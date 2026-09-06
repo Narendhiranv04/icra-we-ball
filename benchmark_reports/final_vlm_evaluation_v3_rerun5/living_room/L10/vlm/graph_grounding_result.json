@@ -1,0 +1,70 @@
+{
+  "assignment": null,
+  "complete": false,
+  "evidence": {
+    "candidate_evaluations": {
+      "PERSONAL_CUP_SAUCER_REGION:SEATING_PAIR": {
+        "checks": {
+          "entity_kind": {
+            "actual": "FIXED_TARGET",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "SEATING_PAIR",
+        "role_name": "PERSONAL_CUP_SAUCER_REGION"
+      },
+      "PERSONAL_CUP_SAUCER_REGION:tv_remote": {
+        "checks": {
+          "entity_kind": {
+            "actual": "OBJECT",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "tv_remote",
+        "role_name": "PERSONAL_CUP_SAUCER_REGION"
+      },
+      "SHARED_REMOTE_REGION:SEATING_PAIR": {
+        "checks": {
+          "entity_kind": {
+            "actual": "FIXED_TARGET",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "SEATING_PAIR",
+        "role_name": "SHARED_REMOTE_REGION"
+      },
+      "SHARED_REMOTE_REGION:tv_remote": {
+        "checks": {
+          "entity_kind": {
+            "actual": "OBJECT",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "tv_remote",
+        "role_name": "SHARED_REMOTE_REGION"
+      }
+    }
+  },
+  "missing_requirements": [
+    "PERSONAL_CUP_SAUCER_REGION",
+    "SHARED_REMOTE_REGION",
+    "PERSONAL_CUP_SAUCER_REGION",
+    "SHARED_REMOTE_REGION"
+  ],
+  "missing_roles": [
+    "PERSONAL_CUP_SAUCER_REGION",
+    "SHARED_REMOTE_REGION"
+  ],
+  "operation_bindings": {},
+  "satisfied": false,
+  "status": "INFEASIBLE",
+  "unresolved_constraints": [
+    "PERSONAL_CUP_SAUCER_REGION",
+    "SHARED_REMOTE_REGION"
+  ],
+  "unsatisfied_relations": []
+}

@@ -1,0 +1,2711 @@
+{
+  "candidate_regions": [],
+  "cross_group_reuse_allowed": false,
+  "detector_vocabulary": [
+    "coffee table",
+    "side table",
+    "end table",
+    "small table",
+    "dining table",
+    "desk",
+    "console table"
+  ],
+  "domain": "living_room",
+  "metadata": {
+    "candidate_categories_used_for_detector_vocabulary": true,
+    "candidate_categories_used_for_grounding_acceptance": false,
+    "candidate_categories_used_for_role_identity": true,
+    "candidate_requirement_statuses": [
+      {
+        "id": "role_10",
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "role_11",
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "role_12",
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "role_1",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_1",
+        "requirement": "sufficient surface area",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_2",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_2",
+        "requirement": "sufficient surface area",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_3",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_3",
+        "requirement": "sufficient surface area",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_4",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_4",
+        "requirement": "sufficient surface area",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_5",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_5",
+        "requirement": "sufficient surface area",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_6",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_6",
+        "requirement": "sufficient surface area",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_7",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_7",
+        "requirement": "sufficient surface area",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_8",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_8",
+        "requirement": "sufficient surface area",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_9",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_9",
+        "requirement": "sufficient surface area",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "group_1",
+        "raw_group": {
+          "function": "refreshment setting",
+          "id": "group_1",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_2",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        "status": "UNINSTANTIABLE_MISSING_RELATION"
+      },
+      {
+        "id": "group_2",
+        "raw_group": {
+          "function": "refreshment setting",
+          "id": "group_2",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_3",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        "status": "UNINSTANTIABLE_MISSING_RELATION"
+      },
+      {
+        "id": "group_3",
+        "raw_group": {
+          "function": "entertainment control placement",
+          "id": "group_3",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_4",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        "status": "UNINSTANTIABLE_MISSING_RELATION"
+      },
+      {
+        "id": "group_4",
+        "raw_group": {
+          "function": "entertainment control placement",
+          "id": "group_4",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_5",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        "status": "UNINSTANTIABLE_MISSING_RELATION"
+      },
+      {
+        "id": "group_5",
+        "raw_group": {
+          "function": "entertainment control placement",
+          "id": "group_5",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_6",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        "status": "UNINSTANTIABLE_MISSING_RELATION"
+      },
+      {
+        "id": "group_6",
+        "raw_group": {
+          "function": "entertainment control placement",
+          "id": "group_6",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_7",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        "status": "UNINSTANTIABLE_MISSING_RELATION"
+      },
+      {
+        "id": "group_7",
+        "raw_group": {
+          "function": "entertainment control placement",
+          "id": "group_7",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_8",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        "status": "UNINSTANTIABLE_MISSING_RELATION"
+      },
+      {
+        "id": "group_8",
+        "raw_group": {
+          "function": "entertainment control placement",
+          "id": "group_8",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_9",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        "status": "UNINSTANTIABLE_MISSING_RELATION"
+      }
+    ],
+    "canonicalization_status": "PARTIAL",
+    "canonicalization_trace": {
+      "context_only_roles": [],
+      "disabled_groups": [
+        {
+          "raw_group": {
+            "function": "refreshment setting",
+            "id": "group_1",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_2",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          "status": "UNINSTANTIABLE_MISSING_RELATION"
+        },
+        {
+          "raw_group": {
+            "function": "refreshment setting",
+            "id": "group_2",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_3",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          "status": "UNINSTANTIABLE_MISSING_RELATION"
+        },
+        {
+          "raw_group": {
+            "function": "entertainment control placement",
+            "id": "group_3",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_4",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          "status": "UNINSTANTIABLE_MISSING_RELATION"
+        },
+        {
+          "raw_group": {
+            "function": "entertainment control placement",
+            "id": "group_4",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_5",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          "status": "UNINSTANTIABLE_MISSING_RELATION"
+        },
+        {
+          "raw_group": {
+            "function": "entertainment control placement",
+            "id": "group_5",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_6",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          "status": "UNINSTANTIABLE_MISSING_RELATION"
+        },
+        {
+          "raw_group": {
+            "function": "entertainment control placement",
+            "id": "group_6",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_7",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          "status": "UNINSTANTIABLE_MISSING_RELATION"
+        },
+        {
+          "raw_group": {
+            "function": "entertainment control placement",
+            "id": "group_7",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_8",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          "status": "UNINSTANTIABLE_MISSING_RELATION"
+        },
+        {
+          "raw_group": {
+            "function": "entertainment control placement",
+            "id": "group_8",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_9",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          "status": "UNINSTANTIABLE_MISSING_RELATION"
+        }
+      ],
+      "disambiguated_roles": [],
+      "groups": [],
+      "merged_roles": [
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "code": "RAW_ROLE_MERGED",
+          "raw_ids": [
+            "role_2",
+            "role_3"
+          ]
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "code": "RAW_ROLE_MERGED",
+          "raw_ids": [
+            "role_2",
+            "role_4"
+          ]
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "code": "RAW_ROLE_MERGED",
+          "raw_ids": [
+            "role_2",
+            "role_5"
+          ]
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "code": "RAW_ROLE_MERGED",
+          "raw_ids": [
+            "role_2",
+            "role_6"
+          ]
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "code": "RAW_ROLE_MERGED",
+          "raw_ids": [
+            "role_2",
+            "role_7"
+          ]
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "code": "RAW_ROLE_MERGED",
+          "raw_ids": [
+            "role_2",
+            "role_8"
+          ]
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "code": "RAW_ROLE_MERGED",
+          "raw_ids": [
+            "role_2",
+            "role_9"
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_1",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_1",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "sufficient surface area",
+          "raw_role_id": "role_1",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_2",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_2",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "sufficient surface area",
+          "raw_role_id": "role_2",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_3",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_3",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "sufficient surface area",
+          "raw_role_id": "role_3",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_4",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_4",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "sufficient surface area",
+          "raw_role_id": "role_4",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_5",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_5",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "sufficient surface area",
+          "raw_role_id": "role_5",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_6",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_6",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "sufficient surface area",
+          "raw_role_id": "role_6",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_7",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_7",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "sufficient surface area",
+          "raw_role_id": "role_7",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_8",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_8",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "sufficient surface area",
+          "raw_role_id": "role_8",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_9",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_9",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "sufficient surface area",
+          "raw_role_id": "role_9",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        }
+      ],
+      "relations": [
+        {
+          "raw_object": "role_2",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_3",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_4",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_5",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_6",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_7",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_8",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_9",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_10",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_11",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_12",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_2",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_3",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_4",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_5",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_6",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_7",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_8",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_9",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        }
+      ],
+      "roles": [
+        {
+          "canonical_role": "PERSONAL_CUP_SAUCER_REGION",
+          "raw_id": "role_1",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "raw_id": "role_2",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "raw_id": "role_3",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "raw_id": "role_4",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "raw_id": "role_5",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "raw_id": "role_6",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "raw_id": "role_7",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "raw_id": "role_8",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "raw_id": "role_9",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        }
+      ],
+      "unresolved_roles": [
+        {
+          "code": "AMBIGUOUS_ROLE_MAPPING",
+          "collision_with": "role_2",
+          "raw_role": {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table",
+              "desk",
+              "console table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_10",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+              }
+            ]
+          }
+        },
+        {
+          "code": "AMBIGUOUS_ROLE_MAPPING",
+          "collision_with": "role_2",
+          "raw_role": {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table",
+              "desk",
+              "console table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_11",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+              }
+            ]
+          }
+        },
+        {
+          "code": "AMBIGUOUS_ROLE_MAPPING",
+          "collision_with": "role_2",
+          "raw_role": {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table",
+              "desk",
+              "console table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_12",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "detector_vocabulary_source": "VLM_CANDIDATES_PLUS_RELEVANT_SYSTEM_ALIASES",
+    "raw_decomposition": {
+      "functional_relations": [
+        {
+          "object_role": "role_2",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_3",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_4",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_5",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_6",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_7",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_8",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_9",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_10",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_11",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_12",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support refreshment setting",
+          "id": "role_1",
+          "required_count": 2,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_2",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_3",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_4",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_5",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_6",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_7",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_8",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_9",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_10",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_11",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_12",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "function": "refreshment setting",
+          "id": "group_1",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_2",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "refreshment setting",
+          "id": "group_2",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_3",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "entertainment control placement",
+          "id": "group_3",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_4",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "entertainment control placement",
+          "id": "group_4",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_5",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "entertainment control placement",
+          "id": "group_5",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_6",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "entertainment control placement",
+          "id": "group_6",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_7",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "entertainment control placement",
+          "id": "group_7",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_8",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "entertainment control placement",
+          "id": "group_8",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_9",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+      "unsupported_reason": ""
+    },
+    "raw_role_to_canonical": {
+      "role_1": "PERSONAL_CUP_SAUCER_REGION",
+      "role_2": "SHARED_REMOTE_REGION",
+      "role_3": "SHARED_REMOTE_REGION",
+      "role_4": "SHARED_REMOTE_REGION",
+      "role_5": "SHARED_REMOTE_REGION",
+      "role_6": "SHARED_REMOTE_REGION",
+      "role_7": "SHARED_REMOTE_REGION",
+      "role_8": "SHARED_REMOTE_REGION",
+      "role_9": "SHARED_REMOTE_REGION"
+    },
+    "raw_vlm_response": {
+      "functional_relations": [
+        {
+          "object_role": "role_2",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_3",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_4",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_5",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_6",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_7",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_8",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_9",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_10",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_11",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_12",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support refreshment setting",
+          "id": "role_1",
+          "required_count": 2,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_2",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_3",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_4",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_5",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_6",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_7",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_8",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_9",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_10",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_11",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table",
+            "desk",
+            "console table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_12",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "function": "refreshment setting",
+          "id": "group_1",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_2",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "refreshment setting",
+          "id": "group_2",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_3",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "entertainment control placement",
+          "id": "group_3",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_4",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "entertainment control placement",
+          "id": "group_4",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_5",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "entertainment control placement",
+          "id": "group_5",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_6",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "entertainment control placement",
+          "id": "group_6",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_7",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "entertainment control placement",
+          "id": "group_7",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_8",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "entertainment control placement",
+          "id": "group_8",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_9",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+      "unsupported_reason": ""
+    },
+    "role_semantic_ontology_version": "phase3_p3i_4_semantic_ontology_v1",
+    "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+    "semantic_vocabulary_path": "/home/naren/RA_iiith/mujoco_scenes/configs/l2_integrated_region_function_semantic_vocabulary.yaml",
+    "soft_semantic_evidence": [
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_1",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "sufficient surface area",
+        "raw_role_id": "role_1",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_2",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "sufficient surface area",
+        "raw_role_id": "role_2",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_3",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "sufficient surface area",
+        "raw_role_id": "role_3",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_4",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "sufficient surface area",
+        "raw_role_id": "role_4",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_5",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "sufficient surface area",
+        "raw_role_id": "role_5",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_6",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "sufficient surface area",
+        "raw_role_id": "role_6",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_7",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "sufficient surface area",
+        "raw_role_id": "role_7",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_8",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "sufficient surface area",
+        "raw_role_id": "role_8",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_9",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "sufficient surface area",
+        "raw_role_id": "role_9",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      }
+    ],
+    "structural_sanitizer": {
+      "document": {
+        "functional_relations": [
+          {
+            "object_role": "role_2",
+            "relation": "compatible with",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_3",
+            "relation": "compatible with",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "compatible with",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_5",
+            "relation": "compatible with",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_6",
+            "relation": "compatible with",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_7",
+            "relation": "compatible with",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_8",
+            "relation": "compatible with",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_9",
+            "relation": "compatible with",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_10",
+            "relation": "compatible with",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_11",
+            "relation": "compatible with",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_12",
+            "relation": "compatible with",
+            "subject_role": "role_1"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table",
+              "desk",
+              "console table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support refreshment setting",
+            "id": "role_1",
+            "required_count": 2,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table",
+              "desk",
+              "console table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_2",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table",
+              "desk",
+              "console table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_3",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table",
+              "desk",
+              "console table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_4",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table",
+              "desk",
+              "console table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_5",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table",
+              "desk",
+              "console table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_6",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table",
+              "desk",
+              "console table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_7",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table",
+              "desk",
+              "console table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_8",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table",
+              "desk",
+              "console table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_9",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table",
+              "desk",
+              "console table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_10",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table",
+              "desk",
+              "console table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_11",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table",
+              "desk",
+              "console table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_12",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "rectangular coffee table with light green top and ornate legs, located between two armchairs"
+              }
+            ]
+          }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "interaction_groups": [
+          {
+            "function": "refreshment setting",
+            "id": "group_1",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_2",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "function": "refreshment setting",
+            "id": "group_2",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_3",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "function": "entertainment control placement",
+            "id": "group_3",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_4",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "function": "entertainment control placement",
+            "id": "group_4",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_5",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "function": "entertainment control placement",
+            "id": "group_5",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_6",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "function": "entertainment control placement",
+            "id": "group_6",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_7",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "function": "entertainment control placement",
+            "id": "group_7",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_8",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "function": "entertainment control placement",
+            "id": "group_8",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_9",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        ],
+        "status": "SUPPORTED",
+        "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+        "unsupported_reason": ""
+      },
+      "repairs": [],
+      "semantically_incomplete": false,
+      "succeeded": true
+    },
+    "unresolved_semantics": [
+      {
+        "raw_object": "role_2",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_3",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_4",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_5",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_6",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_7",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_8",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_9",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_10",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_11",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_12",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_2",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_3",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_4",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_5",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_6",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_7",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_8",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_9",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      }
+    ],
+    "unverified_required_properties": []
+  },
+  "nodes": {
+    "PERSONAL_CUP_SAUCER_REGION": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "sufficient surface area"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "SHARED_REMOTE_REGION": {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "sufficient surface area"
+      ],
+      "shared": true,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  },
+  "operation_groups": [],
+  "region_ranking": [],
+  "relations": [],
+  "roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "sufficient surface area"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "sufficient surface area"
+      ],
+      "shared": true,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "source": "VLM_CANONICAL_G_F",
+  "task_instruction": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people."
+}

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "role_1",
+    "requirement": "openable container",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_1",
+    "requirement": "contains powder",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_2",
+    "requirement": "openable container",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_2",
+    "requirement": "contains liquid",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_5",
+    "requirement": "manipulable",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_6",
+    "requirement": "manipulable",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "group_1",
+    "status": "UNINSTANTIABLE_MISSING_RELATION",
+    "raw_group": {
+      "function": "prepare coffee",
+      "id": "group_1",
+      "required_relations": [
+        "role_5 compatible with role_3"
+      ],
+      "required_target_count": 2,
+      "target_role": "role_3",
+      "tool_role": "role_5",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  },
+  {
+    "id": "group_2",
+    "status": "UNINSTANTIABLE_MISSING_RELATION",
+    "raw_group": {
+      "function": "serve coffee",
+      "id": "group_2",
+      "required_relations": [
+        "role_5 compatible with role_3"
+      ],
+      "required_target_count": 2,
+      "target_role": "role_3",
+      "tool_role": "role_5",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  }
+]

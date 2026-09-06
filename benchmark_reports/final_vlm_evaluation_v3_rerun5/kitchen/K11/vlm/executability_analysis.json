@@ -1,0 +1,55 @@
+[
+  {
+    "id": "role_5",
+    "status": "UNINSTANTIABLE_MISSING_ROLE"
+  },
+  {
+    "id": "role_2",
+    "requirement": "open cavity",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_2",
+    "requirement": "liquid container",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_3",
+    "requirement": "open cavity",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_3",
+    "requirement": "cylindrical shape",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_6",
+    "requirement": "stirring capability",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "group_1",
+    "status": "UNSUPPORTED_OPERATOR",
+    "raw_group": {
+      "function": "prepare coffee",
+      "id": "group_1",
+      "required_relations": [
+        "fits inside"
+      ],
+      "required_target_count": 2,
+      "target_role": "role_1",
+      "tool_role": "role_6",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  },
+  {
+    "id": "soup_serving",
+    "status": "EXECUTABLE",
+    "roles": [
+      "coffee_stirrer",
+      "soup_container"
+    ],
+    "missing_roles": []
+  }
+]

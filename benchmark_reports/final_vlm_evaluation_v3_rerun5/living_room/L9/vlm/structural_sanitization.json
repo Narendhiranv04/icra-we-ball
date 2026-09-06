@@ -1,0 +1,304 @@
+{
+  "document": {
+    "functional_relations": [
+      {
+        "object_role": "role_3",
+        "relation": "near",
+        "subject_role": "role_1"
+      },
+      {
+        "object_role": "role_3",
+        "relation": "near",
+        "subject_role": "role_2"
+      },
+      {
+        "object_role": "role_3",
+        "relation": "viewable from",
+        "subject_role": "role_4"
+      },
+      {
+        "object_role": "role_1",
+        "relation": "placed on",
+        "subject_role": "role_5"
+      },
+      {
+        "object_role": "role_2",
+        "relation": "placed on",
+        "subject_role": "role_6"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "console table",
+          "dining table",
+          "desk",
+          "bench",
+          "ottoman",
+          "low table",
+          "table",
+          "surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support refreshment setting",
+        "id": "role_1",
+        "required_count": 2,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "accessible to seating"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee table",
+            "suitability_reason": "central location between seating, suitable for shared refreshments",
+            "visual_description": "rectangular low table with light green top and ornate legs, positioned between two armchairs"
+          },
+          {
+            "label": "console table",
+            "suitability_reason": "already used for refreshments, but may be moved or supplemented",
+            "visual_description": "long narrow table against wall, currently holding refreshments"
+          },
+          {
+            "label": "desk",
+            "suitability_reason": "large surface area, but may be too far from seating",
+            "visual_description": "large wooden desk in foreground, currently holding refreshments"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "console table",
+          "dining table",
+          "desk",
+          "bench",
+          "ottoman",
+          "low table",
+          "table",
+          "surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support entertainment control",
+        "id": "role_2",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "accessible to both seating positions"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee table",
+            "suitability_reason": "central location between seating, suitable for shared entertainment control",
+            "visual_description": "rectangular low table with light green top and ornate legs, positioned between two armchairs"
+          },
+          {
+            "label": "console table",
+            "suitability_reason": "already used for refreshments, but may be moved or supplemented",
+            "visual_description": "long narrow table against wall, currently holding refreshments"
+          },
+          {
+            "label": "desk",
+            "suitability_reason": "large surface area, but may be too far from seating",
+            "visual_description": "large wooden desk in foreground, currently holding refreshments"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "armchair",
+          "sofa",
+          "couch",
+          "chair",
+          "seat",
+          "furniture"
+        ],
+        "entity_kind": "REGION",
+        "function": "support seating",
+        "id": "role_3",
+        "required_count": 2,
+        "required_properties": [
+          "support human weight",
+          "comfortable seating"
+        ],
+        "visible_candidates": [
+          {
+            "label": "armchair",
+            "suitability_reason": "suitable for seating, positioned near refreshment table",
+            "visual_description": "wooden armchair with black cushion, positioned near coffee table"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wall",
+          "mount",
+          "stand",
+          "shelf",
+          "surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support television",
+        "id": "role_4",
+        "required_count": 1,
+        "required_properties": [
+          "support television",
+          "viewable from seating"
+        ],
+        "visible_candidates": [
+          {
+            "label": "wall",
+            "suitability_reason": "already supports television, suitable for viewing",
+            "visual_description": "plain wall with mounted television"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "mug",
+          "glass",
+          "bowl",
+          "plate",
+          "dish",
+          "food item",
+          "drink container"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "provide refreshment",
+        "id": "role_5",
+        "required_count": 2,
+        "required_properties": [
+          "contain refreshment",
+          "suitable for consumption"
+        ],
+        "visible_candidates": [
+          {
+            "label": "red mug",
+            "suitability_reason": "suitable for refreshment, currently on console table",
+            "visual_description": "red ceramic mug, currently on console table"
+          },
+          {
+            "label": "white plate",
+            "suitability_reason": "suitable for refreshment, currently on console table",
+            "visual_description": "white ceramic plate, currently on console table"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote control",
+          "remote",
+          "controller",
+          "device",
+          "electronic device"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "provide entertainment control",
+        "id": "role_6",
+        "required_count": 1,
+        "required_properties": [
+          "control television",
+          "suitable for entertainment control"
+        ],
+        "visible_candidates": [
+          {
+            "label": "remote control",
+            "suitability_reason": "suitable for entertainment control, currently on console table",
+            "visual_description": "black remote control, currently on console table"
+          }
+        ],
+        "description": ""
+      }
+    ],
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "interaction_groups": [
+      {
+        "context_relations": [
+          "near"
+        ],
+        "context_role": "role_3",
+        "function": "refreshment setting",
+        "id": "group_1",
+        "required_relations": [
+          "placed on"
+        ],
+        "required_target_count": 2,
+        "target_role": "role_1",
+        "tool_role": "role_5",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      {
+        "context_relations": [
+          "near"
+        ],
+        "context_role": "role_4",
+        "function": "entertainment control",
+        "id": "group_2",
+        "required_relations": [
+          "placed on"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_2",
+        "tool_role": "role_6",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      }
+    ],
+    "status": "SUPPORTED",
+    "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+    "unsupported_reason": ""
+  },
+  "repairs": [
+    {
+      "code": "DUPLICATE_VISIBLE_CANDIDATE_REMOVED",
+      "raw": {
+        "role": "role_3",
+        "candidate": {
+          "label": "armchair",
+          "suitability_reason": "suitable for seating, positioned near refreshment table",
+          "visual_description": "wooden armchair with black cushion, positioned near coffee table"
+        }
+      }
+    },
+    {
+      "code": "DUPLICATE_VISIBLE_CANDIDATE_REMOVED",
+      "raw": {
+        "role": "role_5",
+        "candidate": {
+          "label": "red mug",
+          "suitability_reason": "suitable for refreshment, currently on console table",
+          "visual_description": "red ceramic mug, currently on console table"
+        }
+      }
+    },
+    {
+      "code": "DUPLICATE_VISIBLE_CANDIDATE_REMOVED",
+      "raw": {
+        "role": "role_5",
+        "candidate": {
+          "label": "white plate",
+          "suitability_reason": "suitable for refreshment, currently on console table",
+          "visual_description": "white ceramic plate, currently on console table"
+        }
+      }
+    }
+  ],
+  "semantically_incomplete": false,
+  "succeeded": true
+}

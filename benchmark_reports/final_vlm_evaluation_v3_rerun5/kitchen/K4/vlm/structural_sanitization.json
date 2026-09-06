@@ -1,0 +1,218 @@
+{
+  "document": {
+    "cross_group_reuse_allowed": true,
+    "functional_relations": [
+      {
+        "object_role": "role_3",
+        "relation": "compatible with",
+        "subject_role": "role_1"
+      },
+      {
+        "object_role": "role_3",
+        "relation": "compatible with",
+        "subject_role": "role_2"
+      },
+      {
+        "object_role": "role_3",
+        "relation": "fits inside",
+        "subject_role": "role_5"
+      },
+      {
+        "object_role": "role_4",
+        "relation": "fits inside",
+        "subject_role": "role_6"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "coffee container",
+          "coffee tin",
+          "coffee jar"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "contain coffee powder",
+        "id": "role_1",
+        "required_count": 2,
+        "required_properties": [
+          "open cavity",
+          "contains powder"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee container",
+            "visual_description": "dark cylindrical container on table"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "water bottle",
+          "water jug",
+          "water container"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "contain water",
+        "id": "role_2",
+        "required_count": 2,
+        "required_properties": [
+          "open cavity",
+          "contains liquid"
+        ],
+        "visible_candidates": [],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "coffee cup",
+          "coffee mug",
+          "coffee bowl"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "contain coffee",
+        "id": "role_3",
+        "required_count": 2,
+        "required_properties": [
+          "open cavity",
+          "planar support"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee cup",
+            "visual_description": "small cylindrical cup on table"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "soup bowl",
+          "soup cup",
+          "soup container"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "contain soup",
+        "id": "role_4",
+        "required_count": 2,
+        "required_properties": [
+          "open cavity",
+          "planar support"
+        ],
+        "visible_candidates": [
+          {
+            "label": "soup bowl",
+            "visual_description": "small bowl with red liquid on table"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "stirrer",
+          "utensil"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "stir coffee",
+        "id": "role_5",
+        "required_count": 2,
+        "required_properties": [
+          "elongated shape",
+          "rigid"
+        ],
+        "visible_candidates": [
+          {
+            "label": "spoon",
+            "visual_description": "metal spoon on table"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "fork",
+          "knife",
+          "utensil"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "eat soup",
+        "id": "role_6",
+        "required_count": 2,
+        "required_properties": [
+          "elongated shape",
+          "rigid"
+        ],
+        "visible_candidates": [
+          {
+            "label": "spoon",
+            "visual_description": "metal spoon on table"
+          }
+        ],
+        "description": ""
+      }
+    ],
+    "inspectable_regions": [
+      {
+        "id": "region_1",
+        "label": "left cabinet",
+        "reason": "may contain coffee, water, or utensils",
+        "visual_description": "closed cabinet on left side of table"
+      },
+      {
+        "id": "region_2",
+        "label": "right cabinet",
+        "reason": "may contain coffee, water, or utensils",
+        "visual_description": "closed cabinet on right side of table"
+      },
+      {
+        "id": "region_3",
+        "label": "table drawer",
+        "reason": "may contain utensils",
+        "visual_description": "drawer under table"
+      }
+    ],
+    "inspection_order": [
+      "region_1",
+      "region_2",
+      "region_3"
+    ],
+    "interaction_groups": [
+      {
+        "function": "prepare coffee",
+        "id": "group_1",
+        "required_relations": [
+          "fits inside"
+        ],
+        "required_target_count": 2,
+        "target_role": "role_3",
+        "tool_role": "role_5",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      },
+      {
+        "function": "serve soup",
+        "id": "group_2",
+        "required_relations": [
+          "fits inside"
+        ],
+        "required_target_count": 2,
+        "target_role": "role_4",
+        "tool_role": "role_6",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    ],
+    "status": "SUPPORTED",
+    "task_summary": "Prepare and serve two coffees and two soups, each with a suitable utensil, using available items and storage.",
+    "unsupported_reason": ""
+  },
+  "repairs": [],
+  "semantically_incomplete": false,
+  "succeeded": true
+}

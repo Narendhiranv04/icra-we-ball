@@ -1,0 +1,1388 @@
+{
+  "candidate_regions": [],
+  "cross_group_reuse_allowed": false,
+  "detector_vocabulary": [
+    "side table",
+    "coffee table",
+    "desk",
+    "console table",
+    "end table",
+    "small table",
+    "table surface"
+  ],
+  "domain": "living_room",
+  "metadata": {
+    "candidate_categories_used_for_detector_vocabulary": true,
+    "candidate_categories_used_for_grounding_acceptance": false,
+    "candidate_categories_used_for_role_identity": true,
+    "candidate_requirement_statuses": [
+      {
+        "id": "role_3",
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "role_4",
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "role_1",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_1",
+        "requirement": "sufficient surface area",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_2",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_2",
+        "requirement": "sufficient surface area",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "group_1",
+        "raw_group": {
+          "context_relations": [
+            "compatible with"
+          ],
+          "context_role": "role_2",
+          "function": "provide refreshment setting for person 1",
+          "id": "group_1",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_3",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        "status": "UNINSTANTIABLE_MISSING_RELATION"
+      },
+      {
+        "id": "group_2",
+        "raw_group": {
+          "context_relations": [
+            "compatible with"
+          ],
+          "context_role": "role_2",
+          "function": "provide refreshment setting for person 2",
+          "id": "group_2",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_3",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        "status": "UNINSTANTIABLE_MISSING_RELATION"
+      },
+      {
+        "id": "group_3",
+        "raw_group": {
+          "context_relations": [
+            "compatible with"
+          ],
+          "context_role": "role_1",
+          "function": "place entertainment control for shared access",
+          "id": "group_3",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_4",
+          "tool_role": "role_2",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        "status": "UNINSTANTIABLE_MISSING_RELATION"
+      }
+    ],
+    "canonicalization_status": "PARTIAL",
+    "canonicalization_trace": {
+      "context_only_roles": [],
+      "disabled_groups": [
+        {
+          "raw_group": {
+            "context_relations": [
+              "compatible with"
+            ],
+            "context_role": "role_2",
+            "function": "provide refreshment setting for person 1",
+            "id": "group_1",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_3",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          "status": "UNINSTANTIABLE_MISSING_RELATION"
+        },
+        {
+          "raw_group": {
+            "context_relations": [
+              "compatible with"
+            ],
+            "context_role": "role_2",
+            "function": "provide refreshment setting for person 2",
+            "id": "group_2",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_3",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          "status": "UNINSTANTIABLE_MISSING_RELATION"
+        },
+        {
+          "raw_group": {
+            "context_relations": [
+              "compatible with"
+            ],
+            "context_role": "role_1",
+            "function": "place entertainment control for shared access",
+            "id": "group_3",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_4",
+            "tool_role": "role_2",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          "status": "UNINSTANTIABLE_MISSING_RELATION"
+        }
+      ],
+      "disambiguated_roles": [],
+      "groups": [],
+      "merged_roles": [],
+      "properties": [
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_1",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_1",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "sufficient surface area",
+          "raw_role_id": "role_1",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_2",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_2",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "sufficient surface area",
+          "raw_role_id": "role_2",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        }
+      ],
+      "relations": [
+        {
+          "raw_object": "role_2",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_4",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_3",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_3",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_2",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_3",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_2",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_4",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_2",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_1",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_2",
+          "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        }
+      ],
+      "roles": [
+        {
+          "canonical_role": "PERSONAL_CUP_SAUCER_REGION",
+          "raw_id": "role_1",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "raw_id": "role_2",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        }
+      ],
+      "unresolved_roles": [
+        {
+          "code": "AMBIGUOUS_ROLE_MAPPING",
+          "collision_with": "role_1",
+          "raw_role": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "side table",
+              "coffee table",
+              "desk",
+              "console table",
+              "end table",
+              "small table",
+              "table surface"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support refreshment setting",
+            "id": "role_3",
+            "required_count": 2,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "left side table",
+                "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+                "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+              },
+              {
+                "label": "right side table",
+                "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+                "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+              },
+              {
+                "label": "coffee table",
+                "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+                "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+              },
+              {
+                "label": "desk",
+                "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+                "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+              },
+              {
+                "label": "console table",
+                "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+                "visual_description": "long wooden console table against the back wall, currently empty"
+              }
+            ]
+          }
+        },
+        {
+          "code": "AMBIGUOUS_ROLE_MAPPING",
+          "collision_with": "role_2",
+          "raw_role": {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "side table",
+              "coffee table",
+              "desk",
+              "console table",
+              "end table",
+              "small table",
+              "table surface"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_4",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "left side table",
+                "suitability_reason": "has a flat top surface suitable for holding a remote control",
+                "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+              },
+              {
+                "label": "right side table",
+                "suitability_reason": "has a flat top surface suitable for holding a remote control",
+                "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+              },
+              {
+                "label": "coffee table",
+                "suitability_reason": "has a flat top surface suitable for holding a remote control",
+                "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+              },
+              {
+                "label": "desk",
+                "suitability_reason": "has a flat top surface suitable for holding a remote control",
+                "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+              },
+              {
+                "label": "console table",
+                "suitability_reason": "has a flat top surface suitable for holding a remote control",
+                "visual_description": "long wooden console table against the back wall, currently empty"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "detector_vocabulary_source": "VLM_CANDIDATES_PLUS_RELEVANT_SYSTEM_ALIASES",
+    "raw_decomposition": {
+      "functional_relations": [
+        {
+          "object_role": "role_2",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_4",
+          "relation": "compatible with",
+          "subject_role": "role_3"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "side table",
+            "coffee table",
+            "desk",
+            "console table",
+            "end table",
+            "small table",
+            "table surface"
+          ],
+          "entity_kind": "REGION",
+          "function": "support refreshment setting",
+          "id": "role_1",
+          "required_count": 2,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "left side table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+            },
+            {
+              "label": "right side table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+            },
+            {
+              "label": "coffee table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+            },
+            {
+              "label": "desk",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+            },
+            {
+              "label": "console table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "long wooden console table against the back wall, currently empty"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "side table",
+            "coffee table",
+            "desk",
+            "console table",
+            "end table",
+            "small table",
+            "table surface"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_2",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "left side table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+            },
+            {
+              "label": "right side table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+            },
+            {
+              "label": "coffee table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+            },
+            {
+              "label": "desk",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+            },
+            {
+              "label": "console table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "long wooden console table against the back wall, currently empty"
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "side table",
+            "coffee table",
+            "desk",
+            "console table",
+            "end table",
+            "small table",
+            "table surface"
+          ],
+          "entity_kind": "REGION",
+          "function": "support refreshment setting",
+          "id": "role_3",
+          "required_count": 2,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "left side table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+            },
+            {
+              "label": "right side table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+            },
+            {
+              "label": "coffee table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+            },
+            {
+              "label": "desk",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+            },
+            {
+              "label": "console table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "long wooden console table against the back wall, currently empty"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "side table",
+            "coffee table",
+            "desk",
+            "console table",
+            "end table",
+            "small table",
+            "table surface"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_4",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "left side table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+            },
+            {
+              "label": "right side table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+            },
+            {
+              "label": "coffee table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+            },
+            {
+              "label": "desk",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+            },
+            {
+              "label": "console table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "long wooden console table against the back wall, currently empty"
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "context_relations": [
+            "compatible with"
+          ],
+          "context_role": "role_2",
+          "function": "provide refreshment setting for person 1",
+          "id": "group_1",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_3",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "context_relations": [
+            "compatible with"
+          ],
+          "context_role": "role_2",
+          "function": "provide refreshment setting for person 2",
+          "id": "group_2",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_3",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "context_relations": [
+            "compatible with"
+          ],
+          "context_role": "role_1",
+          "function": "place entertainment control for shared access",
+          "id": "group_3",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_4",
+          "tool_role": "role_2",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+      "unsupported_reason": ""
+    },
+    "raw_role_to_canonical": {
+      "role_1": "PERSONAL_CUP_SAUCER_REGION",
+      "role_2": "SHARED_REMOTE_REGION"
+    },
+    "raw_vlm_response": {
+      "functional_relations": [
+        {
+          "object_role": "role_2",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_4",
+          "relation": "compatible with",
+          "subject_role": "role_3"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "side table",
+            "coffee table",
+            "desk",
+            "console table",
+            "end table",
+            "small table",
+            "table surface"
+          ],
+          "entity_kind": "REGION",
+          "function": "support refreshment setting",
+          "id": "role_1",
+          "required_count": 2,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "left side table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+            },
+            {
+              "label": "right side table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+            },
+            {
+              "label": "coffee table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+            },
+            {
+              "label": "desk",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+            },
+            {
+              "label": "console table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "long wooden console table against the back wall, currently empty"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "side table",
+            "coffee table",
+            "desk",
+            "console table",
+            "end table",
+            "small table",
+            "table surface"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_2",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "left side table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+            },
+            {
+              "label": "right side table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+            },
+            {
+              "label": "coffee table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+            },
+            {
+              "label": "desk",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+            },
+            {
+              "label": "console table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "long wooden console table against the back wall, currently empty"
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "side table",
+            "coffee table",
+            "desk",
+            "console table",
+            "end table",
+            "small table",
+            "table surface"
+          ],
+          "entity_kind": "REGION",
+          "function": "support refreshment setting",
+          "id": "role_3",
+          "required_count": 2,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "left side table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+            },
+            {
+              "label": "right side table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+            },
+            {
+              "label": "coffee table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+            },
+            {
+              "label": "desk",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+            },
+            {
+              "label": "console table",
+              "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+              "visual_description": "long wooden console table against the back wall, currently empty"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "side table",
+            "coffee table",
+            "desk",
+            "console table",
+            "end table",
+            "small table",
+            "table surface"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_4",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "sufficient surface area"
+          ],
+          "visible_candidates": [
+            {
+              "label": "left side table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+            },
+            {
+              "label": "right side table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+            },
+            {
+              "label": "coffee table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+            },
+            {
+              "label": "desk",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+            },
+            {
+              "label": "console table",
+              "suitability_reason": "has a flat top surface suitable for holding a remote control",
+              "visual_description": "long wooden console table against the back wall, currently empty"
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "context_relations": [
+            "compatible with"
+          ],
+          "context_role": "role_2",
+          "function": "provide refreshment setting for person 1",
+          "id": "group_1",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_3",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "context_relations": [
+            "compatible with"
+          ],
+          "context_role": "role_2",
+          "function": "provide refreshment setting for person 2",
+          "id": "group_2",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_3",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "context_relations": [
+            "compatible with"
+          ],
+          "context_role": "role_1",
+          "function": "place entertainment control for shared access",
+          "id": "group_3",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_4",
+          "tool_role": "role_2",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+      "unsupported_reason": ""
+    },
+    "role_semantic_ontology_version": "phase3_p3i_4_semantic_ontology_v1",
+    "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+    "semantic_vocabulary_path": "/home/naren/RA_iiith/mujoco_scenes/configs/l2_integrated_region_function_semantic_vocabulary.yaml",
+    "soft_semantic_evidence": [
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_1",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "sufficient surface area",
+        "raw_role_id": "role_1",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_2",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "sufficient surface area",
+        "raw_role_id": "role_2",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      }
+    ],
+    "structural_sanitizer": {
+      "document": {
+        "functional_relations": [
+          {
+            "object_role": "role_2",
+            "relation": "compatible with",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "compatible with",
+            "subject_role": "role_3"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "side table",
+              "coffee table",
+              "desk",
+              "console table",
+              "end table",
+              "small table",
+              "table surface"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support refreshment setting",
+            "id": "role_1",
+            "required_count": 2,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "left side table",
+                "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+                "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+              },
+              {
+                "label": "right side table",
+                "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+                "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+              },
+              {
+                "label": "coffee table",
+                "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+                "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+              },
+              {
+                "label": "desk",
+                "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+                "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+              },
+              {
+                "label": "console table",
+                "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+                "visual_description": "long wooden console table against the back wall, currently empty"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "side table",
+              "coffee table",
+              "desk",
+              "console table",
+              "end table",
+              "small table",
+              "table surface"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_2",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "left side table",
+                "suitability_reason": "has a flat top surface suitable for holding a remote control",
+                "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+              },
+              {
+                "label": "right side table",
+                "suitability_reason": "has a flat top surface suitable for holding a remote control",
+                "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+              },
+              {
+                "label": "coffee table",
+                "suitability_reason": "has a flat top surface suitable for holding a remote control",
+                "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+              },
+              {
+                "label": "desk",
+                "suitability_reason": "has a flat top surface suitable for holding a remote control",
+                "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+              },
+              {
+                "label": "console table",
+                "suitability_reason": "has a flat top surface suitable for holding a remote control",
+                "visual_description": "long wooden console table against the back wall, currently empty"
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "side table",
+              "coffee table",
+              "desk",
+              "console table",
+              "end table",
+              "small table",
+              "table surface"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support refreshment setting",
+            "id": "role_3",
+            "required_count": 2,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "left side table",
+                "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+                "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+              },
+              {
+                "label": "right side table",
+                "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+                "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+              },
+              {
+                "label": "coffee table",
+                "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+                "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+              },
+              {
+                "label": "desk",
+                "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+                "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+              },
+              {
+                "label": "console table",
+                "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+                "visual_description": "long wooden console table against the back wall, currently empty"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "side table",
+              "coffee table",
+              "desk",
+              "console table",
+              "end table",
+              "small table",
+              "table surface"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_4",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "sufficient surface area"
+            ],
+            "visible_candidates": [
+              {
+                "label": "left side table",
+                "suitability_reason": "has a flat top surface suitable for holding a remote control",
+                "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+              },
+              {
+                "label": "right side table",
+                "suitability_reason": "has a flat top surface suitable for holding a remote control",
+                "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+              },
+              {
+                "label": "coffee table",
+                "suitability_reason": "has a flat top surface suitable for holding a remote control",
+                "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+              },
+              {
+                "label": "desk",
+                "suitability_reason": "has a flat top surface suitable for holding a remote control",
+                "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+              },
+              {
+                "label": "console table",
+                "suitability_reason": "has a flat top surface suitable for holding a remote control",
+                "visual_description": "long wooden console table against the back wall, currently empty"
+              }
+            ]
+          }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "interaction_groups": [
+          {
+            "context_relations": [
+              "compatible with"
+            ],
+            "context_role": "role_2",
+            "function": "provide refreshment setting for person 1",
+            "id": "group_1",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_3",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "context_relations": [
+              "compatible with"
+            ],
+            "context_role": "role_2",
+            "function": "provide refreshment setting for person 2",
+            "id": "group_2",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_3",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "context_relations": [
+              "compatible with"
+            ],
+            "context_role": "role_1",
+            "function": "place entertainment control for shared access",
+            "id": "group_3",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_4",
+            "tool_role": "role_2",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        ],
+        "status": "SUPPORTED",
+        "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+        "unsupported_reason": ""
+      },
+      "repairs": [],
+      "semantically_incomplete": false,
+      "succeeded": true
+    },
+    "unresolved_semantics": [
+      {
+        "raw_object": "role_2",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_4",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_3",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_3",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_2",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_3",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_2",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_4",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_2",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_1",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_2",
+        "reason": "VLM living room relation 'compatible with' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      }
+    ],
+    "unverified_required_properties": []
+  },
+  "nodes": {
+    "PERSONAL_CUP_SAUCER_REGION": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "sufficient surface area"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "SHARED_REMOTE_REGION": {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "sufficient surface area"
+      ],
+      "shared": true,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  },
+  "operation_groups": [],
+  "region_ranking": [],
+  "relations": [],
+  "roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "sufficient surface area"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "sufficient surface area"
+      ],
+      "shared": true,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "source": "VLM_CANONICAL_G_F",
+  "task_instruction": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people."
+}

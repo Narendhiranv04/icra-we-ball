@@ -1,0 +1,172 @@
+{
+  "document": {
+    "functional_relations": [],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "chair side table",
+          "coffee table",
+          "end table",
+          "small table",
+          "side table"
+        ],
+        "entity_kind": "REGION",
+        "function": "support refreshment setting",
+        "id": "role_1",
+        "required_count": 2,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "accessible to seated person"
+        ],
+        "visible_candidates": [
+          {
+            "label": "chair side table",
+            "visual_description": "small wooden table next to a chair"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "end table",
+          "small table"
+        ],
+        "entity_kind": "REGION",
+        "function": "support entertainment control",
+        "id": "role_2",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "accessible to both people"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee table",
+            "visual_description": "large wooden table in the center of the room"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "chair side table",
+          "coffee table",
+          "end table",
+          "small table",
+          "side table"
+        ],
+        "entity_kind": "REGION",
+        "function": "support refreshment setting",
+        "id": "role_3",
+        "required_count": 2,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "accessible to seated person"
+        ],
+        "visible_candidates": [
+          {
+            "label": "chair side table",
+            "visual_description": "small wooden table next to a chair"
+          }
+        ],
+        "description": ""
+      }
+    ],
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "interaction_groups": [],
+    "status": "SUPPORTED",
+    "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+    "unsupported_reason": ""
+  },
+  "repairs": [
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "role_4",
+        "relation": "near anchor",
+        "subject_role": "role_1"
+      }
+    },
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "role_4",
+        "relation": "near anchor",
+        "subject_role": "role_3"
+      }
+    },
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "role_4",
+        "relation": "near anchor",
+        "subject_role": "role_2"
+      }
+    },
+    {
+      "code": "INVALID_GROUP_REFERENCE",
+      "raw": {
+        "context_relations": [
+          "near anchor"
+        ],
+        "context_role": "role_4",
+        "function": "provide refreshment setting",
+        "id": "group_1",
+        "required_relations": [
+          "near anchor"
+        ],
+        "required_target_count": 2,
+        "target_role": "role_1",
+        "tool_role": "role_1",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    },
+    {
+      "code": "INVALID_GROUP_REFERENCE",
+      "raw": {
+        "context_relations": [
+          "near anchor"
+        ],
+        "context_role": "role_4",
+        "function": "provide refreshment setting",
+        "id": "group_2",
+        "required_relations": [
+          "near anchor"
+        ],
+        "required_target_count": 2,
+        "target_role": "role_3",
+        "tool_role": "role_3",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    },
+    {
+      "code": "INVALID_GROUP_REFERENCE",
+      "raw": {
+        "context_relations": [
+          "near anchor"
+        ],
+        "context_role": "role_4",
+        "function": "place entertainment control",
+        "id": "group_3",
+        "required_relations": [
+          "near anchor"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_2",
+        "tool_role": "role_2",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    }
+  ],
+  "semantically_incomplete": true,
+  "succeeded": true
+}

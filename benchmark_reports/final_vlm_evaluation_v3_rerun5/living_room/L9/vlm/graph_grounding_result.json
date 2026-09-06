@@ -1,0 +1,32 @@
+{
+  "assignment": {
+    "CUP_SAUCER_SET": [
+      "personal_table_slot_1",
+      "personal_table_slot_2"
+    ],
+    "REMOTE": "object_0003",
+    "SHARED_REMOTE_REGION": "region_0001"
+  },
+  "complete": false,
+  "evidence": {
+    "candidate_roles": [
+      "CUP_SAUCER_SET",
+      "REMOTE",
+      "SHARED_REMOTE_REGION"
+    ],
+    "original_grounding_status": "INFEASIBLE",
+    "search_exhausted": true,
+    "valid_assignment_count": 1
+  },
+  "missing_requirements": [
+    "PERSONAL_CUP_SAUCER_REGION"
+  ],
+  "missing_roles": [
+    "PERSONAL_CUP_SAUCER_REGION"
+  ],
+  "operation_bindings": {},
+  "satisfied": false,
+  "status": "PARTIAL_VERIFIED_GROUNDING",
+  "unresolved_constraints": [],
+  "unsatisfied_relations": []
+}

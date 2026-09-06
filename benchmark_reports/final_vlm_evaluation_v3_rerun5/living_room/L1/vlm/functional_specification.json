@@ -1,0 +1,1399 @@
+{
+  "candidate_regions": [],
+  "cross_group_reuse_allowed": false,
+  "detector_vocabulary": [
+    "coffee table",
+    "side table",
+    "end table",
+    "small table",
+    "dining table",
+    "cup",
+    "mug",
+    "glass",
+    "bowl",
+    "plate",
+    "remote control",
+    "media controller",
+    "entertainment device",
+    "armchair",
+    "sofa",
+    "couch",
+    "chair",
+    "cup saucer set",
+    "saucer",
+    "tv remote"
+  ],
+  "domain": "living_room",
+  "metadata": {
+    "candidate_categories_used_for_detector_vocabulary": true,
+    "candidate_categories_used_for_grounding_acceptance": false,
+    "candidate_categories_used_for_role_identity": true,
+    "candidate_requirement_statuses": [
+      {
+        "id": "role_5",
+        "status": "CONTEXT_ONLY"
+      },
+      {
+        "id": "role_1",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_1",
+        "requirement": "accessible to seating",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_2",
+        "requirement": "open cavity",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_2",
+        "requirement": "stable base",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_3",
+        "requirement": "portable",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_3",
+        "requirement": "button interface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_4",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_4",
+        "requirement": "accessible to seating",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "group_1",
+        "raw_group": {
+          "context_relations": [
+            "near"
+          ],
+          "context_role": "role_5",
+          "function": "refreshment setting",
+          "id": "group_1",
+          "required_relations": [
+            "placed on"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_1",
+          "tool_role": "role_2",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        "status": "UNSUPPORTED_OPERATOR"
+      },
+      {
+        "id": "group_2",
+        "raw_group": {
+          "context_relations": [
+            "near"
+          ],
+          "context_role": "role_5",
+          "function": "entertainment control placement",
+          "id": "group_2",
+          "required_relations": [
+            "placed on"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_4",
+          "tool_role": "role_3",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        "status": "UNSUPPORTED_OPERATOR"
+      }
+    ],
+    "canonicalization_status": "PARTIAL",
+    "canonicalization_trace": {
+      "context_only_roles": [
+        {
+          "raw_role": {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "armchair",
+              "sofa",
+              "couch",
+              "chair"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support seating",
+            "id": "role_5",
+            "required_count": 2,
+            "required_properties": [
+              "support payload",
+              "cushioned surface"
+            ],
+            "visible_candidates": [
+              {
+                "label": "left armchair",
+                "suitability_reason": "suitable for seating",
+                "visual_description": "black cushioned armchair with wooden frame, located on the left side of the room"
+              },
+              {
+                "label": "right armchair",
+                "suitability_reason": "suitable for seating",
+                "visual_description": "black cushioned armchair with wooden frame, located on the right side of the room"
+              }
+            ]
+          },
+          "status": "CONTEXT_ONLY_ROLE"
+        }
+      ],
+      "disabled_groups": [
+        {
+          "raw_group": {
+            "context_relations": [
+              "near"
+            ],
+            "context_role": "role_5",
+            "function": "refreshment setting",
+            "id": "group_1",
+            "required_relations": [
+              "placed on"
+            ],
+            "required_target_count": 2,
+            "target_role": "role_1",
+            "tool_role": "role_2",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          "status": "UNSUPPORTED_OPERATOR"
+        },
+        {
+          "raw_group": {
+            "context_relations": [
+              "near"
+            ],
+            "context_role": "role_5",
+            "function": "entertainment control placement",
+            "id": "group_2",
+            "required_relations": [
+              "placed on"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_4",
+            "tool_role": "role_3",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          "status": "UNSUPPORTED_OPERATOR"
+        }
+      ],
+      "disambiguated_roles": [],
+      "groups": [],
+      "merged_roles": [],
+      "properties": [
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_1",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_1",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "accessible to seating",
+          "raw_role_id": "role_1",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "open cavity",
+          "raw_role_id": "role_2",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable base",
+          "raw_role_id": "role_2",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "portable",
+          "raw_role_id": "role_3",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "button interface",
+          "raw_role_id": "role_3",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_4",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_4",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "accessible to seating",
+          "raw_role_id": "role_4",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        }
+      ],
+      "relations": [
+        {
+          "raw_object": "role_4",
+          "raw_phrase": "placed on",
+          "raw_subject": "role_1",
+          "reason": "VLM living room relation 'placed on' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "canonical": [
+            "PERSONAL_CUP_SAUCER_REGION",
+            "FITS_SET_ON",
+            "CUP_SAUCER_SET"
+          ],
+          "raw_object": "role_1",
+          "raw_phrase": "placed on",
+          "raw_subject": "role_2",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical": [
+            "SHARED_REMOTE_REGION",
+            "FITS_ON",
+            "REMOTE"
+          ],
+          "raw_object": "role_4",
+          "raw_phrase": "placed on",
+          "raw_subject": "role_3",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "raw_object": "role_1",
+          "raw_phrase": "near",
+          "raw_subject": "role_5",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_4",
+          "raw_phrase": "near",
+          "raw_subject": "role_5",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "canonical": [
+            "PERSONAL_CUP_SAUCER_REGION",
+            "FITS_SET_ON",
+            "CUP_SAUCER_SET"
+          ],
+          "raw_object": "role_1",
+          "raw_phrase": "placed on",
+          "raw_subject": "role_2",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "raw_object": "role_5",
+          "raw_phrase": "near",
+          "raw_subject": "role_2",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "canonical": [
+            "SHARED_REMOTE_REGION",
+            "FITS_ON",
+            "REMOTE"
+          ],
+          "raw_object": "role_4",
+          "raw_phrase": "placed on",
+          "raw_subject": "role_3",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "raw_object": "role_5",
+          "raw_phrase": "near",
+          "raw_subject": "role_3",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        }
+      ],
+      "roles": [
+        {
+          "canonical_role": "PERSONAL_CUP_SAUCER_REGION",
+          "raw_id": "role_1",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "CUP_SAUCER_SET",
+          "raw_id": "role_2",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "REMOTE",
+          "raw_id": "role_3",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "raw_id": "role_4",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        }
+      ],
+      "unresolved_roles": []
+    },
+    "detector_vocabulary_source": "VLM_CANDIDATES_PLUS_RELEVANT_SYSTEM_ALIASES",
+    "raw_decomposition": {
+      "functional_relations": [
+        {
+          "object_role": "role_4",
+          "relation": "placed on",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_1",
+          "relation": "placed on",
+          "subject_role": "role_2"
+        },
+        {
+          "object_role": "role_4",
+          "relation": "placed on",
+          "subject_role": "role_3"
+        },
+        {
+          "object_role": "role_1",
+          "relation": "near",
+          "subject_role": "role_5"
+        },
+        {
+          "object_role": "role_4",
+          "relation": "near",
+          "subject_role": "role_5"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support refreshment setting",
+          "id": "role_1",
+          "required_count": 2,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "accessible to seating"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "suitability_reason": "central location between seating, suitable for shared refreshments",
+              "visual_description": "rectangular table with light green top and ornate legs, located between the two armchairs"
+            },
+            {
+              "label": "left side table",
+              "suitability_reason": "adjacent to seating, suitable for individual refreshment setting",
+              "visual_description": "small wooden table with two shelves, located to the left of the left armchair"
+            },
+            {
+              "label": "right side table",
+              "suitability_reason": "adjacent to seating, suitable for individual refreshment setting",
+              "visual_description": "small wooden table with two shelves, located to the right of the right armchair"
+            },
+            {
+              "label": "console table",
+              "suitability_reason": "less ideal due to distance from seating, but could be used if other tables are occupied",
+              "visual_description": "long narrow table against the wall, located behind the left armchair"
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "cup",
+            "mug",
+            "glass",
+            "bowl",
+            "plate"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain refreshment item",
+          "id": "role_2",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "stable base"
+          ],
+          "visible_candidates": [
+            {
+              "label": "red mug",
+              "suitability_reason": "suitable for containing refreshment",
+              "visual_description": "red ceramic mug with handle, located on the large wooden table"
+            },
+            {
+              "label": "white plate",
+              "suitability_reason": "suitable for containing refreshment",
+              "visual_description": "white round plate, located on the large wooden table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "remote control",
+            "media controller",
+            "entertainment device"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain entertainment control",
+          "id": "role_3",
+          "required_count": 1,
+          "required_properties": [
+            "portable",
+            "button interface"
+          ],
+          "visible_candidates": [
+            {
+              "label": "remote control",
+              "suitability_reason": "suitable for controlling entertainment",
+              "visual_description": "black rectangular remote control with buttons, located on the large wooden table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_4",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "accessible to seating"
+          ],
+          "visible_candidates": [
+            {
+              "label": "large wooden table",
+              "suitability_reason": "central location, suitable for placing entertainment control",
+              "visual_description": "large wooden table with ornate legs, located in the foreground"
+            },
+            {
+              "label": "coffee table",
+              "suitability_reason": "central location between seating, suitable for placing entertainment control",
+              "visual_description": "rectangular table with light green top and ornate legs, located between the two armchairs"
+            },
+            {
+              "label": "left side table",
+              "suitability_reason": "less ideal due to distance from seating, but could be used if other tables are occupied",
+              "visual_description": "small wooden table with two shelves, located to the left of the left armchair"
+            },
+            {
+              "label": "right side table",
+              "suitability_reason": "less ideal due to distance from seating, but could be used if other tables are occupied",
+              "visual_description": "small wooden table with two shelves, located to the right of the right armchair"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "armchair",
+            "sofa",
+            "couch",
+            "chair"
+          ],
+          "entity_kind": "REGION",
+          "function": "support seating",
+          "id": "role_5",
+          "required_count": 2,
+          "required_properties": [
+            "support payload",
+            "cushioned surface"
+          ],
+          "visible_candidates": [
+            {
+              "label": "left armchair",
+              "suitability_reason": "suitable for seating",
+              "visual_description": "black cushioned armchair with wooden frame, located on the left side of the room"
+            },
+            {
+              "label": "right armchair",
+              "suitability_reason": "suitable for seating",
+              "visual_description": "black cushioned armchair with wooden frame, located on the right side of the room"
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "context_relations": [
+            "near"
+          ],
+          "context_role": "role_5",
+          "function": "refreshment setting",
+          "id": "group_1",
+          "required_relations": [
+            "placed on"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_1",
+          "tool_role": "role_2",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "context_relations": [
+            "near"
+          ],
+          "context_role": "role_5",
+          "function": "entertainment control placement",
+          "id": "group_2",
+          "required_relations": [
+            "placed on"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_4",
+          "tool_role": "role_3",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+      "unsupported_reason": ""
+    },
+    "raw_role_to_canonical": {
+      "role_1": "PERSONAL_CUP_SAUCER_REGION",
+      "role_2": "CUP_SAUCER_SET",
+      "role_3": "REMOTE",
+      "role_4": "SHARED_REMOTE_REGION"
+    },
+    "raw_vlm_response": {
+      "functional_relations": [
+        {
+          "object_role": "role_4",
+          "relation": "placed on",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_1",
+          "relation": "placed on",
+          "subject_role": "role_2"
+        },
+        {
+          "object_role": "role_4",
+          "relation": "placed on",
+          "subject_role": "role_3"
+        },
+        {
+          "object_role": "role_1",
+          "relation": "near",
+          "subject_role": "role_5"
+        },
+        {
+          "object_role": "role_4",
+          "relation": "near",
+          "subject_role": "role_5"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support refreshment setting",
+          "id": "role_1",
+          "required_count": 2,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "accessible to seating"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "suitability_reason": "central location between seating, suitable for shared refreshments",
+              "visual_description": "rectangular table with light green top and ornate legs, located between the two armchairs"
+            },
+            {
+              "label": "left side table",
+              "suitability_reason": "adjacent to seating, suitable for individual refreshment setting",
+              "visual_description": "small wooden table with two shelves, located to the left of the left armchair"
+            },
+            {
+              "label": "right side table",
+              "suitability_reason": "adjacent to seating, suitable for individual refreshment setting",
+              "visual_description": "small wooden table with two shelves, located to the right of the right armchair"
+            },
+            {
+              "label": "console table",
+              "suitability_reason": "less ideal due to distance from seating, but could be used if other tables are occupied",
+              "visual_description": "long narrow table against the wall, located behind the left armchair"
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "cup",
+            "mug",
+            "glass",
+            "bowl",
+            "plate"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain refreshment item",
+          "id": "role_2",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "stable base"
+          ],
+          "visible_candidates": [
+            {
+              "label": "red mug",
+              "suitability_reason": "suitable for containing refreshment",
+              "visual_description": "red ceramic mug with handle, located on the large wooden table"
+            },
+            {
+              "label": "white plate",
+              "suitability_reason": "suitable for containing refreshment",
+              "visual_description": "white round plate, located on the large wooden table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "remote control",
+            "media controller",
+            "entertainment device"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain entertainment control",
+          "id": "role_3",
+          "required_count": 1,
+          "required_properties": [
+            "portable",
+            "button interface"
+          ],
+          "visible_candidates": [
+            {
+              "label": "remote control",
+              "suitability_reason": "suitable for controlling entertainment",
+              "visual_description": "black rectangular remote control with buttons, located on the large wooden table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table",
+            "dining table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_4",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "accessible to seating"
+          ],
+          "visible_candidates": [
+            {
+              "label": "large wooden table",
+              "suitability_reason": "central location, suitable for placing entertainment control",
+              "visual_description": "large wooden table with ornate legs, located in the foreground"
+            },
+            {
+              "label": "coffee table",
+              "suitability_reason": "central location between seating, suitable for placing entertainment control",
+              "visual_description": "rectangular table with light green top and ornate legs, located between the two armchairs"
+            },
+            {
+              "label": "left side table",
+              "suitability_reason": "less ideal due to distance from seating, but could be used if other tables are occupied",
+              "visual_description": "small wooden table with two shelves, located to the left of the left armchair"
+            },
+            {
+              "label": "right side table",
+              "suitability_reason": "less ideal due to distance from seating, but could be used if other tables are occupied",
+              "visual_description": "small wooden table with two shelves, located to the right of the right armchair"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "armchair",
+            "sofa",
+            "couch",
+            "chair"
+          ],
+          "entity_kind": "REGION",
+          "function": "support seating",
+          "id": "role_5",
+          "required_count": 2,
+          "required_properties": [
+            "support payload",
+            "cushioned surface"
+          ],
+          "visible_candidates": [
+            {
+              "label": "left armchair",
+              "suitability_reason": "suitable for seating",
+              "visual_description": "black cushioned armchair with wooden frame, located on the left side of the room"
+            },
+            {
+              "label": "right armchair",
+              "suitability_reason": "suitable for seating",
+              "visual_description": "black cushioned armchair with wooden frame, located on the right side of the room"
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "context_relations": [
+            "near"
+          ],
+          "context_role": "role_5",
+          "function": "refreshment setting",
+          "id": "group_1",
+          "required_relations": [
+            "placed on"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_1",
+          "tool_role": "role_2",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "context_relations": [
+            "near"
+          ],
+          "context_role": "role_5",
+          "function": "entertainment control placement",
+          "id": "group_2",
+          "required_relations": [
+            "placed on"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_4",
+          "tool_role": "role_3",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+      "unsupported_reason": ""
+    },
+    "role_semantic_ontology_version": "phase3_p3i_4_semantic_ontology_v1",
+    "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+    "semantic_vocabulary_path": "/home/naren/RA_iiith/mujoco_scenes/configs/l2_integrated_region_function_semantic_vocabulary.yaml",
+    "soft_semantic_evidence": [
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_1",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "accessible to seating",
+        "raw_role_id": "role_1",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "open cavity",
+        "raw_role_id": "role_2",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable base",
+        "raw_role_id": "role_2",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "portable",
+        "raw_role_id": "role_3",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "button interface",
+        "raw_role_id": "role_3",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_4",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "accessible to seating",
+        "raw_role_id": "role_4",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      }
+    ],
+    "structural_sanitizer": {
+      "document": {
+        "functional_relations": [
+          {
+            "object_role": "role_4",
+            "relation": "placed on",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_1",
+            "relation": "placed on",
+            "subject_role": "role_2"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "placed on",
+            "subject_role": "role_3"
+          },
+          {
+            "object_role": "role_1",
+            "relation": "near",
+            "subject_role": "role_5"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "near",
+            "subject_role": "role_5"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support refreshment setting",
+            "id": "role_1",
+            "required_count": 2,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "accessible to seating"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "suitability_reason": "central location between seating, suitable for shared refreshments",
+                "visual_description": "rectangular table with light green top and ornate legs, located between the two armchairs"
+              },
+              {
+                "label": "left side table",
+                "suitability_reason": "adjacent to seating, suitable for individual refreshment setting",
+                "visual_description": "small wooden table with two shelves, located to the left of the left armchair"
+              },
+              {
+                "label": "right side table",
+                "suitability_reason": "adjacent to seating, suitable for individual refreshment setting",
+                "visual_description": "small wooden table with two shelves, located to the right of the right armchair"
+              },
+              {
+                "label": "console table",
+                "suitability_reason": "less ideal due to distance from seating, but could be used if other tables are occupied",
+                "visual_description": "long narrow table against the wall, located behind the left armchair"
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "cup",
+              "mug",
+              "glass",
+              "bowl",
+              "plate"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "contain refreshment item",
+            "id": "role_2",
+            "required_count": 2,
+            "required_properties": [
+              "open cavity",
+              "stable base"
+            ],
+            "visible_candidates": [
+              {
+                "label": "red mug",
+                "suitability_reason": "suitable for containing refreshment",
+                "visual_description": "red ceramic mug with handle, located on the large wooden table"
+              },
+              {
+                "label": "white plate",
+                "suitability_reason": "suitable for containing refreshment",
+                "visual_description": "white round plate, located on the large wooden table"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "remote control",
+              "media controller",
+              "entertainment device"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "contain entertainment control",
+            "id": "role_3",
+            "required_count": 1,
+            "required_properties": [
+              "portable",
+              "button interface"
+            ],
+            "visible_candidates": [
+              {
+                "label": "remote control",
+                "suitability_reason": "suitable for controlling entertainment",
+                "visual_description": "black rectangular remote control with buttons, located on the large wooden table"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table",
+              "dining table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_4",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "accessible to seating"
+            ],
+            "visible_candidates": [
+              {
+                "label": "large wooden table",
+                "suitability_reason": "central location, suitable for placing entertainment control",
+                "visual_description": "large wooden table with ornate legs, located in the foreground"
+              },
+              {
+                "label": "coffee table",
+                "suitability_reason": "central location between seating, suitable for placing entertainment control",
+                "visual_description": "rectangular table with light green top and ornate legs, located between the two armchairs"
+              },
+              {
+                "label": "left side table",
+                "suitability_reason": "less ideal due to distance from seating, but could be used if other tables are occupied",
+                "visual_description": "small wooden table with two shelves, located to the left of the left armchair"
+              },
+              {
+                "label": "right side table",
+                "suitability_reason": "less ideal due to distance from seating, but could be used if other tables are occupied",
+                "visual_description": "small wooden table with two shelves, located to the right of the right armchair"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "armchair",
+              "sofa",
+              "couch",
+              "chair"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support seating",
+            "id": "role_5",
+            "required_count": 2,
+            "required_properties": [
+              "support payload",
+              "cushioned surface"
+            ],
+            "visible_candidates": [
+              {
+                "label": "left armchair",
+                "suitability_reason": "suitable for seating",
+                "visual_description": "black cushioned armchair with wooden frame, located on the left side of the room"
+              },
+              {
+                "label": "right armchair",
+                "suitability_reason": "suitable for seating",
+                "visual_description": "black cushioned armchair with wooden frame, located on the right side of the room"
+              }
+            ]
+          }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "interaction_groups": [
+          {
+            "context_relations": [
+              "near"
+            ],
+            "context_role": "role_5",
+            "function": "refreshment setting",
+            "id": "group_1",
+            "required_relations": [
+              "placed on"
+            ],
+            "required_target_count": 2,
+            "target_role": "role_1",
+            "tool_role": "role_2",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "context_relations": [
+              "near"
+            ],
+            "context_role": "role_5",
+            "function": "entertainment control placement",
+            "id": "group_2",
+            "required_relations": [
+              "placed on"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_4",
+            "tool_role": "role_3",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        ],
+        "status": "SUPPORTED",
+        "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+        "unsupported_reason": ""
+      },
+      "repairs": [],
+      "semantically_incomplete": false,
+      "succeeded": true
+    },
+    "unresolved_semantics": [
+      {
+        "raw_object": "role_4",
+        "raw_phrase": "placed on",
+        "raw_subject": "role_1",
+        "reason": "VLM living room relation 'placed on' cannot be mapped to any reviewed relation (available: ['ACCESSIBLE_FROM_BOTH_SEATS', 'FITS_ON', 'FITS_SET_ON', 'NEAR_SEAT'])",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_1",
+        "raw_phrase": "near",
+        "raw_subject": "role_5",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_4",
+        "raw_phrase": "near",
+        "raw_subject": "role_5",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_5",
+        "raw_phrase": "near",
+        "raw_subject": "role_2",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_5",
+        "raw_phrase": "near",
+        "raw_subject": "role_3",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      }
+    ],
+    "unverified_required_properties": []
+  },
+  "nodes": {
+    "CUP_SAUCER_SET": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "CUP_SAUCER_SET",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup_saucer_set",
+        "cup",
+        "saucer"
+      ],
+      "semantic_hints": [
+        "open cavity",
+        "stable base"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "PERSONAL_CUP_SAUCER_REGION": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "accessible to seating"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "REMOTE": {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "semantic_hints": [
+        "portable",
+        "button interface"
+      ],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "SHARED_REMOTE_REGION": {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "accessible to seating"
+      ],
+      "shared": true,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  },
+  "operation_groups": [],
+  "region_ranking": [],
+  "relations": [
+    {
+      "expected": true,
+      "object_role": "CUP_SAUCER_SET",
+      "predicate": "FITS_SET_ON",
+      "subject_role": "PERSONAL_CUP_SAUCER_REGION"
+    },
+    {
+      "expected": true,
+      "object_role": "REMOTE",
+      "predicate": "FITS_ON",
+      "subject_role": "SHARED_REMOTE_REGION"
+    }
+  ],
+  "roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "CUP_SAUCER_SET",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup_saucer_set",
+        "cup",
+        "saucer"
+      ],
+      "semantic_hints": [
+        "open cavity",
+        "stable base"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "accessible to seating"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "semantic_hints": [
+        "portable",
+        "button interface"
+      ],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "accessible to seating"
+      ],
+      "shared": true,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "source": "VLM_CANONICAL_G_F",
+  "task_instruction": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people."
+}

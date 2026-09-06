@@ -1,0 +1,45 @@
+[
+  {
+    "id": "role_1",
+    "status": "CONTEXT_ONLY"
+  },
+  {
+    "id": "role_2",
+    "requirement": "threaded",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_2",
+    "requirement": "compatible with fastening target",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_3",
+    "requirement": "manipulable",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_3",
+    "requirement": "capable of applying force",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "group_1",
+    "status": "UNINSTANTIABLE_MISSING_RELATION",
+    "raw_group": {
+      "context_relations": [
+        "applied to"
+      ],
+      "context_role": "role_1",
+      "function": "fastening operation",
+      "id": "group_1",
+      "required_relations": [
+        "manipulates"
+      ],
+      "required_target_count": 1,
+      "target_role": "role_2",
+      "tool_role": "role_3",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  }
+]

@@ -1,0 +1,88 @@
+[
+  {
+    "id": "role_3",
+    "status": "CONTEXT_ONLY"
+  },
+  {
+    "id": "role_4",
+    "status": "UNINSTANTIABLE_MISSING_ROLE"
+  },
+  {
+    "id": "role_1",
+    "requirement": "stable surface",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_1",
+    "requirement": "accessible to seating",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_2",
+    "requirement": "stable surface",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_2",
+    "requirement": "accessible to both seating positions",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_5",
+    "requirement": "contain refreshment",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_5",
+    "requirement": "suitable for consumption",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_6",
+    "requirement": "control television",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_6",
+    "requirement": "suitable for entertainment control",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "group_1",
+    "status": "UNSUPPORTED_OPERATOR",
+    "raw_group": {
+      "context_relations": [
+        "near"
+      ],
+      "context_role": "role_3",
+      "function": "refreshment setting",
+      "id": "group_1",
+      "required_relations": [
+        "placed on"
+      ],
+      "required_target_count": 2,
+      "target_role": "role_1",
+      "tool_role": "role_5",
+      "usage_policy": "DEDICATED_PER_TARGET"
+    }
+  },
+  {
+    "id": "group_2",
+    "status": "UNSUPPORTED_OPERATOR",
+    "raw_group": {
+      "context_relations": [
+        "near"
+      ],
+      "context_role": "role_4",
+      "function": "entertainment control",
+      "id": "group_2",
+      "required_relations": [
+        "placed on"
+      ],
+      "required_target_count": 1,
+      "target_role": "role_2",
+      "tool_role": "role_6",
+      "usage_policy": "DEDICATED_PER_TARGET"
+    }
+  }
+]

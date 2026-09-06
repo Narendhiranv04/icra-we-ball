@@ -1,0 +1,268 @@
+{
+  "semantic_vlm_requests": 1,
+  "transport_attempts": 1,
+  "transport_retries": 0,
+  "astar_invocations": 1,
+  "high_level_replans": 0,
+  "inference_config": {
+    "model": "qwen35-9b",
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "top_k": 20,
+    "min_p": 0.0,
+    "presence_penalty": 0.0,
+    "repetition_penalty": 1.0,
+    "max_tokens": 8192,
+    "stream": false,
+    "chat_template_kwargs": {
+      "enable_thinking": false
+    },
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "functional_specification",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "SUPPORTED",
+                "UNSUPPORTED"
+              ]
+            },
+            "task_summary": {
+              "type": "string"
+            },
+            "functional_roles": {
+              "type": "array",
+              "maxItems": 12,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "entity_kind": {
+                    "type": "string",
+                    "enum": [
+                      "OBJECT",
+                      "REGION",
+                      "FIXED_TARGET"
+                    ]
+                  },
+                  "function": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "required_count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20
+                  },
+                  "binding_policy": {
+                    "type": "string",
+                    "enum": [
+                      "DISTINCT",
+                      "REUSABLE",
+                      "SHARED"
+                    ]
+                  },
+                  "candidate_categories": {
+                    "type": "array",
+                    "minItems": 0,
+                    "maxItems": 12,
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "visible_candidates": {
+                    "type": "array",
+                    "minItems": 0,
+                    "maxItems": 16,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "visual_description": {
+                          "type": "string"
+                        },
+                        "suitability_reason": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "visual_description"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required_properties": {
+                    "type": "array",
+                    "minItems": 0,
+                    "maxItems": 16,
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "id",
+                  "entity_kind",
+                  "function",
+                  "required_count",
+                  "binding_policy",
+                  "candidate_categories",
+                  "visible_candidates",
+                  "required_properties"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "functional_relations": {
+              "type": "array",
+              "maxItems": 24,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "subject_role": {
+                    "type": "string"
+                  },
+                  "relation": {
+                    "type": "string"
+                  },
+                  "object_role": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "subject_role",
+                  "relation",
+                  "object_role"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "interaction_groups": {
+              "type": "array",
+              "maxItems": 8,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "function": {
+                    "type": "string"
+                  },
+                  "tool_role": {
+                    "type": "string"
+                  },
+                  "target_role": {
+                    "type": "string"
+                  },
+                  "required_target_count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20
+                  },
+                  "usage_policy": {
+                    "type": "string",
+                    "enum": [
+                      "SEQUENTIAL_REUSE_ALLOWED",
+                      "DEDICATED_PER_TARGET"
+                    ]
+                  },
+                  "required_relations": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 12,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "context_role": {
+                    "type": "string"
+                  },
+                  "context_relations": {
+                    "type": "array",
+                    "minItems": 0,
+                    "maxItems": 12,
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "id",
+                  "function",
+                  "tool_role",
+                  "target_role",
+                  "required_target_count",
+                  "usage_policy",
+                  "required_relations"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "inspectable_regions": {
+              "type": "array",
+              "maxItems": 12,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "visual_description": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label",
+                  "visual_description",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "inspection_order": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "unsupported_reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "task_summary",
+            "functional_roles",
+            "functional_relations",
+            "interaction_groups",
+            "inspectable_regions",
+            "inspection_order",
+            "unsupported_reason"
+          ],
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}

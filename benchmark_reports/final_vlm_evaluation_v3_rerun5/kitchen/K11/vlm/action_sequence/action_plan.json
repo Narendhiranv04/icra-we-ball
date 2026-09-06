@@ -1,0 +1,149 @@
+{
+  "actions": [
+    {
+      "action_index": 1,
+      "action_instance_id": "fact_001_pick",
+      "arguments": [
+        "object_0002"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 2,
+      "action_instance_id": "fact_002_place",
+      "arguments": [
+        "object_0002",
+        "dining_table"
+      ],
+      "operator": "PLACE"
+    },
+    {
+      "action_index": 3,
+      "action_instance_id": "fact_003_pick",
+      "arguments": [
+        "object_0008"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 4,
+      "action_instance_id": "fact_004_place",
+      "arguments": [
+        "object_0008",
+        "dining_table"
+      ],
+      "operator": "PLACE"
+    }
+  ],
+  "exploratory_open_actions_excluded": true,
+  "planner": {
+    "algorithm": "deterministic_astar_symbolic_state_search",
+    "expanded_states": 14,
+    "frontier_peak": 16,
+    "generated_states": 34,
+    "is_partial": false,
+    "plan_cost": 4,
+    "plan_length": 4,
+    "satisfied_goals": 3,
+    "search_time_ms": 0.05849000081070699,
+    "total_goals": 3,
+    "visited_states": 29
+  },
+  "validation": {
+    "final_atoms": [
+      [
+        "at",
+        "object_0002",
+        "dining_table"
+      ],
+      [
+        "at",
+        "object_0004",
+        "C1"
+      ],
+      [
+        "at",
+        "object_0006",
+        "D1"
+      ],
+      [
+        "at",
+        "object_0008",
+        "dining_table"
+      ],
+      [
+        "contains",
+        "object_0002",
+        "soup"
+      ],
+      [
+        "contains",
+        "object_0008",
+        "soup"
+      ],
+      [
+        "hand_empty"
+      ]
+    ],
+    "goal_status": "GOAL_SATISFIED",
+    "missing_goals": [],
+    "satisfied_goals": [
+      [
+        "at",
+        "object_0002",
+        "dining_table"
+      ],
+      [
+        "at",
+        "object_0008",
+        "dining_table"
+      ],
+      [
+        "hand_empty"
+      ]
+    ],
+    "status": "VALID",
+    "steps": [
+      {
+        "arguments": [
+          "object_0002"
+        ],
+        "failure": null,
+        "operator": "PICK",
+        "status": "VALID",
+        "step": 0
+      },
+      {
+        "arguments": [
+          "object_0002",
+          "dining_table"
+        ],
+        "failure": null,
+        "operator": "PLACE",
+        "status": "VALID",
+        "step": 1
+      },
+      {
+        "arguments": [
+          "object_0008"
+        ],
+        "failure": null,
+        "operator": "PICK",
+        "status": "VALID",
+        "step": 2
+      },
+      {
+        "arguments": [
+          "object_0008",
+          "dining_table"
+        ],
+        "failure": null,
+        "operator": "PLACE",
+        "status": "VALID",
+        "step": 3
+      }
+    ],
+    "uses_planner_transition": false,
+    "validator": "independent_symbolic_replay_v1"
+  }
+}

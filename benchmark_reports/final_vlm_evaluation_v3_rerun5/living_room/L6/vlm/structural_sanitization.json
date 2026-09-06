@@ -1,0 +1,247 @@
+{
+  "document": {
+    "functional_relations": [
+      {
+        "object_role": "role_2",
+        "relation": "compatible with",
+        "subject_role": "role_1"
+      },
+      {
+        "object_role": "role_3",
+        "relation": "compatible with",
+        "subject_role": "role_1"
+      },
+      {
+        "object_role": "role_4",
+        "relation": "compatible with",
+        "subject_role": "role_1"
+      },
+      {
+        "object_role": "role_3",
+        "relation": "compatible with",
+        "subject_role": "role_2"
+      },
+      {
+        "object_role": "role_4",
+        "relation": "compatible with",
+        "subject_role": "role_2"
+      },
+      {
+        "object_role": "role_4",
+        "relation": "compatible with",
+        "subject_role": "role_3"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "end table",
+          "small table",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support refreshment setting",
+        "id": "role_1",
+        "required_count": 2,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "sufficient surface area"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee table",
+            "visual_description": "A rectangular coffee table with a light green top and ornate legs, located centrally between the two armchairs."
+          },
+          {
+            "label": "left side table",
+            "visual_description": "A small wooden side table with two shelves, located to the left of the left armchair."
+          },
+          {
+            "label": "right side table",
+            "visual_description": "A small wooden side table with two shelves, located to the right of the right armchair."
+          },
+          {
+            "label": "back console table",
+            "visual_description": "A long, narrow wooden console table against the back wall, under the TV."
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "end table",
+          "small table",
+          "table surface",
+          "console table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support entertainment control",
+        "id": "role_2",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "sufficient surface area"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee table",
+            "visual_description": "A rectangular coffee table with a light green top and ornate legs, located centrally between the two armchairs."
+          },
+          {
+            "label": "left side table",
+            "visual_description": "A small wooden side table with two shelves, located to the left of the left armchair."
+          },
+          {
+            "label": "right side table",
+            "visual_description": "A small wooden side table with two shelves, located to the right of the right armchair."
+          },
+          {
+            "label": "back console table",
+            "visual_description": "A long, narrow wooden console table against the back wall, under the TV."
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "end table",
+          "small table",
+          "table surface",
+          "console table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support entertainment control",
+        "id": "role_3",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "sufficient surface area"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee table",
+            "visual_description": "A rectangular coffee table with a light green top and ornate legs, located centrally between the two armchairs."
+          },
+          {
+            "label": "left side table",
+            "visual_description": "A small wooden side table with two shelves, located to the left of the left armchair."
+          },
+          {
+            "label": "right side table",
+            "visual_description": "A small wooden side table with two shelves, located to the right of the right armchair."
+          },
+          {
+            "label": "back console table",
+            "visual_description": "A long, narrow wooden console table against the back wall, under the TV."
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "end table",
+          "small table",
+          "table surface",
+          "console table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support entertainment control",
+        "id": "role_4",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "sufficient surface area"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee table",
+            "visual_description": "A rectangular coffee table with a light green top and ornate legs, located centrally between the two armchairs."
+          },
+          {
+            "label": "left side table",
+            "visual_description": "A small wooden side table with two shelves, located to the left of the left armchair."
+          },
+          {
+            "label": "right side table",
+            "visual_description": "A small wooden side table with two shelves, located to the right of the right armchair."
+          },
+          {
+            "label": "back console table",
+            "visual_description": "A long, narrow wooden console table against the back wall, under the TV."
+          }
+        ],
+        "description": ""
+      }
+    ],
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "interaction_groups": [
+      {
+        "function": "refreshment setting",
+        "id": "group_1",
+        "required_relations": [
+          "support payload"
+        ],
+        "required_target_count": 2,
+        "target_role": "role_1",
+        "tool_role": "role_1",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      },
+      {
+        "function": "entertainment control placement",
+        "id": "group_2",
+        "required_relations": [
+          "support payload"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_2",
+        "tool_role": "role_2",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      },
+      {
+        "function": "entertainment control placement",
+        "id": "group_3",
+        "required_relations": [
+          "support payload"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_3",
+        "tool_role": "role_3",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      },
+      {
+        "function": "entertainment control placement",
+        "id": "group_4",
+        "required_relations": [
+          "support payload"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_4",
+        "tool_role": "role_4",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    ],
+    "status": "SUPPORTED",
+    "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+    "unsupported_reason": ""
+  },
+  "repairs": [],
+  "semantically_incomplete": false,
+  "succeeded": true
+}

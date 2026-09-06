@@ -1,0 +1,124 @@
+{
+  "document": {
+    "functional_relations": [
+      {
+        "object_role": "role_2",
+        "relation": "requires",
+        "subject_role": "role_1"
+      },
+      {
+        "object_role": "role_3",
+        "relation": "requires",
+        "subject_role": "role_1"
+      },
+      {
+        "object_role": "role_1",
+        "relation": "compatible with",
+        "subject_role": "role_2"
+      },
+      {
+        "object_role": "role_2",
+        "relation": "manipulates",
+        "subject_role": "role_3"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "workbench surface",
+          "marked workbench location"
+        ],
+        "entity_kind": "REGION",
+        "function": "fastening target",
+        "id": "role_1",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "accessible surface"
+        ],
+        "visible_candidates": [
+          {
+            "label": "marked workbench location",
+            "visual_description": "A specific area on the workbench surface, likely indicated by a marker or fixture."
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut",
+          "washer",
+          "fastener"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "fastening component",
+        "id": "role_2",
+        "required_count": 1,
+        "required_properties": [
+          "threaded",
+          "compatible with fastening target"
+        ],
+        "visible_candidates": [
+          {
+            "label": "yellow fastener",
+            "visual_description": "A yellow object on the workbench, possibly a screw or bolt."
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "drill",
+          "fastening implement"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "fastening tool",
+        "id": "role_3",
+        "required_count": 1,
+        "required_properties": [
+          "manipulable",
+          "capable of applying force"
+        ],
+        "visible_candidates": [
+          {
+            "label": "robot arm",
+            "visual_description": "A robotic arm, which can be used as a fastening tool."
+          }
+        ],
+        "description": ""
+      }
+    ],
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "interaction_groups": [
+      {
+        "context_relations": [
+          "applied to"
+        ],
+        "context_role": "role_1",
+        "function": "fastening operation",
+        "id": "group_1",
+        "required_relations": [
+          "manipulates"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_2",
+        "tool_role": "role_3",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    ],
+    "status": "SUPPORTED",
+    "task_summary": "Identify compatible components for fastening at the marked workbench location, complete the fastening, and leave reusable equipment on the workbench.",
+    "unsupported_reason": ""
+  },
+  "repairs": [],
+  "semantically_incomplete": false,
+  "succeeded": true
+}

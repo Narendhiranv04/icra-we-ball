@@ -1,0 +1,137 @@
+{
+  "assignment": null,
+  "evidence": {
+    "grounding_evidence": {
+      "candidate_evaluations": {
+        "driver:object_0001": {
+          "checks": {
+            "semantic_categories": {
+              "expected": [
+                "screwdriver",
+                "power_driver",
+                "power_drill",
+                "Phillips screwdriver",
+                "cordless power drill"
+              ],
+              "matched": null,
+              "status": "FALSE"
+            }
+          },
+          "instance_id": "object_0001",
+          "role_name": "driver"
+        },
+        "driver:object_0002": {
+          "checks": {
+            "semantic_categories": {
+              "expected": [
+                "screwdriver",
+                "power_driver",
+                "power_drill",
+                "Phillips screwdriver",
+                "cordless power drill"
+              ],
+              "matched": "power_driver",
+              "status": "TRUE"
+            }
+          },
+          "instance_id": "object_0002",
+          "role_name": "driver"
+        },
+        "driver:object_0003": {
+          "checks": {
+            "semantic_categories": {
+              "expected": [
+                "screwdriver",
+                "power_driver",
+                "power_drill",
+                "Phillips screwdriver",
+                "cordless power drill"
+              ],
+              "matched": "power_driver",
+              "status": "TRUE"
+            }
+          },
+          "instance_id": "object_0003",
+          "role_name": "driver"
+        },
+        "driver:repair_target": {
+          "checks": {
+            "entity_kind": {
+              "actual": "FIXED_TARGET",
+              "expected": "OBJECT",
+              "status": "FALSE"
+            }
+          },
+          "instance_id": "repair_target",
+          "role_name": "driver"
+        },
+        "fastener:object_0001": {
+          "checks": {
+            "semantic_categories": {
+              "expected": [
+                "screw",
+                "Phillips screw",
+                "Phillips head screw"
+              ],
+              "matched": null,
+              "status": "FALSE"
+            }
+          },
+          "instance_id": "object_0001",
+          "role_name": "fastener"
+        },
+        "fastener:object_0002": {
+          "checks": {
+            "semantic_categories": {
+              "expected": [
+                "screw",
+                "Phillips screw",
+                "Phillips head screw"
+              ],
+              "matched": null,
+              "status": "FALSE"
+            }
+          },
+          "instance_id": "object_0002",
+          "role_name": "fastener"
+        },
+        "fastener:object_0003": {
+          "checks": {
+            "semantic_categories": {
+              "expected": [
+                "screw",
+                "Phillips screw",
+                "Phillips head screw"
+              ],
+              "matched": null,
+              "status": "FALSE"
+            }
+          },
+          "instance_id": "object_0003",
+          "role_name": "fastener"
+        },
+        "fastener:repair_target": {
+          "checks": {
+            "entity_kind": {
+              "actual": "FIXED_TARGET",
+              "expected": "OBJECT",
+              "status": "FALSE"
+            }
+          },
+          "instance_id": "repair_target",
+          "role_name": "fastener"
+        }
+      }
+    },
+    "grounding_status": "INFEASIBLE",
+    "observed_object_count": 3,
+    "reason": "NO_COMPATIBLE_SCREW",
+    "stage": 3
+  },
+  "missing_requirements": [
+    "fastener",
+    "fastener"
+  ],
+  "satisfied": false,
+  "status": "INFEASIBLE"
+}

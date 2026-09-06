@@ -1,0 +1,102 @@
+{
+  "actions": [
+    {
+      "action_index": 1,
+      "action_instance_id": "fact_001_pick",
+      "arguments": [
+        "object_0001",
+        "LEFT_DRAWER"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 2,
+      "action_instance_id": "fact_002_place",
+      "arguments": [
+        "object_0001",
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "operator": "PLACE"
+    }
+  ],
+  "exploratory_open_actions_excluded": true,
+  "planner": {
+    "algorithm": "deterministic_astar_symbolic_state_search",
+    "expanded_states": 3,
+    "frontier_peak": 1,
+    "generated_states": 3,
+    "is_partial": true,
+    "plan_cost": 2,
+    "plan_length": 2,
+    "satisfied_goals": 2,
+    "search_time_ms": 0.014215998817235231,
+    "total_goals": 3,
+    "visited_states": 3
+  },
+  "validation": {
+    "final_atoms": [
+      [
+        "at",
+        "object_0001",
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      [
+        "hand_empty"
+      ],
+      [
+        "open",
+        "LEFT_DRAWER"
+      ],
+      [
+        "open",
+        "RIGHT_DRAWER"
+      ],
+      [
+        "open",
+        "TOOL_CABINET"
+      ]
+    ],
+    "goal_status": "PARTIAL_GOAL_SATISFIED",
+    "missing_goals": [
+      [
+        "repaired",
+        "workshop_frame_joint"
+      ]
+    ],
+    "satisfied_goals": [
+      [
+        "at",
+        "object_0001",
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      [
+        "hand_empty"
+      ]
+    ],
+    "status": "VALID",
+    "steps": [
+      {
+        "arguments": [
+          "object_0001",
+          "LEFT_DRAWER"
+        ],
+        "failure": null,
+        "operator": "PICK",
+        "status": "VALID",
+        "step": 0
+      },
+      {
+        "arguments": [
+          "object_0001",
+          "MAIN_WORKBENCH_ZONE"
+        ],
+        "failure": null,
+        "operator": "PLACE",
+        "status": "VALID",
+        "step": 1
+      }
+    ],
+    "uses_planner_transition": false,
+    "validator": "independent_symbolic_replay_v1"
+  }
+}

@@ -1,0 +1,241 @@
+{
+  "document": {
+    "functional_relations": [
+      {
+        "object_role": "role_2",
+        "relation": "compatible with",
+        "subject_role": "role_1"
+      },
+      {
+        "object_role": "role_3",
+        "relation": "compatible with",
+        "subject_role": "role_1"
+      },
+      {
+        "object_role": "role_4",
+        "relation": "compatible with",
+        "subject_role": "role_1"
+      },
+      {
+        "object_role": "role_3",
+        "relation": "compatible with",
+        "subject_role": "role_2"
+      },
+      {
+        "object_role": "role_4",
+        "relation": "compatible with",
+        "subject_role": "role_2"
+      },
+      {
+        "object_role": "role_4",
+        "relation": "compatible with",
+        "subject_role": "role_3"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "end table",
+          "small table",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support refreshment setting",
+        "id": "role_1",
+        "required_count": 2,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "accessible to seated person"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee table",
+            "suitability_reason": "central location between seating, suitable for shared refreshments",
+            "visual_description": "rectangular table with light green top and ornate legs, located centrally between two armchairs"
+          },
+          {
+            "label": "left side table",
+            "suitability_reason": "adjacent to seating, suitable for individual refreshment setting",
+            "visual_description": "small wooden table with two shelves, located to the left of the left armchair"
+          },
+          {
+            "label": "right side table",
+            "suitability_reason": "adjacent to seating, suitable for individual refreshment setting",
+            "visual_description": "small wooden table with two shelves, located to the right of the right armchair"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "end table",
+          "small table",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support entertainment control",
+        "id": "role_2",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "accessible to both seated people"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee table",
+            "suitability_reason": "central location, accessible to both seated people",
+            "visual_description": "rectangular table with light green top and ornate legs, located centrally between two armchairs"
+          },
+          {
+            "label": "left side table",
+            "suitability_reason": "accessible to left person, may be less accessible to right person",
+            "visual_description": "small wooden table with two shelves, located to the left of the left armchair"
+          },
+          {
+            "label": "right side table",
+            "suitability_reason": "accessible to right person, may be less accessible to left person",
+            "visual_description": "small wooden table with two shelves, located to the right of the right armchair"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "end table",
+          "small table",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support refreshment setting",
+        "id": "role_3",
+        "required_count": 2,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "accessible to seated person"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee table",
+            "suitability_reason": "central location, suitable for shared refreshments",
+            "visual_description": "rectangular table with light green top and ornate legs, located centrally between two armchairs"
+          },
+          {
+            "label": "left side table",
+            "suitability_reason": "adjacent to seating, suitable for individual refreshment setting",
+            "visual_description": "small wooden table with two shelves, located to the left of the left armchair"
+          },
+          {
+            "label": "right side table",
+            "suitability_reason": "adjacent to seating, suitable for individual refreshment setting",
+            "visual_description": "small wooden table with two shelves, located to the right of the right armchair"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "end table",
+          "small table",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support entertainment control",
+        "id": "role_4",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "accessible to both seated people"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee table",
+            "suitability_reason": "central location, accessible to both seated people",
+            "visual_description": "rectangular table with light green top and ornate legs, located centrally between two armchairs"
+          },
+          {
+            "label": "left side table",
+            "suitability_reason": "accessible to left person, may be less accessible to right person",
+            "visual_description": "small wooden table with two shelves, located to the left of the left armchair"
+          },
+          {
+            "label": "right side table",
+            "suitability_reason": "accessible to right person, may be less accessible to left person",
+            "visual_description": "small wooden table with two shelves, located to the right of the right armchair"
+          }
+        ],
+        "description": ""
+      }
+    ],
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "interaction_groups": [
+      {
+        "context_relations": [
+          "near"
+        ],
+        "context_role": "role_2",
+        "function": "refreshment setting for person 1",
+        "id": "group_1",
+        "required_relations": [
+          "placed on"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_3",
+        "tool_role": "role_1",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      },
+      {
+        "context_relations": [
+          "near"
+        ],
+        "context_role": "role_2",
+        "function": "refreshment setting for person 2",
+        "id": "group_2",
+        "required_relations": [
+          "placed on"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_3",
+        "tool_role": "role_1",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      },
+      {
+        "context_relations": [
+          "near"
+        ],
+        "context_role": "role_1",
+        "function": "entertainment control placement",
+        "id": "group_3",
+        "required_relations": [
+          "placed on"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_4",
+        "tool_role": "role_2",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    ],
+    "status": "SUPPORTED",
+    "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+    "unsupported_reason": ""
+  },
+  "repairs": [],
+  "semantically_incomplete": false,
+  "succeeded": true
+}

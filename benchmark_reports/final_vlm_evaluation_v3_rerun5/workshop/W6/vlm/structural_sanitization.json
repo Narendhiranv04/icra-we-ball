@@ -1,0 +1,142 @@
+{
+  "document": {
+    "functional_relations": [
+      {
+        "object_role": "role_2",
+        "relation": "requires",
+        "subject_role": "role_1"
+      },
+      {
+        "object_role": "role_3",
+        "relation": "requires",
+        "subject_role": "role_1"
+      },
+      {
+        "object_role": "role_4",
+        "relation": "placed on",
+        "subject_role": "role_3"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "marked workbench location",
+          "workbench surface",
+          "workbench area"
+        ],
+        "entity_kind": "REGION",
+        "function": "fastening target",
+        "id": "role_1",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "accessible surface"
+        ],
+        "visible_candidates": [
+          {
+            "label": "marked workbench location",
+            "visual_description": "A marked area on the workbench surface, likely indicated by a visual marker or outline."
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut",
+          "washer",
+          "fastener"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "fastening component",
+        "id": "role_2",
+        "required_count": 1,
+        "required_properties": [
+          "threaded shaft",
+          "head for driving"
+        ],
+        "visible_candidates": [
+          {
+            "label": "screw/bolt",
+            "visual_description": "A small metallic object, likely a screw or bolt, visible on the workbench."
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screwdriver",
+          "drill",
+          "wrench",
+          "tool"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "fastening tool",
+        "id": "role_3",
+        "required_count": 1,
+        "required_properties": [
+          "handle for grip",
+          "shaft for driving"
+        ],
+        "visible_candidates": [
+          {
+            "label": "screwdriver",
+            "visual_description": "A tool with a handle and a shaft, likely a screwdriver, visible on the workbench."
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "workbench surface",
+          "workbench area"
+        ],
+        "entity_kind": "REGION",
+        "function": "equipment placement area",
+        "id": "role_4",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "stable surface"
+        ],
+        "visible_candidates": [
+          {
+            "label": "workbench surface",
+            "visual_description": "The flat surface of the workbench where equipment can be placed."
+          }
+        ],
+        "description": ""
+      }
+    ],
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "interaction_groups": [
+      {
+        "context_relations": [
+          "role_3 placed on role_4"
+        ],
+        "context_role": "role_4",
+        "function": "fastening operation",
+        "id": "group_1",
+        "required_relations": [
+          "role_3 drives role_2 into role_1"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_1",
+        "tool_role": "role_3",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    ],
+    "status": "SUPPORTED",
+    "task_summary": "Identify compatible components for fastening at a marked workbench location, complete the fastening, and leave reusable equipment on the workbench.",
+    "unsupported_reason": ""
+  },
+  "repairs": [],
+  "semantically_incomplete": false,
+  "succeeded": true
+}

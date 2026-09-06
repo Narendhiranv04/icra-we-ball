@@ -1,0 +1,778 @@
+{
+  "candidate_regions": [],
+  "cross_group_reuse_allowed": false,
+  "detector_vocabulary": [
+    "chair side table",
+    "coffee table",
+    "end table",
+    "small table",
+    "side table"
+  ],
+  "domain": "living_room",
+  "metadata": {
+    "candidate_categories_used_for_detector_vocabulary": true,
+    "candidate_categories_used_for_grounding_acceptance": false,
+    "candidate_categories_used_for_role_identity": true,
+    "candidate_requirement_statuses": [
+      {
+        "id": "role_1",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_1",
+        "requirement": "accessible to seated person",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_2",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_2",
+        "requirement": "accessible to both people",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_3",
+        "requirement": "stable surface",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_3",
+        "requirement": "accessible to seated person",
+        "status": "SOFT_SEMANTIC_ONLY"
+      }
+    ],
+    "canonicalization_status": "PARTIAL",
+    "canonicalization_trace": {
+      "context_only_roles": [],
+      "disabled_groups": [],
+      "disambiguated_roles": [],
+      "groups": [],
+      "merged_roles": [
+        {
+          "canonical_role": "PERSONAL_CUP_SAUCER_REGION",
+          "code": "RAW_ROLE_MERGED",
+          "raw_ids": [
+            "role_1",
+            "role_3"
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_1",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_1",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "accessible to seated person",
+          "raw_role_id": "role_1",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_2",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_2",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "accessible to both people",
+          "raw_role_id": "role_2",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": "PLANAR_SUPPORT",
+          "raw_phrase": "planar support",
+          "raw_role_id": "role_3",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stable surface",
+          "raw_role_id": "role_3",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "accessible to seated person",
+          "raw_role_id": "role_3",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        }
+      ],
+      "relations": [],
+      "roles": [
+        {
+          "canonical_role": "PERSONAL_CUP_SAUCER_REGION",
+          "raw_id": "role_1",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "raw_id": "role_2",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "PERSONAL_CUP_SAUCER_REGION",
+          "raw_id": "role_3",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        }
+      ],
+      "unresolved_roles": []
+    },
+    "detector_vocabulary_source": "VLM_CANDIDATES_PLUS_RELEVANT_SYSTEM_ALIASES",
+    "raw_decomposition": {
+      "functional_relations": [
+        {
+          "object_role": "role_4",
+          "relation": "near anchor",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_4",
+          "relation": "near anchor",
+          "subject_role": "role_3"
+        },
+        {
+          "object_role": "role_4",
+          "relation": "near anchor",
+          "subject_role": "role_2"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "chair side table",
+            "coffee table",
+            "end table",
+            "small table",
+            "side table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support refreshment setting",
+          "id": "role_1",
+          "required_count": 2,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "accessible to seated person"
+          ],
+          "visible_candidates": [
+            {
+              "label": "chair side table",
+              "visual_description": "small wooden table next to a chair"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_2",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "accessible to both people"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "large wooden table in the center of the room"
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "chair side table",
+            "coffee table",
+            "end table",
+            "small table",
+            "side table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support refreshment setting",
+          "id": "role_3",
+          "required_count": 2,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "accessible to seated person"
+          ],
+          "visible_candidates": [
+            {
+              "label": "chair side table",
+              "visual_description": "small wooden table next to a chair"
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "context_relations": [
+            "near anchor"
+          ],
+          "context_role": "role_4",
+          "function": "provide refreshment setting",
+          "id": "group_1",
+          "required_relations": [
+            "near anchor"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_1",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "context_relations": [
+            "near anchor"
+          ],
+          "context_role": "role_4",
+          "function": "provide refreshment setting",
+          "id": "group_2",
+          "required_relations": [
+            "near anchor"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_3",
+          "tool_role": "role_3",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "context_relations": [
+            "near anchor"
+          ],
+          "context_role": "role_4",
+          "function": "place entertainment control",
+          "id": "group_3",
+          "required_relations": [
+            "near anchor"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_2",
+          "tool_role": "role_2",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+      "unsupported_reason": ""
+    },
+    "raw_role_to_canonical": {
+      "role_1": "PERSONAL_CUP_SAUCER_REGION",
+      "role_2": "SHARED_REMOTE_REGION",
+      "role_3": "PERSONAL_CUP_SAUCER_REGION"
+    },
+    "raw_vlm_response": {
+      "functional_relations": [
+        {
+          "object_role": "role_4",
+          "relation": "near anchor",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_4",
+          "relation": "near anchor",
+          "subject_role": "role_3"
+        },
+        {
+          "object_role": "role_4",
+          "relation": "near anchor",
+          "subject_role": "role_2"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "chair side table",
+            "coffee table",
+            "end table",
+            "small table",
+            "side table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support refreshment setting",
+          "id": "role_1",
+          "required_count": 2,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "accessible to seated person"
+          ],
+          "visible_candidates": [
+            {
+              "label": "chair side table",
+              "visual_description": "small wooden table next to a chair"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "coffee table",
+            "side table",
+            "end table",
+            "small table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment control",
+          "id": "role_2",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "accessible to both people"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee table",
+              "visual_description": "large wooden table in the center of the room"
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "chair side table",
+            "coffee table",
+            "end table",
+            "small table",
+            "side table"
+          ],
+          "entity_kind": "REGION",
+          "function": "support refreshment setting",
+          "id": "role_3",
+          "required_count": 2,
+          "required_properties": [
+            "planar support",
+            "stable surface",
+            "accessible to seated person"
+          ],
+          "visible_candidates": [
+            {
+              "label": "chair side table",
+              "visual_description": "small wooden table next to a chair"
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "context_relations": [
+            "near anchor"
+          ],
+          "context_role": "role_4",
+          "function": "provide refreshment setting",
+          "id": "group_1",
+          "required_relations": [
+            "near anchor"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_1",
+          "tool_role": "role_1",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "context_relations": [
+            "near anchor"
+          ],
+          "context_role": "role_4",
+          "function": "provide refreshment setting",
+          "id": "group_2",
+          "required_relations": [
+            "near anchor"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_3",
+          "tool_role": "role_3",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "context_relations": [
+            "near anchor"
+          ],
+          "context_role": "role_4",
+          "function": "place entertainment control",
+          "id": "group_3",
+          "required_relations": [
+            "near anchor"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_2",
+          "tool_role": "role_2",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+      "unsupported_reason": ""
+    },
+    "role_semantic_ontology_version": "phase3_p3i_4_semantic_ontology_v1",
+    "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+    "semantic_vocabulary_path": "/home/naren/RA_iiith/mujoco_scenes/configs/l2_integrated_region_function_semantic_vocabulary.yaml",
+    "soft_semantic_evidence": [
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_1",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "accessible to seated person",
+        "raw_role_id": "role_1",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_2",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "accessible to both people",
+        "raw_role_id": "role_2",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stable surface",
+        "raw_role_id": "role_3",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "accessible to seated person",
+        "raw_role_id": "role_3",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      }
+    ],
+    "structural_sanitizer": {
+      "document": {
+        "functional_relations": [],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "chair side table",
+              "coffee table",
+              "end table",
+              "small table",
+              "side table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support refreshment setting",
+            "id": "role_1",
+            "required_count": 2,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "accessible to seated person"
+            ],
+            "visible_candidates": [
+              {
+                "label": "chair side table",
+                "visual_description": "small wooden table next to a chair"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "end table",
+              "small table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support entertainment control",
+            "id": "role_2",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "accessible to both people"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee table",
+                "visual_description": "large wooden table in the center of the room"
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "chair side table",
+              "coffee table",
+              "end table",
+              "small table",
+              "side table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "support refreshment setting",
+            "id": "role_3",
+            "required_count": 2,
+            "required_properties": [
+              "planar support",
+              "stable surface",
+              "accessible to seated person"
+            ],
+            "visible_candidates": [
+              {
+                "label": "chair side table",
+                "visual_description": "small wooden table next to a chair"
+              }
+            ]
+          }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "interaction_groups": [],
+        "status": "SUPPORTED",
+        "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+        "unsupported_reason": ""
+      },
+      "repairs": [
+        {
+          "code": "DANGLING_RELATION_REFERENCE",
+          "raw": {
+            "object_role": "role_4",
+            "relation": "near anchor",
+            "subject_role": "role_1"
+          }
+        },
+        {
+          "code": "DANGLING_RELATION_REFERENCE",
+          "raw": {
+            "object_role": "role_4",
+            "relation": "near anchor",
+            "subject_role": "role_3"
+          }
+        },
+        {
+          "code": "DANGLING_RELATION_REFERENCE",
+          "raw": {
+            "object_role": "role_4",
+            "relation": "near anchor",
+            "subject_role": "role_2"
+          }
+        },
+        {
+          "code": "INVALID_GROUP_REFERENCE",
+          "raw": {
+            "context_relations": [
+              "near anchor"
+            ],
+            "context_role": "role_4",
+            "function": "provide refreshment setting",
+            "id": "group_1",
+            "required_relations": [
+              "near anchor"
+            ],
+            "required_target_count": 2,
+            "target_role": "role_1",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        },
+        {
+          "code": "INVALID_GROUP_REFERENCE",
+          "raw": {
+            "context_relations": [
+              "near anchor"
+            ],
+            "context_role": "role_4",
+            "function": "provide refreshment setting",
+            "id": "group_2",
+            "required_relations": [
+              "near anchor"
+            ],
+            "required_target_count": 2,
+            "target_role": "role_3",
+            "tool_role": "role_3",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        },
+        {
+          "code": "INVALID_GROUP_REFERENCE",
+          "raw": {
+            "context_relations": [
+              "near anchor"
+            ],
+            "context_role": "role_4",
+            "function": "place entertainment control",
+            "id": "group_3",
+            "required_relations": [
+              "near anchor"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_2",
+            "tool_role": "role_2",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        }
+      ],
+      "semantically_incomplete": true,
+      "succeeded": true
+    },
+    "unresolved_semantics": [],
+    "unverified_required_properties": []
+  },
+  "nodes": {
+    "PERSONAL_CUP_SAUCER_REGION": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "accessible to seated person"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "SHARED_REMOTE_REGION": {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "accessible to both people"
+      ],
+      "shared": true,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  },
+  "operation_groups": [],
+  "region_ranking": [],
+  "relations": [],
+  "roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "accessible to seated person"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [
+        "planar support",
+        "stable surface",
+        "accessible to both people"
+      ],
+      "shared": true,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "source": "VLM_CANONICAL_G_F",
+  "task_instruction": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people."
+}

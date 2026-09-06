@@ -1,0 +1,300 @@
+{
+  "document": {
+    "functional_relations": [
+      {
+        "object_role": "role_1",
+        "relation": "placed on",
+        "subject_role": "role_3"
+      },
+      {
+        "object_role": "role_2",
+        "relation": "placed on",
+        "subject_role": "role_4"
+      },
+      {
+        "object_role": "role_1",
+        "relation": "placed on",
+        "subject_role": "role_5"
+      },
+      {
+        "object_role": "role_2",
+        "relation": "placed on",
+        "subject_role": "role_6"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "end table",
+          "small table",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support refreshment setting",
+        "id": "role_1",
+        "required_count": 2,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "accessible to seated person"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee table",
+            "suitability_reason": "central location between seating, suitable for shared refreshments",
+            "visual_description": "rectangular table with light green top and ornate legs, located centrally between the two armchairs"
+          },
+          {
+            "label": "left side table",
+            "suitability_reason": "adjacent to seating, suitable for individual refreshment setting",
+            "visual_description": "small wooden table with two shelves, located to the left of the left armchair"
+          },
+          {
+            "label": "right side table",
+            "suitability_reason": "adjacent to seating, suitable for individual refreshment setting",
+            "visual_description": "small wooden table with two shelves, located to the right of the right armchair"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "end table",
+          "small table",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support entertainment control",
+        "id": "role_2",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "accessible to both seated people"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee table",
+            "suitability_reason": "central location, accessible to both seated people",
+            "visual_description": "rectangular table with light green top and ornate legs, located centrally between the two armchairs"
+          },
+          {
+            "label": "left side table",
+            "suitability_reason": "accessible to left person, may be less accessible to right person",
+            "visual_description": "small wooden table with two shelves, located to the left of the left armchair"
+          },
+          {
+            "label": "right side table",
+            "suitability_reason": "accessible to right person, may be less accessible to left person",
+            "visual_description": "small wooden table with two shelves, located to the right of the right armchair"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "mug",
+          "glass",
+          "bowl",
+          "plate"
+        ],
+        "entity_kind": "REGION",
+        "function": "support refreshment",
+        "id": "role_3",
+        "required_count": 2,
+        "required_properties": [
+          "contain liquid",
+          "stable base"
+        ],
+        "visible_candidates": [
+          {
+            "label": "red mug",
+            "suitability_reason": "suitable for holding refreshment",
+            "visual_description": "red ceramic mug, located on the large wooden table in the foreground"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote control",
+          "entertainment control device"
+        ],
+        "entity_kind": "REGION",
+        "function": "support entertainment control",
+        "id": "role_4",
+        "required_count": 1,
+        "required_properties": [
+          "contain buttons",
+          "portable"
+        ],
+        "visible_candidates": [
+          {
+            "label": "remote control",
+            "suitability_reason": "suitable for controlling entertainment",
+            "visual_description": "black remote control, located on the large wooden table in the foreground"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "plate",
+          "bowl",
+          "dish"
+        ],
+        "entity_kind": "REGION",
+        "function": "support refreshment setting",
+        "id": "role_5",
+        "required_count": 2,
+        "required_properties": [
+          "flat surface",
+          "stable base"
+        ],
+        "visible_candidates": [
+          {
+            "label": "white plate",
+            "suitability_reason": "suitable for holding refreshment",
+            "visual_description": "white plate, located on the large wooden table in the foreground"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote control",
+          "entertainment control device"
+        ],
+        "entity_kind": "REGION",
+        "function": "support entertainment control",
+        "id": "role_6",
+        "required_count": 1,
+        "required_properties": [
+          "contain buttons",
+          "portable"
+        ],
+        "visible_candidates": [
+          {
+            "label": "remote control",
+            "suitability_reason": "suitable for controlling entertainment",
+            "visual_description": "black remote control, located on the large wooden table in the foreground"
+          }
+        ],
+        "description": ""
+      }
+    ],
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "interaction_groups": [],
+    "status": "SUPPORTED",
+    "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+    "unsupported_reason": ""
+  },
+  "repairs": [
+    {
+      "code": "DUPLICATE_VISIBLE_CANDIDATE_REMOVED",
+      "raw": {
+        "role": "role_3",
+        "candidate": {
+          "label": "red mug",
+          "suitability_reason": "suitable for holding refreshment",
+          "visual_description": "red ceramic mug, located on the large wooden table in the foreground"
+        }
+      }
+    },
+    {
+      "code": "DUPLICATE_VISIBLE_CANDIDATE_REMOVED",
+      "raw": {
+        "role": "role_5",
+        "candidate": {
+          "label": "white plate",
+          "suitability_reason": "suitable for holding refreshment",
+          "visual_description": "white plate, located on the large wooden table in the foreground"
+        }
+      }
+    },
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "role_7",
+        "relation": "near anchor",
+        "subject_role": "role_1"
+      }
+    },
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "role_7",
+        "relation": "near anchor",
+        "subject_role": "role_2"
+      }
+    },
+    {
+      "code": "INVALID_GROUP_REFERENCE",
+      "raw": {
+        "context_relations": [
+          "near anchor"
+        ],
+        "context_role": "role_7",
+        "function": "refreshment setting for person 1",
+        "id": "group_1",
+        "required_relations": [
+          "placed on"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_1",
+        "tool_role": "role_3",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    },
+    {
+      "code": "INVALID_GROUP_REFERENCE",
+      "raw": {
+        "context_relations": [
+          "near anchor"
+        ],
+        "context_role": "role_7",
+        "function": "refreshment setting for person 2",
+        "id": "group_2",
+        "required_relations": [
+          "placed on"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_1",
+        "tool_role": "role_3",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    },
+    {
+      "code": "INVALID_GROUP_REFERENCE",
+      "raw": {
+        "context_relations": [
+          "near anchor"
+        ],
+        "context_role": "role_7",
+        "function": "entertainment control placement",
+        "id": "group_3",
+        "required_relations": [
+          "placed on"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_2",
+        "tool_role": "role_4",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    }
+  ],
+  "semantically_incomplete": true,
+  "succeeded": true
+}

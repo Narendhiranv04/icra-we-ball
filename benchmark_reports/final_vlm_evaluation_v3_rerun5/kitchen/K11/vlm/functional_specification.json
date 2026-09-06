@@ -1,0 +1,1292 @@
+{
+  "candidate_regions": [
+    "C1",
+    "C2"
+  ],
+  "cross_group_reuse_allowed": true,
+  "detector_vocabulary": [
+    "coffee cup",
+    "mug",
+    "water bottle",
+    "water jug",
+    "water container",
+    "coffee canister",
+    "coffee jar",
+    "coffee container",
+    "soup bowl",
+    "bowl",
+    "soup container",
+    "soup canister",
+    "soup jar",
+    "spoon",
+    "stirrer",
+    "utensil",
+    "cup",
+    "kettle",
+    "coffee source"
+  ],
+  "domain": "kitchen",
+  "metadata": {
+    "candidate_categories_used_for_detector_vocabulary": true,
+    "candidate_categories_used_for_grounding_acceptance": false,
+    "candidate_categories_used_for_role_identity": true,
+    "candidate_requirement_statuses": [
+      {
+        "id": "role_5",
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "role_2",
+        "requirement": "open cavity",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_2",
+        "requirement": "liquid container",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_3",
+        "requirement": "open cavity",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_3",
+        "requirement": "cylindrical shape",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_6",
+        "requirement": "stirring capability",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "group_1",
+        "raw_group": {
+          "function": "prepare coffee",
+          "id": "group_1",
+          "required_relations": [
+            "fits inside"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_1",
+          "tool_role": "role_6",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        "status": "UNSUPPORTED_OPERATOR"
+      },
+      {
+        "id": "soup_serving",
+        "missing_roles": [],
+        "roles": [
+          "coffee_stirrer",
+          "soup_container"
+        ],
+        "status": "UNINSTANTIABLE_UNGROUNDED_ROLE"
+      }
+    ],
+    "canonicalization_status": "PARTIAL",
+    "canonicalization_trace": {
+      "context_only_roles": [],
+      "disabled_groups": [
+        {
+          "raw_group": {
+            "function": "prepare coffee",
+            "id": "group_1",
+            "required_relations": [
+              "fits inside"
+            ],
+            "required_target_count": 2,
+            "target_role": "role_1",
+            "tool_role": "role_6",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          "status": "UNSUPPORTED_OPERATOR"
+        }
+      ],
+      "disambiguated_roles": [
+        {
+          "canonical_role": "coffee_source",
+          "code": "RAW_ROLE_DISAMBIGUATED",
+          "evidence": [
+            "source"
+          ],
+          "raw_id": "role_3"
+        }
+      ],
+      "groups": [],
+      "merged_roles": [],
+      "properties": [
+        {
+          "canonical_predicate": "OPEN_CAVITY",
+          "raw_phrase": "open cavity",
+          "raw_role_id": "role_1",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": "OPEN_CAVITY",
+          "raw_phrase": "cylindrical shape",
+          "raw_role_id": "role_1",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "open cavity",
+          "raw_role_id": "role_2",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "liquid container",
+          "raw_role_id": "role_2",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "open cavity",
+          "raw_role_id": "role_3",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "cylindrical shape",
+          "raw_role_id": "role_3",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": "OPEN_CAVITY",
+          "raw_phrase": "open cavity",
+          "raw_role_id": "role_4",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": "OPEN_CAVITY",
+          "raw_phrase": "bowl shape",
+          "raw_role_id": "role_4",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": "ELONGATED_OBJECT",
+          "raw_phrase": "elongated shape",
+          "raw_role_id": "role_6",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "stirring capability",
+          "raw_role_id": "role_6",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        }
+      ],
+      "relations": [
+        {
+          "raw_object": "role_2",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "No executable relation checker",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_3",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_1",
+          "reason": "No executable relation checker",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_5",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_4",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "canonical": [
+            "coffee_stirrer",
+            "INSERTABLE_IN",
+            "coffee_container"
+          ],
+          "raw_object": "role_1",
+          "raw_phrase": "fits inside",
+          "raw_subject": "role_6",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical": [
+            "coffee_stirrer",
+            "INSERTABLE_IN",
+            "soup_container"
+          ],
+          "raw_object": "role_4",
+          "raw_phrase": "fits inside",
+          "raw_subject": "role_6",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical": [
+            "coffee_stirrer",
+            "INSERTABLE_IN",
+            "coffee_container"
+          ],
+          "raw_object": "role_1",
+          "raw_phrase": "fits inside",
+          "raw_subject": "role_6",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical": [
+            "coffee_stirrer",
+            "INSERTABLE_IN",
+            "soup_container"
+          ],
+          "raw_object": "role_4",
+          "raw_phrase": "fits inside",
+          "raw_subject": "role_6",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        }
+      ],
+      "roles": [
+        {
+          "canonical_role": "coffee_container",
+          "raw_id": "role_1",
+          "rule": "DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "water_source",
+          "raw_id": "role_2",
+          "rule": "DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "coffee_source",
+          "raw_id": "role_3",
+          "rule": "CAUSAL_SOURCE_PROVIDER",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "soup_container",
+          "raw_id": "role_4",
+          "rule": "DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "coffee_stirrer",
+          "raw_id": "role_6",
+          "rule": "DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        }
+      ],
+      "unresolved_roles": [
+        {
+          "code": "AMBIGUOUS_ROLE_MAPPING",
+          "collision_with": "role_4",
+          "raw_role": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "soup canister",
+              "soup jar",
+              "soup container"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "contain soup ingredients",
+            "id": "role_5",
+            "required_count": 2,
+            "required_properties": [
+              "open cavity",
+              "cylindrical shape"
+            ],
+            "visible_candidates": [
+              {
+                "label": "soup canister",
+                "visual_description": "A small cylindrical container on the table."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "detector_vocabulary_source": "VLM_CANDIDATES_PLUS_RELEVANT_SYSTEM_ALIASES",
+    "raw_decomposition": {
+      "cross_group_reuse_allowed": true,
+      "functional_relations": [
+        {
+          "object_role": "role_2",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_3",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_5",
+          "relation": "compatible with",
+          "subject_role": "role_4"
+        },
+        {
+          "object_role": "role_1",
+          "relation": "fits inside",
+          "subject_role": "role_6"
+        },
+        {
+          "object_role": "role_4",
+          "relation": "fits inside",
+          "subject_role": "role_6"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "coffee cup",
+            "mug",
+            "coffee cup"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain coffee",
+          "id": "role_1",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "cylindrical shape"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee cup",
+              "visual_description": "A small cylindrical cup on the table."
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "water bottle",
+            "water jug",
+            "water container"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain water",
+          "id": "role_2",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "liquid container"
+          ],
+          "visible_candidates": []
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "coffee canister",
+            "coffee jar",
+            "coffee container"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain coffee powder",
+          "id": "role_3",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "cylindrical shape"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee canister",
+              "visual_description": "A small cylindrical container on the table."
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "soup bowl",
+            "bowl",
+            "soup container"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain soup",
+          "id": "role_4",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "bowl shape"
+          ],
+          "visible_candidates": [
+            {
+              "label": "soup bowl",
+              "visual_description": "A small bowl with red contents on the table."
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "soup canister",
+            "soup jar",
+            "soup container"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain soup ingredients",
+          "id": "role_5",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "cylindrical shape"
+          ],
+          "visible_candidates": [
+            {
+              "label": "soup canister",
+              "visual_description": "A small cylindrical container on the table."
+            }
+          ]
+        },
+        {
+          "binding_policy": "REUSABLE",
+          "candidate_categories": [
+            "spoon",
+            "stirrer",
+            "utensil"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "stir coffee",
+          "id": "role_6",
+          "required_count": 2,
+          "required_properties": [
+            "elongated shape",
+            "stirring capability"
+          ],
+          "visible_candidates": []
+        }
+      ],
+      "inspectable_regions": [
+        {
+          "id": "region_1",
+          "label": "left cabinet",
+          "reason": "May contain additional coffee cups, water, or coffee powder.",
+          "visual_description": "A closed cabinet on the left side of the table."
+        },
+        {
+          "id": "region_2",
+          "label": "right cabinet",
+          "reason": "May contain additional coffee cups, water, or coffee powder.",
+          "visual_description": "A closed cabinet on the right side of the table."
+        },
+        {
+          "id": "region_3",
+          "label": "table drawer",
+          "reason": "May contain additional coffee cups, water, or coffee powder.",
+          "visual_description": "A drawer under the table."
+        }
+      ],
+      "inspection_order": [
+        "region_1",
+        "region_2",
+        "region_3"
+      ],
+      "interaction_groups": [
+        {
+          "function": "prepare coffee",
+          "id": "group_1",
+          "required_relations": [
+            "fits inside"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_1",
+          "tool_role": "role_6",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "prepare soup",
+          "id": "group_2",
+          "required_relations": [
+            "fits inside"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_4",
+          "tool_role": "role_6",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Prepare and serve two coffees and two soups, each with its own utensil, using available ingredients and tools.",
+      "unsupported_reason": ""
+    },
+    "raw_role_to_canonical": {
+      "role_1": "coffee_container",
+      "role_2": "water_source",
+      "role_3": "coffee_source",
+      "role_4": "soup_container",
+      "role_6": "coffee_stirrer"
+    },
+    "raw_vlm_response": {
+      "cross_group_reuse_allowed": true,
+      "functional_relations": [
+        {
+          "object_role": "role_2",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_3",
+          "relation": "compatible with",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_5",
+          "relation": "compatible with",
+          "subject_role": "role_4"
+        },
+        {
+          "object_role": "role_1",
+          "relation": "fits inside",
+          "subject_role": "role_6"
+        },
+        {
+          "object_role": "role_4",
+          "relation": "fits inside",
+          "subject_role": "role_6"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "coffee cup",
+            "mug",
+            "coffee cup"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain coffee",
+          "id": "role_1",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "cylindrical shape"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee cup",
+              "visual_description": "A small cylindrical cup on the table."
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "water bottle",
+            "water jug",
+            "water container"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain water",
+          "id": "role_2",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "liquid container"
+          ],
+          "visible_candidates": []
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "coffee canister",
+            "coffee jar",
+            "coffee container"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain coffee powder",
+          "id": "role_3",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "cylindrical shape"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee canister",
+              "visual_description": "A small cylindrical container on the table."
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "soup bowl",
+            "bowl",
+            "soup container"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain soup",
+          "id": "role_4",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "bowl shape"
+          ],
+          "visible_candidates": [
+            {
+              "label": "soup bowl",
+              "visual_description": "A small bowl with red contents on the table."
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "soup canister",
+            "soup jar",
+            "soup container"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain soup ingredients",
+          "id": "role_5",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "cylindrical shape"
+          ],
+          "visible_candidates": [
+            {
+              "label": "soup canister",
+              "visual_description": "A small cylindrical container on the table."
+            }
+          ]
+        },
+        {
+          "binding_policy": "REUSABLE",
+          "candidate_categories": [
+            "spoon",
+            "stirrer",
+            "utensil"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "stir coffee",
+          "id": "role_6",
+          "required_count": 2,
+          "required_properties": [
+            "elongated shape",
+            "stirring capability"
+          ],
+          "visible_candidates": []
+        }
+      ],
+      "inspectable_regions": [
+        {
+          "id": "region_1",
+          "label": "left cabinet",
+          "reason": "May contain additional coffee cups, water, or coffee powder.",
+          "visual_description": "A closed cabinet on the left side of the table."
+        },
+        {
+          "id": "region_2",
+          "label": "right cabinet",
+          "reason": "May contain additional coffee cups, water, or coffee powder.",
+          "visual_description": "A closed cabinet on the right side of the table."
+        },
+        {
+          "id": "region_3",
+          "label": "table drawer",
+          "reason": "May contain additional coffee cups, water, or coffee powder.",
+          "visual_description": "A drawer under the table."
+        }
+      ],
+      "inspection_order": [
+        "region_1",
+        "region_2",
+        "region_3"
+      ],
+      "interaction_groups": [
+        {
+          "function": "prepare coffee",
+          "id": "group_1",
+          "required_relations": [
+            "fits inside"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_1",
+          "tool_role": "role_6",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "prepare soup",
+          "id": "group_2",
+          "required_relations": [
+            "fits inside"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_4",
+          "tool_role": "role_6",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Prepare and serve two coffees and two soups, each with its own utensil, using available ingredients and tools.",
+      "unsupported_reason": ""
+    },
+    "role_semantic_ontology_version": "phase3_p3i_4_semantic_ontology_v1",
+    "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+    "soft_semantic_evidence": [
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "open cavity",
+        "raw_role_id": "role_2",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "liquid container",
+        "raw_role_id": "role_2",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "open cavity",
+        "raw_role_id": "role_3",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "cylindrical shape",
+        "raw_role_id": "role_3",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "stirring capability",
+        "raw_role_id": "role_6",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      }
+    ],
+    "structural_sanitizer": {
+      "document": {
+        "cross_group_reuse_allowed": true,
+        "functional_relations": [
+          {
+            "object_role": "role_2",
+            "relation": "compatible with",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_3",
+            "relation": "compatible with",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_5",
+            "relation": "compatible with",
+            "subject_role": "role_4"
+          },
+          {
+            "object_role": "role_1",
+            "relation": "fits inside",
+            "subject_role": "role_6"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "fits inside",
+            "subject_role": "role_6"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "coffee cup",
+              "mug",
+              "coffee cup"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "contain coffee",
+            "id": "role_1",
+            "required_count": 2,
+            "required_properties": [
+              "open cavity",
+              "cylindrical shape"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee cup",
+                "visual_description": "A small cylindrical cup on the table."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "water bottle",
+              "water jug",
+              "water container"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "contain water",
+            "id": "role_2",
+            "required_count": 2,
+            "required_properties": [
+              "open cavity",
+              "liquid container"
+            ],
+            "visible_candidates": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "coffee canister",
+              "coffee jar",
+              "coffee container"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "contain coffee powder",
+            "id": "role_3",
+            "required_count": 2,
+            "required_properties": [
+              "open cavity",
+              "cylindrical shape"
+            ],
+            "visible_candidates": [
+              {
+                "label": "coffee canister",
+                "visual_description": "A small cylindrical container on the table."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "soup bowl",
+              "bowl",
+              "soup container"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "contain soup",
+            "id": "role_4",
+            "required_count": 2,
+            "required_properties": [
+              "open cavity",
+              "bowl shape"
+            ],
+            "visible_candidates": [
+              {
+                "label": "soup bowl",
+                "visual_description": "A small bowl with red contents on the table."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "soup canister",
+              "soup jar",
+              "soup container"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "contain soup ingredients",
+            "id": "role_5",
+            "required_count": 2,
+            "required_properties": [
+              "open cavity",
+              "cylindrical shape"
+            ],
+            "visible_candidates": [
+              {
+                "label": "soup canister",
+                "visual_description": "A small cylindrical container on the table."
+              }
+            ]
+          },
+          {
+            "binding_policy": "REUSABLE",
+            "candidate_categories": [
+              "spoon",
+              "stirrer",
+              "utensil"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "stir coffee",
+            "id": "role_6",
+            "required_count": 2,
+            "required_properties": [
+              "elongated shape",
+              "stirring capability"
+            ],
+            "visible_candidates": []
+          }
+        ],
+        "inspectable_regions": [
+          {
+            "id": "region_1",
+            "label": "left cabinet",
+            "reason": "May contain additional coffee cups, water, or coffee powder.",
+            "visual_description": "A closed cabinet on the left side of the table."
+          },
+          {
+            "id": "region_2",
+            "label": "right cabinet",
+            "reason": "May contain additional coffee cups, water, or coffee powder.",
+            "visual_description": "A closed cabinet on the right side of the table."
+          },
+          {
+            "id": "region_3",
+            "label": "table drawer",
+            "reason": "May contain additional coffee cups, water, or coffee powder.",
+            "visual_description": "A drawer under the table."
+          }
+        ],
+        "inspection_order": [
+          "region_1",
+          "region_2",
+          "region_3"
+        ],
+        "interaction_groups": [
+          {
+            "function": "prepare coffee",
+            "id": "group_1",
+            "required_relations": [
+              "fits inside"
+            ],
+            "required_target_count": 2,
+            "target_role": "role_1",
+            "tool_role": "role_6",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "function": "prepare soup",
+            "id": "group_2",
+            "required_relations": [
+              "fits inside"
+            ],
+            "required_target_count": 2,
+            "target_role": "role_4",
+            "tool_role": "role_6",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        ],
+        "status": "SUPPORTED",
+        "task_summary": "Prepare and serve two coffees and two soups, each with its own utensil, using available ingredients and tools.",
+        "unsupported_reason": ""
+      },
+      "repairs": [],
+      "semantically_incomplete": false,
+      "succeeded": true
+    },
+    "unresolved_semantics": [
+      {
+        "raw_object": "role_2",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "No executable relation checker",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_3",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_1",
+        "reason": "No executable relation checker",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_5",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_4",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      }
+    ],
+    "unverified_required_properties": []
+  },
+  "nodes": {
+    "coffee_container": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "coffee_container",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup",
+        "mug"
+      ],
+      "semantic_hints": [
+        "open cavity",
+        "cylindrical shape"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "OPEN_CAVITY"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "coffee_source": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "coffee_source",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_source"
+      ],
+      "semantic_hints": [
+        "open cavity",
+        "cylindrical shape"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "coffee_stirrer": {
+      "binding_policy": "REUSABLE",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "coffee_stirrer",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "spoon"
+      ],
+      "semantic_hints": [
+        "elongated shape",
+        "stirring capability"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "ELONGATED_OBJECT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "soup_container": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "soup_container",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "bowl"
+      ],
+      "semantic_hints": [
+        "open cavity",
+        "bowl shape"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "OPEN_CAVITY"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "water_source": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "water_source",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "kettle"
+      ],
+      "semantic_hints": [
+        "open cavity",
+        "liquid container"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  },
+  "operation_groups": [
+    {
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": false,
+      "function": "PROVIDE_SOUP_EATING_UTENSIL",
+      "id": "soup_serving",
+      "required_relations": [
+        "INSERTABLE_IN"
+      ],
+      "required_target_count": 2,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": "minimize_distinct_tools",
+      "target_role": "soup_container",
+      "tool_role": "coffee_stirrer",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  ],
+  "region_ranking": [
+    "C1",
+    "C2"
+  ],
+  "relations": [
+    {
+      "expected": true,
+      "object_role": "coffee_container",
+      "predicate": "INSERTABLE_IN",
+      "subject_role": "coffee_stirrer"
+    },
+    {
+      "expected": true,
+      "object_role": "soup_container",
+      "predicate": "INSERTABLE_IN",
+      "subject_role": "coffee_stirrer"
+    }
+  ],
+  "roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "coffee_container",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup",
+        "mug"
+      ],
+      "semantic_hints": [
+        "open cavity",
+        "cylindrical shape"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "OPEN_CAVITY"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "coffee_source",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_source"
+      ],
+      "semantic_hints": [
+        "open cavity",
+        "cylindrical shape"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "REUSABLE",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "coffee_stirrer",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "spoon"
+      ],
+      "semantic_hints": [
+        "elongated shape",
+        "stirring capability"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "ELONGATED_OBJECT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "soup_container",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "bowl"
+      ],
+      "semantic_hints": [
+        "open cavity",
+        "bowl shape"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "OPEN_CAVITY"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "water_source",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "kettle"
+      ],
+      "semantic_hints": [
+        "open cavity",
+        "liquid container"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "source": "VLM_CANONICAL_G_F",
+  "task_instruction": "Prepare and serve one coffee and one soup for each of two people. Make each coffee using coffee and water and stir it before serving. Serve each soup bowl with its own suitable eating utensil."
+}

@@ -1,0 +1,774 @@
+{
+  "candidate_regions": [],
+  "cross_group_reuse_allowed": true,
+  "detector_vocabulary": [
+    "workbench surface",
+    "marked workbench location",
+    "screw",
+    "bolt",
+    "nut",
+    "washer",
+    "fastener",
+    "screwdriver",
+    "wrench",
+    "drill",
+    "fastening tool",
+    "Phillips screw",
+    "Phillips head screw",
+    "power driver",
+    "power drill",
+    "Phillips screwdriver",
+    "cordless power drill"
+  ],
+  "domain": "workshop",
+  "metadata": {
+    "alias_to_canonical": {
+      "cordless drill": "power_driver",
+      "cordless power drill": "power_driver",
+      "cordless screwdriver": "power_driver",
+      "cross-head screw": "screw",
+      "cross-head screwdriver": "screwdriver",
+      "drill driver": "power_driver",
+      "electric screwdriver": "power_driver",
+      "fastener": "screw",
+      "hammer": "hammer",
+      "hand screwdriver": "screwdriver",
+      "machine screw": "screw",
+      "mallet": "hammer",
+      "manual screwdriver": "screwdriver",
+      "phillips head screw": "screw",
+      "phillips screw": "screw",
+      "phillips screwdriver": "screwdriver",
+      "power drill": "power_driver",
+      "power driver": "power_driver",
+      "power_driver": "power_driver",
+      "powered screwdriver": "power_driver",
+      "screw": "screw",
+      "screwdriver": "screwdriver",
+      "threaded screw": "screw",
+      "wood mallet": "hammer",
+      "wooden hammer": "hammer"
+    },
+    "candidate_categories_used_for_detector_vocabulary": true,
+    "candidate_categories_used_for_grounding_acceptance": false,
+    "candidate_categories_used_for_role_identity": true,
+    "candidate_requirement_statuses": [
+      {
+        "id": "role_1",
+        "status": "CONTEXT_ONLY"
+      },
+      {
+        "id": "role_2",
+        "requirement": "threaded shaft",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_2",
+        "requirement": "head for driving",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_3",
+        "requirement": "handle for grip",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "role_3",
+        "requirement": "shaft for insertion",
+        "status": "SOFT_SEMANTIC_ONLY"
+      }
+    ],
+    "canonicalization_status": "PARTIAL",
+    "canonicalization_trace": {
+      "context_only_roles": [
+        {
+          "raw_role": {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "workbench surface",
+              "marked workbench location"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "contain fastening target",
+            "id": "role_1",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "flat surface"
+            ],
+            "visible_candidates": [
+              {
+                "label": "marked workbench location",
+                "visual_description": "A marked area on the workbench surface, likely indicated by a yellow marker or similar visual cue."
+              }
+            ]
+          },
+          "status": "CONTEXT_ONLY_ROLE"
+        }
+      ],
+      "disabled_groups": [],
+      "disambiguated_roles": [],
+      "groups": [
+        {
+          "raw_group": {
+            "context_relations": [
+              "placed on"
+            ],
+            "context_role": "role_1",
+            "function": "fastening operation",
+            "id": "group_1",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_2",
+            "tool_role": "role_3",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          "representation": "SINGLETON_RELATIONS",
+          "status": "STATIC_ALREADY_SATISFIED"
+        }
+      ],
+      "merged_roles": [],
+      "properties": [
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "threaded shaft",
+          "raw_role_id": "role_2",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "head for driving",
+          "raw_role_id": "role_2",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "handle for grip",
+          "raw_role_id": "role_3",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "shaft for insertion",
+          "raw_role_id": "role_3",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        }
+      ],
+      "relations": [
+        {
+          "raw_object": "role_2",
+          "raw_phrase": "contains",
+          "raw_subject": "role_1",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_3",
+          "raw_phrase": "contains",
+          "raw_subject": "role_1",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_object": "role_3",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_2",
+          "reason": "Relation 'compatible with' mapped to COMPATIBLE_WITH but endpoints (fastener, driver) violate signature constraints",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "canonical": [
+            "driver",
+            "COMPATIBLE_WITH",
+            "fastener"
+          ],
+          "raw_object": "role_2",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_3",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "raw_object": "role_1",
+          "raw_phrase": "placed on",
+          "raw_subject": "role_3",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "canonical": [
+            "driver",
+            "COMPATIBLE_WITH",
+            "fastener"
+          ],
+          "raw_object": "role_2",
+          "raw_phrase": "compatible with",
+          "raw_subject": "role_3",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "raw_object": "role_1",
+          "raw_phrase": "placed on",
+          "raw_subject": "role_3",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNRESOLVED_SEMANTIC"
+        }
+      ],
+      "roles": [
+        {
+          "canonical_role": "fastener",
+          "raw_id": "role_2",
+          "rule": "CAUSAL_OPERATION_PARTICIPANT",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "driver",
+          "raw_id": "role_3",
+          "rule": "CAUSAL_OPERATION_PARTICIPANT",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        }
+      ],
+      "unresolved_roles": []
+    },
+    "detector_label_to_canonical": {
+      "power drill": "power_driver",
+      "screw": "screw",
+      "screwdriver": "screwdriver",
+      "wooden hammer": "hammer"
+    },
+    "detector_vocabulary_source": "VLM_CANDIDATES_PLUS_RELEVANT_SYSTEM_ALIASES",
+    "raw_decomposition": {
+      "functional_relations": [
+        {
+          "object_role": "role_2",
+          "relation": "contains",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_3",
+          "relation": "contains",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_3",
+          "relation": "compatible with",
+          "subject_role": "role_2"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "workbench surface",
+            "marked workbench location"
+          ],
+          "entity_kind": "REGION",
+          "function": "contain fastening target",
+          "id": "role_1",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "flat surface"
+          ],
+          "visible_candidates": [
+            {
+              "label": "marked workbench location",
+              "visual_description": "A marked area on the workbench surface, likely indicated by a yellow marker or similar visual cue."
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "screw",
+            "bolt",
+            "nut",
+            "washer",
+            "fastener"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "provide fastening component",
+          "id": "role_2",
+          "required_count": 1,
+          "required_properties": [
+            "threaded shaft",
+            "head for driving"
+          ],
+          "visible_candidates": [
+            {
+              "label": "screw/bolt",
+              "visual_description": "A small metallic object, possibly a screw or bolt, located on the workbench surface."
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "screwdriver",
+            "wrench",
+            "drill",
+            "fastening tool"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "provide fastening tool",
+          "id": "role_3",
+          "required_count": 1,
+          "required_properties": [
+            "handle for grip",
+            "shaft for insertion"
+          ],
+          "visible_candidates": [
+            {
+              "label": "screwdriver",
+              "visual_description": "A tool with a handle and a shaft, possibly a screwdriver, located on the workbench surface."
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "context_relations": [
+            "placed on"
+          ],
+          "context_role": "role_1",
+          "function": "fastening operation",
+          "id": "group_1",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_2",
+          "tool_role": "role_3",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Identify compatible components for fastening at a marked workbench location, complete the fastening, and leave reusable equipment on the workbench.",
+      "unsupported_reason": ""
+    },
+    "raw_role_to_canonical": {
+      "role_2": "fastener",
+      "role_3": "driver"
+    },
+    "raw_vlm_response": {
+      "functional_relations": [
+        {
+          "object_role": "role_2",
+          "relation": "contains",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_3",
+          "relation": "contains",
+          "subject_role": "role_1"
+        },
+        {
+          "object_role": "role_3",
+          "relation": "compatible with",
+          "subject_role": "role_2"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "workbench surface",
+            "marked workbench location"
+          ],
+          "entity_kind": "REGION",
+          "function": "contain fastening target",
+          "id": "role_1",
+          "required_count": 1,
+          "required_properties": [
+            "planar support",
+            "flat surface"
+          ],
+          "visible_candidates": [
+            {
+              "label": "marked workbench location",
+              "visual_description": "A marked area on the workbench surface, likely indicated by a yellow marker or similar visual cue."
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "screw",
+            "bolt",
+            "nut",
+            "washer",
+            "fastener"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "provide fastening component",
+          "id": "role_2",
+          "required_count": 1,
+          "required_properties": [
+            "threaded shaft",
+            "head for driving"
+          ],
+          "visible_candidates": [
+            {
+              "label": "screw/bolt",
+              "visual_description": "A small metallic object, possibly a screw or bolt, located on the workbench surface."
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "screwdriver",
+            "wrench",
+            "drill",
+            "fastening tool"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "provide fastening tool",
+          "id": "role_3",
+          "required_count": 1,
+          "required_properties": [
+            "handle for grip",
+            "shaft for insertion"
+          ],
+          "visible_candidates": [
+            {
+              "label": "screwdriver",
+              "visual_description": "A tool with a handle and a shaft, possibly a screwdriver, located on the workbench surface."
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "context_relations": [
+            "placed on"
+          ],
+          "context_role": "role_1",
+          "function": "fastening operation",
+          "id": "group_1",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_2",
+          "tool_role": "role_3",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Identify compatible components for fastening at a marked workbench location, complete the fastening, and leave reusable equipment on the workbench.",
+      "unsupported_reason": ""
+    },
+    "role_semantic_ontology_version": "phase3_p3i_4_semantic_ontology_v1",
+    "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+    "soft_semantic_evidence": [
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "threaded shaft",
+        "raw_role_id": "role_2",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "head for driving",
+        "raw_role_id": "role_2",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "handle for grip",
+        "raw_role_id": "role_3",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "shaft for insertion",
+        "raw_role_id": "role_3",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      }
+    ],
+    "structural_sanitizer": {
+      "document": {
+        "functional_relations": [
+          {
+            "object_role": "role_2",
+            "relation": "contains",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_3",
+            "relation": "contains",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_3",
+            "relation": "compatible with",
+            "subject_role": "role_2"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "workbench surface",
+              "marked workbench location"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "contain fastening target",
+            "id": "role_1",
+            "required_count": 1,
+            "required_properties": [
+              "planar support",
+              "flat surface"
+            ],
+            "visible_candidates": [
+              {
+                "label": "marked workbench location",
+                "visual_description": "A marked area on the workbench surface, likely indicated by a yellow marker or similar visual cue."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "screw",
+              "bolt",
+              "nut",
+              "washer",
+              "fastener"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "provide fastening component",
+            "id": "role_2",
+            "required_count": 1,
+            "required_properties": [
+              "threaded shaft",
+              "head for driving"
+            ],
+            "visible_candidates": [
+              {
+                "label": "screw/bolt",
+                "visual_description": "A small metallic object, possibly a screw or bolt, located on the workbench surface."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "screwdriver",
+              "wrench",
+              "drill",
+              "fastening tool"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "provide fastening tool",
+            "id": "role_3",
+            "required_count": 1,
+            "required_properties": [
+              "handle for grip",
+              "shaft for insertion"
+            ],
+            "visible_candidates": [
+              {
+                "label": "screwdriver",
+                "visual_description": "A tool with a handle and a shaft, possibly a screwdriver, located on the workbench surface."
+              }
+            ]
+          }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "interaction_groups": [
+          {
+            "context_relations": [
+              "placed on"
+            ],
+            "context_role": "role_1",
+            "function": "fastening operation",
+            "id": "group_1",
+            "required_relations": [
+              "compatible with"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_2",
+            "tool_role": "role_3",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        ],
+        "status": "SUPPORTED",
+        "task_summary": "Identify compatible components for fastening at a marked workbench location, complete the fastening, and leave reusable equipment on the workbench.",
+        "unsupported_reason": ""
+      },
+      "repairs": [],
+      "semantically_incomplete": false,
+      "succeeded": true
+    },
+    "unresolved_semantics": [
+      {
+        "raw_object": "role_2",
+        "raw_phrase": "contains",
+        "raw_subject": "role_1",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_3",
+        "raw_phrase": "contains",
+        "raw_subject": "role_1",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_3",
+        "raw_phrase": "compatible with",
+        "raw_subject": "role_2",
+        "reason": "Relation 'compatible with' mapped to COMPATIBLE_WITH but endpoints (fastener, driver) violate signature constraints",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_1",
+        "raw_phrase": "placed on",
+        "raw_subject": "role_3",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      },
+      {
+        "raw_object": "role_1",
+        "raw_phrase": "placed on",
+        "raw_subject": "role_3",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNRESOLVED_SEMANTIC"
+      }
+    ],
+    "unverified_required_properties": []
+  },
+  "nodes": {
+    "driver": {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "driver",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "semantic_hints": [
+        "handle for grip",
+        "shaft for insertion"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "fastener": {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "fastener",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "screw",
+        "Phillips screw",
+        "Phillips head screw"
+      ],
+      "semantic_hints": [
+        "threaded shaft",
+        "head for driving"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  },
+  "operation_groups": [],
+  "region_ranking": [],
+  "relations": [
+    {
+      "expected": true,
+      "object_role": "fastener",
+      "predicate": "COMPATIBLE_WITH",
+      "subject_role": "driver"
+    }
+  ],
+  "roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "driver",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "semantic_hints": [
+        "handle for grip",
+        "shaft for insertion"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "fastener",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "screw",
+        "Phillips screw",
+        "Phillips head screw"
+      ],
+      "semantic_hints": [
+        "threaded shaft",
+        "head for driving"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "source": "VLM_CANONICAL_G_F",
+  "task_instruction": "Identify the compatible components required to complete the fastening at the marked workbench location, complete the fastening, and leave any reusable equipment used for the task safely on the workbench."
+}

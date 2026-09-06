@@ -1,0 +1,242 @@
+{
+  "document": {
+    "functional_relations": [
+      {
+        "object_role": "role_4",
+        "relation": "placed on",
+        "subject_role": "role_1"
+      },
+      {
+        "object_role": "role_1",
+        "relation": "placed on",
+        "subject_role": "role_2"
+      },
+      {
+        "object_role": "role_4",
+        "relation": "placed on",
+        "subject_role": "role_3"
+      },
+      {
+        "object_role": "role_1",
+        "relation": "near",
+        "subject_role": "role_5"
+      },
+      {
+        "object_role": "role_4",
+        "relation": "near",
+        "subject_role": "role_5"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "end table",
+          "small table",
+          "dining table"
+        ],
+        "entity_kind": "REGION",
+        "function": "support refreshment setting",
+        "id": "role_1",
+        "required_count": 2,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "accessible to seating"
+        ],
+        "visible_candidates": [
+          {
+            "label": "coffee table",
+            "suitability_reason": "central location between seating, suitable for shared refreshments",
+            "visual_description": "rectangular table with light green top and ornate legs, located between the two armchairs"
+          },
+          {
+            "label": "left side table",
+            "suitability_reason": "adjacent to seating, suitable for individual refreshment setting",
+            "visual_description": "small wooden table with two shelves, located to the left of the left armchair"
+          },
+          {
+            "label": "right side table",
+            "suitability_reason": "adjacent to seating, suitable for individual refreshment setting",
+            "visual_description": "small wooden table with two shelves, located to the right of the right armchair"
+          },
+          {
+            "label": "console table",
+            "suitability_reason": "less ideal due to distance from seating, but could be used if other tables are occupied",
+            "visual_description": "long narrow table against the wall, located behind the left armchair"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "mug",
+          "glass",
+          "bowl",
+          "plate"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "contain refreshment item",
+        "id": "role_2",
+        "required_count": 2,
+        "required_properties": [
+          "open cavity",
+          "stable base"
+        ],
+        "visible_candidates": [
+          {
+            "label": "red mug",
+            "suitability_reason": "suitable for containing refreshment",
+            "visual_description": "red ceramic mug with handle, located on the large wooden table"
+          },
+          {
+            "label": "white plate",
+            "suitability_reason": "suitable for containing refreshment",
+            "visual_description": "white round plate, located on the large wooden table"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote control",
+          "media controller",
+          "entertainment device"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "contain entertainment control",
+        "id": "role_3",
+        "required_count": 1,
+        "required_properties": [
+          "portable",
+          "button interface"
+        ],
+        "visible_candidates": [
+          {
+            "label": "remote control",
+            "suitability_reason": "suitable for controlling entertainment",
+            "visual_description": "black rectangular remote control with buttons, located on the large wooden table"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "end table",
+          "small table",
+          "dining table"
+        ],
+        "entity_kind": "REGION",
+        "function": "support entertainment control",
+        "id": "role_4",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "accessible to seating"
+        ],
+        "visible_candidates": [
+          {
+            "label": "large wooden table",
+            "suitability_reason": "central location, suitable for placing entertainment control",
+            "visual_description": "large wooden table with ornate legs, located in the foreground"
+          },
+          {
+            "label": "coffee table",
+            "suitability_reason": "central location between seating, suitable for placing entertainment control",
+            "visual_description": "rectangular table with light green top and ornate legs, located between the two armchairs"
+          },
+          {
+            "label": "left side table",
+            "suitability_reason": "less ideal due to distance from seating, but could be used if other tables are occupied",
+            "visual_description": "small wooden table with two shelves, located to the left of the left armchair"
+          },
+          {
+            "label": "right side table",
+            "suitability_reason": "less ideal due to distance from seating, but could be used if other tables are occupied",
+            "visual_description": "small wooden table with two shelves, located to the right of the right armchair"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "armchair",
+          "sofa",
+          "couch",
+          "chair"
+        ],
+        "entity_kind": "REGION",
+        "function": "support seating",
+        "id": "role_5",
+        "required_count": 2,
+        "required_properties": [
+          "support payload",
+          "cushioned surface"
+        ],
+        "visible_candidates": [
+          {
+            "label": "left armchair",
+            "suitability_reason": "suitable for seating",
+            "visual_description": "black cushioned armchair with wooden frame, located on the left side of the room"
+          },
+          {
+            "label": "right armchair",
+            "suitability_reason": "suitable for seating",
+            "visual_description": "black cushioned armchair with wooden frame, located on the right side of the room"
+          }
+        ],
+        "description": ""
+      }
+    ],
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "interaction_groups": [
+      {
+        "context_relations": [
+          "near"
+        ],
+        "context_role": "role_5",
+        "function": "refreshment setting",
+        "id": "group_1",
+        "required_relations": [
+          "placed on"
+        ],
+        "required_target_count": 2,
+        "target_role": "role_1",
+        "tool_role": "role_2",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      },
+      {
+        "context_relations": [
+          "near"
+        ],
+        "context_role": "role_5",
+        "function": "entertainment control placement",
+        "id": "group_2",
+        "required_relations": [
+          "placed on"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_4",
+        "tool_role": "role_3",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    ],
+    "status": "SUPPORTED",
+    "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+    "unsupported_reason": ""
+  },
+  "repairs": [],
+  "semantically_incomplete": false,
+  "succeeded": true
+}

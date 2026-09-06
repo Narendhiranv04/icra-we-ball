@@ -1,0 +1,269 @@
+{
+  "document": {
+    "functional_relations": [
+      {
+        "object_role": "role_2",
+        "relation": "compatible with",
+        "subject_role": "role_1"
+      },
+      {
+        "object_role": "role_4",
+        "relation": "compatible with",
+        "subject_role": "role_3"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "side table",
+          "coffee table",
+          "desk",
+          "console table",
+          "end table",
+          "small table",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support refreshment setting",
+        "id": "role_1",
+        "required_count": 2,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "sufficient surface area"
+        ],
+        "visible_candidates": [
+          {
+            "label": "left side table",
+            "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+            "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+          },
+          {
+            "label": "right side table",
+            "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+            "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+          },
+          {
+            "label": "coffee table",
+            "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+            "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+          },
+          {
+            "label": "desk",
+            "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+            "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+          },
+          {
+            "label": "console table",
+            "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+            "visual_description": "long wooden console table against the back wall, currently empty"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "side table",
+          "coffee table",
+          "desk",
+          "console table",
+          "end table",
+          "small table",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support entertainment control",
+        "id": "role_2",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "sufficient surface area"
+        ],
+        "visible_candidates": [
+          {
+            "label": "left side table",
+            "suitability_reason": "has a flat top surface suitable for holding a remote control",
+            "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+          },
+          {
+            "label": "right side table",
+            "suitability_reason": "has a flat top surface suitable for holding a remote control",
+            "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+          },
+          {
+            "label": "coffee table",
+            "suitability_reason": "has a flat top surface suitable for holding a remote control",
+            "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+          },
+          {
+            "label": "desk",
+            "suitability_reason": "has a flat top surface suitable for holding a remote control",
+            "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+          },
+          {
+            "label": "console table",
+            "suitability_reason": "has a flat top surface suitable for holding a remote control",
+            "visual_description": "long wooden console table against the back wall, currently empty"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "side table",
+          "coffee table",
+          "desk",
+          "console table",
+          "end table",
+          "small table",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support refreshment setting",
+        "id": "role_3",
+        "required_count": 2,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "sufficient surface area"
+        ],
+        "visible_candidates": [
+          {
+            "label": "left side table",
+            "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+            "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+          },
+          {
+            "label": "right side table",
+            "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+            "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+          },
+          {
+            "label": "coffee table",
+            "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+            "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+          },
+          {
+            "label": "desk",
+            "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+            "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+          },
+          {
+            "label": "console table",
+            "suitability_reason": "has a flat top surface suitable for holding a refreshment setting",
+            "visual_description": "long wooden console table against the back wall, currently empty"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "side table",
+          "coffee table",
+          "desk",
+          "console table",
+          "end table",
+          "small table",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support entertainment control",
+        "id": "role_4",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "sufficient surface area"
+        ],
+        "visible_candidates": [
+          {
+            "label": "left side table",
+            "suitability_reason": "has a flat top surface suitable for holding a remote control",
+            "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+          },
+          {
+            "label": "right side table",
+            "suitability_reason": "has a flat top surface suitable for holding a remote control",
+            "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+          },
+          {
+            "label": "coffee table",
+            "suitability_reason": "has a flat top surface suitable for holding a remote control",
+            "visual_description": "rectangular coffee table with a light green top, located between the two armchairs"
+          },
+          {
+            "label": "desk",
+            "suitability_reason": "has a flat top surface suitable for holding a remote control",
+            "visual_description": "large wooden desk with a remote, red cup, and white plate on top, located in the foreground"
+          },
+          {
+            "label": "console table",
+            "suitability_reason": "has a flat top surface suitable for holding a remote control",
+            "visual_description": "long wooden console table against the back wall, currently empty"
+          }
+        ],
+        "description": ""
+      }
+    ],
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "interaction_groups": [
+      {
+        "context_relations": [
+          "compatible with"
+        ],
+        "context_role": "role_2",
+        "function": "provide refreshment setting for person 1",
+        "id": "group_1",
+        "required_relations": [
+          "compatible with"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_3",
+        "tool_role": "role_1",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      },
+      {
+        "context_relations": [
+          "compatible with"
+        ],
+        "context_role": "role_2",
+        "function": "provide refreshment setting for person 2",
+        "id": "group_2",
+        "required_relations": [
+          "compatible with"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_3",
+        "tool_role": "role_1",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      },
+      {
+        "context_relations": [
+          "compatible with"
+        ],
+        "context_role": "role_1",
+        "function": "place entertainment control for shared access",
+        "id": "group_3",
+        "required_relations": [
+          "compatible with"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_4",
+        "tool_role": "role_2",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    ],
+    "status": "SUPPORTED",
+    "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+    "unsupported_reason": ""
+  },
+  "repairs": [],
+  "semantically_incomplete": false,
+  "succeeded": true
+}

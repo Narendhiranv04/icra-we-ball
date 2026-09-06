@@ -1,0 +1,65 @@
+{
+  "assignment": {
+    "driver": "object_0001",
+    "fastener": "object_0002"
+  },
+  "candidate_plan": [
+    {
+      "action_index": 1,
+      "action_instance_id": "fact_001_pick",
+      "arguments": [
+        "object_0001",
+        "LEFT_DRAWER"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 2,
+      "action_instance_id": "fact_002_place",
+      "arguments": [
+        "object_0001",
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "operator": "PLACE"
+    }
+  ],
+  "candidate_search_statistics": {
+    "algorithm": "deterministic_astar_symbolic_state_search",
+    "expanded_states": 5,
+    "frontier_peak": 2,
+    "generated_states": 4,
+    "is_partial": true,
+    "plan_cost": 2,
+    "plan_length": 2,
+    "satisfied_goals": 2,
+    "search_time_ms": 0.018585000361781567,
+    "total_goals": 3,
+    "visited_states": 5
+  },
+  "canonicalization_succeeded": true,
+  "domain": "workshop",
+  "failure_category": null,
+  "failure_reason": null,
+  "functional_spec_complete": false,
+  "inspected_regions": [
+    "LEFT_DRAWER",
+    "RIGHT_DRAWER"
+  ],
+  "mode": "vlm",
+  "plan": [],
+  "search_statistics": {
+    "algorithm": "deterministic_astar_symbolic_state_search",
+    "expanded_states": 5,
+    "frontier_peak": 2,
+    "generated_states": 4,
+    "is_partial": true,
+    "plan_cost": 2,
+    "plan_length": 2,
+    "satisfied_goals": 2,
+    "search_time_ms": 0.018585000361781567,
+    "total_goals": 3,
+    "visited_states": 5
+  },
+  "status": "PARTIAL_ACTION_SEQUENCE_READY",
+  "variant": "W8"
+}

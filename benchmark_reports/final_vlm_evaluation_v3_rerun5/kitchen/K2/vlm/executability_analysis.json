@@ -1,0 +1,71 @@
+[
+  {
+    "id": "role_5",
+    "status": "UNINSTANTIABLE_MISSING_ROLE"
+  },
+  {
+    "id": "role_1",
+    "requirement": "planar support",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_2",
+    "requirement": "open cavity",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_2",
+    "requirement": "planar support",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_3",
+    "requirement": "open cavity",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_3",
+    "requirement": "planar support",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_4",
+    "requirement": "planar support",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_6",
+    "requirement": "planar support",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "group_1",
+    "status": "UNINSTANTIABLE_MISSING_RELATION",
+    "raw_group": {
+      "function": "prepare coffee",
+      "id": "group_1",
+      "required_relations": [
+        "compatible with"
+      ],
+      "required_target_count": 2,
+      "target_role": "role_1",
+      "tool_role": "role_6",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  },
+  {
+    "id": "group_2",
+    "status": "UNINSTANTIABLE_MISSING_RELATION",
+    "raw_group": {
+      "function": "serve coffee",
+      "id": "group_2",
+      "required_relations": [
+        "compatible with"
+      ],
+      "required_target_count": 2,
+      "target_role": "role_2",
+      "tool_role": "role_1",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  }
+]

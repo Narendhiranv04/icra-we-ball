@@ -1,0 +1,90 @@
+[
+  {
+    "id": "role_3",
+    "status": "UNINSTANTIABLE_MISSING_ROLE"
+  },
+  {
+    "id": "role_4",
+    "status": "UNINSTANTIABLE_MISSING_ROLE"
+  },
+  {
+    "id": "role_1",
+    "requirement": "stable surface",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_1",
+    "requirement": "sufficient surface area",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_2",
+    "requirement": "stable surface",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_2",
+    "requirement": "sufficient surface area",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "group_1",
+    "status": "UNINSTANTIABLE_MISSING_RELATION",
+    "raw_group": {
+      "function": "refreshment setting",
+      "id": "group_1",
+      "required_relations": [
+        "support payload"
+      ],
+      "required_target_count": 2,
+      "target_role": "role_1",
+      "tool_role": "role_1",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  },
+  {
+    "id": "group_2",
+    "status": "UNINSTANTIABLE_MISSING_RELATION",
+    "raw_group": {
+      "function": "entertainment control placement",
+      "id": "group_2",
+      "required_relations": [
+        "support payload"
+      ],
+      "required_target_count": 1,
+      "target_role": "role_2",
+      "tool_role": "role_2",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  },
+  {
+    "id": "group_3",
+    "status": "UNINSTANTIABLE_MISSING_RELATION",
+    "raw_group": {
+      "function": "entertainment control placement",
+      "id": "group_3",
+      "required_relations": [
+        "support payload"
+      ],
+      "required_target_count": 1,
+      "target_role": "role_3",
+      "tool_role": "role_3",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  },
+  {
+    "id": "group_4",
+    "status": "UNINSTANTIABLE_MISSING_RELATION",
+    "raw_group": {
+      "function": "entertainment control placement",
+      "id": "group_4",
+      "required_relations": [
+        "support payload"
+      ],
+      "required_target_count": 1,
+      "target_role": "role_4",
+      "tool_role": "role_4",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  }
+]

@@ -1,0 +1,50 @@
+{
+  "assignment": {
+    "coffee_stirrer": [
+      "object_0004",
+      "object_0006"
+    ],
+    "soup_container": [
+      "object_0002",
+      "object_0008"
+    ]
+  },
+  "complete": false,
+  "evidence": {
+    "candidate_roles": [
+      "coffee_stirrer",
+      "soup_container"
+    ],
+    "original_grounding_status": "INFEASIBLE",
+    "search_exhausted": true,
+    "valid_assignment_count": 1
+  },
+  "missing_requirements": [
+    "coffee_container",
+    "coffee_source",
+    "water_source"
+  ],
+  "missing_roles": [
+    "coffee_container",
+    "coffee_source",
+    "water_source"
+  ],
+  "operation_bindings": {
+    "soup_serving": [
+      {
+        "context": {},
+        "target_id": "object_0002",
+        "tool_id": "object_0004"
+      },
+      {
+        "context": {},
+        "target_id": "object_0008",
+        "tool_id": "object_0004"
+      }
+    ]
+  },
+  "satisfied": false,
+  "status": "PARTIAL_VERIFIED_GROUNDING",
+  "unresolved_constraints": [],
+  "unsatisfied_relations": []
+}

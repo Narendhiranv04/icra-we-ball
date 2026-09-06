@@ -1,0 +1,49 @@
+[
+  {
+    "id": "role_4",
+    "status": "CONTEXT_ONLY"
+  },
+  {
+    "id": "role_1",
+    "status": "UNINSTANTIABLE_MISSING_ROLE"
+  },
+  {
+    "id": "role_2",
+    "requirement": "threaded shaft",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_2",
+    "requirement": "head for driving",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_3",
+    "requirement": "handle for grip",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "role_3",
+    "requirement": "shaft for driving",
+    "status": "SOFT_SEMANTIC_ONLY"
+  },
+  {
+    "id": "group_1",
+    "status": "UNINSTANTIABLE_MISSING_RELATION",
+    "raw_group": {
+      "context_relations": [
+        "role_3 placed on role_4"
+      ],
+      "context_role": "role_4",
+      "function": "fastening operation",
+      "id": "group_1",
+      "required_relations": [
+        "role_3 drives role_2 into role_1"
+      ],
+      "required_target_count": 1,
+      "target_role": "role_1",
+      "tool_role": "role_3",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  }
+]

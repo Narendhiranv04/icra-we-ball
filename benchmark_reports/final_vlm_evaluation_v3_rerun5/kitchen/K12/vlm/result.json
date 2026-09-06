@@ -1,0 +1,90 @@
+{
+  "assignment": {
+    "coffee_container": [
+      "object_0001",
+      "object_0005"
+    ],
+    "soup_container": [
+      "object_0002",
+      "object_0008"
+    ]
+  },
+  "candidate_plan": [
+    {
+      "action_index": 1,
+      "action_instance_id": "fact_001_pick",
+      "arguments": [
+        "object_0002"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 2,
+      "action_instance_id": "fact_002_place",
+      "arguments": [
+        "object_0002",
+        "dining_table"
+      ],
+      "operator": "PLACE"
+    },
+    {
+      "action_index": 3,
+      "action_instance_id": "fact_003_pick",
+      "arguments": [
+        "object_0008"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 4,
+      "action_instance_id": "fact_004_place",
+      "arguments": [
+        "object_0008",
+        "dining_table"
+      ],
+      "operator": "PLACE"
+    }
+  ],
+  "candidate_search_statistics": {
+    "algorithm": "deterministic_astar_symbolic_state_search",
+    "expanded_states": 40,
+    "frontier_peak": 14,
+    "generated_states": 86,
+    "is_partial": true,
+    "plan_cost": 4,
+    "plan_length": 4,
+    "satisfied_goals": 3,
+    "search_time_ms": 0.1550900014990475,
+    "total_goals": 7,
+    "visited_states": 40
+  },
+  "canonicalization_succeeded": true,
+  "domain": "kitchen",
+  "failure_category": null,
+  "failure_reason": null,
+  "functional_spec_complete": false,
+  "inspected_regions": [
+    "C1",
+    "C2",
+    "D1",
+    "D2",
+    "B1"
+  ],
+  "mode": "vlm",
+  "plan": [],
+  "search_statistics": {
+    "algorithm": "deterministic_astar_symbolic_state_search",
+    "expanded_states": 40,
+    "frontier_peak": 14,
+    "generated_states": 86,
+    "is_partial": true,
+    "plan_cost": 4,
+    "plan_length": 4,
+    "satisfied_goals": 3,
+    "search_time_ms": 0.1550900014990475,
+    "total_goals": 7,
+    "visited_states": 40
+  },
+  "status": "PARTIAL_ACTION_SEQUENCE_READY",
+  "variant": "K12"
+}

@@ -1,0 +1,269 @@
+{
+  "document": {
+    "functional_relations": [],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "side table",
+          "coffee table",
+          "console table",
+          "desk",
+          "end table",
+          "small table",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support refreshment setting",
+        "id": "role_1",
+        "required_count": 2,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "sufficient surface area"
+        ],
+        "visible_candidates": [
+          {
+            "label": "left side table",
+            "suitability_reason": "has a flat top surface suitable for supporting a refreshment setting",
+            "visual_description": "small wooden side table with a white plate on top, located to the left of the left armchair"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "side table",
+          "coffee table",
+          "console table",
+          "desk",
+          "end table",
+          "small table",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support refreshment setting",
+        "id": "role_2",
+        "required_count": 2,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "sufficient surface area"
+        ],
+        "visible_candidates": [
+          {
+            "label": "right side table",
+            "suitability_reason": "has a flat top surface suitable for supporting a refreshment setting",
+            "visual_description": "small wooden side table with a white plate on top, located to the right of the right armchair"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "side table",
+          "coffee table",
+          "console table",
+          "desk",
+          "end table",
+          "small table",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support entertainment control",
+        "id": "role_3",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "sufficient surface area"
+        ],
+        "visible_candidates": [
+          {
+            "label": "console table",
+            "suitability_reason": "has a flat top surface suitable for supporting a remote control and is centrally located for accessibility",
+            "visual_description": "long wooden console table against the wall under the TV, currently empty"
+          }
+        ],
+        "description": ""
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "side table",
+          "coffee table",
+          "console table",
+          "desk",
+          "end table",
+          "small table",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "support entertainment control",
+        "id": "role_4",
+        "required_count": 1,
+        "required_properties": [
+          "planar support",
+          "stable surface",
+          "sufficient surface area"
+        ],
+        "visible_candidates": [
+          {
+            "label": "desk",
+            "suitability_reason": "has a flat top surface suitable for supporting a remote control and is centrally located for accessibility",
+            "visual_description": "large wooden desk in the foreground, currently holding a remote control, two red mugs, and a white plate"
+          }
+        ],
+        "description": ""
+      }
+    ],
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "interaction_groups": [],
+    "status": "SUPPORTED",
+    "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+    "unsupported_reason": ""
+  },
+  "repairs": [
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "role_5",
+        "relation": "near anchor",
+        "subject_role": "role_1"
+      }
+    },
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "role_6",
+        "relation": "near anchor",
+        "subject_role": "role_2"
+      }
+    },
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "role_7",
+        "relation": "near anchor",
+        "subject_role": "role_3"
+      }
+    },
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "role_8",
+        "relation": "near anchor",
+        "subject_role": "role_4"
+      }
+    },
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "role_9",
+        "relation": "compatible with",
+        "subject_role": "role_3"
+      }
+    },
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "role_9",
+        "relation": "compatible with",
+        "subject_role": "role_4"
+      }
+    },
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "role_10",
+        "relation": "compatible with",
+        "subject_role": "role_1"
+      }
+    },
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "role_10",
+        "relation": "compatible with",
+        "subject_role": "role_2"
+      }
+    },
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "role_11",
+        "relation": "compatible with",
+        "subject_role": "role_3"
+      }
+    },
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "role_11",
+        "relation": "compatible with",
+        "subject_role": "role_4"
+      }
+    },
+    {
+      "code": "INVALID_GROUP_REFERENCE",
+      "raw": {
+        "function": "refreshment setting for person 1",
+        "id": "group_1",
+        "required_relations": [
+          "near anchor"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_10",
+        "tool_role": "role_1",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    },
+    {
+      "code": "INVALID_GROUP_REFERENCE",
+      "raw": {
+        "function": "refreshment setting for person 2",
+        "id": "group_2",
+        "required_relations": [
+          "near anchor"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_10",
+        "tool_role": "role_2",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    },
+    {
+      "code": "INVALID_GROUP_REFERENCE",
+      "raw": {
+        "function": "entertainment control placement",
+        "id": "group_3",
+        "required_relations": [
+          "compatible with"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_3",
+        "tool_role": "role_9",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    },
+    {
+      "code": "INVALID_GROUP_REFERENCE",
+      "raw": {
+        "function": "entertainment control placement",
+        "id": "group_4",
+        "required_relations": [
+          "compatible with"
+        ],
+        "required_target_count": 1,
+        "target_role": "role_4",
+        "tool_role": "role_9",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    }
+  ],
+  "semantically_incomplete": true,
+  "succeeded": true
+}

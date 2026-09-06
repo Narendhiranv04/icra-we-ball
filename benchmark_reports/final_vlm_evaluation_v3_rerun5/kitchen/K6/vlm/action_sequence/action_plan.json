@@ -1,0 +1,50 @@
+{
+  "actions": [],
+  "exploratory_open_actions_excluded": true,
+  "planner": {
+    "algorithm": "deterministic_astar_symbolic_state_search",
+    "expanded_states": 1,
+    "frontier_peak": 1,
+    "generated_states": 0,
+    "is_partial": false,
+    "plan_cost": 0,
+    "plan_length": 0,
+    "satisfied_goals": 1,
+    "search_time_ms": 0.003977998858317733,
+    "total_goals": 1,
+    "visited_states": 1
+  },
+  "validation": {
+    "final_atoms": [
+      [
+        "at",
+        "object_0003",
+        "countertop"
+      ],
+      [
+        "at",
+        "object_0005",
+        "C1"
+      ],
+      [
+        "at",
+        "object_0008",
+        "D2"
+      ],
+      [
+        "hand_empty"
+      ]
+    ],
+    "goal_status": "GOAL_SATISFIED",
+    "missing_goals": [],
+    "satisfied_goals": [
+      [
+        "hand_empty"
+      ]
+    ],
+    "status": "VALID",
+    "steps": [],
+    "uses_planner_transition": false,
+    "validator": "independent_symbolic_replay_v1"
+  }
+}
