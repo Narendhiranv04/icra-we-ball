@@ -1,0 +1,2000 @@
+{
+  "candidate_regions": [
+    "C1",
+    "C2"
+  ],
+  "cross_group_reuse_allowed": true,
+  "detector_vocabulary": [
+    "spoon",
+    "ladle",
+    "whisk",
+    "stirrer",
+    "cup",
+    "mug",
+    "coffee cup",
+    "bowl",
+    "soup bowl"
+  ],
+  "domain": "kitchen",
+  "metadata": {
+    "candidate_categories_used_for_detector_vocabulary": true,
+    "candidate_categories_used_for_grounding_acceptance": false,
+    "candidate_categories_used_for_role_identity": false,
+    "canonicalization_trace": {
+      "candidate_regions": [
+        "C1",
+        "C2"
+      ],
+      "canonical_predicates_dispatched": {
+        "binary": [
+          {
+            "object_role": "coffee_container",
+            "predicate": "INSERTABLE_IN",
+            "subject_role": "coffee_stirrer"
+          },
+          {
+            "object_role": "soup_container",
+            "predicate": "INSERTABLE_IN",
+            "subject_role": "coffee_stirrer"
+          }
+        ],
+        "unary": [
+          {
+            "predicate": "ELONGATED_OBJECT",
+            "role": "coffee_stirrer"
+          },
+          {
+            "predicate": "OPEN_CAVITY",
+            "role": "coffee_container"
+          },
+          {
+            "predicate": "OPEN_CAVITY",
+            "role": "soup_container"
+          }
+        ]
+      },
+      "concept_accounting": {
+        "omissions": [
+          "Missing functional soup_eating_utensil role in Kitchen task: QWEN_SEMANTIC_OMISSION",
+          "Missing functional coffee_source role in Kitchen task: QWEN_SEMANTIC_OMISSION"
+        ],
+        "operation_groups": [
+          {
+            "canonical_function": "STIR_COFFEE",
+            "canonical_group": "coffee_stirring",
+            "function_mapping_status": "MULTI_SIGNAL_OPERATION_INTERPRETATION",
+            "raw_function": "prepare coffee",
+            "raw_group_id": "group_coffee_preparation",
+            "raw_usage_policy": "SEQUENTIAL_REUSE_ALLOWED",
+            "required_relations": [
+              "INSERTABLE_IN"
+            ],
+            "required_target_count": 1,
+            "status": "NORMALIZED_SINGLETON_POLICY",
+            "target_role": "coffee_container",
+            "tool_role": "coffee_stirrer",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          },
+          {
+            "canonical_function": null,
+            "canonical_group": null,
+            "function_mapping_status": "ABSORBED_NON_EXECUTABLE_INTERACTION_GROUP",
+            "raw_function": "serve soup",
+            "raw_group_id": "group_soup_serving",
+            "reason": "Tool role 'coffee_stirrer' cannot execute soup serving in Kitchen verifier ontology; soup_eating_utensil was omitted",
+            "required_relations": [
+              "fits inside"
+            ],
+            "required_target_count": 2,
+            "status": "ABSORBED_NON_EXECUTABLE_INTERACTION_GROUP",
+            "target_role": "soup_container",
+            "tool_role": "coffee_stirrer",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        ],
+        "properties": [
+          {
+            "canonical_predicate": "ELONGATED_OBJECT",
+            "raw_phrase": "elongated shape",
+            "raw_role_id": "role_stirring_implementation",
+            "status": "PRESERVED"
+          },
+          {
+            "canonical_predicate": null,
+            "raw_phrase": "rigid",
+            "raw_role_id": "role_stirring_implementation",
+            "reason": "Non-verifier affordance/feature note 'rigid' absorbed",
+            "status": "ABSORBED_NON_EXECUTABLE_AFFORDANCE"
+          },
+          {
+            "canonical_predicate": "OPEN_CAVITY",
+            "raw_phrase": "open cavity",
+            "raw_role_id": "role_coffee_containment",
+            "status": "PRESERVED"
+          },
+          {
+            "canonical_predicate": "OPEN_CAVITY",
+            "raw_phrase": "cup shape",
+            "raw_role_id": "role_coffee_containment",
+            "reason": "Duplicate alias for predicate OPEN_CAVITY on same role",
+            "status": "MERGED_BY_EXPLICIT_RULE"
+          },
+          {
+            "canonical_predicate": "OPEN_CAVITY",
+            "raw_phrase": "open cavity",
+            "raw_role_id": "role_soup_containment",
+            "status": "PRESERVED"
+          },
+          {
+            "canonical_predicate": "OPEN_CAVITY",
+            "raw_phrase": "bowl shape",
+            "raw_role_id": "role_soup_containment",
+            "reason": "Duplicate alias for predicate OPEN_CAVITY on same role",
+            "status": "MERGED_BY_EXPLICIT_RULE"
+          }
+        ],
+        "relations": [
+          {
+            "canonical_object": "coffee_container",
+            "canonical_predicate": "INSERTABLE_IN",
+            "canonical_subject": "coffee_stirrer",
+            "raw_object": "role_coffee_containment",
+            "raw_phrase": "fits inside",
+            "raw_subject": "role_stirring_implementation",
+            "status": "PRESERVED"
+          },
+          {
+            "canonical_object": "soup_container",
+            "canonical_predicate": "INSERTABLE_IN",
+            "canonical_subject": "coffee_stirrer",
+            "raw_object": "role_soup_containment",
+            "raw_phrase": "fits inside",
+            "raw_subject": "role_stirring_implementation",
+            "status": "PRESERVED"
+          },
+          {
+            "canonical_object": "CONTEXTUAL_ENVIRONMENT",
+            "canonical_predicate": "placed on",
+            "canonical_subject": "coffee_container",
+            "raw_object": "role_serving_surface",
+            "raw_phrase": "placed on",
+            "raw_subject": "role_coffee_containment",
+            "reason": "Relation involving contextual environment entity absorbed",
+            "status": "ABSORBED_CONTEXTUAL_RELATION"
+          },
+          {
+            "canonical_object": "CONTEXTUAL_ENVIRONMENT",
+            "canonical_predicate": "placed on",
+            "canonical_subject": "soup_container",
+            "raw_object": "role_serving_surface",
+            "raw_phrase": "placed on",
+            "raw_subject": "role_soup_containment",
+            "reason": "Relation involving contextual environment entity absorbed",
+            "status": "ABSORBED_CONTEXTUAL_RELATION"
+          },
+          {
+            "canonical_object": "CONTEXTUAL_ENVIRONMENT",
+            "canonical_predicate": "near anchor",
+            "canonical_subject": "CONTEXTUAL_ENVIRONMENT",
+            "raw_object": "role_serving_surface",
+            "raw_phrase": "near anchor",
+            "raw_subject": "role_storage_unit",
+            "reason": "Relation involving contextual environment entity absorbed",
+            "status": "ABSORBED_CONTEXTUAL_RELATION"
+          }
+        ],
+        "roles": {
+          "role_coffee_containment": {
+            "binding_policy": "SHARED",
+            "candidate_categories_used_for_role_identity": false,
+            "canonical_role": "coffee_container",
+            "count": 1,
+            "max_count": null,
+            "min_count": null,
+            "preference": null,
+            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+            "status": "PRESERVED",
+            "unary_predicates": [
+              "OPEN_CAVITY"
+            ]
+          },
+          "role_serving_surface": {
+            "binding_policy": "SHARED",
+            "candidate_categories_used_for_role_identity": true,
+            "canonical_role": "CONTEXTUAL_ENVIRONMENT",
+            "count": 1,
+            "reason": "Contextual scene environment entity 'role_serving_surface' absorbed into context",
+            "role_semantic_source": "CONTEXTUAL_ENVIRONMENT_MATCH",
+            "status": "ABSORBED_CONTEXTUAL_ENVIRONMENT_ROLE",
+            "unary_predicates": []
+          },
+          "role_soup_containment": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories_used_for_role_identity": false,
+            "canonical_role": "soup_container",
+            "count": 2,
+            "max_count": null,
+            "min_count": null,
+            "preference": null,
+            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+            "status": "PRESERVED",
+            "unary_predicates": [
+              "OPEN_CAVITY"
+            ]
+          },
+          "role_stirring_implementation": {
+            "binding_policy": "REUSABLE",
+            "candidate_categories_used_for_role_identity": false,
+            "canonical_role": "coffee_stirrer",
+            "count": 1,
+            "max_count": null,
+            "min_count": null,
+            "preference": "minimize_distinct",
+            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+            "status": "PRESERVED",
+            "unary_predicates": [
+              "ELONGATED_OBJECT"
+            ]
+          },
+          "role_storage_unit": {
+            "binding_policy": "SHARED",
+            "candidate_categories_used_for_role_identity": true,
+            "canonical_role": "CONTEXTUAL_ENVIRONMENT",
+            "count": 2,
+            "reason": "Contextual scene environment entity 'role_storage_unit' absorbed into context",
+            "role_semantic_source": "CONTEXTUAL_ENVIRONMENT_MATCH",
+            "status": "ABSORBED_CONTEXTUAL_ENVIRONMENT_ROLE",
+            "unary_predicates": []
+          }
+        }
+      },
+      "detector_vocabulary": {
+        "canonical_labels": {
+          "bowl": [
+            "bowl"
+          ],
+          "coffee_cup": [
+            "coffee cup"
+          ],
+          "cup": [
+            "cup"
+          ],
+          "ladle": [
+            "ladle"
+          ],
+          "mug": [
+            "mug"
+          ],
+          "soup_bowl": [
+            "soup bowl"
+          ],
+          "spoon": [
+            "spoon"
+          ],
+          "stirrer": [
+            "stirrer"
+          ],
+          "whisk": [
+            "whisk"
+          ]
+        },
+        "schema_version": 1
+      },
+      "inspection_order": [
+        "C1",
+        "C2"
+      ],
+      "raw_group_to_canonical": {
+        "group_coffee_preparation": "coffee_stirring"
+      },
+      "raw_role_to_canonical": {
+        "role_coffee_containment": "coffee_container",
+        "role_serving_surface": "CONTEXTUAL_ENVIRONMENT",
+        "role_soup_containment": "soup_container",
+        "role_stirring_implementation": "coffee_stirrer",
+        "role_storage_unit": "CONTEXTUAL_ENVIRONMENT"
+      },
+      "raw_roles_preserved": [
+        "role_stirring_implementation",
+        "role_coffee_containment",
+        "role_soup_containment",
+        "role_serving_surface",
+        "role_storage_unit"
+      ],
+      "region_proposal_trace": [
+        {
+          "canonical_region_id": "C1",
+          "raw_id": "region_left_cabinet",
+          "raw_index": 0,
+          "raw_label": "left cabinet",
+          "raw_visual_description": "left cabinet",
+          "reason": "Deterministic label/visual_description match",
+          "resolution_status": "RESOLVED"
+        },
+        {
+          "canonical_region_id": "C2",
+          "raw_id": "region_right_cabinet",
+          "raw_index": 1,
+          "raw_label": "right cabinet",
+          "raw_visual_description": "right cabinet",
+          "reason": "Deterministic label/visual_description match",
+          "resolution_status": "RESOLVED"
+        }
+      ],
+      "resolved_regions": {
+        "region_left_cabinet": "C1",
+        "region_right_cabinet": "C2"
+      },
+      "schema_version": 2,
+      "task_contract": {
+        "constraints": {
+          "distinct_objects": false,
+          "distinct_role_assignments": false,
+          "pairwise": [
+            {
+              "apply_to": "all_selected_targets",
+              "from_role": "coffee_stirrer",
+              "relation": "INSERTABLE_IN",
+              "required_status": "TRUE",
+              "to_role": "coffee_container"
+            },
+            {
+              "apply_to": "all_selected_targets",
+              "from_role": "coffee_stirrer",
+              "relation": "INSERTABLE_IN",
+              "required_status": "TRUE",
+              "to_role": "soup_container"
+            }
+          ]
+        },
+        "cross_group_reuse": {
+          "allowed": true,
+          "selection_preference": "neutral"
+        },
+        "diagnostics": {
+          "max_representative_rejections": 50
+        },
+        "generated_from_foundation_model": true,
+        "goal_instruction": "prepare coffee by stirring and serve soup for two people. Inspect storages for any missing kitchenware",
+        "operation_groups": {
+          "coffee_stirring": {
+            "function": "STIR_COFFEE",
+            "relations": [
+              "INSERTABLE_IN"
+            ],
+            "required_target_count": 1,
+            "target_role": "coffee_container",
+            "tool_role": "coffee_stirrer",
+            "usage_policy": {
+              "distinct_within_group": true,
+              "mode": "dedicated_per_target",
+              "same_tool_must_cover_all_targets": false,
+              "selection_preference": "deterministic_rank"
+            }
+          }
+        },
+        "pairing": {
+          "semantic_unknown_policy": "defer_relation_evaluation",
+          "strategy": "semantic_role_scoped",
+          "unary_geometry_scope": "all_observed_objects"
+        },
+        "relations": [
+          {
+            "expected": true,
+            "object_role": "coffee_container",
+            "predicate": "INSERTABLE_IN",
+            "subject_role": "coffee_stirrer"
+          },
+          {
+            "expected": true,
+            "object_role": "soup_container",
+            "predicate": "INSERTABLE_IN",
+            "subject_role": "coffee_stirrer"
+          }
+        ],
+        "roles": {
+          "coffee_container": {
+            "allow_empty_geometry": false,
+            "assignment_order": 1,
+            "count": 1,
+            "entity_kind": "OBJECT",
+            "geometric_requirements": [
+              {
+                "predicate": "OPEN_CAVITY",
+                "required_status": "TRUE"
+              }
+            ],
+            "max_count": null,
+            "min_count": null,
+            "preference": null,
+            "raw_vlm_role_id": "role_coffee_containment",
+            "semantic_preferences": [
+              {
+                "canonical_label": "cup",
+                "detector_aliases": [
+                  "cup"
+                ],
+                "rank": 1
+              },
+              {
+                "canonical_label": "mug",
+                "detector_aliases": [
+                  "mug"
+                ],
+                "rank": 2
+              },
+              {
+                "canonical_label": "coffee_cup",
+                "detector_aliases": [
+                  "coffee cup",
+                  "coffee_cup"
+                ],
+                "rank": 3
+              },
+              {
+                "canonical_label": "bowl",
+                "detector_aliases": [
+                  "bowl"
+                ],
+                "rank": 4
+              }
+            ],
+            "unary_geometry": [
+              {
+                "expected": true,
+                "predicate": "OPEN_CAVITY"
+              }
+            ],
+            "visible_candidates": [
+              {
+                "label": "blue mug",
+                "visual_description": "blue mug on table"
+              },
+              {
+                "label": "beige cup",
+                "visual_description": "beige cup on table"
+              }
+            ],
+            "vlm_binding_policy": "SHARED",
+            "vlm_function": "contain coffee",
+            "vlm_verification_mode": "SEMANTIC_AND_GEOMETRIC"
+          },
+          "coffee_stirrer": {
+            "allow_empty_geometry": false,
+            "assignment_order": 0,
+            "count": 1,
+            "entity_kind": "OBJECT",
+            "geometric_requirements": [
+              {
+                "predicate": "ELONGATED_OBJECT",
+                "required_status": "TRUE"
+              }
+            ],
+            "max_count": 1,
+            "min_count": 1,
+            "preference": "minimize_distinct",
+            "raw_vlm_role_id": "role_stirring_implementation",
+            "semantic_preferences": [
+              {
+                "canonical_label": "spoon",
+                "detector_aliases": [
+                  "spoon"
+                ],
+                "rank": 1
+              },
+              {
+                "canonical_label": "ladle",
+                "detector_aliases": [
+                  "ladle"
+                ],
+                "rank": 2
+              },
+              {
+                "canonical_label": "whisk",
+                "detector_aliases": [
+                  "whisk"
+                ],
+                "rank": 3
+              },
+              {
+                "canonical_label": "stirrer",
+                "detector_aliases": [
+                  "stirrer"
+                ],
+                "rank": 4
+              }
+            ],
+            "unary_geometry": [
+              {
+                "expected": true,
+                "predicate": "ELONGATED_OBJECT"
+              }
+            ],
+            "visible_candidates": [
+              {
+                "label": "metal spoon",
+                "visual_description": "metal spoon on table"
+              }
+            ],
+            "vlm_binding_policy": "REUSABLE",
+            "vlm_function": "stir liquid",
+            "vlm_verification_mode": "SEMANTIC_AND_GEOMETRIC"
+          },
+          "soup_container": {
+            "allow_empty_geometry": false,
+            "assignment_order": 2,
+            "count": 2,
+            "entity_kind": "OBJECT",
+            "geometric_requirements": [
+              {
+                "predicate": "OPEN_CAVITY",
+                "required_status": "TRUE"
+              }
+            ],
+            "max_count": null,
+            "min_count": null,
+            "preference": null,
+            "raw_vlm_role_id": "role_soup_containment",
+            "semantic_preferences": [
+              {
+                "canonical_label": "bowl",
+                "detector_aliases": [
+                  "bowl"
+                ],
+                "rank": 1
+              },
+              {
+                "canonical_label": "soup_bowl",
+                "detector_aliases": [
+                  "soup bowl",
+                  "soup_bowl"
+                ],
+                "rank": 2
+              },
+              {
+                "canonical_label": "cup",
+                "detector_aliases": [
+                  "cup"
+                ],
+                "rank": 3
+              },
+              {
+                "canonical_label": "mug",
+                "detector_aliases": [
+                  "mug"
+                ],
+                "rank": 4
+              }
+            ],
+            "unary_geometry": [
+              {
+                "expected": true,
+                "predicate": "OPEN_CAVITY"
+              }
+            ],
+            "visible_candidates": [
+              {
+                "label": "blue bowl",
+                "visual_description": "blue bowl on table"
+              },
+              {
+                "label": "beige bowl",
+                "visual_description": "beige bowl on table"
+              }
+            ],
+            "vlm_binding_policy": "DISTINCT",
+            "vlm_function": "contain soup",
+            "vlm_verification_mode": "SEMANTIC_AND_GEOMETRIC"
+          }
+        },
+        "schema_version": 2,
+        "selection": {
+          "policy": "ranked_valid_candidate",
+          "semantic_confidence_is_only_a_gate": true
+        },
+        "specification_source": "qwen_vlm_natural_language_specification",
+        "symbolic_task": {},
+        "target_assignment_ablation": true,
+        "task_id": "qwen_kitchen_functional_graph"
+      },
+      "transformation": "DETERMINISTIC_NATURAL_LANGUAGE_CANONICALIZATION",
+      "vlm_canonicalization_version": "phase3_p3e_1_v1"
+    },
+    "detector_vocabulary_source": "VLM_CANDIDATES_PLUS_RELEVANT_SYSTEM_ALIASES",
+    "normalization_trace": {
+      "candidate_regions": [
+        "C1",
+        "C2"
+      ],
+      "canonical_predicates_dispatched": {
+        "binary": [
+          {
+            "object_role": "coffee_container",
+            "predicate": "INSERTABLE_IN",
+            "subject_role": "coffee_stirrer"
+          },
+          {
+            "object_role": "soup_container",
+            "predicate": "INSERTABLE_IN",
+            "subject_role": "coffee_stirrer"
+          }
+        ],
+        "unary": [
+          {
+            "predicate": "ELONGATED_OBJECT",
+            "role": "coffee_stirrer"
+          },
+          {
+            "predicate": "OPEN_CAVITY",
+            "role": "coffee_container"
+          },
+          {
+            "predicate": "OPEN_CAVITY",
+            "role": "soup_container"
+          }
+        ]
+      },
+      "concept_accounting": {
+        "omissions": [
+          "Missing functional soup_eating_utensil role in Kitchen task: QWEN_SEMANTIC_OMISSION",
+          "Missing functional coffee_source role in Kitchen task: QWEN_SEMANTIC_OMISSION"
+        ],
+        "operation_groups": [
+          {
+            "canonical_function": "STIR_COFFEE",
+            "canonical_group": "coffee_stirring",
+            "function_mapping_status": "MULTI_SIGNAL_OPERATION_INTERPRETATION",
+            "raw_function": "prepare coffee",
+            "raw_group_id": "group_coffee_preparation",
+            "raw_usage_policy": "SEQUENTIAL_REUSE_ALLOWED",
+            "required_relations": [
+              "INSERTABLE_IN"
+            ],
+            "required_target_count": 1,
+            "status": "NORMALIZED_SINGLETON_POLICY",
+            "target_role": "coffee_container",
+            "tool_role": "coffee_stirrer",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          },
+          {
+            "canonical_function": null,
+            "canonical_group": null,
+            "function_mapping_status": "ABSORBED_NON_EXECUTABLE_INTERACTION_GROUP",
+            "raw_function": "serve soup",
+            "raw_group_id": "group_soup_serving",
+            "reason": "Tool role 'coffee_stirrer' cannot execute soup serving in Kitchen verifier ontology; soup_eating_utensil was omitted",
+            "required_relations": [
+              "fits inside"
+            ],
+            "required_target_count": 2,
+            "status": "ABSORBED_NON_EXECUTABLE_INTERACTION_GROUP",
+            "target_role": "soup_container",
+            "tool_role": "coffee_stirrer",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        ],
+        "properties": [
+          {
+            "canonical_predicate": "ELONGATED_OBJECT",
+            "raw_phrase": "elongated shape",
+            "raw_role_id": "role_stirring_implementation",
+            "status": "PRESERVED"
+          },
+          {
+            "canonical_predicate": null,
+            "raw_phrase": "rigid",
+            "raw_role_id": "role_stirring_implementation",
+            "reason": "Non-verifier affordance/feature note 'rigid' absorbed",
+            "status": "ABSORBED_NON_EXECUTABLE_AFFORDANCE"
+          },
+          {
+            "canonical_predicate": "OPEN_CAVITY",
+            "raw_phrase": "open cavity",
+            "raw_role_id": "role_coffee_containment",
+            "status": "PRESERVED"
+          },
+          {
+            "canonical_predicate": "OPEN_CAVITY",
+            "raw_phrase": "cup shape",
+            "raw_role_id": "role_coffee_containment",
+            "reason": "Duplicate alias for predicate OPEN_CAVITY on same role",
+            "status": "MERGED_BY_EXPLICIT_RULE"
+          },
+          {
+            "canonical_predicate": "OPEN_CAVITY",
+            "raw_phrase": "open cavity",
+            "raw_role_id": "role_soup_containment",
+            "status": "PRESERVED"
+          },
+          {
+            "canonical_predicate": "OPEN_CAVITY",
+            "raw_phrase": "bowl shape",
+            "raw_role_id": "role_soup_containment",
+            "reason": "Duplicate alias for predicate OPEN_CAVITY on same role",
+            "status": "MERGED_BY_EXPLICIT_RULE"
+          }
+        ],
+        "relations": [
+          {
+            "canonical_object": "coffee_container",
+            "canonical_predicate": "INSERTABLE_IN",
+            "canonical_subject": "coffee_stirrer",
+            "raw_object": "role_coffee_containment",
+            "raw_phrase": "fits inside",
+            "raw_subject": "role_stirring_implementation",
+            "status": "PRESERVED"
+          },
+          {
+            "canonical_object": "soup_container",
+            "canonical_predicate": "INSERTABLE_IN",
+            "canonical_subject": "coffee_stirrer",
+            "raw_object": "role_soup_containment",
+            "raw_phrase": "fits inside",
+            "raw_subject": "role_stirring_implementation",
+            "status": "PRESERVED"
+          },
+          {
+            "canonical_object": "CONTEXTUAL_ENVIRONMENT",
+            "canonical_predicate": "placed on",
+            "canonical_subject": "coffee_container",
+            "raw_object": "role_serving_surface",
+            "raw_phrase": "placed on",
+            "raw_subject": "role_coffee_containment",
+            "reason": "Relation involving contextual environment entity absorbed",
+            "status": "ABSORBED_CONTEXTUAL_RELATION"
+          },
+          {
+            "canonical_object": "CONTEXTUAL_ENVIRONMENT",
+            "canonical_predicate": "placed on",
+            "canonical_subject": "soup_container",
+            "raw_object": "role_serving_surface",
+            "raw_phrase": "placed on",
+            "raw_subject": "role_soup_containment",
+            "reason": "Relation involving contextual environment entity absorbed",
+            "status": "ABSORBED_CONTEXTUAL_RELATION"
+          },
+          {
+            "canonical_object": "CONTEXTUAL_ENVIRONMENT",
+            "canonical_predicate": "near anchor",
+            "canonical_subject": "CONTEXTUAL_ENVIRONMENT",
+            "raw_object": "role_serving_surface",
+            "raw_phrase": "near anchor",
+            "raw_subject": "role_storage_unit",
+            "reason": "Relation involving contextual environment entity absorbed",
+            "status": "ABSORBED_CONTEXTUAL_RELATION"
+          }
+        ],
+        "roles": {
+          "role_coffee_containment": {
+            "binding_policy": "SHARED",
+            "candidate_categories_used_for_role_identity": false,
+            "canonical_role": "coffee_container",
+            "count": 1,
+            "max_count": null,
+            "min_count": null,
+            "preference": null,
+            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+            "status": "PRESERVED",
+            "unary_predicates": [
+              "OPEN_CAVITY"
+            ]
+          },
+          "role_serving_surface": {
+            "binding_policy": "SHARED",
+            "candidate_categories_used_for_role_identity": true,
+            "canonical_role": "CONTEXTUAL_ENVIRONMENT",
+            "count": 1,
+            "reason": "Contextual scene environment entity 'role_serving_surface' absorbed into context",
+            "role_semantic_source": "CONTEXTUAL_ENVIRONMENT_MATCH",
+            "status": "ABSORBED_CONTEXTUAL_ENVIRONMENT_ROLE",
+            "unary_predicates": []
+          },
+          "role_soup_containment": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories_used_for_role_identity": false,
+            "canonical_role": "soup_container",
+            "count": 2,
+            "max_count": null,
+            "min_count": null,
+            "preference": null,
+            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+            "status": "PRESERVED",
+            "unary_predicates": [
+              "OPEN_CAVITY"
+            ]
+          },
+          "role_stirring_implementation": {
+            "binding_policy": "REUSABLE",
+            "candidate_categories_used_for_role_identity": false,
+            "canonical_role": "coffee_stirrer",
+            "count": 1,
+            "max_count": null,
+            "min_count": null,
+            "preference": "minimize_distinct",
+            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+            "status": "PRESERVED",
+            "unary_predicates": [
+              "ELONGATED_OBJECT"
+            ]
+          },
+          "role_storage_unit": {
+            "binding_policy": "SHARED",
+            "candidate_categories_used_for_role_identity": true,
+            "canonical_role": "CONTEXTUAL_ENVIRONMENT",
+            "count": 2,
+            "reason": "Contextual scene environment entity 'role_storage_unit' absorbed into context",
+            "role_semantic_source": "CONTEXTUAL_ENVIRONMENT_MATCH",
+            "status": "ABSORBED_CONTEXTUAL_ENVIRONMENT_ROLE",
+            "unary_predicates": []
+          }
+        }
+      },
+      "detector_vocabulary": {
+        "canonical_labels": {
+          "bowl": [
+            "bowl"
+          ],
+          "coffee_cup": [
+            "coffee cup"
+          ],
+          "cup": [
+            "cup"
+          ],
+          "ladle": [
+            "ladle"
+          ],
+          "mug": [
+            "mug"
+          ],
+          "soup_bowl": [
+            "soup bowl"
+          ],
+          "spoon": [
+            "spoon"
+          ],
+          "stirrer": [
+            "stirrer"
+          ],
+          "whisk": [
+            "whisk"
+          ]
+        },
+        "schema_version": 1
+      },
+      "inspection_order": [
+        "C1",
+        "C2"
+      ],
+      "raw_group_to_canonical": {
+        "group_coffee_preparation": "coffee_stirring"
+      },
+      "raw_role_to_canonical": {
+        "role_coffee_containment": "coffee_container",
+        "role_serving_surface": "CONTEXTUAL_ENVIRONMENT",
+        "role_soup_containment": "soup_container",
+        "role_stirring_implementation": "coffee_stirrer",
+        "role_storage_unit": "CONTEXTUAL_ENVIRONMENT"
+      },
+      "raw_roles_preserved": [
+        "role_stirring_implementation",
+        "role_coffee_containment",
+        "role_soup_containment",
+        "role_serving_surface",
+        "role_storage_unit"
+      ],
+      "region_proposal_trace": [
+        {
+          "canonical_region_id": "C1",
+          "raw_id": "region_left_cabinet",
+          "raw_index": 0,
+          "raw_label": "left cabinet",
+          "raw_visual_description": "left cabinet",
+          "reason": "Deterministic label/visual_description match",
+          "resolution_status": "RESOLVED"
+        },
+        {
+          "canonical_region_id": "C2",
+          "raw_id": "region_right_cabinet",
+          "raw_index": 1,
+          "raw_label": "right cabinet",
+          "raw_visual_description": "right cabinet",
+          "reason": "Deterministic label/visual_description match",
+          "resolution_status": "RESOLVED"
+        }
+      ],
+      "resolved_regions": {
+        "region_left_cabinet": "C1",
+        "region_right_cabinet": "C2"
+      },
+      "schema_version": 2,
+      "task_contract": {
+        "constraints": {
+          "distinct_objects": false,
+          "distinct_role_assignments": false,
+          "pairwise": [
+            {
+              "apply_to": "all_selected_targets",
+              "from_role": "coffee_stirrer",
+              "relation": "INSERTABLE_IN",
+              "required_status": "TRUE",
+              "to_role": "coffee_container"
+            },
+            {
+              "apply_to": "all_selected_targets",
+              "from_role": "coffee_stirrer",
+              "relation": "INSERTABLE_IN",
+              "required_status": "TRUE",
+              "to_role": "soup_container"
+            }
+          ]
+        },
+        "cross_group_reuse": {
+          "allowed": true,
+          "selection_preference": "neutral"
+        },
+        "diagnostics": {
+          "max_representative_rejections": 50
+        },
+        "generated_from_foundation_model": true,
+        "goal_instruction": "prepare coffee by stirring and serve soup for two people. Inspect storages for any missing kitchenware",
+        "operation_groups": {
+          "coffee_stirring": {
+            "function": "STIR_COFFEE",
+            "relations": [
+              "INSERTABLE_IN"
+            ],
+            "required_target_count": 1,
+            "target_role": "coffee_container",
+            "tool_role": "coffee_stirrer",
+            "usage_policy": {
+              "distinct_within_group": true,
+              "mode": "dedicated_per_target",
+              "same_tool_must_cover_all_targets": false,
+              "selection_preference": "deterministic_rank"
+            }
+          }
+        },
+        "pairing": {
+          "semantic_unknown_policy": "defer_relation_evaluation",
+          "strategy": "semantic_role_scoped",
+          "unary_geometry_scope": "all_observed_objects"
+        },
+        "relations": [
+          {
+            "expected": true,
+            "object_role": "coffee_container",
+            "predicate": "INSERTABLE_IN",
+            "subject_role": "coffee_stirrer"
+          },
+          {
+            "expected": true,
+            "object_role": "soup_container",
+            "predicate": "INSERTABLE_IN",
+            "subject_role": "coffee_stirrer"
+          }
+        ],
+        "roles": {
+          "coffee_container": {
+            "allow_empty_geometry": false,
+            "assignment_order": 1,
+            "count": 1,
+            "entity_kind": "OBJECT",
+            "geometric_requirements": [
+              {
+                "predicate": "OPEN_CAVITY",
+                "required_status": "TRUE"
+              }
+            ],
+            "max_count": null,
+            "min_count": null,
+            "preference": null,
+            "raw_vlm_role_id": "role_coffee_containment",
+            "semantic_preferences": [
+              {
+                "canonical_label": "cup",
+                "detector_aliases": [
+                  "cup"
+                ],
+                "rank": 1
+              },
+              {
+                "canonical_label": "mug",
+                "detector_aliases": [
+                  "mug"
+                ],
+                "rank": 2
+              },
+              {
+                "canonical_label": "coffee_cup",
+                "detector_aliases": [
+                  "coffee cup",
+                  "coffee_cup"
+                ],
+                "rank": 3
+              },
+              {
+                "canonical_label": "bowl",
+                "detector_aliases": [
+                  "bowl"
+                ],
+                "rank": 4
+              }
+            ],
+            "unary_geometry": [
+              {
+                "expected": true,
+                "predicate": "OPEN_CAVITY"
+              }
+            ],
+            "visible_candidates": [
+              {
+                "label": "blue mug",
+                "visual_description": "blue mug on table"
+              },
+              {
+                "label": "beige cup",
+                "visual_description": "beige cup on table"
+              }
+            ],
+            "vlm_binding_policy": "SHARED",
+            "vlm_function": "contain coffee",
+            "vlm_verification_mode": "SEMANTIC_AND_GEOMETRIC"
+          },
+          "coffee_stirrer": {
+            "allow_empty_geometry": false,
+            "assignment_order": 0,
+            "count": 1,
+            "entity_kind": "OBJECT",
+            "geometric_requirements": [
+              {
+                "predicate": "ELONGATED_OBJECT",
+                "required_status": "TRUE"
+              }
+            ],
+            "max_count": 1,
+            "min_count": 1,
+            "preference": "minimize_distinct",
+            "raw_vlm_role_id": "role_stirring_implementation",
+            "semantic_preferences": [
+              {
+                "canonical_label": "spoon",
+                "detector_aliases": [
+                  "spoon"
+                ],
+                "rank": 1
+              },
+              {
+                "canonical_label": "ladle",
+                "detector_aliases": [
+                  "ladle"
+                ],
+                "rank": 2
+              },
+              {
+                "canonical_label": "whisk",
+                "detector_aliases": [
+                  "whisk"
+                ],
+                "rank": 3
+              },
+              {
+                "canonical_label": "stirrer",
+                "detector_aliases": [
+                  "stirrer"
+                ],
+                "rank": 4
+              }
+            ],
+            "unary_geometry": [
+              {
+                "expected": true,
+                "predicate": "ELONGATED_OBJECT"
+              }
+            ],
+            "visible_candidates": [
+              {
+                "label": "metal spoon",
+                "visual_description": "metal spoon on table"
+              }
+            ],
+            "vlm_binding_policy": "REUSABLE",
+            "vlm_function": "stir liquid",
+            "vlm_verification_mode": "SEMANTIC_AND_GEOMETRIC"
+          },
+          "soup_container": {
+            "allow_empty_geometry": false,
+            "assignment_order": 2,
+            "count": 2,
+            "entity_kind": "OBJECT",
+            "geometric_requirements": [
+              {
+                "predicate": "OPEN_CAVITY",
+                "required_status": "TRUE"
+              }
+            ],
+            "max_count": null,
+            "min_count": null,
+            "preference": null,
+            "raw_vlm_role_id": "role_soup_containment",
+            "semantic_preferences": [
+              {
+                "canonical_label": "bowl",
+                "detector_aliases": [
+                  "bowl"
+                ],
+                "rank": 1
+              },
+              {
+                "canonical_label": "soup_bowl",
+                "detector_aliases": [
+                  "soup bowl",
+                  "soup_bowl"
+                ],
+                "rank": 2
+              },
+              {
+                "canonical_label": "cup",
+                "detector_aliases": [
+                  "cup"
+                ],
+                "rank": 3
+              },
+              {
+                "canonical_label": "mug",
+                "detector_aliases": [
+                  "mug"
+                ],
+                "rank": 4
+              }
+            ],
+            "unary_geometry": [
+              {
+                "expected": true,
+                "predicate": "OPEN_CAVITY"
+              }
+            ],
+            "visible_candidates": [
+              {
+                "label": "blue bowl",
+                "visual_description": "blue bowl on table"
+              },
+              {
+                "label": "beige bowl",
+                "visual_description": "beige bowl on table"
+              }
+            ],
+            "vlm_binding_policy": "DISTINCT",
+            "vlm_function": "contain soup",
+            "vlm_verification_mode": "SEMANTIC_AND_GEOMETRIC"
+          }
+        },
+        "schema_version": 2,
+        "selection": {
+          "policy": "ranked_valid_candidate",
+          "semantic_confidence_is_only_a_gate": true
+        },
+        "specification_source": "qwen_vlm_natural_language_specification",
+        "symbolic_task": {},
+        "target_assignment_ablation": true,
+        "task_id": "qwen_kitchen_functional_graph"
+      },
+      "transformation": "DETERMINISTIC_NATURAL_LANGUAGE_CANONICALIZATION",
+      "vlm_canonicalization_version": "phase3_p3e_1_v1"
+    },
+    "object_vocabulary": {
+      "bowl": [
+        "bowl"
+      ],
+      "coffee_cup": [
+        "coffee cup"
+      ],
+      "cup": [
+        "cup"
+      ],
+      "ladle": [
+        "ladle"
+      ],
+      "mug": [
+        "mug"
+      ],
+      "soup_bowl": [
+        "soup bowl"
+      ],
+      "spoon": [
+        "spoon"
+      ],
+      "stirrer": [
+        "stirrer"
+      ],
+      "whisk": [
+        "whisk"
+      ]
+    },
+    "raw_decomposition": {
+      "cross_group_reuse_allowed": true,
+      "functional_relations": [
+        {
+          "object_role": "role_coffee_containment",
+          "relation": "fits inside",
+          "subject_role": "role_stirring_implementation"
+        },
+        {
+          "object_role": "role_soup_containment",
+          "relation": "fits inside",
+          "subject_role": "role_stirring_implementation"
+        },
+        {
+          "object_role": "role_serving_surface",
+          "relation": "placed on",
+          "subject_role": "role_coffee_containment"
+        },
+        {
+          "object_role": "role_serving_surface",
+          "relation": "placed on",
+          "subject_role": "role_soup_containment"
+        },
+        {
+          "object_role": "role_serving_surface",
+          "relation": "near anchor",
+          "subject_role": "role_storage_unit"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "REUSABLE",
+          "candidate_categories": [
+            "spoon",
+            "ladle",
+            "whisk",
+            "stirrer"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "stir liquid",
+          "id": "role_stirring_implementation",
+          "required_count": 1,
+          "required_properties": [
+            "elongated shape",
+            "rigid"
+          ],
+          "visible_candidates": [
+            {
+              "label": "metal spoon",
+              "visual_description": "metal spoon on table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "cup",
+            "mug",
+            "coffee cup",
+            "bowl"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain coffee",
+          "id": "role_coffee_containment",
+          "required_count": 1,
+          "required_properties": [
+            "open cavity",
+            "cup shape"
+          ],
+          "visible_candidates": [
+            {
+              "label": "blue mug",
+              "visual_description": "blue mug on table"
+            },
+            {
+              "label": "beige cup",
+              "visual_description": "beige cup on table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "bowl",
+            "soup bowl",
+            "cup",
+            "mug"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain soup",
+          "id": "role_soup_containment",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "bowl shape"
+          ],
+          "visible_candidates": [
+            {
+              "label": "blue bowl",
+              "visual_description": "blue bowl on table"
+            },
+            {
+              "label": "beige bowl",
+              "visual_description": "beige bowl on table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "table",
+            "counter",
+            "surface"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "support payload",
+          "id": "role_serving_surface",
+          "required_count": 1,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "table",
+              "visual_description": "table with items"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "cabinet",
+            "cupboard",
+            "drawer",
+            "storage unit"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain items",
+          "id": "role_storage_unit",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "enclosed volume"
+          ],
+          "visible_candidates": [
+            {
+              "label": "left cabinet",
+              "visual_description": "left cabinet"
+            },
+            {
+              "label": "right cabinet",
+              "visual_description": "right cabinet"
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [
+        {
+          "id": "region_left_cabinet",
+          "label": "left cabinet",
+          "reason": "potential storage for kitchenware",
+          "visual_description": "left cabinet"
+        },
+        {
+          "id": "region_right_cabinet",
+          "label": "right cabinet",
+          "reason": "potential storage for kitchenware",
+          "visual_description": "right cabinet"
+        }
+      ],
+      "inspection_order": [
+        "region_left_cabinet",
+        "region_right_cabinet"
+      ],
+      "interaction_groups": [
+        {
+          "function": "prepare coffee",
+          "id": "group_coffee_preparation",
+          "required_relations": [
+            "fits inside"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_coffee_containment",
+          "tool_role": "role_stirring_implementation",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "serve soup",
+          "id": "group_soup_serving",
+          "required_relations": [
+            "fits inside"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_soup_containment",
+          "tool_role": "role_stirring_implementation",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "prepare coffee by stirring and serve soup for two people. Inspect storages for any missing kitchenware",
+      "unsupported_reason": ""
+    },
+    "raw_vlm_response": {
+      "cross_group_reuse_allowed": true,
+      "functional_relations": [
+        {
+          "object_role": "role_coffee_containment",
+          "relation": "fits inside",
+          "subject_role": "role_stirring_implementation"
+        },
+        {
+          "object_role": "role_soup_containment",
+          "relation": "fits inside",
+          "subject_role": "role_stirring_implementation"
+        },
+        {
+          "object_role": "role_serving_surface",
+          "relation": "placed on",
+          "subject_role": "role_coffee_containment"
+        },
+        {
+          "object_role": "role_serving_surface",
+          "relation": "placed on",
+          "subject_role": "role_soup_containment"
+        },
+        {
+          "object_role": "role_serving_surface",
+          "relation": "near anchor",
+          "subject_role": "role_storage_unit"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "REUSABLE",
+          "candidate_categories": [
+            "spoon",
+            "ladle",
+            "whisk",
+            "stirrer"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "stir liquid",
+          "id": "role_stirring_implementation",
+          "required_count": 1,
+          "required_properties": [
+            "elongated shape",
+            "rigid"
+          ],
+          "visible_candidates": [
+            {
+              "label": "metal spoon",
+              "visual_description": "metal spoon on table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "cup",
+            "mug",
+            "coffee cup",
+            "bowl"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain coffee",
+          "id": "role_coffee_containment",
+          "required_count": 1,
+          "required_properties": [
+            "open cavity",
+            "cup shape"
+          ],
+          "visible_candidates": [
+            {
+              "label": "blue mug",
+              "visual_description": "blue mug on table"
+            },
+            {
+              "label": "beige cup",
+              "visual_description": "beige cup on table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "bowl",
+            "soup bowl",
+            "cup",
+            "mug"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain soup",
+          "id": "role_soup_containment",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "bowl shape"
+          ],
+          "visible_candidates": [
+            {
+              "label": "blue bowl",
+              "visual_description": "blue bowl on table"
+            },
+            {
+              "label": "beige bowl",
+              "visual_description": "beige bowl on table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "table",
+            "counter",
+            "surface"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "support payload",
+          "id": "role_serving_surface",
+          "required_count": 1,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "table",
+              "visual_description": "table with items"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "cabinet",
+            "cupboard",
+            "drawer",
+            "storage unit"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain items",
+          "id": "role_storage_unit",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "enclosed volume"
+          ],
+          "visible_candidates": [
+            {
+              "label": "left cabinet",
+              "visual_description": "left cabinet"
+            },
+            {
+              "label": "right cabinet",
+              "visual_description": "right cabinet"
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [
+        {
+          "id": "region_left_cabinet",
+          "label": "left cabinet",
+          "reason": "potential storage for kitchenware",
+          "visual_description": "left cabinet"
+        },
+        {
+          "id": "region_right_cabinet",
+          "label": "right cabinet",
+          "reason": "potential storage for kitchenware",
+          "visual_description": "right cabinet"
+        }
+      ],
+      "inspection_order": [
+        "region_left_cabinet",
+        "region_right_cabinet"
+      ],
+      "interaction_groups": [
+        {
+          "function": "prepare coffee",
+          "id": "group_coffee_preparation",
+          "required_relations": [
+            "fits inside"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_coffee_containment",
+          "tool_role": "role_stirring_implementation",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "serve soup",
+          "id": "group_soup_serving",
+          "required_relations": [
+            "fits inside"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_soup_containment",
+          "tool_role": "role_stirring_implementation",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "prepare coffee by stirring and serve soup for two people. Inspect storages for any missing kitchenware",
+      "unsupported_reason": ""
+    },
+    "role_semantic_ontology_version": "phase3_p3i_4_semantic_ontology_v1",
+    "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+    "symbolic_task": {},
+    "validated_vlm_specification": {
+      "cross_group_reuse_allowed": true,
+      "functional_relations": [
+        {
+          "object_role": "role_coffee_containment",
+          "relation": "fits inside",
+          "subject_role": "role_stirring_implementation"
+        },
+        {
+          "object_role": "role_soup_containment",
+          "relation": "fits inside",
+          "subject_role": "role_stirring_implementation"
+        },
+        {
+          "object_role": "role_serving_surface",
+          "relation": "placed on",
+          "subject_role": "role_coffee_containment"
+        },
+        {
+          "object_role": "role_serving_surface",
+          "relation": "placed on",
+          "subject_role": "role_soup_containment"
+        },
+        {
+          "object_role": "role_serving_surface",
+          "relation": "near anchor",
+          "subject_role": "role_storage_unit"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "REUSABLE",
+          "candidate_categories": [
+            "spoon",
+            "ladle",
+            "whisk",
+            "stirrer"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "stir liquid",
+          "id": "role_stirring_implementation",
+          "required_count": 1,
+          "required_properties": [
+            "elongated shape",
+            "rigid"
+          ],
+          "visible_candidates": [
+            {
+              "label": "metal spoon",
+              "visual_description": "metal spoon on table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "cup",
+            "mug",
+            "coffee cup",
+            "bowl"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain coffee",
+          "id": "role_coffee_containment",
+          "required_count": 1,
+          "required_properties": [
+            "open cavity",
+            "cup shape"
+          ],
+          "visible_candidates": [
+            {
+              "label": "blue mug",
+              "visual_description": "blue mug on table"
+            },
+            {
+              "label": "beige cup",
+              "visual_description": "beige cup on table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "bowl",
+            "soup bowl",
+            "cup",
+            "mug"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain soup",
+          "id": "role_soup_containment",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "bowl shape"
+          ],
+          "visible_candidates": [
+            {
+              "label": "blue bowl",
+              "visual_description": "blue bowl on table"
+            },
+            {
+              "label": "beige bowl",
+              "visual_description": "beige bowl on table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "table",
+            "counter",
+            "surface"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "support payload",
+          "id": "role_serving_surface",
+          "required_count": 1,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "table",
+              "visual_description": "table with items"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "cabinet",
+            "cupboard",
+            "drawer",
+            "storage unit"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "contain items",
+          "id": "role_storage_unit",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "enclosed volume"
+          ],
+          "visible_candidates": [
+            {
+              "label": "left cabinet",
+              "visual_description": "left cabinet"
+            },
+            {
+              "label": "right cabinet",
+              "visual_description": "right cabinet"
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [
+        {
+          "id": "region_left_cabinet",
+          "label": "left cabinet",
+          "reason": "potential storage for kitchenware",
+          "visual_description": "left cabinet"
+        },
+        {
+          "id": "region_right_cabinet",
+          "label": "right cabinet",
+          "reason": "potential storage for kitchenware",
+          "visual_description": "right cabinet"
+        }
+      ],
+      "inspection_order": [
+        "region_left_cabinet",
+        "region_right_cabinet"
+      ],
+      "interaction_groups": [
+        {
+          "function": "prepare coffee",
+          "id": "group_coffee_preparation",
+          "required_relations": [
+            "fits inside"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_coffee_containment",
+          "tool_role": "role_stirring_implementation",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "function": "serve soup",
+          "id": "group_soup_serving",
+          "required_relations": [
+            "fits inside"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_soup_containment",
+          "tool_role": "role_stirring_implementation",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "prepare coffee by stirring and serve soup for two people. Inspect storages for any missing kitchenware",
+      "unsupported_reason": ""
+    },
+    "vlm_canonicalization_version": "phase3_p3e_1_v1"
+  },
+  "nodes": {
+    "coffee_container": {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "coffee_container",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup",
+        "mug"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [
+        "OPEN_CAVITY"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "coffee_stirrer": {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": 1,
+      "min_count": 1,
+      "name": "coffee_stirrer",
+      "numeric_constraints": [],
+      "preference": "minimize_distinct",
+      "reusable": true,
+      "semantic_categories": [
+        "spoon"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [
+        "ELONGATED_OBJECT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "soup_container": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "soup_container",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "bowl"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [
+        "OPEN_CAVITY"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  },
+  "operation_groups": [
+    {
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": true,
+      "function": "STIR_COFFEE",
+      "id": "coffee_stirring",
+      "required_relations": [
+        "INSERTABLE_IN"
+      ],
+      "required_target_count": 1,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": "deterministic_rank",
+      "target_role": "coffee_container",
+      "tool_role": "coffee_stirrer",
+      "usage_policy": "DEDICATED_PER_TARGET"
+    }
+  ],
+  "region_ranking": [
+    "C1",
+    "C2"
+  ],
+  "relations": [
+    {
+      "expected": true,
+      "object_role": "coffee_container",
+      "predicate": "INSERTABLE_IN",
+      "subject_role": "coffee_stirrer"
+    },
+    {
+      "expected": true,
+      "object_role": "soup_container",
+      "predicate": "INSERTABLE_IN",
+      "subject_role": "coffee_stirrer"
+    }
+  ],
+  "roles": [
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "coffee_container",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup",
+        "mug"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [
+        "OPEN_CAVITY"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": 1,
+      "min_count": 1,
+      "name": "coffee_stirrer",
+      "numeric_constraints": [],
+      "preference": "minimize_distinct",
+      "reusable": true,
+      "semantic_categories": [
+        "spoon"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [
+        "ELONGATED_OBJECT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "soup_container",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "bowl"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [
+        "OPEN_CAVITY"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "source": "VLM_FUNCTIONAL_SPEC",
+  "task_instruction": "prepare coffee by stirring and serve soup for two people. Inspect storages for any missing kitchenware"
+}

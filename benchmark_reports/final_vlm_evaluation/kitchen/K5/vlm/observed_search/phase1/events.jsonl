@@ -1,0 +1,86 @@
+{"event": "SETTLE_COMPLETED", "region_id": "INITIAL", "settle_steps": 50, "stage": 0}
+{"event": "VIRTUAL_INSPECTION_RIG_POSITIONED", "region_id": "INITIAL", "stage": 0}
+{"event": "INSPECTION_CAPTURED", "region_id": "INITIAL", "stage": 0, "valid_camera_count": 5}
+{"event": "OBJECT_DISCOVERED", "instance_token": "ad297da7a1e088fc37277b1d", "object_id": "object_0001", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0001", "point_count": 1776, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply", "object_id": "object_0001", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": true}
+{"event": "OBJECT_DISCOVERED", "instance_token": "074133203062dcd2c9abdcf7", "object_id": "object_0002", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0002", "point_count": 3392, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply", "object_id": "object_0002", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": true}
+{"event": "OBJECT_DISCOVERED", "instance_token": "215938969d5cce69273ebb3c", "object_id": "object_0003", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0003", "point_count": 4030, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0003/fused.ply", "object_id": "object_0003", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": true}
+{"event": "OBJECT_DISCOVERED", "instance_token": "258b17d690a938eb74a09035", "object_id": "object_0004", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0004", "point_count": 5320, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply", "object_id": "object_0004", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": true}
+{"event": "OBJECT_DISCOVERED", "instance_token": "cc3ca43f95b5dc47d16b2958", "object_id": "object_0005", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0005", "point_count": 1364, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0005/fused.ply", "object_id": "object_0005", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": false}
+{"event": "OBJECT_DISCOVERED", "instance_token": "8348a4ae24c12c81bb6375c2", "object_id": "object_0006", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0006", "point_count": 4323, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0006/fused.ply", "object_id": "object_0006", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": false}
+{"event": "OBJECT_DISCOVERED", "instance_token": "c42d9ddfe6f73386b5b97472", "object_id": "object_0007", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0007", "point_count": 2315, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0007/fused.ply", "object_id": "object_0007", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": true}
+{"camera_id": "inspection_left", "detection_count": 28, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 0}
+{"camera_id": "inspection_right", "detection_count": 33, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 0}
+{"camera_id": "inspection_top", "detection_count": 32, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 0}
+{"camera_id": "inspection_front", "detection_count": 33, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 0}
+{"camera_id": "inspection_close", "detection_count": 29, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 0}
+{"association_score": 0.9550619659160574, "camera_id": "inspection_left", "confidence": 0.721389889717102, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0003", "stage": 0}
+{"association_score": 0.9496740161213846, "camera_id": "inspection_left", "confidence": 0.6253806948661804, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0002", "stage": 0}
+{"association_score": 0.9574105760086538, "camera_id": "inspection_left", "confidence": 0.5836411714553833, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0004", "stage": 0}
+{"association_score": 0.9257059838328204, "camera_id": "inspection_left", "confidence": 0.8236110806465149, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0001", "stage": 0}
+{"association_score": 0.8669023462944405, "camera_id": "inspection_left", "confidence": 0.8250446915626526, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0005", "stage": 0}
+{"association_score": 0.9462102760661205, "camera_id": "inspection_left", "confidence": 0.47026190161705017, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0007", "stage": 0}
+{"association_score": 0.9277932072946294, "camera_id": "inspection_left", "confidence": 0.09056729823350906, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0006", "stage": 0}
+{"association_score": 0.9567936031054837, "camera_id": "inspection_right", "confidence": 0.6743742823600769, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0004", "stage": 0}
+{"association_score": 0.9624129768866612, "camera_id": "inspection_right", "confidence": 0.6424151062965393, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0003", "stage": 0}
+{"association_score": 0.9446510297482837, "camera_id": "inspection_right", "confidence": 0.6005970239639282, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0007", "stage": 0}
+{"association_score": 0.9297625999132177, "camera_id": "inspection_right", "confidence": 0.8511900305747986, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0002", "stage": 0}
+{"association_score": 0.9086712399637344, "camera_id": "inspection_right", "confidence": 0.7791231870651245, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0001", "stage": 0}
+{"association_score": 0.5506289315694337, "camera_id": "inspection_right", "confidence": 0.4171086847782135, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0005", "stage": 0}
+{"association_score": 0.90179974731085, "camera_id": "inspection_right", "confidence": 0.11470767110586166, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0006", "stage": 0}
+{"association_score": 0.8368583645676446, "camera_id": "inspection_top", "confidence": 0.8337545394897461, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0005", "stage": 0}
+{"association_score": 0.9335617684020237, "camera_id": "inspection_top", "confidence": 0.7268437147140503, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0002", "stage": 0}
+{"association_score": 0.9277452296110279, "camera_id": "inspection_top", "confidence": 0.5679263472557068, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0001", "stage": 0}
+{"association_score": 0.901266535035575, "camera_id": "inspection_top", "confidence": 0.5453176498413086, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0006", "stage": 0}
+{"association_score": 0.9528940690933028, "camera_id": "inspection_top", "confidence": 0.43926456570625305, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0004", "stage": 0}
+{"association_score": 0.9225762971373678, "camera_id": "inspection_top", "confidence": 0.4331066906452179, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0007", "stage": 0}
+{"association_score": 0.8400850841380821, "camera_id": "inspection_top", "confidence": 0.3778199553489685, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0003", "stage": 0}
+{"association_score": 0.956664533204915, "camera_id": "inspection_front", "confidence": 0.6770889759063721, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0004", "stage": 0}
+{"association_score": 0.9637471051412692, "camera_id": "inspection_front", "confidence": 0.6227717399597168, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0003", "stage": 0}
+{"association_score": 0.9458574709321552, "camera_id": "inspection_front", "confidence": 0.6281622052192688, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0007", "stage": 0}
+{"association_score": 0.932901224703974, "camera_id": "inspection_front", "confidence": 0.8302791714668274, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0002", "stage": 0}
+{"association_score": 0.943943872090129, "camera_id": "inspection_front", "confidence": 0.784721314907074, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0001", "stage": 0}
+{"association_score": 0.9028932257603516, "camera_id": "inspection_front", "confidence": 0.12169952690601349, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0006", "stage": 0}
+{"association_score": 0.9063777777777778, "camera_id": "inspection_front", "confidence": 0.10635743290185928, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0005", "stage": 0}
+{"association_score": 0.9394137671589607, "camera_id": "inspection_close", "confidence": 0.7075604200363159, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0002", "stage": 0}
+{"association_score": 0.954606288981289, "camera_id": "inspection_close", "confidence": 0.4471551775932312, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0007", "stage": 0}
+{"association_score": 0.9601037361895927, "camera_id": "inspection_close", "confidence": 0.6603055000305176, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0004", "stage": 0}
+{"association_score": 0.6987008205927684, "camera_id": "inspection_close", "confidence": 0.7589640021324158, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0005", "stage": 0}
+{"association_score": 0.9336277682465323, "camera_id": "inspection_close", "confidence": 0.5332761406898499, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0003", "stage": 0}
+{"association_score": 0.9357218402961396, "camera_id": "inspection_close", "confidence": 0.24937985837459564, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0006", "stage": 0}
+{"elapsed_seconds": 6.754600326530635e-05, "event": "SEMANTIC_ROLE_SCOPED_PAIRS_EVALUATED", "observed_object_count": 7, "ordered_distinct_object_pair_count": 42, "pairing_strategy": "semantic_role_scoped", "region_id": "INITIAL", "relation_evaluation_count": 6, "role_binding_phase": "AFTER_SEMANTIC_GATING_AND_PAIRWISE_GEOMETRY", "skipped_relation_pair_count": 36, "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0004", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0005", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_GEOMETRY", "object_id": "object_0006", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0001", "role": "coffee_stirrer", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0002", "role": "coffee_stirrer", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "coffee_stirrer", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0004", "role": "coffee_stirrer", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0006", "role": "coffee_stirrer", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0007", "role": "coffee_stirrer", "stage": 0}
+{"counts": {"distinct_assigned_physical_objects": 1, "functionally_assignable_utensils": 1, "geometrically_eligible_utensils": 1, "grounding_eligible_utensils": 1, "raw_observed_utensils": 1, "required_distinct_physical_objects": 1, "required_target_slots": 1, "satisfied_target_slots": 1, "semantically_eligible_utensils": 1}, "event": "FUNCTION_GROUP_EVALUATED", "function": "STIR_COFFEE", "function_group": "coffee_stirring", "policy_mode": "function-aware", "region_id": "INITIAL", "stage": 0, "status": "COMPLETE"}
+{"counts": {"distinct_assigned_physical_objects": 1, "functionally_assignable_utensils": 1, "geometrically_eligible_utensils": 1, "grounding_eligible_utensils": 1, "raw_observed_utensils": 1, "required_distinct_physical_objects": 1, "required_target_slots": 1, "satisfied_target_slots": 1, "semantically_eligible_utensils": 1}, "declared_usage_policy": {"distinct_within_group": true, "mode": "dedicated_per_target", "same_tool_must_cover_all_targets": false, "selection_preference": "deterministic_rank"}, "event": "USAGE_POLICY_EVALUATED", "function_group": "coffee_stirring", "policy_mode": "function-aware", "region_id": "INITIAL", "stage": 0, "status": "COMPLETE"}
+{"counts": {"distinct_assigned_physical_objects": 1, "functionally_assignable_utensils": 1, "geometrically_eligible_utensils": 1, "grounding_eligible_utensils": 1, "raw_observed_utensils": 1, "required_distinct_physical_objects": 1, "required_target_slots": 1, "satisfied_target_slots": 1, "semantically_eligible_utensils": 1}, "event": "FUNCTION_GROUP_COMPLETE", "function_group": "coffee_stirring", "policy_mode": "function-aware", "reason": "ALL_TARGET_SLOTS_ASSIGNED", "region_id": "INITIAL", "stage": 0}
+{"counts": {"distinct_assigned_physical_objects": 1, "functionally_assignable_utensils": 1, "geometrically_eligible_utensils": 1, "grounding_eligible_utensils": 1, "raw_observed_utensils": 1, "required_distinct_physical_objects": 1, "required_target_slots": 1, "satisfied_target_slots": 1, "semantically_eligible_utensils": 1}, "event": "COUNT_REQUIREMENT_SATISFIED", "function_group": "coffee_stirring", "policy_mode": "function-aware", "region_id": "INITIAL", "stage": 0}
+{"dedicated_assignment": true, "event": "TARGET_ASSIGNMENT_CREATED", "function_group": "coffee_stirring", "policy_mode": "function-aware", "region_id": "INITIAL", "reused_assignment": false, "stage": 0, "target_object_id": "object_0002", "utensil_object_id": "object_0005"}
+{"event": "DEDICATED_ASSIGNMENT_CREATED", "function_group": "coffee_stirring", "object_id": "object_0005", "policy_mode": "function-aware", "region_id": "INITIAL", "stage": 0, "target_object_id": "object_0002"}
+{"event": "CANDIDATE_EXCLUDED_FROM_COUNT", "function_group": "coffee_stirring", "object_id": "object_0005", "policy_mode": "function-aware", "reason": "TARGET_RELATION_FAILED", "region_id": "INITIAL", "stage": 0, "status": "FALSE", "target_object_id": "object_0001"}
+{"event": "CANDIDATE_EXCLUDED_FROM_COUNT", "function_group": "coffee_stirring", "object_id": "object_0005", "policy_mode": "function-aware", "reason": "TARGET_ROLE_INELIGIBLE", "region_id": "INITIAL", "stage": 0, "status": "FALSE", "target_object_id": "object_0006"}
+{"event": "WITNESS_EVALUATED", "stage": 0, "status": "COMPLETE", "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"}
+{"event": "COMPLETE_WITNESS_FOUND", "stage": 0, "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"}
+{"event": "VERIFIED_TASK_WITNESS_COMPLETE", "ready_for_tamp": true, "stage": 0, "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"}
+{"event": "INSPECTION_STOPPED_COMPLETE", "remaining_regions": ["C1", "C2", "D1", "D2", "B1"], "stage": 0}

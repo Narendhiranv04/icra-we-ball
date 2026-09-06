@@ -1,0 +1,145 @@
+{
+  "artifacts": {
+    "final_plan": "action_sequence/plan.json",
+    "functional_graph": "functional_requirement_graph.json",
+    "functional_specification": "functional_specification.json",
+    "grounding": "graph_grounding_result.json",
+    "observed_graph": "observed_scene_graph.json",
+    "plan": "action_sequence/plan.json",
+    "plan_grounding_audit": "plan_grounding_audit.json",
+    "replay_validation": "action_sequence/replay_validation.json",
+    "result": "result.json"
+  },
+  "candidate_plan": [
+    {
+      "action_index": 1,
+      "arguments": [
+        "object_0001"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 2,
+      "arguments": [
+        "object_0001",
+        "region_0001"
+      ],
+      "operator": "PLACE"
+    },
+    {
+      "action_index": 3,
+      "arguments": [
+        "object_0002"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 4,
+      "arguments": [
+        "object_0002",
+        "region_0002"
+      ],
+      "operator": "PLACE"
+    },
+    {
+      "action_index": 5,
+      "arguments": [
+        "object_0003"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 6,
+      "arguments": [
+        "object_0003",
+        "region_0003"
+      ],
+      "operator": "PLACE"
+    },
+    {
+      "action_index": 7,
+      "arguments": [
+        "object_0004"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 8,
+      "arguments": [
+        "object_0004",
+        "region_0001"
+      ],
+      "operator": "PLACE"
+    },
+    {
+      "action_index": 9,
+      "arguments": [
+        "object_0005"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 10,
+      "arguments": [
+        "object_0005",
+        "region_0003"
+      ],
+      "operator": "PLACE"
+    }
+  ],
+  "candidate_search_statistics": {
+    "algorithm": "deterministic_astar_symbolic_state_search",
+    "expanded_states": 822,
+    "frontier_peak": 491,
+    "generated_states": 2200,
+    "is_partial": false,
+    "plan_cost": 10,
+    "plan_length": 10,
+    "satisfied_goals": 5,
+    "search_time_ms": 4.888808005489409,
+    "total_goals": 5,
+    "visited_states": 1312
+  },
+  "canonicalization_succeeded": true,
+  "domain": "living_room",
+  "execution_state": "planning_only",
+  "exploration_actuation": "not_applicable",
+  "failure_category": null,
+  "failure_reason": null,
+  "finished_at_utc": "2026-09-06T04:39:01.496889+00:00",
+  "functional_spec_complete": true,
+  "git_commit": "ed90a6d056241c486e9fc60c694d829f5feb1501",
+  "git_dirty": true,
+  "internal_variant": "F2_LEFT_SAUCER_ON_SHARED",
+  "observer_errors": [],
+  "pipeline_runtime_seconds": 7.9344,
+  "provider_model": null,
+  "provider_region_ranking": [],
+  "region_order_used": [],
+  "schema_version": 1,
+  "search_contract": {
+    "canonical_region_ids": [],
+    "domain": "living_room",
+    "no_search_required": true,
+    "policy_version": "phase3_p3h_1_v1",
+    "proposal_trace": [],
+    "region_proposal_trace": [],
+    "search_policy_trace": [],
+    "search_seed": null,
+    "source": "SYSTEM_DECLARED_NO_SEARCH"
+  },
+  "search_order_source_effective": "not_applicable",
+  "search_order_source_requested": "auto",
+  "search_policy_version": "phase3_p3h_1_v1",
+  "search_seed_effective": null,
+  "search_seed_requested": null,
+  "spec_acquisition": "replayed_provider_output",
+  "spec_mode": "vlm",
+  "spec_provider_source": "VLM_CANONICAL_G_F",
+  "specification_input": "/home/naren/RA_iiith/runs/final_vlm_pipeline_eval_v2/living_room/L1/vlm/functional_specification.json",
+  "specification_sha256": "e6499869a76202a76ce82b5c9858332289a9f1c445cbd9112708a99c19b31f12",
+  "started_at_utc": "2026-09-06T04:38:53.562537+00:00",
+  "terminal_status": "ACTION_SEQUENCE_READY",
+  "variant": "L3",
+  "visualization_requested": false
+}

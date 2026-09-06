@@ -1,0 +1,116 @@
+{
+  "artifacts": {
+    "action_plan": "action_plan.json",
+    "detection_diagnostics": "detection_diagnostics.json",
+    "final_plan": "action_plan.json",
+    "functional_graph": "functional_requirement_graph.json",
+    "functional_specification": "functional_specification.json",
+    "grounding": "graph_grounding_result.json",
+    "observed_graph": "observed_scene_graph.json",
+    "plan_grounding_audit": "plan_grounding_audit.json",
+    "result": "result.json",
+    "satisfaction": "satisfaction.json"
+  },
+  "candidate_plan": [
+    {
+      "action_index": 1,
+      "action_instance_id": "fact_001_pick",
+      "arguments": [
+        "object_0003",
+        "RIGHT_DRAWER"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 2,
+      "action_instance_id": "fact_002_place",
+      "arguments": [
+        "object_0003",
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "operator": "PLACE"
+    }
+  ],
+  "candidate_search_statistics": {
+    "algorithm": "deterministic_astar_symbolic_state_search",
+    "expanded_states": 3,
+    "frontier_peak": 1,
+    "generated_states": 2,
+    "is_partial": true,
+    "plan_cost": 2,
+    "plan_length": 2,
+    "satisfied_goals": 2,
+    "search_time_ms": 0.013876007869839668,
+    "total_goals": 3,
+    "visited_states": 3
+  },
+  "canonicalization_succeeded": true,
+  "domain": "workshop",
+  "execution_state": "planning_only",
+  "exploration_actuation": "direct_sim_articulation",
+  "failure_category": null,
+  "failure_reason": null,
+  "finished_at_utc": "2026-09-06T04:40:26.879360+00:00",
+  "functional_spec_complete": false,
+  "git_commit": "ed90a6d056241c486e9fc60c694d829f5feb1501",
+  "git_dirty": true,
+  "internal_variant": "F2_MANUAL_FIRST_TWO_REGIONS",
+  "observer_errors": [],
+  "pipeline_runtime_seconds": 12.9593,
+  "provider_model": null,
+  "provider_region_ranking": [],
+  "region_order_used": [
+    "LEFT_DRAWER",
+    "RIGHT_DRAWER",
+    "TOOL_CABINET"
+  ],
+  "schema_version": 1,
+  "search_contract": {
+    "canonical_region_ids": [
+      "LEFT_DRAWER",
+      "RIGHT_DRAWER",
+      "TOOL_CABINET"
+    ],
+    "domain": "workshop",
+    "no_search_required": false,
+    "policy_version": "phase3_p3h_1_v1",
+    "proposal_trace": [],
+    "region_proposal_trace": [],
+    "search_policy_trace": [
+      {
+        "final_rank": 0,
+        "origin": "SYSTEM_COMPLETION",
+        "provider_rank": null,
+        "region_id": "LEFT_DRAWER"
+      },
+      {
+        "final_rank": 1,
+        "origin": "SYSTEM_COMPLETION",
+        "provider_rank": null,
+        "region_id": "RIGHT_DRAWER"
+      },
+      {
+        "final_rank": 2,
+        "origin": "SYSTEM_COMPLETION",
+        "provider_rank": null,
+        "region_id": "TOOL_CABINET"
+      }
+    ],
+    "search_seed": null,
+    "source": "VLM_PROVIDER_RANKED_SYSTEM_COMPLETED"
+  },
+  "search_order_source_effective": "provider",
+  "search_order_source_requested": "auto",
+  "search_policy_version": "phase3_p3h_1_v1",
+  "search_seed_effective": null,
+  "search_seed_requested": null,
+  "spec_acquisition": "replayed_provider_output",
+  "spec_mode": "vlm",
+  "spec_provider_source": "VLM_CANONICAL_G_F",
+  "specification_input": "/home/naren/RA_iiith/runs/final_vlm_pipeline_eval_v2/workshop/W1/vlm/functional_specification.json",
+  "specification_sha256": "5126de9c68a3005e52d4a7f5e3949e8953c910f2926731de894031026afb9f64",
+  "started_at_utc": "2026-09-06T04:40:13.920063+00:00",
+  "terminal_status": "PARTIAL_ACTION_SEQUENCE_READY",
+  "variant": "W3",
+  "visualization_requested": false
+}

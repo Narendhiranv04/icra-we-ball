@@ -1,0 +1,525 @@
+{
+  "camera_summaries": [
+    {
+      "accepted_association_count": 0,
+      "camera_id": "inspection_left",
+      "crop_inference_count": 0,
+      "crop_inference_seconds": 0.0,
+      "detection_count": 0,
+      "full_frame_inference_seconds": 0.09491873098886572,
+      "inference_seconds": 0.09491873098886572,
+      "unmatched_detection_count": 0,
+      "unmatched_visible_object_ids": []
+    },
+    {
+      "accepted_association_count": 1,
+      "camera_id": "inspection_right",
+      "crop_inference_count": 1,
+      "crop_inference_seconds": 0.11749141098698601,
+      "detection_count": 3,
+      "full_frame_inference_seconds": 0.10035938100190833,
+      "inference_seconds": 0.21785079198889434,
+      "unmatched_detection_count": 2,
+      "unmatched_visible_object_ids": []
+    },
+    {
+      "accepted_association_count": 1,
+      "camera_id": "inspection_top",
+      "crop_inference_count": 1,
+      "crop_inference_seconds": 0.10311272900435142,
+      "detection_count": 5,
+      "full_frame_inference_seconds": 0.09942963000503369,
+      "inference_seconds": 0.2025423590093851,
+      "unmatched_detection_count": 4,
+      "unmatched_visible_object_ids": []
+    },
+    {
+      "accepted_association_count": 1,
+      "camera_id": "inspection_front",
+      "crop_inference_count": 1,
+      "crop_inference_seconds": 0.13617873401381075,
+      "detection_count": 4,
+      "full_frame_inference_seconds": 0.09972074499819428,
+      "inference_seconds": 0.23589947901200503,
+      "unmatched_detection_count": 3,
+      "unmatched_visible_object_ids": []
+    },
+    {
+      "accepted_association_count": 1,
+      "camera_id": "inspection_close",
+      "crop_inference_count": 1,
+      "crop_inference_seconds": 0.09753923999960534,
+      "detection_count": 4,
+      "full_frame_inference_seconds": 0.0997124999994412,
+      "inference_seconds": 0.19725173999904655,
+      "unmatched_detection_count": 3,
+      "unmatched_visible_object_ids": []
+    }
+  ],
+  "detections": [
+    {
+      "bbox_xyxy": [
+        415.1449890136719,
+        383.82049560546875,
+        501.2125549316406,
+        499.20928955078125
+      ],
+      "camera_id": "inspection_right",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.7715191841125488,
+      "crop_source_object_id": null,
+      "detection_id": "inspection_right_full_000",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        1280,
+        960
+      ],
+      "input_crop_box_xyxy": null,
+      "input_image_path": "cameras/inspection_right/rgb.png",
+      "input_kind": "FULL_FRAME",
+      "raw_label": "coffee mug",
+      "source_camera": "inspection_right"
+    },
+    {
+      "bbox_xyxy": [
+        414.7070007324219,
+        383.52813720703125,
+        501.9923400878906,
+        498.81414794921875
+      ],
+      "camera_id": "inspection_right",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.5078378915786743,
+      "crop_source_object_id": null,
+      "detection_id": "inspection_right_full_001",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        1280,
+        960
+      ],
+      "input_crop_box_xyxy": null,
+      "input_image_path": "cameras/inspection_right/rgb.png",
+      "input_kind": "FULL_FRAME",
+      "raw_label": "cup",
+      "source_camera": "inspection_right"
+    },
+    {
+      "bbox_xyxy": [
+        413.0062446594238,
+        384.6140670776367,
+        500.31532287597656,
+        499.4024963378906
+      ],
+      "camera_id": "inspection_right",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.05921163409948349,
+      "crop_source_object_id": "object_0008",
+      "detection_id": "inspection_right_crop_000_000",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        140,
+        186
+      ],
+      "input_crop_box_xyxy": [
+        387,
+        349,
+        527,
+        535
+      ],
+      "input_image_path": "semantics/cameras/inspection_right/crops/000_object_0008.png",
+      "input_kind": "MASK_BOUNDED_RGB_CROP",
+      "raw_label": "cup",
+      "source_camera": "inspection_right"
+    },
+    {
+      "bbox_xyxy": [
+        487.95440673828125,
+        322.21612548828125,
+        586.9989624023438,
+        450.76190185546875
+      ],
+      "camera_id": "inspection_top",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.8835424184799194,
+      "crop_source_object_id": null,
+      "detection_id": "inspection_top_full_000",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        1280,
+        960
+      ],
+      "input_crop_box_xyxy": null,
+      "input_image_path": "cameras/inspection_top/rgb.png",
+      "input_kind": "FULL_FRAME",
+      "raw_label": "coffee mug",
+      "source_camera": "inspection_top"
+    },
+    {
+      "bbox_xyxy": [
+        487.75469970703125,
+        322.17236328125,
+        587.3428344726562,
+        450.4111328125
+      ],
+      "camera_id": "inspection_top",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.8446914553642273,
+      "crop_source_object_id": null,
+      "detection_id": "inspection_top_full_001",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        1280,
+        960
+      ],
+      "input_crop_box_xyxy": null,
+      "input_image_path": "cameras/inspection_top/rgb.png",
+      "input_kind": "FULL_FRAME",
+      "raw_label": "cup",
+      "source_camera": "inspection_top"
+    },
+    {
+      "bbox_xyxy": [
+        487.390380859375,
+        322.12957763671875,
+        586.835693359375,
+        450.49957275390625
+      ],
+      "camera_id": "inspection_top",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.8083527088165283,
+      "crop_source_object_id": null,
+      "detection_id": "inspection_top_full_002",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        1280,
+        960
+      ],
+      "input_crop_box_xyxy": null,
+      "input_image_path": "cameras/inspection_top/rgb.png",
+      "input_kind": "FULL_FRAME",
+      "raw_label": "mug",
+      "source_camera": "inspection_top"
+    },
+    {
+      "bbox_xyxy": [
+        487.96795654296875,
+        323.20478439331055,
+        586.4776153564453,
+        450.4355010986328
+      ],
+      "camera_id": "inspection_top",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.7505626082420349,
+      "crop_source_object_id": "object_0008",
+      "detection_id": "inspection_top_crop_000_000",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        159,
+        204
+      ],
+      "input_crop_box_xyxy": [
+        458,
+        285,
+        617,
+        489
+      ],
+      "input_image_path": "semantics/cameras/inspection_top/crops/000_object_0008.png",
+      "input_kind": "MASK_BOUNDED_RGB_CROP",
+      "raw_label": "cup",
+      "source_camera": "inspection_top"
+    },
+    {
+      "bbox_xyxy": [
+        488.1198215484619,
+        323.1875686645508,
+        586.6117248535156,
+        450.8367462158203
+      ],
+      "camera_id": "inspection_top",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.6501614451408386,
+      "crop_source_object_id": "object_0008",
+      "detection_id": "inspection_top_crop_000_001",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        159,
+        204
+      ],
+      "input_crop_box_xyxy": [
+        458,
+        285,
+        617,
+        489
+      ],
+      "input_image_path": "semantics/cameras/inspection_top/crops/000_object_0008.png",
+      "input_kind": "MASK_BOUNDED_RGB_CROP",
+      "raw_label": "mug",
+      "source_camera": "inspection_top"
+    },
+    {
+      "bbox_xyxy": [
+        541.0263061523438,
+        358.21295166015625,
+        636.5357055664062,
+        471.19903564453125
+      ],
+      "camera_id": "inspection_front",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.9204782247543335,
+      "crop_source_object_id": null,
+      "detection_id": "inspection_front_full_000",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        1280,
+        960
+      ],
+      "input_crop_box_xyxy": null,
+      "input_image_path": "cameras/inspection_front/rgb.png",
+      "input_kind": "FULL_FRAME",
+      "raw_label": "coffee mug",
+      "source_camera": "inspection_front"
+    },
+    {
+      "bbox_xyxy": [
+        540.6805419921875,
+        357.79168701171875,
+        636.83349609375,
+        471.35394287109375
+      ],
+      "camera_id": "inspection_front",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.8480519652366638,
+      "crop_source_object_id": null,
+      "detection_id": "inspection_front_full_001",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        1280,
+        960
+      ],
+      "input_crop_box_xyxy": null,
+      "input_image_path": "cameras/inspection_front/rgb.png",
+      "input_kind": "FULL_FRAME",
+      "raw_label": "cup",
+      "source_camera": "inspection_front"
+    },
+    {
+      "bbox_xyxy": [
+        540.6568603515625,
+        358.04937744140625,
+        636.7735595703125,
+        471.07464599609375
+      ],
+      "camera_id": "inspection_front",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.824482262134552,
+      "crop_source_object_id": null,
+      "detection_id": "inspection_front_full_002",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        1280,
+        960
+      ],
+      "input_crop_box_xyxy": null,
+      "input_image_path": "cameras/inspection_front/rgb.png",
+      "input_kind": "FULL_FRAME",
+      "raw_label": "mug",
+      "source_camera": "inspection_front"
+    },
+    {
+      "bbox_xyxy": [
+        541.6660289764404,
+        360.2671241760254,
+        636.8376083374023,
+        470.1702880859375
+      ],
+      "camera_id": "inspection_front",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.06394733488559723,
+      "crop_source_object_id": "object_0008",
+      "detection_id": "inspection_front_crop_000_000",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        154,
+        177
+      ],
+      "input_crop_box_xyxy": [
+        512,
+        327,
+        666,
+        504
+      ],
+      "input_image_path": "semantics/cameras/inspection_front/crops/000_object_0008.png",
+      "input_kind": "MASK_BOUNDED_RGB_CROP",
+      "raw_label": "cup",
+      "source_camera": "inspection_front"
+    },
+    {
+      "bbox_xyxy": [
+        447.151611328125,
+        317.97137451171875,
+        540.4246826171875,
+        444.5355224609375
+      ],
+      "camera_id": "inspection_close",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.8461036086082458,
+      "crop_source_object_id": null,
+      "detection_id": "inspection_close_full_000",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        1280,
+        960
+      ],
+      "input_crop_box_xyxy": null,
+      "input_image_path": "cameras/inspection_close/rgb.png",
+      "input_kind": "FULL_FRAME",
+      "raw_label": "cup",
+      "source_camera": "inspection_close"
+    },
+    {
+      "bbox_xyxy": [
+        447.37750244140625,
+        318.06060791015625,
+        540.3174438476562,
+        444.57904052734375
+      ],
+      "camera_id": "inspection_close",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.8423247933387756,
+      "crop_source_object_id": null,
+      "detection_id": "inspection_close_full_001",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        1280,
+        960
+      ],
+      "input_crop_box_xyxy": null,
+      "input_image_path": "cameras/inspection_close/rgb.png",
+      "input_kind": "FULL_FRAME",
+      "raw_label": "coffee mug",
+      "source_camera": "inspection_close"
+    },
+    {
+      "bbox_xyxy": [
+        447.03437423706055,
+        319.36149978637695,
+        539.2398910522461,
+        444.00718688964844
+      ],
+      "camera_id": "inspection_close",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.6435680389404297,
+      "crop_source_object_id": "object_0008",
+      "detection_id": "inspection_close_crop_000_000",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        149,
+        202
+      ],
+      "input_crop_box_xyxy": [
+        419,
+        281,
+        568,
+        483
+      ],
+      "input_image_path": "semantics/cameras/inspection_close/crops/000_object_0008.png",
+      "input_kind": "MASK_BOUNDED_RGB_CROP",
+      "raw_label": "cup",
+      "source_camera": "inspection_close"
+    },
+    {
+      "bbox_xyxy": [
+        447.04891777038574,
+        319.4369773864746,
+        539.6002883911133,
+        444.24574279785156
+      ],
+      "camera_id": "inspection_close",
+      "canonical_label": "cup",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence": 0.43760308623313904,
+      "crop_source_object_id": "object_0008",
+      "detection_id": "inspection_close_crop_000_001",
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "inference_resolution": [
+        149,
+        202
+      ],
+      "input_crop_box_xyxy": [
+        419,
+        281,
+        568,
+        483
+      ],
+      "input_image_path": "semantics/cameras/inspection_close/crops/000_object_0008.png",
+      "input_kind": "MASK_BOUNDED_RGB_CROP",
+      "raw_label": "mug",
+      "source_camera": "inspection_close"
+    }
+  ],
+  "detector": {
+    "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+    "name": "ultralytics_yolo_world",
+    "version": "8.4.112"
+  },
+  "inference_seconds": 0.9484631009981968,
+  "observation_source": "RGB_DETECTOR",
+  "vocabulary": [
+    "bowl",
+    "mixing bowl",
+    "soup bowl",
+    "serving bowl",
+    "deep bowl",
+    "cup",
+    "coffee cup",
+    "mug",
+    "coffee mug",
+    "spoon",
+    "teaspoon",
+    "tablespoon",
+    "metal spoon",
+    "large spoon",
+    "ladle",
+    "soup spoon",
+    "dessert spoon",
+    "serving spoon",
+    "silver spoon",
+    "stirrer",
+    "drink stirrer",
+    "coffee stirrer",
+    "stirring stick",
+    "stirring utensil",
+    "whisk"
+  ]
+}

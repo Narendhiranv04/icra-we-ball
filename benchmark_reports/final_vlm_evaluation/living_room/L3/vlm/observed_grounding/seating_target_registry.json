@@ -1,0 +1,483 @@
+{
+  "schema_version": 1,
+  "seating_targets": {
+    "seat_0001": {
+      "centroid_world_m": [
+        -1.0202299356460571,
+        0.9956938624382019,
+        0.4617701768875122
+      ],
+      "identity": {
+        "entity_type": "seating_target",
+        "first_seen_stage": 0,
+        "seating_target_id": "seat_0001"
+      },
+      "point_count": 208895,
+      "provenance": {
+        "contributing_camera_ids": [
+          "room_left",
+          "room_right",
+          "room_high",
+          "room_front",
+          "room_rear"
+        ],
+        "evidence_path": "observation/seats/seat_0001/observed_points.ply"
+      },
+      "quality_is_valid": true,
+      "semantic_role": {
+        "canonical_label": "chair",
+        "semantic_rank": null,
+        "status": "TRUE",
+        "value": true
+      },
+      "semantics": {
+        "alternatives": [
+          {
+            "camera_ids": [
+              "room_front",
+              "room_high",
+              "room_rear",
+              "room_right"
+            ],
+            "label": "chair",
+            "mean_confidence": 0.7745812386274338,
+            "supporting_view_count": 4,
+            "weighted_score": 2.6140666685794334
+          },
+          {
+            "camera_ids": [
+              "room_left"
+            ],
+            "label": "armchair",
+            "mean_confidence": 0.8185718655586243,
+            "supporting_view_count": 1,
+            "weighted_score": 0.6699933287122908
+          }
+        ],
+        "canonical_label": "chair",
+        "confidence": 0.7745812386274338,
+        "entity_id": "seat_0001",
+        "entity_type": "seat",
+        "observations": [
+          {
+            "association_metrics": {
+              "box_fraction": 0.6667064819238733,
+              "intersection_pixels": 16745,
+              "mask_fraction": 0.900220418257083,
+              "score": 0.8184905405404596
+            },
+            "detection": {
+              "bbox_xyxy": [
+                379.6143798828125,
+                448.14483642578125,
+                534.049072265625,
+                608.0618286132812
+              ],
+              "canonical_label": "armchair",
+              "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.8185718655586243,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "armchair",
+              "source_camera": "room_left"
+            },
+            "entity_id": "seat_0001",
+            "entity_type": "seat",
+            "weighted_score": 0.6699933287122908
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.5796604356028126,
+              "intersection_pixels": 6760,
+              "mask_fraction": 0.9278067526763656,
+              "score": 0.805955541700622
+            },
+            "detection": {
+              "bbox_xyxy": [
+                574.8477783203125,
+                403.70306396484375,
+                692.035400390625,
+                500.53082275390625
+              ],
+              "canonical_label": "chair",
+              "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.6990724802017212,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "chair",
+              "source_camera": "room_right"
+            },
+            "entity_id": "seat_0001",
+            "entity_type": "seat",
+            "weighted_score": 0.5634213394689755
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.8643911885741951,
+              "intersection_pixels": 17854,
+              "mask_fraction": 0.7857582959246545,
+              "score": 0.8132798083519936
+            },
+            "detection": {
+              "bbox_xyxy": [
+                416.91973876953125,
+                270.030517578125,
+                550.1758422851562,
+                422.515869140625
+              ],
+              "canonical_label": "chair",
+              "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.728464663028717,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "chair",
+              "source_camera": "room_high"
+            },
+            "entity_id": "seat_0001",
+            "entity_type": "seat",
+            "weighted_score": 0.5924456015391947
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.8155967409794969,
+              "intersection_pixels": 45547,
+              "mask_fraction": 0.8951671547335941,
+              "score": 0.8673175099196601
+            },
+            "detection": {
+              "bbox_xyxy": [
+                287.72198486328125,
+                55.859527587890625,
+                505.521728515625,
+                309.9065856933594
+              ],
+              "canonical_label": "chair",
+              "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.8468279838562012,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "chair",
+              "source_camera": "room_front"
+            },
+            "entity_id": "seat_0001",
+            "entity_type": "seat",
+            "weighted_score": 0.7344687382884465
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.7257577173472884,
+              "intersection_pixels": 139794,
+              "mask_fraction": 0.9605260445653743,
+              "score": 0.8783571300390443
+            },
+            "detection": {
+              "bbox_xyxy": [
+                443.68359375,
+                328.01611328125,
+                811.04443359375,
+                849.4007568359375
+              ],
+              "canonical_label": "chair",
+              "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.8239598274230957,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "chair",
+              "source_camera": "room_rear"
+            },
+            "entity_id": "seat_0001",
+            "entity_type": "seat",
+            "weighted_score": 0.7237309892828165
+          }
+        ],
+        "status": "SUPPORTED",
+        "supporting_view_count": 4,
+        "weighted_score_margin": 1.9440733398671426
+      }
+    },
+    "seat_0002": {
+      "centroid_world_m": [
+        0.9236130714416504,
+        0.9415481090545654,
+        0.42410972714424133
+      ],
+      "identity": {
+        "entity_type": "seating_target",
+        "first_seen_stage": 0,
+        "seating_target_id": "seat_0002"
+      },
+      "point_count": 165355,
+      "provenance": {
+        "contributing_camera_ids": [
+          "room_left",
+          "room_right",
+          "room_high",
+          "room_front",
+          "room_rear"
+        ],
+        "evidence_path": "observation/seats/seat_0002/observed_points.ply"
+      },
+      "quality_is_valid": true,
+      "semantic_role": {
+        "canonical_label": "chair",
+        "semantic_rank": null,
+        "status": "TRUE",
+        "value": true
+      },
+      "semantics": {
+        "alternatives": [
+          {
+            "camera_ids": [
+              "room_front",
+              "room_high",
+              "room_left",
+              "room_rear"
+            ],
+            "label": "chair",
+            "mean_confidence": 0.7336067259311676,
+            "supporting_view_count": 4,
+            "weighted_score": 2.482202821105769
+          },
+          {
+            "camera_ids": [
+              "room_right"
+            ],
+            "label": "armchair",
+            "mean_confidence": 0.8088146448135376,
+            "supporting_view_count": 1,
+            "weighted_score": 0.6608082154639381
+          }
+        ],
+        "canonical_label": "chair",
+        "confidence": 0.7336067259311676,
+        "entity_id": "seat_0002",
+        "entity_type": "seat",
+        "observations": [
+          {
+            "association_metrics": {
+              "box_fraction": 0.5942580421999308,
+              "intersection_pixels": 6872,
+              "mask_fraction": 0.9281469475958941,
+              "score": 0.811285830707307
+            },
+            "detection": {
+              "bbox_xyxy": [
+                589.35302734375,
+                402.1239013671875,
+                706.3206787109375,
+                499.92138671875
+              ],
+              "canonical_label": "chair",
+              "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.6178639531135559,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "chair",
+              "source_camera": "room_left"
+            },
+            "entity_id": "seat_0002",
+            "entity_type": "seat",
+            "weighted_score": 0.5012642704658318
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.6503844063058166,
+              "intersection_pixels": 16750,
+              "mask_fraction": 0.9067287392410545,
+              "score": 0.8170082227137212
+            },
+            "detection": {
+              "bbox_xyxy": [
+                744.7882080078125,
+                446.4729309082031,
+                901.1934814453125,
+                608.0615234375
+              ],
+              "canonical_label": "armchair",
+              "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.8088146448135376,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "armchair",
+              "source_camera": "room_right"
+            },
+            "entity_id": "seat_0002",
+            "entity_type": "seat",
+            "weighted_score": 0.6608082154639381
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.8709985210629264,
+              "intersection_pixels": 18257,
+              "mask_fraction": 0.7997284156117219,
+              "score": 0.8246729525196436
+            },
+            "detection": {
+              "bbox_xyxy": [
+                727.2796020507812,
+                270.20306396484375,
+                863.5636596679688,
+                422.39447021484375
+              ],
+              "canonical_label": "chair",
+              "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.6341858506202698,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "chair",
+              "source_camera": "room_high"
+            },
+            "entity_id": "seat_0002",
+            "entity_type": "seat",
+            "weighted_score": 0.5229959178771995
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.81296875,
+              "intersection_pixels": 46827,
+              "mask_fraction": 0.9108007702332095,
+              "score": 0.8765595631515861
+            },
+            "detection": {
+              "bbox_xyxy": [
+                774.8935546875,
+                55.246002197265625,
+                998.751708984375,
+                310.58782958984375
+              ],
+              "canonical_label": "chair",
+              "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.8473508954048157,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "chair",
+              "source_camera": "room_front"
+            },
+            "entity_id": "seat_0002",
+            "entity_type": "seat",
+            "weighted_score": 0.7427535307121506
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.6679762787249814,
+              "intersection_pixels": 72088,
+              "mask_fraction": 0.957992797246475,
+              "score": 0.8564870157639523
+            },
+            "detection": {
+              "bbox_xyxy": [
+                19.4259033203125,
+                239.26666259765625,
+                322.75787353515625,
+                593.0205078125
+              ],
+              "canonical_label": "chair",
+              "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.835026204586029,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "chair",
+              "source_camera": "room_rear"
+            },
+            "entity_id": "seat_0002",
+            "entity_type": "seat",
+            "weighted_score": 0.7151891020505875
+          }
+        ],
+        "status": "SUPPORTED",
+        "supporting_view_count": 4,
+        "weighted_score_margin": 1.821394605641831
+      }
+    }
+  }
+}

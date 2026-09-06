@@ -1,0 +1,68 @@
+{
+  "camera_id": "inspection_left",
+  "depth_png_unit": "mm",
+  "intrinsics": [
+    [
+      865.9429225302833,
+      0.0,
+      640.0
+    ],
+    [
+      0.0,
+      865.9429225302833,
+      480.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "model_camera_name": "left_shoulder_camera",
+  "position_world_m": [
+    0.25,
+    -0.3,
+    1.2999999999999998
+  ],
+  "resolution": [
+    1280,
+    960
+  ],
+  "rotation_world_from_camera": [
+    [
+      0.9230769230769231,
+      0.30715729672836456,
+      -0.23148086130253562
+    ],
+    [
+      -0.3846153846153847,
+      0.7371775121480748,
+      -0.5555540671260855
+    ],
+    [
+      -2.7755575615628914e-17,
+      0.6018502393865925,
+      0.7986089714937477
+    ]
+  ],
+  "target_world_m": [
+    0.45,
+    0.18,
+    0.61
+  ],
+  "validation": {
+    "camera_transform_valid": true,
+    "intrinsics_match_resolution": true,
+    "reasons": [],
+    "target_angle_degrees": 0.0,
+    "target_depth_m": 0.8640023148117139,
+    "target_in_front": true,
+    "target_in_frustum": true,
+    "target_pixel": [
+      640.0,
+      479.99999999999994
+    ],
+    "usable": true,
+    "valid_depth_pixels": 795517
+  }
+}

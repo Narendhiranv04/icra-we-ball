@@ -1,0 +1,1670 @@
+{
+  "candidate_regions": [],
+  "cross_group_reuse_allowed": false,
+  "detector_vocabulary": [
+    "cup",
+    "mug",
+    "bowl",
+    "plate",
+    "glass",
+    "bottle",
+    "table",
+    "desk",
+    "side table",
+    "coffee table",
+    "ottoman",
+    "remote control",
+    "phone",
+    "tablet",
+    "game controller",
+    "media player",
+    "armchair",
+    "chair",
+    "sofa"
+  ],
+  "domain": "living_room",
+  "metadata": {
+    "candidate_categories_used_for_detector_vocabulary": true,
+    "candidate_categories_used_for_grounding_acceptance": false,
+    "candidate_categories_used_for_role_identity": false,
+    "canonicalization_trace": {
+      "concept_accounting": {
+        "operation_groups": [
+          {
+            "canonical_function": "SUPPORT_DRINKWARE",
+            "canonical_group_id": "personal_support_group",
+            "context_relations": [
+              "NEAR_SEAT"
+            ],
+            "context_role": "SEATING_POSITION",
+            "function_mapping_status": "PRESERVED",
+            "raw_function": "assign refreshment to seating",
+            "raw_group_id": "group_refreshment_assignment",
+            "required_relations": [
+              "FITS_SET_ON"
+            ],
+            "required_target_count": 2,
+            "status": "PRESERVED",
+            "target_role": "CUP_SAUCER_SET",
+            "tool_role": "PERSONAL_CUP_SAUCER_REGION",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          },
+          {
+            "canonical_function": "SUPPORT_REMOTE",
+            "canonical_group_id": "absorbed_entertainment_group",
+            "context_role": "SEATING_POSITION",
+            "raw_function": "assign entertainment to seating",
+            "raw_group_id": "group_entertainment_assignment",
+            "reason": "Singleton entertainment assignment absorbed into top-level functional relations",
+            "status": "ABSORBED_SINGLETON_PLACEMENT_GROUP",
+            "target_role": "SHARED_REMOTE_REGION",
+            "tool_role": "REMOTE"
+          }
+        ],
+        "properties": [
+          {
+            "canonical_predicate": null,
+            "raw_phrase": "open cavity",
+            "raw_role_id": "role_refreshment_container",
+            "reason": "Non-verifier affordance/feature note 'open cavity' on role 'role_refreshment_container' absorbed",
+            "status": "ABSORBED_NON_EXECUTABLE_AFFORDANCE"
+          },
+          {
+            "canonical_predicate": null,
+            "raw_phrase": "holds liquid",
+            "raw_role_id": "role_refreshment_container",
+            "reason": "Non-verifier affordance/feature note 'holds liquid' on role 'role_refreshment_container' absorbed",
+            "status": "ABSORBED_NON_EXECUTABLE_AFFORDANCE"
+          },
+          {
+            "canonical_predicate": null,
+            "raw_phrase": "holds solid",
+            "raw_role_id": "role_refreshment_container",
+            "reason": "Non-verifier affordance/feature note 'holds solid' on role 'role_refreshment_container' absorbed",
+            "status": "ABSORBED_NON_EXECUTABLE_AFFORDANCE"
+          },
+          {
+            "canonical_predicate": null,
+            "raw_phrase": "small handheld",
+            "raw_role_id": "role_entertainment_device",
+            "reason": "Non-verifier affordance/feature note 'small handheld' on role 'role_entertainment_device' absorbed",
+            "status": "ABSORBED_NON_EXECUTABLE_AFFORDANCE"
+          },
+          {
+            "canonical_predicate": "PLANAR_SUPPORT",
+            "raw_phrase": "planar support",
+            "raw_role_id": "role_seating_position_1",
+            "status": "PRESERVED"
+          },
+          {
+            "canonical_predicate": "PLANAR_SUPPORT",
+            "raw_phrase": "planar support",
+            "raw_role_id": "role_seating_position_2",
+            "status": "PRESERVED"
+          },
+          {
+            "canonical_predicate": "PLANAR_SUPPORT",
+            "raw_phrase": "planar support",
+            "raw_role_id": "role_refreshment_support",
+            "status": "PRESERVED"
+          },
+          {
+            "canonical_predicate": "PLANAR_SUPPORT",
+            "raw_phrase": "planar support",
+            "raw_role_id": "role_entertainment_support",
+            "status": "PRESERVED"
+          }
+        ],
+        "relations": [
+          {
+            "canonical_object_role_id": "CUP_SAUCER_SET",
+            "canonical_predicate": "FITS_SET_ON",
+            "canonical_subject_role_id": "PERSONAL_CUP_SAUCER_REGION",
+            "direction_status": "NORMALIZED_TO_CANONICAL_SIGNATURE",
+            "raw_object_role_id": "role_refreshment_support",
+            "raw_relation_text": "placed on",
+            "raw_subject_role_id": "role_refreshment_container",
+            "status": "PRESERVED",
+            "structural_destination": "OPERATION_REQUIRED_RELATION"
+          },
+          {
+            "canonical_object_role_id": "REMOTE",
+            "canonical_predicate": "FITS_ON",
+            "canonical_subject_role_id": "SHARED_REMOTE_REGION",
+            "direction_status": "NORMALIZED_TO_CANONICAL_SIGNATURE",
+            "raw_object_role_id": "role_entertainment_support",
+            "raw_relation_text": "placed on",
+            "raw_subject_role_id": "role_entertainment_device",
+            "status": "PRESERVED",
+            "structural_destination": "GRAPH_RELATION"
+          },
+          {
+            "canonical_object_role_id": "SEATING_POSITION",
+            "canonical_predicate": "NEAR_SEAT",
+            "canonical_subject_role_id": "PERSONAL_CUP_SAUCER_REGION",
+            "direction_status": "PRESERVED",
+            "raw_object_role_id": "role_seating_position_1",
+            "raw_relation_text": "near",
+            "raw_subject_role_id": "role_refreshment_support",
+            "status": "PRESERVED",
+            "structural_destination": "OPERATION_CONTEXT_RELATION"
+          },
+          {
+            "canonical_object_role_id": "SEATING_POSITION",
+            "canonical_predicate": "NEAR_SEAT",
+            "canonical_subject_role_id": "PERSONAL_CUP_SAUCER_REGION",
+            "direction_status": "PRESERVED",
+            "raw_object_role_id": "role_seating_position_2",
+            "raw_relation_text": "near",
+            "raw_subject_role_id": "role_refreshment_support",
+            "status": "PRESERVED",
+            "structural_destination": "OPERATION_CONTEXT_RELATION"
+          },
+          {
+            "canonical_object_role_id": "SEATING_PAIR",
+            "canonical_predicate": "ACCESSIBLE_FROM_BOTH_SEATS",
+            "canonical_subject_role_id": "SHARED_REMOTE_REGION",
+            "direction_status": "NORMALIZED_TO_CANONICAL_SIGNATURE",
+            "raw_object_role_id": "role_seating_position_1",
+            "raw_relation_text": "near",
+            "raw_subject_role_id": "role_entertainment_support",
+            "status": "PRESERVED",
+            "structural_destination": "GRAPH_RELATION"
+          },
+          {
+            "canonical_object_role_id": "SEATING_PAIR",
+            "canonical_predicate": "ACCESSIBLE_FROM_BOTH_SEATS",
+            "canonical_subject_role_id": "SHARED_REMOTE_REGION",
+            "direction_status": "NORMALIZED_TO_CANONICAL_SIGNATURE",
+            "raw_object_role_id": "role_seating_position_2",
+            "raw_relation_text": "near",
+            "raw_subject_role_id": "role_entertainment_support",
+            "status": "PRESERVED",
+            "structural_destination": "MERGED_GRAPH_RELATION"
+          }
+        ],
+        "roles": {
+          "role_entertainment_device": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories_used_for_role_identity": true,
+            "canonical_count": 1,
+            "canonical_role": "REMOTE",
+            "entity_kind": "OBJECT",
+            "raw_count": 1,
+            "reason": "Runtime environment requires specific REMOTE executable type; inferred from multi-signal candidate evidence.",
+            "role_semantic_source": "FUNCTION_DESCRIPTION_AND_CANDIDATES",
+            "semantic_equivalence": false,
+            "status": "ENVIRONMENT_CONTRACT_PROJECTION",
+            "unary_predicates": []
+          },
+          "role_entertainment_support": {
+            "binding_policy": "SHARED",
+            "candidate_categories_used_for_role_identity": false,
+            "canonical_count": 1,
+            "canonical_role": "SHARED_REMOTE_REGION",
+            "entity_kind": "REGION",
+            "raw_count": 1,
+            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+            "status": "PRESERVED",
+            "unary_predicates": [
+              "PLANAR_SUPPORT"
+            ]
+          },
+          "role_refreshment_container": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories_used_for_role_identity": true,
+            "canonical_count": 2,
+            "canonical_role": "CUP_SAUCER_SET",
+            "entity_kind": "OBJECT",
+            "raw_count": 2,
+            "reason": "Runtime environment supports a more specific executable representation (CUP_SAUCER_SET) than the VLM explicitly inferred.",
+            "role_semantic_source": "FUNCTION_DESCRIPTION_AND_CANDIDATES",
+            "semantic_equivalence": false,
+            "status": "ENVIRONMENT_CONTRACT_PROJECTION",
+            "unary_predicates": []
+          },
+          "role_refreshment_support": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories_used_for_role_identity": false,
+            "canonical_count": 2,
+            "canonical_role": "PERSONAL_CUP_SAUCER_REGION",
+            "entity_kind": "REGION",
+            "raw_count": 2,
+            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+            "status": "PRESERVED",
+            "unary_predicates": [
+              "PLANAR_SUPPORT"
+            ]
+          },
+          "role_seating_position_1": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories_used_for_role_identity": false,
+            "canonical_count": 2,
+            "canonical_role": "SEATING_POSITION",
+            "entity_kind": "FIXED_TARGET",
+            "raw_count": 1,
+            "reason": "Disjoint personal seating position role (VIEWER_1) composed into canonical role",
+            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+            "status": "MERGED_BY_EXPLICIT_RULE",
+            "unary_predicates": []
+          },
+          "role_seating_position_2": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories_used_for_role_identity": false,
+            "canonical_count": 2,
+            "canonical_role": "SEATING_POSITION",
+            "entity_kind": "FIXED_TARGET",
+            "raw_count": 1,
+            "reason": "Disjoint personal seating position role (VIEWER_2) composed into canonical role",
+            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+            "status": "MERGED_BY_EXPLICIT_RULE",
+            "unary_predicates": []
+          },
+          "seating_pair": {
+            "binding_policy": "SHARED",
+            "candidate_categories_used_for_role_identity": false,
+            "canonical_count": 1,
+            "canonical_role": "SEATING_PAIR",
+            "entity_kind": "FIXED_TARGET",
+            "raw_count": 1,
+            "role_semantic_source": "DERIVED_FROM_SEATING_POSITIONS",
+            "status": "DERIVED_PAIR_FROM_SEATING_POSITIONS",
+            "unary_predicates": []
+          }
+        }
+      },
+      "operation_groups": [
+        {
+          "context_relations": [
+            "NEAR_SEAT"
+          ],
+          "context_role": "SEATING_POSITION",
+          "distinct_within_group": true,
+          "function": "SUPPORT_DRINKWARE",
+          "id": "personal_support_group",
+          "required_relations": [
+            "FITS_SET_ON"
+          ],
+          "required_target_count": 2,
+          "same_tool_must_cover_all_targets": false,
+          "target_role": "CUP_SAUCER_SET",
+          "tool_role": "PERSONAL_CUP_SAUCER_REGION",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        }
+      ],
+      "raw_id_to_canonical": {
+        "role_entertainment_device": "REMOTE",
+        "role_entertainment_support": "SHARED_REMOTE_REGION",
+        "role_refreshment_container": "CUP_SAUCER_SET",
+        "role_refreshment_support": "PERSONAL_CUP_SAUCER_REGION",
+        "role_seating_position_1": "SEATING_POSITION",
+        "role_seating_position_2": "SEATING_POSITION",
+        "seating_pair": "SEATING_PAIR"
+      },
+      "relations": [
+        {
+          "canonical_object_role_id": "REMOTE",
+          "canonical_predicate": "FITS_ON",
+          "canonical_subject_role_id": "SHARED_REMOTE_REGION",
+          "direction_status": "NORMALIZED_TO_CANONICAL_SIGNATURE",
+          "raw_object_role_id": "role_entertainment_support",
+          "raw_relation_text": "placed on",
+          "raw_subject_role_id": "role_entertainment_device"
+        },
+        {
+          "canonical_object_role_id": "SEATING_PAIR",
+          "canonical_predicate": "ACCESSIBLE_FROM_BOTH_SEATS",
+          "canonical_subject_role_id": "SHARED_REMOTE_REGION",
+          "direction_status": "NORMALIZED_TO_CANONICAL_SIGNATURE",
+          "raw_object_role_id": "role_seating_position_1",
+          "raw_relation_text": "near",
+          "raw_subject_role_id": "role_entertainment_support"
+        }
+      ],
+      "roles": [
+        {
+          "accepted_categories": [
+            "cup_saucer_set",
+            "cup",
+            "saucer",
+            "mug",
+            "bowl",
+            "plate",
+            "glass",
+            "bottle"
+          ],
+          "canonical_func": "CUP_SAUCER_SET",
+          "canonical_graph_category": [
+            "cup_saucer_set",
+            "cup",
+            "saucer"
+          ],
+          "raw_categories": [
+            "cup",
+            "mug",
+            "bowl",
+            "plate",
+            "glass",
+            "bottle"
+          ],
+          "raw_role_ids": [
+            "role_refreshment_container"
+          ],
+          "required_properties": []
+        },
+        {
+          "accepted_categories": [
+            "table",
+            "desk",
+            "side_table",
+            "coffee_table",
+            "ottoman"
+          ],
+          "canonical_func": "PERSONAL_CUP_SAUCER_REGION",
+          "canonical_graph_category": null,
+          "raw_categories": [
+            "table",
+            "desk",
+            "side table",
+            "coffee table",
+            "ottoman"
+          ],
+          "raw_role_ids": [
+            "role_refreshment_support"
+          ],
+          "required_properties": [
+            "PLANAR_SUPPORT"
+          ]
+        },
+        {
+          "accepted_categories": [
+            "table",
+            "desk",
+            "side_table",
+            "coffee_table",
+            "ottoman"
+          ],
+          "canonical_func": "SHARED_REMOTE_REGION",
+          "canonical_graph_category": null,
+          "raw_categories": [
+            "table",
+            "desk",
+            "side table",
+            "coffee table",
+            "ottoman"
+          ],
+          "raw_role_ids": [
+            "role_entertainment_support"
+          ],
+          "required_properties": [
+            "PLANAR_SUPPORT"
+          ]
+        },
+        {
+          "accepted_categories": [
+            "tv_remote",
+            "remote_control",
+            "phone",
+            "tablet",
+            "game_controller",
+            "media_player"
+          ],
+          "canonical_func": "REMOTE",
+          "canonical_graph_category": [
+            "tv_remote",
+            "remote_control"
+          ],
+          "raw_categories": [
+            "remote control",
+            "phone",
+            "tablet",
+            "game controller",
+            "media player"
+          ],
+          "raw_role_ids": [
+            "role_entertainment_device"
+          ],
+          "required_properties": []
+        },
+        {
+          "accepted_categories": [
+            "seating_position",
+            "armchair",
+            "chair",
+            "sofa",
+            "couch",
+            "bench"
+          ],
+          "canonical_func": "SEATING_POSITION",
+          "canonical_graph_category": [
+            "seating_position",
+            "armchair",
+            "chair",
+            "sofa"
+          ],
+          "raw_categories": [
+            "armchair",
+            "sofa",
+            "couch",
+            "bench"
+          ],
+          "raw_role_ids": [
+            "role_seating_position_1",
+            "role_seating_position_2"
+          ],
+          "required_properties": []
+        },
+        {
+          "accepted_categories": [
+            "seating_pair",
+            "armchair",
+            "chair",
+            "sofa"
+          ],
+          "canonical_func": "SEATING_PAIR",
+          "canonical_graph_category": [
+            "seating_pair",
+            "armchair",
+            "chair",
+            "sofa"
+          ],
+          "raw_categories": [
+            "armchairs",
+            "seating area"
+          ],
+          "raw_role_ids": [
+            "role_seating_position_1",
+            "role_seating_position_2"
+          ],
+          "required_properties": []
+        }
+      ],
+      "transformation": "DETERMINISTIC_NATURAL_LANGUAGE_CANONICALIZATION",
+      "version": "phase3_p3f_2_v1",
+      "vlm_canonicalization_version": "phase3_p3f_2_v1"
+    },
+    "detector_vocabulary_source": "SYSTEM_REVIEWED_ENVIRONMENT_CONTRACT",
+    "normalization_audit": {
+      "issues": [],
+      "note": "The reviewed ontology was used only after the VLM response; it was not included in the model prompt.",
+      "status": "PASS"
+    },
+    "raw_decomposition": {
+      "functional_relations": [
+        {
+          "object_role": "role_refreshment_support",
+          "relation": "placed on",
+          "subject_role": "role_refreshment_container"
+        },
+        {
+          "object_role": "role_entertainment_support",
+          "relation": "placed on",
+          "subject_role": "role_entertainment_device"
+        },
+        {
+          "object_role": "role_seating_position_1",
+          "relation": "near",
+          "subject_role": "role_refreshment_support"
+        },
+        {
+          "object_role": "role_seating_position_2",
+          "relation": "near",
+          "subject_role": "role_refreshment_support"
+        },
+        {
+          "object_role": "role_seating_position_1",
+          "relation": "near",
+          "subject_role": "role_entertainment_support"
+        },
+        {
+          "object_role": "role_seating_position_2",
+          "relation": "near",
+          "subject_role": "role_entertainment_support"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "cup",
+            "mug",
+            "bowl",
+            "plate",
+            "glass",
+            "bottle"
+          ],
+          "description": "",
+          "entity_kind": "OBJECT",
+          "function": "hold refreshment",
+          "id": "role_refreshment_container",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "holds liquid",
+            "holds solid"
+          ],
+          "visible_candidates": [
+            {
+              "label": "red_mug_1",
+              "suitability_reason": "Suitable for holding liquid refreshment",
+              "visual_description": "Red mug on the foreground table"
+            },
+            {
+              "label": "red_mug_2",
+              "suitability_reason": "Suitable for holding liquid refreshment",
+              "visual_description": "Red mug on the foreground table"
+            },
+            {
+              "label": "white_plate_1",
+              "suitability_reason": "Suitable for holding solid refreshment",
+              "visual_description": "White plate on the foreground table"
+            },
+            {
+              "label": "white_plate_2",
+              "suitability_reason": "Suitable for holding solid refreshment",
+              "visual_description": "White plate on the foreground table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "remote control",
+            "phone",
+            "tablet",
+            "game controller",
+            "media player"
+          ],
+          "description": "",
+          "entity_kind": "OBJECT",
+          "function": "provide entertainment",
+          "id": "role_entertainment_device",
+          "required_count": 1,
+          "required_properties": [
+            "small handheld"
+          ],
+          "visible_candidates": [
+            {
+              "label": "remote_control",
+              "suitability_reason": "Suitable for controlling entertainment device",
+              "visual_description": "Black remote control on the foreground table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "armchair",
+            "sofa",
+            "couch",
+            "bench"
+          ],
+          "description": "",
+          "entity_kind": "REGION",
+          "function": "seat user",
+          "id": "role_seating_position_1",
+          "required_count": 1,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "armchair_1",
+              "suitability_reason": "Suitable for seating",
+              "visual_description": "Black armchair on the left"
+            },
+            {
+              "label": "armchair_2",
+              "suitability_reason": "Suitable for seating",
+              "visual_description": "Black armchair on the right"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "armchair",
+            "sofa",
+            "couch",
+            "bench"
+          ],
+          "description": "",
+          "entity_kind": "REGION",
+          "function": "seat user",
+          "id": "role_seating_position_2",
+          "required_count": 1,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "armchair_1",
+              "suitability_reason": "Suitable for seating",
+              "visual_description": "Black armchair on the left"
+            },
+            {
+              "label": "armchair_2",
+              "suitability_reason": "Suitable for seating",
+              "visual_description": "Black armchair on the right"
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "table",
+            "desk",
+            "side table",
+            "coffee table",
+            "ottoman"
+          ],
+          "description": "",
+          "entity_kind": "REGION",
+          "function": "support refreshment",
+          "id": "role_refreshment_support",
+          "required_count": 2,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee_table",
+              "suitability_reason": "Suitable for supporting refreshments near seating",
+              "visual_description": "Coffee table between the two armchairs"
+            },
+            {
+              "label": "side_table_1",
+              "suitability_reason": "Suitable for supporting refreshments near seating",
+              "visual_description": "Side table next to the left armchair"
+            },
+            {
+              "label": "side_table_2",
+              "suitability_reason": "Suitable for supporting refreshments near seating",
+              "visual_description": "Side table next to the right armchair"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "table",
+            "desk",
+            "side table",
+            "coffee table",
+            "ottoman"
+          ],
+          "description": "",
+          "entity_kind": "REGION",
+          "function": "support entertainment device",
+          "id": "role_entertainment_support",
+          "required_count": 1,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee_table",
+              "suitability_reason": "Suitable for supporting entertainment device near seating",
+              "visual_description": "Coffee table between the two armchairs"
+            },
+            {
+              "label": "side_table_1",
+              "suitability_reason": "Suitable for supporting entertainment device near seating",
+              "visual_description": "Side table next to the left armchair"
+            },
+            {
+              "label": "side_table_2",
+              "suitability_reason": "Suitable for supporting entertainment device near seating",
+              "visual_description": "Side table next to the right armchair"
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "context_relations": [
+            "near"
+          ],
+          "context_role": "role_seating_position_1",
+          "function": "assign refreshment to seating",
+          "id": "group_refreshment_assignment",
+          "required_relations": [
+            "placed on"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_refreshment_support",
+          "tool_role": "role_refreshment_container",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "context_relations": [
+            "near"
+          ],
+          "context_role": "role_seating_position_1",
+          "function": "assign entertainment to seating",
+          "id": "group_entertainment_assignment",
+          "required_relations": [
+            "placed on"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_entertainment_support",
+          "tool_role": "role_entertainment_device",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Assign refreshments and entertainment objects to suitable regions near two seating positions.",
+      "unsupported_reason": ""
+    },
+    "raw_vlm_response": {
+      "functional_relations": [
+        {
+          "object_role": "role_refreshment_support",
+          "relation": "placed on",
+          "subject_role": "role_refreshment_container"
+        },
+        {
+          "object_role": "role_entertainment_support",
+          "relation": "placed on",
+          "subject_role": "role_entertainment_device"
+        },
+        {
+          "object_role": "role_seating_position_1",
+          "relation": "near",
+          "subject_role": "role_refreshment_support"
+        },
+        {
+          "object_role": "role_seating_position_2",
+          "relation": "near",
+          "subject_role": "role_refreshment_support"
+        },
+        {
+          "object_role": "role_seating_position_1",
+          "relation": "near",
+          "subject_role": "role_entertainment_support"
+        },
+        {
+          "object_role": "role_seating_position_2",
+          "relation": "near",
+          "subject_role": "role_entertainment_support"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "cup",
+            "mug",
+            "bowl",
+            "plate",
+            "glass",
+            "bottle"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "hold refreshment",
+          "id": "role_refreshment_container",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "holds liquid",
+            "holds solid"
+          ],
+          "visible_candidates": [
+            {
+              "label": "red_mug_1",
+              "suitability_reason": "Suitable for holding liquid refreshment",
+              "visual_description": "Red mug on the foreground table"
+            },
+            {
+              "label": "red_mug_2",
+              "suitability_reason": "Suitable for holding liquid refreshment",
+              "visual_description": "Red mug on the foreground table"
+            },
+            {
+              "label": "white_plate_1",
+              "suitability_reason": "Suitable for holding solid refreshment",
+              "visual_description": "White plate on the foreground table"
+            },
+            {
+              "label": "white_plate_2",
+              "suitability_reason": "Suitable for holding solid refreshment",
+              "visual_description": "White plate on the foreground table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "remote control",
+            "phone",
+            "tablet",
+            "game controller",
+            "media player"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "provide entertainment",
+          "id": "role_entertainment_device",
+          "required_count": 1,
+          "required_properties": [
+            "small handheld"
+          ],
+          "visible_candidates": [
+            {
+              "label": "remote_control",
+              "suitability_reason": "Suitable for controlling entertainment device",
+              "visual_description": "Black remote control on the foreground table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "armchair",
+            "sofa",
+            "couch",
+            "bench"
+          ],
+          "entity_kind": "REGION",
+          "function": "seat user",
+          "id": "role_seating_position_1",
+          "required_count": 1,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "armchair_1",
+              "suitability_reason": "Suitable for seating",
+              "visual_description": "Black armchair on the left"
+            },
+            {
+              "label": "armchair_2",
+              "suitability_reason": "Suitable for seating",
+              "visual_description": "Black armchair on the right"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "armchair",
+            "sofa",
+            "couch",
+            "bench"
+          ],
+          "entity_kind": "REGION",
+          "function": "seat user",
+          "id": "role_seating_position_2",
+          "required_count": 1,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "armchair_1",
+              "suitability_reason": "Suitable for seating",
+              "visual_description": "Black armchair on the left"
+            },
+            {
+              "label": "armchair_2",
+              "suitability_reason": "Suitable for seating",
+              "visual_description": "Black armchair on the right"
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "table",
+            "desk",
+            "side table",
+            "coffee table",
+            "ottoman"
+          ],
+          "entity_kind": "REGION",
+          "function": "support refreshment",
+          "id": "role_refreshment_support",
+          "required_count": 2,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee_table",
+              "suitability_reason": "Suitable for supporting refreshments near seating",
+              "visual_description": "Coffee table between the two armchairs"
+            },
+            {
+              "label": "side_table_1",
+              "suitability_reason": "Suitable for supporting refreshments near seating",
+              "visual_description": "Side table next to the left armchair"
+            },
+            {
+              "label": "side_table_2",
+              "suitability_reason": "Suitable for supporting refreshments near seating",
+              "visual_description": "Side table next to the right armchair"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "table",
+            "desk",
+            "side table",
+            "coffee table",
+            "ottoman"
+          ],
+          "entity_kind": "REGION",
+          "function": "support entertainment device",
+          "id": "role_entertainment_support",
+          "required_count": 1,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee_table",
+              "suitability_reason": "Suitable for supporting entertainment device near seating",
+              "visual_description": "Coffee table between the two armchairs"
+            },
+            {
+              "label": "side_table_1",
+              "suitability_reason": "Suitable for supporting entertainment device near seating",
+              "visual_description": "Side table next to the left armchair"
+            },
+            {
+              "label": "side_table_2",
+              "suitability_reason": "Suitable for supporting entertainment device near seating",
+              "visual_description": "Side table next to the right armchair"
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "context_relations": [
+            "near"
+          ],
+          "context_role": "role_seating_position_1",
+          "function": "assign refreshment to seating",
+          "id": "group_refreshment_assignment",
+          "required_relations": [
+            "placed on"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_refreshment_support",
+          "tool_role": "role_refreshment_container",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "context_relations": [
+            "near"
+          ],
+          "context_role": "role_seating_position_1",
+          "function": "assign entertainment to seating",
+          "id": "group_entertainment_assignment",
+          "required_relations": [
+            "placed on"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_entertainment_support",
+          "tool_role": "role_entertainment_device",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Assign refreshments and entertainment objects to suitable regions near two seating positions.",
+      "unsupported_reason": ""
+    },
+    "role_semantic_ontology_version": "phase3_p3i_4_semantic_ontology_v1",
+    "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+    "semantic_vocabulary_path": "/home/naren/RA_iiith/mujoco_scenes/configs/l2_integrated_region_function_semantic_vocabulary.yaml",
+    "task_explicit_context_vocabulary": [
+      "armchair",
+      "chair",
+      "sofa"
+    ],
+    "validated_vlm_specification": {
+      "functional_relations": [
+        {
+          "object_role": "role_refreshment_support",
+          "relation": "placed on",
+          "subject_role": "role_refreshment_container"
+        },
+        {
+          "object_role": "role_entertainment_support",
+          "relation": "placed on",
+          "subject_role": "role_entertainment_device"
+        },
+        {
+          "object_role": "role_seating_position_1",
+          "relation": "near",
+          "subject_role": "role_refreshment_support"
+        },
+        {
+          "object_role": "role_seating_position_2",
+          "relation": "near",
+          "subject_role": "role_refreshment_support"
+        },
+        {
+          "object_role": "role_seating_position_1",
+          "relation": "near",
+          "subject_role": "role_entertainment_support"
+        },
+        {
+          "object_role": "role_seating_position_2",
+          "relation": "near",
+          "subject_role": "role_entertainment_support"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "cup",
+            "mug",
+            "bowl",
+            "plate",
+            "glass",
+            "bottle"
+          ],
+          "description": "",
+          "entity_kind": "OBJECT",
+          "function": "hold refreshment",
+          "id": "role_refreshment_container",
+          "required_count": 2,
+          "required_properties": [
+            "open cavity",
+            "holds liquid",
+            "holds solid"
+          ],
+          "visible_candidates": [
+            {
+              "label": "red_mug_1",
+              "suitability_reason": "Suitable for holding liquid refreshment",
+              "visual_description": "Red mug on the foreground table"
+            },
+            {
+              "label": "red_mug_2",
+              "suitability_reason": "Suitable for holding liquid refreshment",
+              "visual_description": "Red mug on the foreground table"
+            },
+            {
+              "label": "white_plate_1",
+              "suitability_reason": "Suitable for holding solid refreshment",
+              "visual_description": "White plate on the foreground table"
+            },
+            {
+              "label": "white_plate_2",
+              "suitability_reason": "Suitable for holding solid refreshment",
+              "visual_description": "White plate on the foreground table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "remote control",
+            "phone",
+            "tablet",
+            "game controller",
+            "media player"
+          ],
+          "description": "",
+          "entity_kind": "OBJECT",
+          "function": "provide entertainment",
+          "id": "role_entertainment_device",
+          "required_count": 1,
+          "required_properties": [
+            "small handheld"
+          ],
+          "visible_candidates": [
+            {
+              "label": "remote_control",
+              "suitability_reason": "Suitable for controlling entertainment device",
+              "visual_description": "Black remote control on the foreground table"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "armchair",
+            "sofa",
+            "couch",
+            "bench"
+          ],
+          "description": "",
+          "entity_kind": "REGION",
+          "function": "seat user",
+          "id": "role_seating_position_1",
+          "required_count": 1,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "armchair_1",
+              "suitability_reason": "Suitable for seating",
+              "visual_description": "Black armchair on the left"
+            },
+            {
+              "label": "armchair_2",
+              "suitability_reason": "Suitable for seating",
+              "visual_description": "Black armchair on the right"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "armchair",
+            "sofa",
+            "couch",
+            "bench"
+          ],
+          "description": "",
+          "entity_kind": "REGION",
+          "function": "seat user",
+          "id": "role_seating_position_2",
+          "required_count": 1,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "armchair_1",
+              "suitability_reason": "Suitable for seating",
+              "visual_description": "Black armchair on the left"
+            },
+            {
+              "label": "armchair_2",
+              "suitability_reason": "Suitable for seating",
+              "visual_description": "Black armchair on the right"
+            }
+          ]
+        },
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "table",
+            "desk",
+            "side table",
+            "coffee table",
+            "ottoman"
+          ],
+          "description": "",
+          "entity_kind": "REGION",
+          "function": "support refreshment",
+          "id": "role_refreshment_support",
+          "required_count": 2,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee_table",
+              "suitability_reason": "Suitable for supporting refreshments near seating",
+              "visual_description": "Coffee table between the two armchairs"
+            },
+            {
+              "label": "side_table_1",
+              "suitability_reason": "Suitable for supporting refreshments near seating",
+              "visual_description": "Side table next to the left armchair"
+            },
+            {
+              "label": "side_table_2",
+              "suitability_reason": "Suitable for supporting refreshments near seating",
+              "visual_description": "Side table next to the right armchair"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "table",
+            "desk",
+            "side table",
+            "coffee table",
+            "ottoman"
+          ],
+          "description": "",
+          "entity_kind": "REGION",
+          "function": "support entertainment device",
+          "id": "role_entertainment_support",
+          "required_count": 1,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "coffee_table",
+              "suitability_reason": "Suitable for supporting entertainment device near seating",
+              "visual_description": "Coffee table between the two armchairs"
+            },
+            {
+              "label": "side_table_1",
+              "suitability_reason": "Suitable for supporting entertainment device near seating",
+              "visual_description": "Side table next to the left armchair"
+            },
+            {
+              "label": "side_table_2",
+              "suitability_reason": "Suitable for supporting entertainment device near seating",
+              "visual_description": "Side table next to the right armchair"
+            }
+          ]
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "context_relations": [
+            "near"
+          ],
+          "context_role": "role_seating_position_1",
+          "function": "assign refreshment to seating",
+          "id": "group_refreshment_assignment",
+          "required_relations": [
+            "placed on"
+          ],
+          "required_target_count": 2,
+          "target_role": "role_refreshment_support",
+          "tool_role": "role_refreshment_container",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "context_relations": [
+            "near"
+          ],
+          "context_role": "role_seating_position_1",
+          "function": "assign entertainment to seating",
+          "id": "group_entertainment_assignment",
+          "required_relations": [
+            "placed on"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_entertainment_support",
+          "tool_role": "role_entertainment_device",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Assign refreshments and entertainment objects to suitable regions near two seating positions.",
+      "unsupported_reason": ""
+    },
+    "vlm_canonicalization_version": "phase3_p3f_2_v1",
+    "vlm_derived_role_vocabulary": [
+      "cup",
+      "mug",
+      "bowl",
+      "plate",
+      "glass",
+      "bottle",
+      "table",
+      "desk",
+      "side table",
+      "coffee table",
+      "ottoman",
+      "remote control",
+      "phone",
+      "tablet",
+      "game controller",
+      "media player"
+    ]
+  },
+  "nodes": {
+    "CUP_SAUCER_SET": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "CUP_SAUCER_SET",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup_saucer_set",
+        "cup",
+        "saucer"
+      ],
+      "semantic_hints": [
+        "red_mug_1",
+        "red_mug_2",
+        "white_plate_1",
+        "white_plate_2"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    "PERSONAL_CUP_SAUCER_REGION": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [
+        "coffee_table",
+        "side_table_1",
+        "side_table_2"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "REMOTE": {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "semantic_hints": [
+        "remote_control"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    "SEATING_PAIR": {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "both viewer seating positions collectively for shared item accessibility",
+      "distinct": false,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "SEATING_PAIR",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "armchair",
+        "chair",
+        "sofa",
+        "seating_pair"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    "SEATING_POSITION": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "SEATING_POSITION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "armchair",
+        "chair",
+        "sofa",
+        "seating_position"
+      ],
+      "semantic_hints": [
+        "armchair_1",
+        "armchair_2"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    "SHARED_REMOTE_REGION": {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [
+        "coffee_table",
+        "side_table_1",
+        "side_table_2"
+      ],
+      "shared": true,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  },
+  "operation_groups": [
+    {
+      "context_relations": [
+        "NEAR_SEAT"
+      ],
+      "context_role": "SEATING_POSITION",
+      "distinct_within_group": true,
+      "function": "SUPPORT_DRINKWARE",
+      "id": "personal_support_group",
+      "required_relations": [
+        "FITS_SET_ON"
+      ],
+      "required_target_count": 2,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": null,
+      "target_role": "CUP_SAUCER_SET",
+      "tool_role": "PERSONAL_CUP_SAUCER_REGION",
+      "usage_policy": "DEDICATED_PER_TARGET"
+    }
+  ],
+  "region_ranking": [],
+  "relations": [
+    {
+      "expected": true,
+      "object_role": "REMOTE",
+      "predicate": "FITS_ON",
+      "subject_role": "SHARED_REMOTE_REGION"
+    },
+    {
+      "expected": true,
+      "object_role": "SEATING_PAIR",
+      "predicate": "ACCESSIBLE_FROM_BOTH_SEATS",
+      "subject_role": "SHARED_REMOTE_REGION"
+    }
+  ],
+  "roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "CUP_SAUCER_SET",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup_saucer_set",
+        "cup",
+        "saucer"
+      ],
+      "semantic_hints": [
+        "red_mug_1",
+        "red_mug_2",
+        "white_plate_1",
+        "white_plate_2"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [
+        "coffee_table",
+        "side_table_1",
+        "side_table_2"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "semantic_hints": [
+        "remote_control"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "both viewer seating positions collectively for shared item accessibility",
+      "distinct": false,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "SEATING_PAIR",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "armchair",
+        "chair",
+        "sofa",
+        "seating_pair"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "SEATING_POSITION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "armchair",
+        "chair",
+        "sofa",
+        "seating_position"
+      ],
+      "semantic_hints": [
+        "armchair_1",
+        "armchair_2"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [
+        "coffee_table",
+        "side_table_1",
+        "side_table_2"
+      ],
+      "shared": true,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "source": "VLM_CANONICAL_G_F",
+  "task_instruction": "Assign refreshments and entertainment objects to suitable regions near two seating positions."
+}

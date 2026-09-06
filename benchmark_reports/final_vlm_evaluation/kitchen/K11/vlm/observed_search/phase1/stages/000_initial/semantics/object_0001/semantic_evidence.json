@@ -1,0 +1,69 @@
+{
+  "alternatives": [
+    {
+      "camera_ids": [
+        "inspection_front",
+        "inspection_left",
+        "inspection_right"
+      ],
+      "label": "cup",
+      "mean_confidence": 0.6000811755657196,
+      "score": 6.311320965583665,
+      "supporting_view_count": 3
+    },
+    {
+      "camera_ids": [
+        "inspection_top"
+      ],
+      "label": "bowl",
+      "mean_confidence": 0.12415279448032379,
+      "score": 0.2785630195106026,
+      "supporting_view_count": 1
+    }
+  ],
+  "ambiguity_hypotheses": [
+    "cup"
+  ],
+  "association_method": "mask_box_overlap_v1",
+  "canonical_label": "cup",
+  "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+  "contributing_camera_ids": [
+    "inspection_front",
+    "inspection_left",
+    "inspection_right"
+  ],
+  "detector_name": "ultralytics_yolo_world",
+  "detector_version": "8.4.112",
+  "mean_confidence": 0.6000811755657196,
+  "observation_source": "RGB_DETECTOR",
+  "plausible_labels": [
+    "cup"
+  ],
+  "quality": {
+    "mean_confidence": 0.6000811755657196,
+    "supporting_view_count": 3,
+    "supporting_view_margin": 2,
+    "validated": true,
+    "weighted_score_margin": 6.032757946073062,
+    "winner_policy": "supporting_views_then_weighted_score",
+    "winning_label_margin": 2.0,
+    "winning_label_margin_kind": "supporting_view_count"
+  },
+  "reason_codes": [],
+  "semantic_evidence_paths": [
+    "stages/000_initial/cameras/inspection_front/rgb.png",
+    "stages/000_initial/cameras/inspection_left/rgb.png",
+    "stages/000_initial/cameras/inspection_right/rgb.png",
+    "stages/000_initial/semantics/cameras/inspection_top/crops/000_object_0001.png"
+  ],
+  "semantic_record_path": "stages/000_initial/semantics/object_0001/semantic_evidence.json",
+  "source_region": "INITIAL",
+  "source_stage": 0,
+  "status": "SUPPORTED",
+  "supporting_view_count": 3,
+  "supporting_view_margin": 2,
+  "weighted_score_margin": 6.032757946073062,
+  "winner_policy": "supporting_views_then_weighted_score",
+  "winning_label_margin": 2.0,
+  "winning_label_margin_kind": "supporting_view_count"
+}

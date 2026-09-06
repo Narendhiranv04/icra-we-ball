@@ -1,0 +1,1956 @@
+{
+  "inspected_regions": [
+    "LEFT_DRAWER",
+    "RIGHT_DRAWER",
+    "TOOL_CABINET"
+  ],
+  "nodes": {
+    "object_0001": {
+      "canonical_category": "power_driver",
+      "entity_kind": "OBJECT",
+      "first_seen_stage": 0,
+      "geometry": {
+        "centroid_world_m": [
+          -0.25255976617336273,
+          -0.046095140278339386,
+          0.4952714592218399
+        ],
+        "distal_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 3.6274069046515964,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 253,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.0403935514785824,
+              "transverse_width_m": 0.011135654901793298
+            },
+            {
+              "anisotropy_ratio": 1.6078731095507592,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 123,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.0174280429286563,
+              "transverse_width_m": 0.01083919049652227
+            }
+          ],
+          "principal_axis_world": [
+            -0.997431229512937,
+            0.003711081953389525,
+            -0.07153439915904992
+          ]
+        },
+        "footprint_area_m2": 0.005671346033296523,
+        "footprint_length_m": 0.27866510768275576,
+        "footprint_width_m": 0.02035183407229091,
+        "head_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 3.446309652026504,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 618,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.03820212820252224,
+              "transverse_width_m": 0.011084937820389577
+            },
+            {
+              "anisotropy_ratio": 1.7969410248153441,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 370,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.016658440441140357,
+              "transverse_width_m": 0.009270443610052366
+            }
+          ],
+          "principal_axis_world": [
+            -0.997431229512937,
+            0.003711081953389525,
+            -0.07153439915904992
+          ]
+        },
+        "head_evidence": {
+          "anisotropy_ratio": 3.446309652026504,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 618,
+          "side": "LOW",
+          "status": "MEASURED",
+          "transverse_length_m": 0.03820212820252224,
+          "transverse_width_m": 0.011084937820389577
+        },
+        "head_interface": "CROSS_LIKE",
+        "maximum_cross_section_m": 0.06431351061561118,
+        "measurement_provenance": {
+          "camera_ids": [
+            "CLOSE",
+            "FRONT",
+            "LEFT",
+            "RIGHT",
+            "TOP"
+          ],
+          "cloud_purpose": "MEASUREMENT_EVIDENCE",
+          "measurement_method": "stage_local_multiview_masked_rgbd",
+          "point_count": 1776,
+          "source_region": "LEFT_DRAWER",
+          "source_stage": 1
+        },
+        "method": "robust_pca_and_distal_local_geometry_v2",
+        "point_count": 1776,
+        "principal_axes_world": [
+          [
+            -0.997431229512937,
+            0.06995050026227613,
+            0.015423031652965049
+          ],
+          [
+            0.003711081953389525,
+            -0.1645608216116623,
+            0.9863599565377893
+          ],
+          [
+            -0.07153439915904992,
+            -0.9838834603262481,
+            -0.16387851059062522
+          ]
+        ],
+        "property_status": "MEASURED",
+        "robust_dimensions_m": [
+          0.27954353259902903,
+          0.06431351061561118,
+          0.023696097181547467
+        ],
+        "total_length_m": 0.27954353259902903,
+        "usable_length_m": 0.27954353259902903,
+        "working_end_evidence": {
+          "anisotropy_ratio": 1.6078731095507592,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 123,
+          "side": "HIGH",
+          "status": "MEASURED",
+          "transverse_length_m": 0.0174280429286563,
+          "transverse_width_m": 0.01083919049652227
+        },
+        "working_end_interface": "CROSS_LIKE"
+      },
+      "instance_id": "object_0001",
+      "last_seen_stage": 3,
+      "region": "LEFT_DRAWER",
+      "semantic_labels": {
+        "ambiguity_hypotheses": [
+          "power_driver"
+        ],
+        "canonical_label": "power_driver",
+        "confidence": 0.6214,
+        "label_confidence_sum": {
+          "power_driver": 0.621397897368297,
+          "tool": 0.024768714793026447
+        },
+        "label_supporting_view_count": {
+          "power_driver": 5,
+          "tool": 1
+        },
+        "plausible_labels": [
+          "power_driver"
+        ],
+        "raw_label": "cordless power drill",
+        "reason_codes": [],
+        "status": "SUPPORTED",
+        "supporting_view_count": 5,
+        "total_observations": 6
+      },
+      "source_region": "LEFT_DRAWER",
+      "unary_predicates": {
+        "CAN_DRIVE_SCREW": "TRUE",
+        "CAN_FASTEN": "TRUE"
+      },
+      "unary_properties": {
+        "centroid_world_m": [
+          -0.25255976617336273,
+          -0.046095140278339386,
+          0.4952714592218399
+        ],
+        "distal_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 3.6274069046515964,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 253,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.0403935514785824,
+              "transverse_width_m": 0.011135654901793298
+            },
+            {
+              "anisotropy_ratio": 1.6078731095507592,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 123,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.0174280429286563,
+              "transverse_width_m": 0.01083919049652227
+            }
+          ],
+          "principal_axis_world": [
+            -0.997431229512937,
+            0.003711081953389525,
+            -0.07153439915904992
+          ]
+        },
+        "footprint_area_m2": 0.005671346033296523,
+        "footprint_length_m": 0.27866510768275576,
+        "footprint_width_m": 0.02035183407229091,
+        "head_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 3.446309652026504,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 618,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.03820212820252224,
+              "transverse_width_m": 0.011084937820389577
+            },
+            {
+              "anisotropy_ratio": 1.7969410248153441,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 370,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.016658440441140357,
+              "transverse_width_m": 0.009270443610052366
+            }
+          ],
+          "principal_axis_world": [
+            -0.997431229512937,
+            0.003711081953389525,
+            -0.07153439915904992
+          ]
+        },
+        "head_evidence": {
+          "anisotropy_ratio": 3.446309652026504,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 618,
+          "side": "LOW",
+          "status": "MEASURED",
+          "transverse_length_m": 0.03820212820252224,
+          "transverse_width_m": 0.011084937820389577
+        },
+        "head_interface": "CROSS_LIKE",
+        "maximum_cross_section_m": 0.06431351061561118,
+        "measurement_provenance": {
+          "camera_ids": [
+            "CLOSE",
+            "FRONT",
+            "LEFT",
+            "RIGHT",
+            "TOP"
+          ],
+          "cloud_purpose": "MEASUREMENT_EVIDENCE",
+          "measurement_method": "stage_local_multiview_masked_rgbd",
+          "point_count": 1776,
+          "source_region": "LEFT_DRAWER",
+          "source_stage": 1
+        },
+        "method": "robust_pca_and_distal_local_geometry_v2",
+        "point_count": 1776,
+        "principal_axes_world": [
+          [
+            -0.997431229512937,
+            0.06995050026227613,
+            0.015423031652965049
+          ],
+          [
+            0.003711081953389525,
+            -0.1645608216116623,
+            0.9863599565377893
+          ],
+          [
+            -0.07153439915904992,
+            -0.9838834603262481,
+            -0.16387851059062522
+          ]
+        ],
+        "property_status": "MEASURED",
+        "robust_dimensions_m": [
+          0.27954353259902903,
+          0.06431351061561118,
+          0.023696097181547467
+        ],
+        "total_length_m": 0.27954353259902903,
+        "usable_length_m": 0.27954353259902903,
+        "working_end_evidence": {
+          "anisotropy_ratio": 1.6078731095507592,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 123,
+          "side": "HIGH",
+          "status": "MEASURED",
+          "transverse_length_m": 0.0174280429286563,
+          "transverse_width_m": 0.01083919049652227
+        },
+        "working_end_interface": "CROSS_LIKE"
+      }
+    },
+    "object_0002": {
+      "canonical_category": "wrench",
+      "entity_kind": "OBJECT",
+      "first_seen_stage": 0,
+      "geometry": {
+        "centroid_world_m": [
+          0.38693612813949585,
+          -0.17109952867031097,
+          0.48103049397468567
+        ],
+        "distal_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 4.431974598587203,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 16,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.00976149673342884,
+              "transverse_width_m": 0.0022025163990201
+            },
+            {
+              "anisotropy_ratio": 1.3894809562473025,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 6,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.004731496454895492,
+              "transverse_width_m": 0.003405225838916335
+            }
+          ],
+          "principal_axis_world": [
+            -0.9995060334443143,
+            0.023238980883738915,
+            -0.02115747801364982
+          ]
+        },
+        "footprint_area_m2": 0.00026428190430762493,
+        "footprint_length_m": 0.03958357777012214,
+        "footprint_width_m": 0.00667655424788575,
+        "head_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 4.206842876582626,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 32,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.009185347058787343,
+              "transverse_width_m": 0.0021834300277572857
+            },
+            {
+              "anisotropy_ratio": 1.3624457407224042,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 19,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.004852950970806038,
+              "transverse_width_m": 0.003561940725971867
+            }
+          ],
+          "principal_axis_world": [
+            -0.9995060334443143,
+            0.023238980883738915,
+            -0.02115747801364982
+          ]
+        },
+        "head_evidence": {
+          "anisotropy_ratio": 4.206842876582626,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 32,
+          "side": "LOW",
+          "status": "MEASURED",
+          "transverse_length_m": 0.009185347058787343,
+          "transverse_width_m": 0.0021834300277572857
+        },
+        "head_interface": "CROSS_LIKE",
+        "maximum_cross_section_m": 0.01294628266689166,
+        "measurement_provenance": {
+          "camera_ids": [
+            "CLOSE",
+            "LEFT",
+            "RIGHT",
+            "TOP"
+          ],
+          "cloud_purpose": "MEASUREMENT_EVIDENCE",
+          "measurement_method": "stage_local_multiview_masked_rgbd",
+          "point_count": 89,
+          "source_region": "RIGHT_DRAWER",
+          "source_stage": 2
+        },
+        "method": "robust_pca_and_distal_local_geometry_v2",
+        "point_count": 89,
+        "principal_axes_world": [
+          [
+            -0.9995060334443143,
+            -0.0191604736107507,
+            0.024911149299552283
+          ],
+          [
+            0.023238980883738915,
+            0.08302932710996669,
+            0.996276106612595
+          ],
+          [
+            -0.02115747801364982,
+            0.9963628892580644,
+            -0.08254304351926946
+          ]
+        ],
+        "property_status": "MEASURED",
+        "robust_dimensions_m": [
+          0.03968951162521307,
+          0.01294628266689166,
+          0.006723722846211977
+        ],
+        "total_length_m": 0.03968951162521307,
+        "usable_length_m": 0.03968951162521307,
+        "working_end_evidence": {
+          "anisotropy_ratio": 1.3894809562473025,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 6,
+          "side": "HIGH",
+          "status": "MEASURED",
+          "transverse_length_m": 0.004731496454895492,
+          "transverse_width_m": 0.003405225838916335
+        },
+        "working_end_interface": "CROSS_LIKE"
+      },
+      "instance_id": "object_0002",
+      "last_seen_stage": 3,
+      "region": "RIGHT_DRAWER",
+      "semantic_labels": {
+        "ambiguity_hypotheses": [
+          "wrench"
+        ],
+        "canonical_label": "wrench",
+        "confidence": 0.5745,
+        "label_confidence_sum": {
+          "tool": 0.18720337189733982,
+          "wrench": 0.574483540840447
+        },
+        "label_supporting_view_count": {
+          "tool": 2,
+          "wrench": 3
+        },
+        "plausible_labels": [
+          "wrench"
+        ],
+        "raw_label": "wrench",
+        "reason_codes": [],
+        "status": "SUPPORTED",
+        "supporting_view_count": 3,
+        "total_observations": 5
+      },
+      "source_region": "RIGHT_DRAWER",
+      "unary_predicates": {
+        "CAN_DRIVE_SCREW": "FALSE",
+        "CAN_FASTEN": "TRUE"
+      },
+      "unary_properties": {
+        "centroid_world_m": [
+          0.38693612813949585,
+          -0.17109952867031097,
+          0.48103049397468567
+        ],
+        "distal_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 4.431974598587203,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 16,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.00976149673342884,
+              "transverse_width_m": 0.0022025163990201
+            },
+            {
+              "anisotropy_ratio": 1.3894809562473025,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 6,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.004731496454895492,
+              "transverse_width_m": 0.003405225838916335
+            }
+          ],
+          "principal_axis_world": [
+            -0.9995060334443143,
+            0.023238980883738915,
+            -0.02115747801364982
+          ]
+        },
+        "footprint_area_m2": 0.00026428190430762493,
+        "footprint_length_m": 0.03958357777012214,
+        "footprint_width_m": 0.00667655424788575,
+        "head_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 4.206842876582626,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 32,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.009185347058787343,
+              "transverse_width_m": 0.0021834300277572857
+            },
+            {
+              "anisotropy_ratio": 1.3624457407224042,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 19,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.004852950970806038,
+              "transverse_width_m": 0.003561940725971867
+            }
+          ],
+          "principal_axis_world": [
+            -0.9995060334443143,
+            0.023238980883738915,
+            -0.02115747801364982
+          ]
+        },
+        "head_evidence": {
+          "anisotropy_ratio": 4.206842876582626,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 32,
+          "side": "LOW",
+          "status": "MEASURED",
+          "transverse_length_m": 0.009185347058787343,
+          "transverse_width_m": 0.0021834300277572857
+        },
+        "head_interface": "CROSS_LIKE",
+        "maximum_cross_section_m": 0.01294628266689166,
+        "measurement_provenance": {
+          "camera_ids": [
+            "CLOSE",
+            "LEFT",
+            "RIGHT",
+            "TOP"
+          ],
+          "cloud_purpose": "MEASUREMENT_EVIDENCE",
+          "measurement_method": "stage_local_multiview_masked_rgbd",
+          "point_count": 89,
+          "source_region": "RIGHT_DRAWER",
+          "source_stage": 2
+        },
+        "method": "robust_pca_and_distal_local_geometry_v2",
+        "point_count": 89,
+        "principal_axes_world": [
+          [
+            -0.9995060334443143,
+            -0.0191604736107507,
+            0.024911149299552283
+          ],
+          [
+            0.023238980883738915,
+            0.08302932710996669,
+            0.996276106612595
+          ],
+          [
+            -0.02115747801364982,
+            0.9963628892580644,
+            -0.08254304351926946
+          ]
+        ],
+        "property_status": "MEASURED",
+        "robust_dimensions_m": [
+          0.03968951162521307,
+          0.01294628266689166,
+          0.006723722846211977
+        ],
+        "total_length_m": 0.03968951162521307,
+        "usable_length_m": 0.03968951162521307,
+        "working_end_evidence": {
+          "anisotropy_ratio": 1.3894809562473025,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 6,
+          "side": "HIGH",
+          "status": "MEASURED",
+          "transverse_length_m": 0.004731496454895492,
+          "transverse_width_m": 0.003405225838916335
+        },
+        "working_end_interface": "CROSS_LIKE"
+      }
+    },
+    "object_0003": {
+      "canonical_category": "wrench",
+      "entity_kind": "OBJECT",
+      "first_seen_stage": 0,
+      "geometry": {
+        "centroid_world_m": [
+          0.3405560851097107,
+          0.5319031476974487,
+          0.8278841972351074
+        ],
+        "distal_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 1.8898949939967549,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 94,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.01959338243043815,
+              "transverse_width_m": 0.010367445012911545
+            },
+            {
+              "anisotropy_ratio": 2.9017385201029744,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 29,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.005508401616023928,
+              "transverse_width_m": 0.00189831081534819
+            }
+          ],
+          "principal_axis_world": [
+            4.6925625757959354e-05,
+            0.02859936811002497,
+            0.9995909533112496
+          ]
+        },
+        "footprint_area_m2": 0.000561243459936571,
+        "footprint_length_m": 0.02686069476456404,
+        "footprint_width_m": 0.02089459952007612,
+        "head_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 1.77149944107174,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 354,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.021186481540698916,
+              "transverse_width_m": 0.011959632077490977
+            },
+            {
+              "anisotropy_ratio": 2.0974730484486823,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 92,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.00540761856390236,
+              "transverse_width_m": 0.0025781587839242576
+            }
+          ],
+          "principal_axis_world": [
+            4.6925625757959354e-05,
+            0.02859936811002497,
+            0.9995909533112496
+          ]
+        },
+        "head_evidence": {
+          "anisotropy_ratio": 1.77149944107174,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 354,
+          "side": "LOW",
+          "status": "MEASURED",
+          "transverse_length_m": 0.021186481540698916,
+          "transverse_width_m": 0.011959632077490977
+        },
+        "head_interface": "CROSS_LIKE",
+        "maximum_cross_section_m": 0.026792756461352544,
+        "measurement_provenance": {
+          "camera_ids": [
+            "CLOSE",
+            "FRONT",
+            "LEFT",
+            "RIGHT",
+            "TOP"
+          ],
+          "cloud_purpose": "MEASUREMENT_EVIDENCE",
+          "measurement_method": "stage_local_multiview_masked_rgbd",
+          "point_count": 932,
+          "source_region": "TOOL_CABINET",
+          "source_stage": 3
+        },
+        "method": "robust_pca_and_distal_local_geometry_v2",
+        "point_count": 932,
+        "principal_axes_world": [
+          [
+            4.6925625757959354e-05,
+            0.9941347255578951,
+            -0.10814871815197069
+          ],
+          [
+            0.02859936811002497,
+            0.1081031463431698,
+            0.9937282253686941
+          ],
+          [
+            0.9995909533112496,
+            -0.00313961631986432,
+            -0.028426552159400324
+          ]
+        ],
+        "property_status": "MEASURED",
+        "robust_dimensions_m": [
+          0.22102225928087008,
+          0.026792756461352544,
+          0.020559864277373392
+        ],
+        "total_length_m": 0.22102225928087008,
+        "usable_length_m": 0.22102225928087008,
+        "working_end_evidence": {
+          "anisotropy_ratio": 2.9017385201029744,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 29,
+          "side": "HIGH",
+          "status": "MEASURED",
+          "transverse_length_m": 0.005508401616023928,
+          "transverse_width_m": 0.00189831081534819
+        },
+        "working_end_interface": "CROSS_LIKE"
+      },
+      "instance_id": "object_0003",
+      "last_seen_stage": 3,
+      "region": "TOOL_CABINET",
+      "semantic_labels": {
+        "ambiguity_hypotheses": [
+          "wrench"
+        ],
+        "canonical_label": "wrench",
+        "confidence": 0.8848,
+        "label_confidence_sum": {
+          "screwdriver": 0.13377780094742775,
+          "tool": 0.2554994309321046,
+          "wrench": 2.9887771606445312
+        },
+        "label_supporting_view_count": {
+          "screwdriver": 1,
+          "tool": 3,
+          "wrench": 1
+        },
+        "plausible_labels": [
+          "wrench"
+        ],
+        "raw_label": "wrench",
+        "reason_codes": [],
+        "status": "SUPPORTED",
+        "supporting_view_count": 1,
+        "total_observations": 5
+      },
+      "source_region": "TOOL_CABINET",
+      "unary_predicates": {
+        "CAN_DRIVE_SCREW": "FALSE",
+        "CAN_FASTEN": "TRUE"
+      },
+      "unary_properties": {
+        "centroid_world_m": [
+          0.3405560851097107,
+          0.5319031476974487,
+          0.8278841972351074
+        ],
+        "distal_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 1.8898949939967549,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 94,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.01959338243043815,
+              "transverse_width_m": 0.010367445012911545
+            },
+            {
+              "anisotropy_ratio": 2.9017385201029744,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 29,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.005508401616023928,
+              "transverse_width_m": 0.00189831081534819
+            }
+          ],
+          "principal_axis_world": [
+            4.6925625757959354e-05,
+            0.02859936811002497,
+            0.9995909533112496
+          ]
+        },
+        "footprint_area_m2": 0.000561243459936571,
+        "footprint_length_m": 0.02686069476456404,
+        "footprint_width_m": 0.02089459952007612,
+        "head_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 1.77149944107174,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 354,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.021186481540698916,
+              "transverse_width_m": 0.011959632077490977
+            },
+            {
+              "anisotropy_ratio": 2.0974730484486823,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 92,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.00540761856390236,
+              "transverse_width_m": 0.0025781587839242576
+            }
+          ],
+          "principal_axis_world": [
+            4.6925625757959354e-05,
+            0.02859936811002497,
+            0.9995909533112496
+          ]
+        },
+        "head_evidence": {
+          "anisotropy_ratio": 1.77149944107174,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 354,
+          "side": "LOW",
+          "status": "MEASURED",
+          "transverse_length_m": 0.021186481540698916,
+          "transverse_width_m": 0.011959632077490977
+        },
+        "head_interface": "CROSS_LIKE",
+        "maximum_cross_section_m": 0.026792756461352544,
+        "measurement_provenance": {
+          "camera_ids": [
+            "CLOSE",
+            "FRONT",
+            "LEFT",
+            "RIGHT",
+            "TOP"
+          ],
+          "cloud_purpose": "MEASUREMENT_EVIDENCE",
+          "measurement_method": "stage_local_multiview_masked_rgbd",
+          "point_count": 932,
+          "source_region": "TOOL_CABINET",
+          "source_stage": 3
+        },
+        "method": "robust_pca_and_distal_local_geometry_v2",
+        "point_count": 932,
+        "principal_axes_world": [
+          [
+            4.6925625757959354e-05,
+            0.9941347255578951,
+            -0.10814871815197069
+          ],
+          [
+            0.02859936811002497,
+            0.1081031463431698,
+            0.9937282253686941
+          ],
+          [
+            0.9995909533112496,
+            -0.00313961631986432,
+            -0.028426552159400324
+          ]
+        ],
+        "property_status": "MEASURED",
+        "robust_dimensions_m": [
+          0.22102225928087008,
+          0.026792756461352544,
+          0.020559864277373392
+        ],
+        "total_length_m": 0.22102225928087008,
+        "usable_length_m": 0.22102225928087008,
+        "working_end_evidence": {
+          "anisotropy_ratio": 2.9017385201029744,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 29,
+          "side": "HIGH",
+          "status": "MEASURED",
+          "transverse_length_m": 0.005508401616023928,
+          "transverse_width_m": 0.00189831081534819
+        },
+        "working_end_interface": "CROSS_LIKE"
+      }
+    },
+    "repair_target": {
+      "canonical_category": "repair_target",
+      "entity_kind": "FIXED_TARGET",
+      "first_seen_stage": 0,
+      "geometry": {},
+      "instance_id": "repair_target",
+      "last_seen_stage": 0,
+      "region": null,
+      "semantic_labels": {},
+      "source_region": null,
+      "unary_predicates": {},
+      "unary_properties": {
+        "target": "workbench_hole"
+      }
+    }
+  },
+  "objects": {
+    "object_0001": {
+      "canonical_category": "power_driver",
+      "entity_kind": "OBJECT",
+      "first_seen_stage": 0,
+      "geometry": {
+        "centroid_world_m": [
+          -0.25255976617336273,
+          -0.046095140278339386,
+          0.4952714592218399
+        ],
+        "distal_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 3.6274069046515964,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 253,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.0403935514785824,
+              "transverse_width_m": 0.011135654901793298
+            },
+            {
+              "anisotropy_ratio": 1.6078731095507592,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 123,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.0174280429286563,
+              "transverse_width_m": 0.01083919049652227
+            }
+          ],
+          "principal_axis_world": [
+            -0.997431229512937,
+            0.003711081953389525,
+            -0.07153439915904992
+          ]
+        },
+        "footprint_area_m2": 0.005671346033296523,
+        "footprint_length_m": 0.27866510768275576,
+        "footprint_width_m": 0.02035183407229091,
+        "head_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 3.446309652026504,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 618,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.03820212820252224,
+              "transverse_width_m": 0.011084937820389577
+            },
+            {
+              "anisotropy_ratio": 1.7969410248153441,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 370,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.016658440441140357,
+              "transverse_width_m": 0.009270443610052366
+            }
+          ],
+          "principal_axis_world": [
+            -0.997431229512937,
+            0.003711081953389525,
+            -0.07153439915904992
+          ]
+        },
+        "head_evidence": {
+          "anisotropy_ratio": 3.446309652026504,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 618,
+          "side": "LOW",
+          "status": "MEASURED",
+          "transverse_length_m": 0.03820212820252224,
+          "transverse_width_m": 0.011084937820389577
+        },
+        "head_interface": "CROSS_LIKE",
+        "maximum_cross_section_m": 0.06431351061561118,
+        "measurement_provenance": {
+          "camera_ids": [
+            "CLOSE",
+            "FRONT",
+            "LEFT",
+            "RIGHT",
+            "TOP"
+          ],
+          "cloud_purpose": "MEASUREMENT_EVIDENCE",
+          "measurement_method": "stage_local_multiview_masked_rgbd",
+          "point_count": 1776,
+          "source_region": "LEFT_DRAWER",
+          "source_stage": 1
+        },
+        "method": "robust_pca_and_distal_local_geometry_v2",
+        "point_count": 1776,
+        "principal_axes_world": [
+          [
+            -0.997431229512937,
+            0.06995050026227613,
+            0.015423031652965049
+          ],
+          [
+            0.003711081953389525,
+            -0.1645608216116623,
+            0.9863599565377893
+          ],
+          [
+            -0.07153439915904992,
+            -0.9838834603262481,
+            -0.16387851059062522
+          ]
+        ],
+        "property_status": "MEASURED",
+        "robust_dimensions_m": [
+          0.27954353259902903,
+          0.06431351061561118,
+          0.023696097181547467
+        ],
+        "total_length_m": 0.27954353259902903,
+        "usable_length_m": 0.27954353259902903,
+        "working_end_evidence": {
+          "anisotropy_ratio": 1.6078731095507592,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 123,
+          "side": "HIGH",
+          "status": "MEASURED",
+          "transverse_length_m": 0.0174280429286563,
+          "transverse_width_m": 0.01083919049652227
+        },
+        "working_end_interface": "CROSS_LIKE"
+      },
+      "instance_id": "object_0001",
+      "last_seen_stage": 3,
+      "region": "LEFT_DRAWER",
+      "semantic_labels": {
+        "ambiguity_hypotheses": [
+          "power_driver"
+        ],
+        "canonical_label": "power_driver",
+        "confidence": 0.6214,
+        "label_confidence_sum": {
+          "power_driver": 0.621397897368297,
+          "tool": 0.024768714793026447
+        },
+        "label_supporting_view_count": {
+          "power_driver": 5,
+          "tool": 1
+        },
+        "plausible_labels": [
+          "power_driver"
+        ],
+        "raw_label": "cordless power drill",
+        "reason_codes": [],
+        "status": "SUPPORTED",
+        "supporting_view_count": 5,
+        "total_observations": 6
+      },
+      "source_region": "LEFT_DRAWER",
+      "unary_predicates": {
+        "CAN_DRIVE_SCREW": "TRUE",
+        "CAN_FASTEN": "TRUE"
+      },
+      "unary_properties": {
+        "centroid_world_m": [
+          -0.25255976617336273,
+          -0.046095140278339386,
+          0.4952714592218399
+        ],
+        "distal_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 3.6274069046515964,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 253,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.0403935514785824,
+              "transverse_width_m": 0.011135654901793298
+            },
+            {
+              "anisotropy_ratio": 1.6078731095507592,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 123,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.0174280429286563,
+              "transverse_width_m": 0.01083919049652227
+            }
+          ],
+          "principal_axis_world": [
+            -0.997431229512937,
+            0.003711081953389525,
+            -0.07153439915904992
+          ]
+        },
+        "footprint_area_m2": 0.005671346033296523,
+        "footprint_length_m": 0.27866510768275576,
+        "footprint_width_m": 0.02035183407229091,
+        "head_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 3.446309652026504,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 618,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.03820212820252224,
+              "transverse_width_m": 0.011084937820389577
+            },
+            {
+              "anisotropy_ratio": 1.7969410248153441,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 370,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.016658440441140357,
+              "transverse_width_m": 0.009270443610052366
+            }
+          ],
+          "principal_axis_world": [
+            -0.997431229512937,
+            0.003711081953389525,
+            -0.07153439915904992
+          ]
+        },
+        "head_evidence": {
+          "anisotropy_ratio": 3.446309652026504,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 618,
+          "side": "LOW",
+          "status": "MEASURED",
+          "transverse_length_m": 0.03820212820252224,
+          "transverse_width_m": 0.011084937820389577
+        },
+        "head_interface": "CROSS_LIKE",
+        "maximum_cross_section_m": 0.06431351061561118,
+        "measurement_provenance": {
+          "camera_ids": [
+            "CLOSE",
+            "FRONT",
+            "LEFT",
+            "RIGHT",
+            "TOP"
+          ],
+          "cloud_purpose": "MEASUREMENT_EVIDENCE",
+          "measurement_method": "stage_local_multiview_masked_rgbd",
+          "point_count": 1776,
+          "source_region": "LEFT_DRAWER",
+          "source_stage": 1
+        },
+        "method": "robust_pca_and_distal_local_geometry_v2",
+        "point_count": 1776,
+        "principal_axes_world": [
+          [
+            -0.997431229512937,
+            0.06995050026227613,
+            0.015423031652965049
+          ],
+          [
+            0.003711081953389525,
+            -0.1645608216116623,
+            0.9863599565377893
+          ],
+          [
+            -0.07153439915904992,
+            -0.9838834603262481,
+            -0.16387851059062522
+          ]
+        ],
+        "property_status": "MEASURED",
+        "robust_dimensions_m": [
+          0.27954353259902903,
+          0.06431351061561118,
+          0.023696097181547467
+        ],
+        "total_length_m": 0.27954353259902903,
+        "usable_length_m": 0.27954353259902903,
+        "working_end_evidence": {
+          "anisotropy_ratio": 1.6078731095507592,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 123,
+          "side": "HIGH",
+          "status": "MEASURED",
+          "transverse_length_m": 0.0174280429286563,
+          "transverse_width_m": 0.01083919049652227
+        },
+        "working_end_interface": "CROSS_LIKE"
+      }
+    },
+    "object_0002": {
+      "canonical_category": "wrench",
+      "entity_kind": "OBJECT",
+      "first_seen_stage": 0,
+      "geometry": {
+        "centroid_world_m": [
+          0.38693612813949585,
+          -0.17109952867031097,
+          0.48103049397468567
+        ],
+        "distal_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 4.431974598587203,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 16,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.00976149673342884,
+              "transverse_width_m": 0.0022025163990201
+            },
+            {
+              "anisotropy_ratio": 1.3894809562473025,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 6,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.004731496454895492,
+              "transverse_width_m": 0.003405225838916335
+            }
+          ],
+          "principal_axis_world": [
+            -0.9995060334443143,
+            0.023238980883738915,
+            -0.02115747801364982
+          ]
+        },
+        "footprint_area_m2": 0.00026428190430762493,
+        "footprint_length_m": 0.03958357777012214,
+        "footprint_width_m": 0.00667655424788575,
+        "head_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 4.206842876582626,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 32,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.009185347058787343,
+              "transverse_width_m": 0.0021834300277572857
+            },
+            {
+              "anisotropy_ratio": 1.3624457407224042,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 19,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.004852950970806038,
+              "transverse_width_m": 0.003561940725971867
+            }
+          ],
+          "principal_axis_world": [
+            -0.9995060334443143,
+            0.023238980883738915,
+            -0.02115747801364982
+          ]
+        },
+        "head_evidence": {
+          "anisotropy_ratio": 4.206842876582626,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 32,
+          "side": "LOW",
+          "status": "MEASURED",
+          "transverse_length_m": 0.009185347058787343,
+          "transverse_width_m": 0.0021834300277572857
+        },
+        "head_interface": "CROSS_LIKE",
+        "maximum_cross_section_m": 0.01294628266689166,
+        "measurement_provenance": {
+          "camera_ids": [
+            "CLOSE",
+            "LEFT",
+            "RIGHT",
+            "TOP"
+          ],
+          "cloud_purpose": "MEASUREMENT_EVIDENCE",
+          "measurement_method": "stage_local_multiview_masked_rgbd",
+          "point_count": 89,
+          "source_region": "RIGHT_DRAWER",
+          "source_stage": 2
+        },
+        "method": "robust_pca_and_distal_local_geometry_v2",
+        "point_count": 89,
+        "principal_axes_world": [
+          [
+            -0.9995060334443143,
+            -0.0191604736107507,
+            0.024911149299552283
+          ],
+          [
+            0.023238980883738915,
+            0.08302932710996669,
+            0.996276106612595
+          ],
+          [
+            -0.02115747801364982,
+            0.9963628892580644,
+            -0.08254304351926946
+          ]
+        ],
+        "property_status": "MEASURED",
+        "robust_dimensions_m": [
+          0.03968951162521307,
+          0.01294628266689166,
+          0.006723722846211977
+        ],
+        "total_length_m": 0.03968951162521307,
+        "usable_length_m": 0.03968951162521307,
+        "working_end_evidence": {
+          "anisotropy_ratio": 1.3894809562473025,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 6,
+          "side": "HIGH",
+          "status": "MEASURED",
+          "transverse_length_m": 0.004731496454895492,
+          "transverse_width_m": 0.003405225838916335
+        },
+        "working_end_interface": "CROSS_LIKE"
+      },
+      "instance_id": "object_0002",
+      "last_seen_stage": 3,
+      "region": "RIGHT_DRAWER",
+      "semantic_labels": {
+        "ambiguity_hypotheses": [
+          "wrench"
+        ],
+        "canonical_label": "wrench",
+        "confidence": 0.5745,
+        "label_confidence_sum": {
+          "tool": 0.18720337189733982,
+          "wrench": 0.574483540840447
+        },
+        "label_supporting_view_count": {
+          "tool": 2,
+          "wrench": 3
+        },
+        "plausible_labels": [
+          "wrench"
+        ],
+        "raw_label": "wrench",
+        "reason_codes": [],
+        "status": "SUPPORTED",
+        "supporting_view_count": 3,
+        "total_observations": 5
+      },
+      "source_region": "RIGHT_DRAWER",
+      "unary_predicates": {
+        "CAN_DRIVE_SCREW": "FALSE",
+        "CAN_FASTEN": "TRUE"
+      },
+      "unary_properties": {
+        "centroid_world_m": [
+          0.38693612813949585,
+          -0.17109952867031097,
+          0.48103049397468567
+        ],
+        "distal_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 4.431974598587203,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 16,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.00976149673342884,
+              "transverse_width_m": 0.0022025163990201
+            },
+            {
+              "anisotropy_ratio": 1.3894809562473025,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 6,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.004731496454895492,
+              "transverse_width_m": 0.003405225838916335
+            }
+          ],
+          "principal_axis_world": [
+            -0.9995060334443143,
+            0.023238980883738915,
+            -0.02115747801364982
+          ]
+        },
+        "footprint_area_m2": 0.00026428190430762493,
+        "footprint_length_m": 0.03958357777012214,
+        "footprint_width_m": 0.00667655424788575,
+        "head_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 4.206842876582626,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 32,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.009185347058787343,
+              "transverse_width_m": 0.0021834300277572857
+            },
+            {
+              "anisotropy_ratio": 1.3624457407224042,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 19,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.004852950970806038,
+              "transverse_width_m": 0.003561940725971867
+            }
+          ],
+          "principal_axis_world": [
+            -0.9995060334443143,
+            0.023238980883738915,
+            -0.02115747801364982
+          ]
+        },
+        "head_evidence": {
+          "anisotropy_ratio": 4.206842876582626,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 32,
+          "side": "LOW",
+          "status": "MEASURED",
+          "transverse_length_m": 0.009185347058787343,
+          "transverse_width_m": 0.0021834300277572857
+        },
+        "head_interface": "CROSS_LIKE",
+        "maximum_cross_section_m": 0.01294628266689166,
+        "measurement_provenance": {
+          "camera_ids": [
+            "CLOSE",
+            "LEFT",
+            "RIGHT",
+            "TOP"
+          ],
+          "cloud_purpose": "MEASUREMENT_EVIDENCE",
+          "measurement_method": "stage_local_multiview_masked_rgbd",
+          "point_count": 89,
+          "source_region": "RIGHT_DRAWER",
+          "source_stage": 2
+        },
+        "method": "robust_pca_and_distal_local_geometry_v2",
+        "point_count": 89,
+        "principal_axes_world": [
+          [
+            -0.9995060334443143,
+            -0.0191604736107507,
+            0.024911149299552283
+          ],
+          [
+            0.023238980883738915,
+            0.08302932710996669,
+            0.996276106612595
+          ],
+          [
+            -0.02115747801364982,
+            0.9963628892580644,
+            -0.08254304351926946
+          ]
+        ],
+        "property_status": "MEASURED",
+        "robust_dimensions_m": [
+          0.03968951162521307,
+          0.01294628266689166,
+          0.006723722846211977
+        ],
+        "total_length_m": 0.03968951162521307,
+        "usable_length_m": 0.03968951162521307,
+        "working_end_evidence": {
+          "anisotropy_ratio": 1.3894809562473025,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 6,
+          "side": "HIGH",
+          "status": "MEASURED",
+          "transverse_length_m": 0.004731496454895492,
+          "transverse_width_m": 0.003405225838916335
+        },
+        "working_end_interface": "CROSS_LIKE"
+      }
+    },
+    "object_0003": {
+      "canonical_category": "wrench",
+      "entity_kind": "OBJECT",
+      "first_seen_stage": 0,
+      "geometry": {
+        "centroid_world_m": [
+          0.3405560851097107,
+          0.5319031476974487,
+          0.8278841972351074
+        ],
+        "distal_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 1.8898949939967549,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 94,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.01959338243043815,
+              "transverse_width_m": 0.010367445012911545
+            },
+            {
+              "anisotropy_ratio": 2.9017385201029744,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 29,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.005508401616023928,
+              "transverse_width_m": 0.00189831081534819
+            }
+          ],
+          "principal_axis_world": [
+            4.6925625757959354e-05,
+            0.02859936811002497,
+            0.9995909533112496
+          ]
+        },
+        "footprint_area_m2": 0.000561243459936571,
+        "footprint_length_m": 0.02686069476456404,
+        "footprint_width_m": 0.02089459952007612,
+        "head_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 1.77149944107174,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 354,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.021186481540698916,
+              "transverse_width_m": 0.011959632077490977
+            },
+            {
+              "anisotropy_ratio": 2.0974730484486823,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 92,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.00540761856390236,
+              "transverse_width_m": 0.0025781587839242576
+            }
+          ],
+          "principal_axis_world": [
+            4.6925625757959354e-05,
+            0.02859936811002497,
+            0.9995909533112496
+          ]
+        },
+        "head_evidence": {
+          "anisotropy_ratio": 1.77149944107174,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 354,
+          "side": "LOW",
+          "status": "MEASURED",
+          "transverse_length_m": 0.021186481540698916,
+          "transverse_width_m": 0.011959632077490977
+        },
+        "head_interface": "CROSS_LIKE",
+        "maximum_cross_section_m": 0.026792756461352544,
+        "measurement_provenance": {
+          "camera_ids": [
+            "CLOSE",
+            "FRONT",
+            "LEFT",
+            "RIGHT",
+            "TOP"
+          ],
+          "cloud_purpose": "MEASUREMENT_EVIDENCE",
+          "measurement_method": "stage_local_multiview_masked_rgbd",
+          "point_count": 932,
+          "source_region": "TOOL_CABINET",
+          "source_stage": 3
+        },
+        "method": "robust_pca_and_distal_local_geometry_v2",
+        "point_count": 932,
+        "principal_axes_world": [
+          [
+            4.6925625757959354e-05,
+            0.9941347255578951,
+            -0.10814871815197069
+          ],
+          [
+            0.02859936811002497,
+            0.1081031463431698,
+            0.9937282253686941
+          ],
+          [
+            0.9995909533112496,
+            -0.00313961631986432,
+            -0.028426552159400324
+          ]
+        ],
+        "property_status": "MEASURED",
+        "robust_dimensions_m": [
+          0.22102225928087008,
+          0.026792756461352544,
+          0.020559864277373392
+        ],
+        "total_length_m": 0.22102225928087008,
+        "usable_length_m": 0.22102225928087008,
+        "working_end_evidence": {
+          "anisotropy_ratio": 2.9017385201029744,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 29,
+          "side": "HIGH",
+          "status": "MEASURED",
+          "transverse_length_m": 0.005508401616023928,
+          "transverse_width_m": 0.00189831081534819
+        },
+        "working_end_interface": "CROSS_LIKE"
+      },
+      "instance_id": "object_0003",
+      "last_seen_stage": 3,
+      "region": "TOOL_CABINET",
+      "semantic_labels": {
+        "ambiguity_hypotheses": [
+          "wrench"
+        ],
+        "canonical_label": "wrench",
+        "confidence": 0.8848,
+        "label_confidence_sum": {
+          "screwdriver": 0.13377780094742775,
+          "tool": 0.2554994309321046,
+          "wrench": 2.9887771606445312
+        },
+        "label_supporting_view_count": {
+          "screwdriver": 1,
+          "tool": 3,
+          "wrench": 1
+        },
+        "plausible_labels": [
+          "wrench"
+        ],
+        "raw_label": "wrench",
+        "reason_codes": [],
+        "status": "SUPPORTED",
+        "supporting_view_count": 1,
+        "total_observations": 5
+      },
+      "source_region": "TOOL_CABINET",
+      "unary_predicates": {
+        "CAN_DRIVE_SCREW": "FALSE",
+        "CAN_FASTEN": "TRUE"
+      },
+      "unary_properties": {
+        "centroid_world_m": [
+          0.3405560851097107,
+          0.5319031476974487,
+          0.8278841972351074
+        ],
+        "distal_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 1.8898949939967549,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 94,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.01959338243043815,
+              "transverse_width_m": 0.010367445012911545
+            },
+            {
+              "anisotropy_ratio": 2.9017385201029744,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 29,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.005508401616023928,
+              "transverse_width_m": 0.00189831081534819
+            }
+          ],
+          "principal_axis_world": [
+            4.6925625757959354e-05,
+            0.02859936811002497,
+            0.9995909533112496
+          ]
+        },
+        "footprint_area_m2": 0.000561243459936571,
+        "footprint_length_m": 0.02686069476456404,
+        "footprint_width_m": 0.02089459952007612,
+        "head_end_geometry": {
+          "ends": [
+            {
+              "anisotropy_ratio": 1.77149944107174,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 354,
+              "side": "LOW",
+              "status": "MEASURED",
+              "transverse_length_m": 0.021186481540698916,
+              "transverse_width_m": 0.011959632077490977
+            },
+            {
+              "anisotropy_ratio": 2.0974730484486823,
+              "interface_geometry": "CROSS_LIKE",
+              "method": "distal_local_transverse_pca_v2",
+              "point_count": 92,
+              "side": "HIGH",
+              "status": "MEASURED",
+              "transverse_length_m": 0.00540761856390236,
+              "transverse_width_m": 0.0025781587839242576
+            }
+          ],
+          "principal_axis_world": [
+            4.6925625757959354e-05,
+            0.02859936811002497,
+            0.9995909533112496
+          ]
+        },
+        "head_evidence": {
+          "anisotropy_ratio": 1.77149944107174,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 354,
+          "side": "LOW",
+          "status": "MEASURED",
+          "transverse_length_m": 0.021186481540698916,
+          "transverse_width_m": 0.011959632077490977
+        },
+        "head_interface": "CROSS_LIKE",
+        "maximum_cross_section_m": 0.026792756461352544,
+        "measurement_provenance": {
+          "camera_ids": [
+            "CLOSE",
+            "FRONT",
+            "LEFT",
+            "RIGHT",
+            "TOP"
+          ],
+          "cloud_purpose": "MEASUREMENT_EVIDENCE",
+          "measurement_method": "stage_local_multiview_masked_rgbd",
+          "point_count": 932,
+          "source_region": "TOOL_CABINET",
+          "source_stage": 3
+        },
+        "method": "robust_pca_and_distal_local_geometry_v2",
+        "point_count": 932,
+        "principal_axes_world": [
+          [
+            4.6925625757959354e-05,
+            0.9941347255578951,
+            -0.10814871815197069
+          ],
+          [
+            0.02859936811002497,
+            0.1081031463431698,
+            0.9937282253686941
+          ],
+          [
+            0.9995909533112496,
+            -0.00313961631986432,
+            -0.028426552159400324
+          ]
+        ],
+        "property_status": "MEASURED",
+        "robust_dimensions_m": [
+          0.22102225928087008,
+          0.026792756461352544,
+          0.020559864277373392
+        ],
+        "total_length_m": 0.22102225928087008,
+        "usable_length_m": 0.22102225928087008,
+        "working_end_evidence": {
+          "anisotropy_ratio": 2.9017385201029744,
+          "interface_geometry": "CROSS_LIKE",
+          "method": "distal_local_transverse_pca_v2",
+          "point_count": 29,
+          "side": "HIGH",
+          "status": "MEASURED",
+          "transverse_length_m": 0.005508401616023928,
+          "transverse_width_m": 0.00189831081534819
+        },
+        "working_end_interface": "CROSS_LIKE"
+      }
+    }
+  },
+  "regions": {
+    "LEFT_DRAWER": {
+      "inspected": true
+    },
+    "RIGHT_DRAWER": {
+      "inspected": true
+    },
+    "TOOL_CABINET": {
+      "inspected": true
+    }
+  },
+  "relations": [
+    {
+      "evidence": {
+        "driver_interface": "CROSS_LIKE",
+        "fastener_interface": "CROSS_LIKE",
+        "method": "local_interface_descriptor_match_v2",
+        "relation": "COMPATIBLE_WITH",
+        "status": "TRUE"
+      },
+      "object": "object_0001",
+      "object_id": "object_0001",
+      "predicate": "COMPATIBLE_WITH",
+      "status": "TRUE",
+      "subject": "object_0001",
+      "subject_id": "object_0001"
+    },
+    {
+      "evidence": {
+        "driver_interface": "CROSS_LIKE",
+        "fastener_interface": "CROSS_LIKE",
+        "method": "local_interface_descriptor_match_v2",
+        "relation": "COMPATIBLE_WITH",
+        "status": "TRUE"
+      },
+      "object": "object_0002",
+      "object_id": "object_0002",
+      "predicate": "COMPATIBLE_WITH",
+      "status": "TRUE",
+      "subject": "object_0001",
+      "subject_id": "object_0001"
+    },
+    {
+      "evidence": {
+        "driver_interface": "CROSS_LIKE",
+        "fastener_interface": "CROSS_LIKE",
+        "method": "local_interface_descriptor_match_v2",
+        "relation": "COMPATIBLE_WITH",
+        "status": "TRUE"
+      },
+      "object": "object_0003",
+      "object_id": "object_0003",
+      "predicate": "COMPATIBLE_WITH",
+      "status": "TRUE",
+      "subject": "object_0001",
+      "subject_id": "object_0001"
+    },
+    {
+      "evidence": {
+        "reason": "REQUIRED_MEASUREMENT_MISSING",
+        "relation": "COMPATIBLE_WITH_TARGET",
+        "status": "UNKNOWN"
+      },
+      "object": "repair_target",
+      "object_id": "repair_target",
+      "predicate": "COMPATIBLE_WITH_TARGET",
+      "status": "UNKNOWN",
+      "subject": "object_0001",
+      "subject_id": "object_0001"
+    },
+    {
+      "evidence": {
+        "reason": "REQUIRED_MEASUREMENT_MISSING",
+        "relation": "COMPATIBLE_WITH_TARGET",
+        "status": "UNKNOWN"
+      },
+      "object": "repair_target",
+      "object_id": "repair_target",
+      "predicate": "COMPATIBLE_WITH_TARGET",
+      "status": "UNKNOWN",
+      "subject": "object_0002",
+      "subject_id": "object_0002"
+    },
+    {
+      "evidence": {
+        "reason": "REQUIRED_MEASUREMENT_MISSING",
+        "relation": "COMPATIBLE_WITH_TARGET",
+        "status": "UNKNOWN"
+      },
+      "object": "repair_target",
+      "object_id": "repair_target",
+      "predicate": "COMPATIBLE_WITH_TARGET",
+      "status": "UNKNOWN",
+      "subject": "object_0003",
+      "subject_id": "object_0003"
+    },
+    {
+      "evidence": {
+        "compact_driver_full_minimum_length_m": 0.15,
+        "compact_driver_maximum_cross_section_m": 0.22,
+        "compact_driver_maximum_length_m": 0.25,
+        "compact_driver_min_cross_section_ratio": 0.55,
+        "compact_driver_minimum_cross_section_m": 0.065,
+        "compact_driver_partial_maximum_length_m": 0.125,
+        "grasp_allowance_m": 0.04,
+        "maximum_cross_section_margin_m": 0.03568648938438883,
+        "maximum_driver_cross_section_m": 0.1,
+        "maximum_driver_length_m": 0.25,
+        "maximum_length_margin_m": -0.029543532599029032,
+        "maximum_observed_cross_section_m": 0.06431351061561118,
+        "method": "observed_length_vs_observed_target_depth_v2",
+        "observed_cross_section_ratio": 0.23006617258379228,
+        "plausible_driver_shape": false,
+        "relation": "REACHES_TARGET",
+        "signed_margin_m": 0.20454353259902902,
+        "slender_driver_max_cross_section_ratio": 0.3,
+        "status": "FALSE",
+        "target_recess_depth_m": 0.038,
+        "tolerance_m": 0.003,
+        "usable_length_m": 0.27954353259902903
+      },
+      "object": "repair_target",
+      "object_id": "repair_target",
+      "predicate": "REACHES_TARGET",
+      "status": "FALSE",
+      "subject": "object_0001",
+      "subject_id": "object_0001"
+    }
+  ],
+  "stage_index": 3
+}

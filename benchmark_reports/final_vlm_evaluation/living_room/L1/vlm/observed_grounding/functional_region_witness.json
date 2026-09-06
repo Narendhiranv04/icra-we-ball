@@ -1,0 +1,52 @@
+{
+  "status": "COMPLETE",
+  "functional_requirements": [
+    {
+      "function_id": "PERSONAL_CUP_SAUCER_REGION",
+      "slot_id": "personal_table_slot_1",
+      "region_id": "region_0001",
+      "payload_ids": [
+        "object_0001",
+        "object_0002"
+      ],
+      "selected_compatibility_evidence": {
+        "compatibility_status": "TRUE",
+        "FITS_SET_ON": "TRUE",
+        "NEAR_SEAT": "TRUE",
+        "PLANAR_SUPPORT": "TRUE",
+        "semantic_role_status": "TRUE"
+      }
+    },
+    {
+      "function_id": "PERSONAL_CUP_SAUCER_REGION",
+      "slot_id": "personal_table_slot_2",
+      "region_id": "region_0003",
+      "payload_ids": [
+        "object_0004",
+        "object_0005"
+      ],
+      "selected_compatibility_evidence": {
+        "compatibility_status": "TRUE",
+        "FITS_SET_ON": "TRUE",
+        "NEAR_SEAT": "TRUE",
+        "PLANAR_SUPPORT": "TRUE",
+        "semantic_role_status": "TRUE"
+      }
+    },
+    {
+      "function_id": "SHARED_REMOTE_REGION",
+      "slot_id": "shared_remote_slot",
+      "region_id": "region_0002",
+      "payload_ids": [
+        "object_0003"
+      ],
+      "selected_compatibility_evidence": {
+        "compatibility_status": "TRUE",
+        "FITS_ON": "TRUE",
+        "ACCESSIBLE_FROM_BOTH_SEATS": "TRUE",
+        "PLANAR_SUPPORT": "TRUE",
+        "semantic_role_status": "TRUE"
+      }
+    }
+  ]
+}

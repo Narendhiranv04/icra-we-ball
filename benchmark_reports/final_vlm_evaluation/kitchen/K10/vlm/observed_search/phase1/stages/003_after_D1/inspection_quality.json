@@ -1,0 +1,51 @@
+{
+  "accepted_instance_count": 1,
+  "accepted_objects": [
+    {
+      "measurement_cloud_path": "stages/003_after_D1/evidence/object_0007/fused.ply",
+      "object_id": "object_0007",
+      "point_count": 1574,
+      "quality_is_valid": true
+    }
+  ],
+  "capture_quality_is_valid": true,
+  "minimum_valid_rig_cameras": 5,
+  "region_id": "D1",
+  "rejected_instance_count": 3,
+  "rejected_objects": [
+    {
+      "instance_token": "53e75a769cc37d9638f65adb",
+      "object_id": "object_0001",
+      "point_count_inside": 0,
+      "raw_visible_point_count": 39675,
+      "reasons": [
+        "SOURCE_REGION_MISMATCH",
+        "INSUFFICIENT_POINTS_INSIDE_VOLUME",
+        "INSUFFICIENT_INSIDE_FRACTION"
+      ]
+    },
+    {
+      "instance_token": "600951299864c60f956ba7ae",
+      "object_id": "object_0002",
+      "point_count_inside": 0,
+      "raw_visible_point_count": 17585,
+      "reasons": [
+        "SOURCE_REGION_MISMATCH",
+        "INSUFFICIENT_POINTS_INSIDE_VOLUME",
+        "INSUFFICIENT_INSIDE_FRACTION"
+      ]
+    },
+    {
+      "instance_token": "46346b77e6b48b45511e52c8",
+      "object_id": "object_0003",
+      "point_count_inside": 0,
+      "raw_visible_point_count": 7402,
+      "reasons": [
+        "SOURCE_REGION_MISMATCH",
+        "INSUFFICIENT_POINTS_INSIDE_VOLUME",
+        "INSUFFICIENT_INSIDE_FRACTION"
+      ]
+    }
+  ],
+  "valid_camera_count": 5
+}

@@ -1,0 +1,1398 @@
+{
+  "object_0001": {
+    "alternatives": [
+      {
+        "camera_ids": [
+          "room_front",
+          "room_rear",
+          "room_right"
+        ],
+        "label": "cup",
+        "mean_confidence": 0.521256814400355,
+        "supporting_view_count": 3,
+        "weighted_score": 1.3846623364765867
+      },
+      {
+        "camera_ids": [
+          "room_left"
+        ],
+        "label": "tv_remote",
+        "mean_confidence": 0.1655375063419342,
+        "supporting_view_count": 1,
+        "weighted_score": 0.1457792699547051
+      }
+    ],
+    "canonical_label": "cup",
+    "confidence": 0.521256814400355,
+    "entity_id": "object_0001",
+    "entity_type": "payload",
+    "observations": [
+      {
+        "association_metrics": {
+          "box_fraction": 0.8715415019762845,
+          "intersection_pixels": 441,
+          "mask_fraction": 0.8855421686746988,
+          "score": 0.8806419353302538
+        },
+        "detection": {
+          "bbox_xyxy": [
+            882.0654296875,
+            578.07177734375,
+            903.704833984375,
+            600.2119140625
+          ],
+          "canonical_label": "tv_remote",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.1655375063419342,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "tv_remote",
+          "source_camera": "room_left"
+        },
+        "entity_id": "object_0001",
+        "entity_type": "payload",
+        "weighted_score": 0.1457792699547051
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.6375,
+          "intersection_pixels": 306,
+          "mask_fraction": 0.996742671009772,
+          "score": 0.8710077361563517
+        },
+        "detection": {
+          "bbox_xyxy": [
+            298.0540771484375,
+            512.6358642578125,
+            317.50958251953125,
+            535.2750244140625
+          ],
+          "canonical_label": "cup",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.42826515436172485,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "cup",
+          "source_camera": "room_right"
+        },
+        "entity_id": "object_0001",
+        "entity_type": "payload",
+        "weighted_score": 0.3730222625752565
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.7117353308364545,
+          "intersection_pixels": 5701,
+          "mask_fraction": 1.0,
+          "score": 0.8991073657927591
+        },
+        "detection": {
+          "bbox_xyxy": [
+            194.62387084960938,
+            444.63519287109375,
+            282.5710144042969,
+            533.8766479492188
+          ],
+          "canonical_label": "cup",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.8218784332275391,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "mug",
+          "source_camera": "room_front"
+        },
+        "entity_id": "object_0001",
+        "entity_type": "payload",
+        "weighted_score": 0.7389569531010927
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.6270022883295194,
+          "intersection_pixels": 274,
+          "mask_fraction": 1.0,
+          "score": 0.8694508009153318
+        },
+        "detection": {
+          "bbox_xyxy": [
+            808.033447265625,
+            181.88360595703125,
+            826.011474609375,
+            203.04159545898438
+          ],
+          "canonical_label": "cup",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.31362685561180115,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "cup",
+          "source_camera": "room_rear"
+        },
+        "entity_id": "object_0001",
+        "entity_type": "payload",
+        "weighted_score": 0.2726831208002376
+      }
+    ],
+    "status": "SUPPORTED",
+    "supporting_view_count": 3,
+    "weighted_score_margin": 1.2388830665218815
+  },
+  "object_0002": {
+    "alternatives": [
+      {
+        "camera_ids": [
+          "room_front",
+          "room_left",
+          "room_rear",
+          "room_right"
+        ],
+        "label": "plate",
+        "mean_confidence": 0.4308810606598854,
+        "supporting_view_count": 4,
+        "weighted_score": 1.5068130853942752
+      }
+    ],
+    "canonical_label": "plate",
+    "confidence": 0.4308810606598854,
+    "entity_id": "object_0002",
+    "entity_type": "payload",
+    "observations": [
+      {
+        "association_metrics": {
+          "box_fraction": 0.5789049919484702,
+          "intersection_pixels": 719,
+          "mask_fraction": 1.0,
+          "score": 0.8526167471819646
+        },
+        "detection": {
+          "bbox_xyxy": [
+            893.680419921875,
+            569.411376953125,
+            938.0546875,
+            595.011474609375
+          ],
+          "canonical_label": "plate",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.4053123891353607,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "plate",
+          "source_camera": "room_left"
+        },
+        "entity_id": "object_0002",
+        "entity_type": "payload",
+        "weighted_score": 0.3455761308171419
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.6091269841269841,
+          "intersection_pixels": 614,
+          "mask_fraction": 1.0,
+          "score": 0.8631944444444444
+        },
+        "detection": {
+          "bbox_xyxy": [
+            308.02288818359375,
+            539.0021362304688,
+            349.245361328125,
+            562.4618530273438
+          ],
+          "canonical_label": "plate",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.33413395285606384,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "plate",
+          "source_camera": "room_right"
+        },
+        "entity_id": "object_0002",
+        "entity_type": "payload",
+        "weighted_score": 0.2884225718056162
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.7496302964058381,
+          "intersection_pixels": 11659,
+          "mask_fraction": 1.0,
+          "score": 0.9123706037420434
+        },
+        "detection": {
+          "bbox_xyxy": [
+            388.8822021484375,
+            481.67303466796875,
+            538.42724609375,
+            583.2916870117188
+          ],
+          "canonical_label": "plate",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.5176942348480225,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "plate",
+          "source_camera": "room_front"
+        },
+        "entity_id": "object_0002",
+        "entity_type": "payload",
+        "weighted_score": 0.4723290016020654
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.5962962962962963,
+          "intersection_pixels": 322,
+          "mask_fraction": 1.0,
+          "score": 0.8587037037037037
+        },
+        "detection": {
+          "bbox_xyxy": [
+            751.532470703125,
+            192.44715881347656,
+            786.17724609375,
+            206.75270080566406
+          ],
+          "canonical_label": "plate",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.4663836658000946,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "plate",
+          "source_camera": "room_rear"
+        },
+        "entity_id": "object_0002",
+        "entity_type": "payload",
+        "weighted_score": 0.40048538116945165
+      }
+    ],
+    "status": "SUPPORTED",
+    "supporting_view_count": 4,
+    "weighted_score_margin": 1.5068130853942752
+  },
+  "object_0003": {
+    "alternatives": [
+      {
+        "camera_ids": [
+          "room_front",
+          "room_rear"
+        ],
+        "label": "remote_control",
+        "mean_confidence": 0.4799818843603134,
+        "supporting_view_count": 2,
+        "weighted_score": 0.8994701452423288
+      }
+    ],
+    "canonical_label": "remote_control",
+    "confidence": 0.4799818843603134,
+    "entity_id": "object_0003",
+    "entity_type": "payload",
+    "observations": [
+      {
+        "association_metrics": {
+          "box_fraction": 0.9285468911027138,
+          "intersection_pixels": 5406,
+          "mask_fraction": 1.0,
+          "score": 0.9749914118859498
+        },
+        "detection": {
+          "bbox_xyxy": [
+            569.1508178710938,
+            417.3519287109375,
+            710.8848266601562,
+            457.858642578125
+          ],
+          "canonical_label": "remote_control",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.7034756541252136,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "remote control",
+          "source_camera": "room_front"
+        },
+        "entity_id": "object_0003",
+        "entity_type": "payload",
+        "weighted_score": 0.6858827212429341
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.5221088435374149,
+          "intersection_pixels": 307,
+          "mask_fraction": 1.0,
+          "score": 0.8327380952380953
+        },
+        "detection": {
+          "bbox_xyxy": [
+            695.62744140625,
+            193.16937255859375,
+            736.4095458984375,
+            206.9093017578125
+          ],
+          "canonical_label": "remote_control",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.2564881145954132,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "remote control",
+          "source_camera": "room_rear"
+        },
+        "entity_id": "object_0003",
+        "entity_type": "payload",
+        "weighted_score": 0.2135874239993947
+      }
+    ],
+    "status": "SUPPORTED",
+    "supporting_view_count": 2,
+    "weighted_score_margin": 0.8994701452423288
+  },
+  "object_0004": {
+    "alternatives": [
+      {
+        "camera_ids": [
+          "room_front",
+          "room_rear",
+          "room_right"
+        ],
+        "label": "cup",
+        "mean_confidence": 0.5447627107302347,
+        "supporting_view_count": 3,
+        "weighted_score": 1.4610506205419342
+      },
+      {
+        "camera_ids": [
+          "room_left"
+        ],
+        "label": "remote_control",
+        "mean_confidence": 0.1302047222852707,
+        "supporting_view_count": 1,
+        "weighted_score": 0.021053227896007467
+      }
+    ],
+    "canonical_label": "cup",
+    "confidence": 0.5447627107302347,
+    "entity_id": "object_0004",
+    "entity_type": "payload",
+    "observations": [
+      {
+        "association_metrics": {
+          "box_fraction": 0.12890625,
+          "intersection_pixels": 66,
+          "mask_fraction": 0.1793478260869565,
+          "score": 0.16169327445652174
+        },
+        "detection": {
+          "bbox_xyxy": [
+            925.814697265625,
+            548.9097290039062,
+            956.982177734375,
+            563.5092163085938
+          ],
+          "canonical_label": "remote_control",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.1302047222852707,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "remote control",
+          "source_camera": "room_left"
+        },
+        "entity_id": "object_0004",
+        "entity_type": "payload",
+        "weighted_score": 0.021053227896007467
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.6705685618729097,
+          "intersection_pixels": 401,
+          "mask_fraction": 1.0,
+          "score": 0.8846989966555184
+        },
+        "detection": {
+          "bbox_xyxy": [
+            346.06201171875,
+            553.311279296875,
+            368.6395263671875,
+            578.3031005859375
+          ],
+          "canonical_label": "cup",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.30370578169822693,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "mug",
+          "source_camera": "room_right"
+        },
+        "entity_id": "object_0004",
+        "entity_type": "payload",
+        "weighted_score": 0.2686882003469013
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.7227272727272728,
+          "intersection_pixels": 5724,
+          "mask_fraction": 1.0,
+          "score": 0.9029545454545455
+        },
+        "detection": {
+          "bbox_xyxy": [
+            740.7679443359375,
+            444.4827880859375,
+            827.5537109375,
+            533.885009765625
+          ],
+          "canonical_label": "cup",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.9597917795181274,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "mug",
+          "source_camera": "room_front"
+        },
+        "entity_id": "object_0004",
+        "entity_type": "payload",
+        "weighted_score": 0.8666483500058001
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.6526610644257703,
+          "intersection_pixels": 233,
+          "mask_fraction": 1.0,
+          "score": 0.8784313725490196
+        },
+        "detection": {
+          "bbox_xyxy": [
+            696.324462890625,
+            169.44837951660156,
+            712.8814697265625,
+            189.5754852294922
+          ],
+          "canonical_label": "cup",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.37079057097435,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "cup",
+          "source_camera": "room_rear"
+        },
+        "entity_id": "object_0004",
+        "entity_type": "payload",
+        "weighted_score": 0.32571407018923293
+      }
+    ],
+    "status": "SUPPORTED",
+    "supporting_view_count": 3,
+    "weighted_score_margin": 1.4399973926459269
+  },
+  "object_0005": {
+    "alternatives": [
+      {
+        "camera_ids": [
+          "room_front",
+          "room_left",
+          "room_rear",
+          "room_right"
+        ],
+        "label": "plate",
+        "mean_confidence": 0.4106897562742233,
+        "supporting_view_count": 4,
+        "weighted_score": 1.432013956861357
+      }
+    ],
+    "canonical_label": "plate",
+    "confidence": 0.4106897562742233,
+    "entity_id": "object_0005",
+    "entity_type": "payload",
+    "observations": [
+      {
+        "association_metrics": {
+          "box_fraction": 0.47117516629711753,
+          "intersection_pixels": 425,
+          "mask_fraction": 1.0,
+          "score": 0.8149113082039912
+        },
+        "detection": {
+          "bbox_xyxy": [
+            946.9746704101562,
+            527.2780151367188,
+            986.1371459960938,
+            548.9894409179688
+          ],
+          "canonical_label": "plate",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.17160511016845703,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "plate",
+          "source_camera": "room_left"
+        },
+        "entity_id": "object_0005",
+        "entity_type": "payload",
+        "weighted_score": 0.13984294482186735
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.6277777777777778,
+          "intersection_pixels": 904,
+          "mask_fraction": 1.0,
+          "score": 0.8697222222222223
+        },
+        "detection": {
+          "bbox_xyxy": [
+            361.38397216796875,
+            585.93603515625,
+            408.40350341796875,
+            614.43408203125
+          ],
+          "canonical_label": "plate",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.6690424680709839,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "plate",
+          "source_camera": "room_right"
+        },
+        "entity_id": "object_0005",
+        "entity_type": "payload",
+        "weighted_score": 0.5818811020917363
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.7538805493452571,
+          "intersection_pixels": 11802,
+          "mask_fraction": 0.9997458703939008,
+          "score": 0.9136930080268755
+        },
+        "detection": {
+          "bbox_xyxy": [
+            907.303955078125,
+            481.5577392578125,
+            1061.8140869140625,
+            581.794189453125
+          ],
+          "canonical_label": "plate",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.5417038202285767,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "plate",
+          "source_camera": "room_front"
+        },
+        "entity_id": "object_0005",
+        "entity_type": "payload",
+        "weighted_score": 0.494950992964298
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.5055147058823529,
+          "intersection_pixels": 275,
+          "mask_fraction": 1.0,
+          "score": 0.8269301470588235
+        },
+        "detection": {
+          "bbox_xyxy": [
+            645.6805419921875,
+            179.32559204101562,
+            678.031494140625,
+            194.30459594726562
+          ],
+          "canonical_label": "plate",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.26040762662887573,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "plate",
+          "source_camera": "room_rear"
+        },
+        "entity_id": "object_0005",
+        "entity_type": "payload",
+        "weighted_score": 0.21533891698345542
+      }
+    ],
+    "status": "SUPPORTED",
+    "supporting_view_count": 4,
+    "weighted_score_margin": 1.432013956861357
+  },
+  "region_0001": {
+    "alternatives": [
+      {
+        "camera_ids": [
+          "room_high",
+          "room_left",
+          "room_right"
+        ],
+        "label": "side_table",
+        "mean_confidence": 0.6319599151611328,
+        "supporting_view_count": 3,
+        "weighted_score": 1.5343916177906212
+      },
+      {
+        "camera_ids": [
+          "room_front",
+          "room_rear"
+        ],
+        "label": "coffee_table",
+        "mean_confidence": 0.6288585960865021,
+        "supporting_view_count": 2,
+        "weighted_score": 0.9869037383965625
+      }
+    ],
+    "canonical_label": "side_table",
+    "confidence": 0.6319599151611328,
+    "entity_id": "region_0001",
+    "entity_type": "region",
+    "observations": [
+      {
+        "association_metrics": {
+          "box_fraction": 0.284310836034974,
+          "intersection_pixels": 5788,
+          "mask_fraction": 1.0,
+          "score": 0.7495087926122409
+        },
+        "detection": {
+          "bbox_xyxy": [
+            517.871337890625,
+            472.4915466308594,
+            690.7724609375,
+            588.8255615234375
+          ],
+          "canonical_label": "side_table",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.6496155261993408,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "small side table",
+          "source_camera": "room_left"
+        },
+        "entity_id": "region_0001",
+        "entity_type": "region",
+        "weighted_score": 0.48689254870383347
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.29392321383168063,
+          "intersection_pixels": 5780,
+          "mask_fraction": 0.9984453273449646,
+          "score": 0.7518625876153152
+        },
+        "detection": {
+          "bbox_xyxy": [
+            588.94580078125,
+            474.51531982421875,
+            758.908203125,
+            588.0116577148438
+          ],
+          "canonical_label": "side_table",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.6634654402732849,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "small side table",
+          "source_camera": "room_right"
+        },
+        "entity_id": "region_0001",
+        "entity_type": "region",
+        "weighted_score": 0.49883484271720635
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.8326570048309179,
+          "intersection_pixels": 17236,
+          "mask_fraction": 1.0,
+          "score": 0.9414299516908213
+        },
+        "detection": {
+          "bbox_xyxy": [
+            549.09033203125,
+            362.422119140625,
+            728.794921875,
+            476.6514892578125
+          ],
+          "canonical_label": "side_table",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.5827987790107727,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "side table",
+          "source_camera": "room_high"
+        },
+        "entity_id": "region_0001",
+        "entity_type": "region",
+        "weighted_score": 0.5486642263695815
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.3886893248595376,
+          "intersection_pixels": 21100,
+          "mask_fraction": 1.0,
+          "score": 0.7860412637008382
+        },
+        "detection": {
+          "bbox_xyxy": [
+            476.3675842285156,
+            188.42787170410156,
+            804.1373291015625,
+            352.3660888671875
+          ],
+          "canonical_label": "coffee_table",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.5498825311660767,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "low coffee table",
+          "source_camera": "room_front"
+        },
+        "entity_id": "region_0001",
+        "entity_type": "region",
+        "weighted_score": 0.4322303596847984
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.38184273092841,
+          "intersection_pixels": 26018,
+          "mask_fraction": 0.999961566547523,
+          "score": 0.7836199740808335
+        },
+        "detection": {
+          "bbox_xyxy": [
+            299.7650146484375,
+            360.69195556640625,
+            612.931640625,
+            576.2080078125
+          ],
+          "canonical_label": "coffee_table",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.7078346610069275,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "low coffee table",
+          "source_camera": "room_rear"
+        },
+        "entity_id": "region_0001",
+        "entity_type": "region",
+        "weighted_score": 0.5546733787117641
+      }
+    ],
+    "status": "SUPPORTED",
+    "supporting_view_count": 3,
+    "weighted_score_margin": 0.5474878793940586
+  },
+  "seat_0001": {
+    "alternatives": [
+      {
+        "camera_ids": [
+          "room_front",
+          "room_high",
+          "room_rear"
+        ],
+        "label": "chair",
+        "mean_confidence": 0.7786287268002828,
+        "supporting_view_count": 3,
+        "weighted_score": 2.0082860250979184
+      },
+      {
+        "camera_ids": [
+          "room_left",
+          "room_right"
+        ],
+        "label": "armchair",
+        "mean_confidence": 0.7772485017776489,
+        "supporting_view_count": 2,
+        "weighted_score": 1.269838478093514
+      }
+    ],
+    "canonical_label": "chair",
+    "confidence": 0.7786287268002828,
+    "entity_id": "seat_0001",
+    "entity_type": "seat",
+    "observations": [
+      {
+        "association_metrics": {
+          "box_fraction": 0.717673630717109,
+          "intersection_pixels": 17794,
+          "mask_fraction": 0.8937217478653943,
+          "score": 0.8321049068634945
+        },
+        "detection": {
+          "bbox_xyxy": [
+            379.6435546875,
+            447.1717529296875,
+            532.530517578125,
+            607.4571533203125
+          ],
+          "canonical_label": "armchair",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.7940665483474731,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "armchair",
+          "source_camera": "room_left"
+        },
+        "entity_id": "seat_0001",
+        "entity_type": "seat",
+        "weighted_score": 0.6607466712560907
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.5394557823129251,
+          "intersection_pixels": 6344,
+          "mask_fraction": 0.9418052256532067,
+          "score": 0.8009829204841081
+        },
+        "detection": {
+          "bbox_xyxy": [
+            572.7970581054688,
+            404.04730224609375,
+            691.6038208007812,
+            501.77313232421875
+          ],
+          "canonical_label": "armchair",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.7604304552078247,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "armchair",
+          "source_camera": "room_right"
+        },
+        "entity_id": "seat_0001",
+        "entity_type": "seat",
+        "weighted_score": 0.6090918068374233
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.831938431938432,
+          "intersection_pixels": 17296,
+          "mask_fraction": 0.8053266284862877,
+          "score": 0.8146407596945382
+        },
+        "detection": {
+          "bbox_xyxy": [
+            416.70068359375,
+            270.64501953125,
+            550.0202026367188,
+            423.2103271484375
+          ],
+          "canonical_label": "chair",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.7203893661499023,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "chair",
+          "source_camera": "room_high"
+        },
+        "entity_id": "seat_0001",
+        "entity_type": "seat",
+        "weighted_score": 0.5868585405162233
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.7856378424657534,
+          "intersection_pixels": 44046,
+          "mask_fraction": 0.9401494130202774,
+          "score": 0.886070363326194
+        },
+        "detection": {
+          "bbox_xyxy": [
+            287.83514404296875,
+            55.74530029296875,
+            505.42742919921875,
+            310.474365234375
+          ],
+          "canonical_label": "chair",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.8320476412773132,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "chair",
+          "source_camera": "room_front"
+        },
+        "entity_id": "seat_0001",
+        "entity_type": "seat",
+        "weighted_score": 0.7372527558112917
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.7293249899869441,
+          "intersection_pixels": 140212,
+          "mask_fraction": 0.9508025524354602,
+          "score": 0.8732854055784796
+        },
+        "detection": {
+          "bbox_xyxy": [
+            443.01593017578125,
+            328.19903564453125,
+            811.2013549804688,
+            848.8120727539062
+          ],
+          "canonical_label": "chair",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.7834491729736328,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "chair",
+          "source_camera": "room_rear"
+        },
+        "entity_id": "seat_0001",
+        "entity_type": "seat",
+        "weighted_score": 0.6841747287704033
+      }
+    ],
+    "status": "SUPPORTED",
+    "supporting_view_count": 3,
+    "weighted_score_margin": 0.7384475470044045
+  },
+  "seat_0002": {
+    "alternatives": [
+      {
+        "camera_ids": [
+          "room_front",
+          "room_high",
+          "room_left",
+          "room_rear"
+        ],
+        "label": "chair",
+        "mean_confidence": 0.7908328473567963,
+        "supporting_view_count": 4,
+        "weighted_score": 2.6558900731188597
+      },
+      {
+        "camera_ids": [
+          "room_right"
+        ],
+        "label": "armchair",
+        "mean_confidence": 0.7782718539237976,
+        "supporting_view_count": 1,
+        "weighted_score": 0.6507226442708974
+      }
+    ],
+    "canonical_label": "chair",
+    "confidence": 0.7908328473567963,
+    "entity_id": "seat_0002",
+    "entity_type": "seat",
+    "observations": [
+      {
+        "association_metrics": {
+          "box_fraction": 0.5378991596638656,
+          "intersection_pixels": 6401,
+          "mask_fraction": 0.9373261092400058,
+          "score": 0.7975266768883567
+        },
+        "detection": {
+          "bbox_xyxy": [
+            588.3955688476562,
+            402.0644226074219,
+            706.6887817382812,
+            501.0050964355469
+          ],
+          "canonical_label": "chair",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.7649012207984924,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "chair",
+          "source_camera": "room_left"
+        },
+        "entity_id": "seat_0002",
+        "entity_type": "seat",
+        "weighted_score": 0.6100291287712688
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.7008714001015982,
+          "intersection_pixels": 17936,
+          "mask_fraction": 0.9089342725383874,
+          "score": 0.8361122671855112
+        },
+        "detection": {
+          "bbox_xyxy": [
+            744.727294921875,
+            446.15673828125,
+            900.29296875,
+            608.017822265625
+          ],
+          "canonical_label": "armchair",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.7782718539237976,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "armchair",
+          "source_camera": "room_right"
+        },
+        "entity_id": "seat_0002",
+        "entity_type": "seat",
+        "weighted_score": 0.6507226442708974
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.856898740357387,
+          "intersection_pixels": 17551,
+          "mask_fraction": 0.8171237022207738,
+          "score": 0.8310449655685883
+        },
+        "detection": {
+          "bbox_xyxy": [
+            727.062255859375,
+            269.9139404296875,
+            859.5167236328125,
+            422.2935791015625
+          ],
+          "canonical_label": "chair",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.7429087162017822,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "chair",
+          "source_camera": "room_high"
+        },
+        "entity_id": "seat_0002",
+        "entity_type": "seat",
+        "weighted_score": 0.6173905484765143
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.7745361328125,
+          "intersection_pixels": 44415,
+          "mask_fraction": 0.9422534314869423,
+          "score": 0.8835523769508875
+        },
+        "detection": {
+          "bbox_xyxy": [
+            775.2144775390625,
+            55.679237365722656,
+            998.8072509765625,
+            310.1092224121094
+          ],
+          "canonical_label": "chair",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.8146157264709473,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "chair",
+          "source_camera": "room_front"
+        },
+        "entity_id": "seat_0002",
+        "entity_type": "seat",
+        "weighted_score": 0.7197556614249795
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.6138940907199334,
+          "intersection_pixels": 70809,
+          "mask_fraction": 0.966055909518807,
+          "score": 0.8427992729392013
+        },
+        "detection": {
+          "bbox_xyxy": [
+            0.230133056640625,
+            238.978515625,
+            323.20208740234375,
+            593.30859375
+          ],
+          "canonical_label": "chair",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.8409057259559631,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "chair",
+          "source_camera": "room_rear"
+        },
+        "entity_id": "seat_0002",
+        "entity_type": "seat",
+        "weighted_score": 0.708714734446097
+      }
+    ],
+    "status": "SUPPORTED",
+    "supporting_view_count": 4,
+    "weighted_score_margin": 2.005167428847962
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "assignment": null,
+  "complete": false,
+  "evidence": {
+    "search_exhausted": true,
+    "unsatisfied_relations": [
+      {
+        "expected": true,
+        "object_id": "SEATING_PAIR",
+        "object_role": "SEATING_PAIR",
+        "predicate": "ACCESSIBLE_FROM_BOTH_SEATS",
+        "status": "FALSE",
+        "subject_id": "region_0001",
+        "subject_role": "SHARED_REMOTE_REGION"
+      },
+      {
+        "expected": true,
+        "object_id": "SEATING_PAIR",
+        "object_role": "SEATING_PAIR",
+        "predicate": "ACCESSIBLE_FROM_BOTH_SEATS",
+        "status": "FALSE",
+        "subject_id": "region_0002",
+        "subject_role": "SHARED_REMOTE_REGION"
+      }
+    ]
+  },
+  "missing_requirements": [
+    "ACCESSIBLE_FROM_BOTH_SEATS",
+    "ACCESSIBLE_FROM_BOTH_SEATS(SHARED_REMOTE_REGION, SEATING_PAIR)",
+    "ACCESSIBLE_FROM_BOTH_SEATS(SHARED_REMOTE_REGION, SEATING_PAIR)"
+  ],
+  "missing_roles": [],
+  "operation_bindings": {},
+  "satisfied": false,
+  "status": "INFEASIBLE",
+  "unresolved_constraints": [
+    "ACCESSIBLE_FROM_BOTH_SEATS"
+  ],
+  "unsatisfied_relations": [
+    {
+      "expected": true,
+      "object_id": "SEATING_PAIR",
+      "object_role": "SEATING_PAIR",
+      "predicate": "ACCESSIBLE_FROM_BOTH_SEATS",
+      "status": "FALSE",
+      "subject_id": "region_0001",
+      "subject_role": "SHARED_REMOTE_REGION"
+    },
+    {
+      "expected": true,
+      "object_id": "SEATING_PAIR",
+      "object_role": "SEATING_PAIR",
+      "predicate": "ACCESSIBLE_FROM_BOTH_SEATS",
+      "status": "FALSE",
+      "subject_id": "region_0002",
+      "subject_role": "SHARED_REMOTE_REGION"
+    }
+  ]
+}

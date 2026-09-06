@@ -1,0 +1,46 @@
+{
+  "assignment": null,
+  "complete": false,
+  "evidence": {
+    "grounding_evidence": {
+      "search_exhausted": true,
+      "unsatisfied_relations": [
+        {
+          "expected": true,
+          "object_id": "repair_target",
+          "object_role": "repair_target",
+          "predicate": "REACHES_TARGET",
+          "status": "FALSE",
+          "subject_id": "object_0001",
+          "subject_role": "driver"
+        }
+      ]
+    },
+    "grounding_status": "INFEASIBLE",
+    "observed_object_count": 3,
+    "reason": "TOOL_GEOMETRY_FAILURE",
+    "stage": 3
+  },
+  "missing_requirements": [
+    "REACHES_TARGET",
+    "REACHES_TARGET(driver, repair_target)"
+  ],
+  "missing_roles": [],
+  "operation_bindings": {},
+  "satisfied": false,
+  "status": "INFEASIBLE",
+  "unresolved_constraints": [
+    "REACHES_TARGET"
+  ],
+  "unsatisfied_relations": [
+    {
+      "expected": true,
+      "object_id": "repair_target",
+      "object_role": "repair_target",
+      "predicate": "REACHES_TARGET",
+      "status": "FALSE",
+      "subject_id": "object_0001",
+      "subject_role": "driver"
+    }
+  ]
+}

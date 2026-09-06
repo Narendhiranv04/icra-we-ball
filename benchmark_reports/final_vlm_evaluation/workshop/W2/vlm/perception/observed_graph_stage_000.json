@@ -1,0 +1,120 @@
+{
+  "stage_index": 0,
+  "total_nodes": 2,
+  "total_edges": 0,
+  "nodes": [
+    {
+      "node_id": "workpiece_joint_0001",
+      "node_type": "WORKPIECE",
+      "first_seen_stage": 0,
+      "attributes": {
+        "task": "frame_joint_repair"
+      },
+      "provenance": {
+        "source": "task_specification"
+      }
+    },
+    {
+      "node_id": "region_0001",
+      "node_type": "FUNCTIONAL_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "proposal_bounds_m": {
+          "minimum_world_m": [
+            -0.25,
+            0.12,
+            0.66
+          ],
+          "maximum_world_m": [
+            0.25,
+            0.4,
+            0.7000000000000001
+          ]
+        },
+        "support_plane": {
+          "center_world_m": [
+            0.021870795637369156,
+            0.24693183600902557,
+            0.6812088489532471
+          ],
+          "dimensions_m": [
+            0.5175724728644404,
+            0.3183143610842941
+          ],
+          "area_m2": 0.1647507510146625,
+          "point_count": 6317,
+          "method": "dominant_height_plane_observed_footprint_v2"
+        },
+        "cavity_geometry": {
+          "is_open": null,
+          "is_open_status": "UNKNOWN",
+          "estimated_depth_m": null,
+          "opening_width_m": null,
+          "opening_length_m": null,
+          "point_count": 7125,
+          "predicate": {
+            "value": null,
+            "status": "UNKNOWN",
+            "method": "open_cavity_structure_v3",
+            "evidence": {
+              "point_count": 7125,
+              "contributing_camera_count": 5,
+              "definition": "enclosed_rim AND open_centre AND observed_interior_below_rim",
+              "structural_components": {
+                "ENCLOSED_RIM": "UNKNOWN",
+                "OPEN_CENTRE": "TRUE",
+                "INTERIOR_BELOW_RIM": "UNKNOWN"
+              },
+              "vertical_extent_m": 0.03613278388977048,
+              "planarity_score": 0.9968318673949607,
+              "minimum_resolvable_vertical_extent_m": 0.006,
+              "rim_point_count": 1024,
+              "top_candidate_point_count": 1024,
+              "rim_normal_alignment": 0.9985590849726879,
+              "rim_normal_world": [
+                0.052558633310883944,
+                -0.01083253816059171,
+                0.9985590849726879
+              ],
+              "estimated_opening_length_m": 0.5201887381259445,
+              "estimated_opening_width_m": 0.17951307501765545,
+              "minimum_resolvable_opening_m": 0.009,
+              "occupied_angular_bins": 6,
+              "angular_bin_count": 12,
+              "rim_enclosure_ratio": 0.5,
+              "rim_shell_fraction": 1.0,
+              "central_top_occupancy_fraction": 0.0,
+              "central_top_point_count": 0,
+              "top_height_spread_m": 0.03585426211357112
+            },
+            "reason": "INSUFFICIENT_RIM_ENCLOSURE",
+            "source_stage": 0,
+            "source_region": "region_0002",
+            "measurement_cloud_path": null,
+            "contributing_camera_ids": [
+              "LEFT",
+              "RIGHT",
+              "TOP",
+              "FRONT",
+              "CLOSE"
+            ],
+            "point_count": 7125,
+            "extractor_version": "open_cavity_structure_v3",
+            "cloud_purpose": "MEASUREMENT_EVIDENCE"
+          }
+        },
+        "obstruction": {
+          "is_obstructed": true,
+          "elevated_point_count": 725,
+          "reference_support_plane_z_m": 0.6824228763580322,
+          "support_plane_points_excluded": true
+        },
+        "is_open": null
+      },
+      "provenance": {
+        "observation_source": "calibrated_spatial_proposal"
+      }
+    }
+  ],
+  "edges": []
+}

@@ -1,0 +1,62 @@
+{
+  "alternatives": [
+    {
+      "camera_ids": [
+        "inspection_close",
+        "inspection_front",
+        "inspection_right",
+        "inspection_top"
+      ],
+      "label": "cup",
+      "mean_confidence": 0.4577077515423298,
+      "score": 6.735818312363159,
+      "supporting_view_count": 4
+    }
+  ],
+  "ambiguity_hypotheses": [
+    "cup"
+  ],
+  "association_method": "mask_box_overlap_v1",
+  "canonical_label": "cup",
+  "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+  "contributing_camera_ids": [
+    "inspection_close",
+    "inspection_front",
+    "inspection_right",
+    "inspection_top"
+  ],
+  "detector_name": "ultralytics_yolo_world",
+  "detector_version": "8.4.112",
+  "mean_confidence": 0.4577077515423298,
+  "observation_source": "RGB_DETECTOR",
+  "plausible_labels": [
+    "cup"
+  ],
+  "quality": {
+    "mean_confidence": 0.4577077515423298,
+    "supporting_view_count": 4,
+    "supporting_view_margin": 4,
+    "validated": true,
+    "weighted_score_margin": 6.735818312363159,
+    "winner_policy": "supporting_views_then_weighted_score",
+    "winning_label_margin": 4.0,
+    "winning_label_margin_kind": "supporting_view_count"
+  },
+  "reason_codes": [],
+  "semantic_evidence_paths": [
+    "stages/002_after_C2/cameras/inspection_close/rgb.png",
+    "stages/002_after_C2/cameras/inspection_front/rgb.png",
+    "stages/002_after_C2/cameras/inspection_top/rgb.png",
+    "stages/002_after_C2/semantics/cameras/inspection_right/crops/000_object_0006.png"
+  ],
+  "semantic_record_path": "stages/002_after_C2/semantics/object_0006/semantic_evidence.json",
+  "source_region": "C2",
+  "source_stage": 2,
+  "status": "SUPPORTED",
+  "supporting_view_count": 4,
+  "supporting_view_margin": 4,
+  "weighted_score_margin": 6.735818312363159,
+  "winner_policy": "supporting_views_then_weighted_score",
+  "winning_label_margin": 4.0,
+  "winning_label_margin_kind": "supporting_view_count"
+}

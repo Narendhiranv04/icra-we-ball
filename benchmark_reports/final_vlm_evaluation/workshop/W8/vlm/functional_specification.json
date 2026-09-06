@@ -1,0 +1,693 @@
+{
+  "candidate_regions": [],
+  "cross_group_reuse_allowed": true,
+  "detector_vocabulary": [
+    "screwdriver",
+    "wrench",
+    "hammer",
+    "tool",
+    "power driver",
+    "power drill",
+    "Phillips screwdriver",
+    "cordless power drill"
+  ],
+  "domain": "workshop",
+  "metadata": {
+    "alias_to_canonical": {
+      "assembly part": "assembly_part",
+      "assembly_part": "assembly_part",
+      "broken component": "broken_component",
+      "broken_component": "broken_component",
+      "cordless drill": "power_driver",
+      "cordless power drill": "power_driver",
+      "cordless screwdriver": "power_driver",
+      "cross-head screw": "screw",
+      "cross-head screwdriver": "screwdriver",
+      "drill driver": "power_driver",
+      "electric screwdriver": "power_driver",
+      "fastener": "screw",
+      "hammer": "hammer",
+      "hand screwdriver": "screwdriver",
+      "machine screw": "screw",
+      "mallet": "hammer",
+      "manual screwdriver": "screwdriver",
+      "phillips head screw": "screw",
+      "phillips screw": "screw",
+      "phillips screwdriver": "screwdriver",
+      "power drill": "power_driver",
+      "power driver": "power_driver",
+      "power_driver": "power_driver",
+      "powered screwdriver": "power_driver",
+      "repair target": "repair_target",
+      "repair_target": "repair_target",
+      "screw": "screw",
+      "screwdriver": "screwdriver",
+      "threaded screw": "screw",
+      "tool": "tool",
+      "wood mallet": "hammer",
+      "wooden hammer": "hammer",
+      "wrench": "wrench"
+    },
+    "candidate_categories_used_for_detector_vocabulary": true,
+    "candidate_categories_used_for_grounding_acceptance": false,
+    "candidate_categories_used_for_role_identity": false,
+    "canonicalization_trace": {
+      "concept_accounting": {
+        "omissions": [
+          "Missing functional fastener role in Workshop task: QWEN_SEMANTIC_OMISSION"
+        ],
+        "operation_groups": [
+          {
+            "canonical_context_relation": "LOCATED_ON",
+            "canonical_function": "FASTEN_WORKPIECE",
+            "canonical_required_relation": "REACHES_TARGET",
+            "context_role": "role_1 -> MAIN_WORKBENCH_ZONE",
+            "policy_status": "NORMALIZED_SINGLETON_POLICY",
+            "raw_context_relation": "placed on",
+            "raw_function": "fastening operation",
+            "raw_group_id": "group_0",
+            "raw_required_relation": "compatible with",
+            "raw_usage_policy": "SEQUENTIAL_REUSE_ALLOWED",
+            "represented_relation_triples": [
+              [
+                "driver",
+                "REACHES_TARGET",
+                "repair_target"
+              ]
+            ],
+            "represented_relations": [
+              "REACHES_TARGET"
+            ],
+            "status": "MERGED_BY_EXPLICIT_RULE",
+            "structural_destination": "REDUNDANT_WITH_CANONICAL_GRAPH_RELATIONS",
+            "target_role": "role_2 -> repair_target",
+            "tool_role": "role_0 -> driver",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          }
+        ],
+        "properties": [
+          {
+            "canonical_predicate": null,
+            "raw_phrase": "elongated shape",
+            "raw_role_id": "role_0",
+            "reason": "Non-verifier affordance/feature note 'elongated shape' absorbed",
+            "status": "ABSORBED_NON_EXECUTABLE_AFFORDANCE"
+          },
+          {
+            "canonical_predicate": null,
+            "raw_phrase": "rigid structure",
+            "raw_role_id": "role_0",
+            "reason": "Non-verifier affordance/feature note 'rigid structure' absorbed",
+            "status": "ABSORBED_NON_EXECUTABLE_AFFORDANCE"
+          },
+          {
+            "canonical_predicate": "PLANAR_SUPPORT",
+            "canonical_role": "MAIN_WORKBENCH_ZONE",
+            "destination": "PLANNER_CONTEXT",
+            "raw_phrase": "planar support",
+            "raw_role_id": "role_1",
+            "status": "ABSORBED_INTO_PLANNER_CONTEXT"
+          },
+          {
+            "canonical_predicate": null,
+            "raw_phrase": "has fastening points",
+            "raw_role_id": "role_2",
+            "reason": "Non-verifier affordance/feature note 'has fastening points' absorbed",
+            "status": "ABSORBED_NON_EXECUTABLE_AFFORDANCE"
+          }
+        ],
+        "relations": [
+          {
+            "canonical_object_role_id": "repair_target",
+            "canonical_predicate": "REACHES_TARGET",
+            "canonical_subject_role_id": "driver",
+            "direction_status": "NORMALIZED_TO_CANONICAL_SIGNATURE",
+            "raw_object_role_id": "role_2",
+            "raw_relation_text": "compatible with",
+            "raw_subject_role_id": "role_0",
+            "status": "NORMALIZED_TO_CANONICAL_SIGNATURE",
+            "structural_destination": "GRAPH_RELATION"
+          },
+          {
+            "canonical_object_role_id": "MAIN_WORKBENCH_ZONE",
+            "canonical_predicate": "LOCATED_ON",
+            "canonical_subject_role_id": "driver",
+            "direction_status": "PRESERVED",
+            "planner_context_constant": "MAIN_WORKBENCH_ZONE",
+            "raw_object_role_id": "role_1",
+            "raw_relation_text": "placed on",
+            "raw_subject_role_id": "role_0",
+            "status": "ABSORBED_INTO_PLANNER_CONTEXT",
+            "structural_destination": "ABSORBED_INTO_PLANNER_CONTEXT"
+          }
+        ],
+        "roles": {
+          "role_0": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories_used_for_role_identity": false,
+            "canonical_count": 1,
+            "canonical_role": "driver",
+            "entity_kind": "OBJECT",
+            "raw_count": 1,
+            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+            "status": "PRESERVED",
+            "unary_predicates": []
+          },
+          "role_1": {
+            "binding_policy": "SHARED",
+            "candidate_categories_used_for_role_identity": false,
+            "canonical_count": 0,
+            "canonical_role": "MAIN_WORKBENCH_ZONE",
+            "entity_kind": "REGION",
+            "planner_context_constant": "MAIN_WORKBENCH_ZONE",
+            "raw_count": 1,
+            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+            "status": "ABSORBED_INTO_PLANNER_CONTEXT",
+            "unary_predicates": [
+              "PLANAR_SUPPORT"
+            ]
+          },
+          "role_2": {
+            "binding_policy": "SHARED",
+            "candidate_categories_used_for_role_identity": false,
+            "canonical_count": 1,
+            "canonical_role": "repair_target",
+            "entity_kind": "FIXED_TARGET",
+            "raw_count": 1,
+            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+            "status": "PRESERVED",
+            "unary_predicates": []
+          }
+        }
+      },
+      "raw_operation_groups_count": 1,
+      "raw_relations_count": 2,
+      "raw_roles_count": 3,
+      "region_proposal_trace": [],
+      "transformation_trace": [
+        {
+          "canonical_role": "repair_target",
+          "raw_entity_kind": "FIXED_TARGET",
+          "raw_role": "role_2",
+          "transformation": "SYSTEM_OWNED_FIXED_TARGET_REPRESENTATION"
+        },
+        {
+          "canonical_role": "MAIN_WORKBENCH_ZONE",
+          "raw_entity_kind": "REGION",
+          "raw_role": "role_1",
+          "transformation": "ABSORBED_INTO_PLANNER_CONTEXT"
+        },
+        {
+          "canonical_role": "driver",
+          "raw_entity_kind": "OBJECT",
+          "raw_role": "role_0",
+          "transformation": "CANONICAL_DRIVER_ROLE_MAPPING"
+        },
+        {
+          "context_role": "role_1 -> MAIN_WORKBENCH_ZONE",
+          "raw_group": "group_0",
+          "target_role": "role_2 -> repair_target",
+          "tool_role": "role_0 -> driver",
+          "transformation": "VALIDATED_REDUNDANT_WITH_GRAPH_RELATIONS"
+        }
+      ],
+      "version": "phase3_p3g_3_v1",
+      "vlm_canonicalization_version": "phase3_p3g_3_v1"
+    },
+    "detector_label_to_canonical": {
+      "assembly part": "assembly_part",
+      "broken component": "broken_component",
+      "hammer": "hammer",
+      "power drill": "power_driver",
+      "repair target": "repair_target",
+      "screw": "screw",
+      "screwdriver": "screwdriver",
+      "tool": "tool",
+      "wooden hammer": "hammer",
+      "wrench": "wrench"
+    },
+    "detector_vocabulary_source": "VLM_CANDIDATES_PLUS_RELEVANT_SYSTEM_ALIASES",
+    "evaluation_negative_control_prompts": [
+      "claw hammer",
+      "ball peen hammer",
+      "sledgehammer"
+    ],
+    "raw_decomposition": {
+      "functional_relations": [
+        {
+          "object_role": "role_2",
+          "relation": "compatible with",
+          "subject_role": "role_0"
+        },
+        {
+          "object_role": "role_1",
+          "relation": "placed on",
+          "subject_role": "role_0"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "screwdriver",
+            "wrench",
+            "hammer",
+            "tool"
+          ],
+          "description": "",
+          "entity_kind": "OBJECT",
+          "function": "provide fastening capability",
+          "id": "role_0",
+          "required_count": 1,
+          "required_properties": [
+            "elongated shape",
+            "rigid structure"
+          ],
+          "visible_candidates": [
+            {
+              "label": "tool on desk",
+              "suitability_reason": "",
+              "visual_description": "yellow and black tool on black tray on desk"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "desk surface",
+            "table top",
+            "workbench"
+          ],
+          "description": "",
+          "entity_kind": "REGION",
+          "function": "support payload",
+          "id": "role_1",
+          "required_count": 1,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "desk surface",
+              "suitability_reason": "",
+              "visual_description": "wooden desk surface with tool on it"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "repair target",
+            "broken component",
+            "assembly part"
+          ],
+          "description": "",
+          "entity_kind": "FIXED_TARGET",
+          "function": "receive fastening",
+          "id": "role_2",
+          "required_count": 1,
+          "required_properties": [
+            "has fastening points"
+          ],
+          "visible_candidates": []
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "context_relations": [
+            "placed on"
+          ],
+          "context_role": "role_1",
+          "function": "fastening operation",
+          "id": "group_0",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_2",
+          "tool_role": "role_0",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Identify compatible components needed for the repair, and complete the fastening at the marked workbench location",
+      "unsupported_reason": ""
+    },
+    "raw_operation_groups_count": 1,
+    "raw_relations_count": 2,
+    "raw_roles_count": 3,
+    "raw_vlm_response": {
+      "functional_relations": [
+        {
+          "object_role": "role_2",
+          "relation": "compatible with",
+          "subject_role": "role_0"
+        },
+        {
+          "object_role": "role_1",
+          "relation": "placed on",
+          "subject_role": "role_0"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "screwdriver",
+            "wrench",
+            "hammer",
+            "tool"
+          ],
+          "entity_kind": "OBJECT",
+          "function": "provide fastening capability",
+          "id": "role_0",
+          "required_count": 1,
+          "required_properties": [
+            "elongated shape",
+            "rigid structure"
+          ],
+          "visible_candidates": [
+            {
+              "label": "tool on desk",
+              "visual_description": "yellow and black tool on black tray on desk"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "desk surface",
+            "table top",
+            "workbench"
+          ],
+          "entity_kind": "REGION",
+          "function": "support payload",
+          "id": "role_1",
+          "required_count": 1,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "desk surface",
+              "visual_description": "wooden desk surface with tool on it"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "repair target",
+            "broken component",
+            "assembly part"
+          ],
+          "entity_kind": "FIXED_TARGET",
+          "function": "receive fastening",
+          "id": "role_2",
+          "required_count": 1,
+          "required_properties": [
+            "has fastening points"
+          ],
+          "visible_candidates": []
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "context_relations": [
+            "placed on"
+          ],
+          "context_role": "role_1",
+          "function": "fastening operation",
+          "id": "group_0",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_2",
+          "tool_role": "role_0",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Identify compatible components needed for the repair, and complete the fastening at the marked workbench location",
+      "unsupported_reason": ""
+    },
+    "role_semantic_ontology_version": "phase3_p3i_4_semantic_ontology_v1",
+    "schema_version": 2,
+    "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+    "transformation": "LOSSLESS_CANONICAL_G_F_CONSTRUCTION",
+    "transformation_trace": [
+      {
+        "canonical_role": "repair_target",
+        "raw_entity_kind": "FIXED_TARGET",
+        "raw_role": "role_2",
+        "transformation": "SYSTEM_OWNED_FIXED_TARGET_REPRESENTATION"
+      },
+      {
+        "canonical_role": "MAIN_WORKBENCH_ZONE",
+        "raw_entity_kind": "REGION",
+        "raw_role": "role_1",
+        "transformation": "ABSORBED_INTO_PLANNER_CONTEXT"
+      },
+      {
+        "canonical_role": "driver",
+        "raw_entity_kind": "OBJECT",
+        "raw_role": "role_0",
+        "transformation": "CANONICAL_DRIVER_ROLE_MAPPING"
+      },
+      {
+        "context_role": "role_1 -> MAIN_WORKBENCH_ZONE",
+        "raw_group": "group_0",
+        "target_role": "role_2 -> repair_target",
+        "tool_role": "role_0 -> driver",
+        "transformation": "VALIDATED_REDUNDANT_WITH_GRAPH_RELATIONS"
+      }
+    ],
+    "validated_vlm_specification": {
+      "functional_relations": [
+        {
+          "object_role": "role_2",
+          "relation": "compatible with",
+          "subject_role": "role_0"
+        },
+        {
+          "object_role": "role_1",
+          "relation": "placed on",
+          "subject_role": "role_0"
+        }
+      ],
+      "functional_roles": [
+        {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "screwdriver",
+            "wrench",
+            "hammer",
+            "tool"
+          ],
+          "description": "",
+          "entity_kind": "OBJECT",
+          "function": "provide fastening capability",
+          "id": "role_0",
+          "required_count": 1,
+          "required_properties": [
+            "elongated shape",
+            "rigid structure"
+          ],
+          "visible_candidates": [
+            {
+              "label": "tool on desk",
+              "suitability_reason": "",
+              "visual_description": "yellow and black tool on black tray on desk"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "desk surface",
+            "table top",
+            "workbench"
+          ],
+          "description": "",
+          "entity_kind": "REGION",
+          "function": "support payload",
+          "id": "role_1",
+          "required_count": 1,
+          "required_properties": [
+            "planar support"
+          ],
+          "visible_candidates": [
+            {
+              "label": "desk surface",
+              "suitability_reason": "",
+              "visual_description": "wooden desk surface with tool on it"
+            }
+          ]
+        },
+        {
+          "binding_policy": "SHARED",
+          "candidate_categories": [
+            "repair target",
+            "broken component",
+            "assembly part"
+          ],
+          "description": "",
+          "entity_kind": "FIXED_TARGET",
+          "function": "receive fastening",
+          "id": "role_2",
+          "required_count": 1,
+          "required_properties": [
+            "has fastening points"
+          ],
+          "visible_candidates": []
+        }
+      ],
+      "inspectable_regions": [],
+      "inspection_order": [],
+      "interaction_groups": [
+        {
+          "context_relations": [
+            "placed on"
+          ],
+          "context_role": "role_1",
+          "function": "fastening operation",
+          "id": "group_0",
+          "required_relations": [
+            "compatible with"
+          ],
+          "required_target_count": 1,
+          "target_role": "role_2",
+          "tool_role": "role_0",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "status": "SUPPORTED",
+      "task_summary": "Identify compatible components needed for the repair, and complete the fastening at the marked workbench location",
+      "unsupported_reason": ""
+    },
+    "vlm_canonicalization_version": "phase3_p3g_3_v1",
+    "vlm_derived_detector_prompts": [
+      "screwdriver",
+      "wrench",
+      "hammer",
+      "tool"
+    ]
+  },
+  "nodes": {
+    "driver": {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "driver",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "semantic_hints": [
+        "tool on desk"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "repair_target": {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "repair_target",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "repair_target",
+        "workshop_frame_joint",
+        "recess"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "GEOMETRIC_ONLY"
+    }
+  },
+  "operation_groups": [],
+  "region_ranking": [],
+  "relations": [
+    {
+      "expected": true,
+      "object_role": "repair_target",
+      "predicate": "REACHES_TARGET",
+      "subject_role": "driver"
+    }
+  ],
+  "roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "driver",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "semantic_hints": [
+        "tool on desk"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "repair_target",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "repair_target",
+        "workshop_frame_joint",
+        "recess"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "GEOMETRIC_ONLY"
+    }
+  ],
+  "source": "VLM_CANONICAL_G_F",
+  "task_instruction": "Identify compatible components needed for the repair, and complete the fastening at the marked workbench location"
+}

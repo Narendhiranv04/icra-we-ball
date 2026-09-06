@@ -1,0 +1,44 @@
+{
+  "all_assignment_nodes_observed": true,
+  "all_required_relations_true": true,
+  "grounding_complete": true,
+  "operation_bindings": {
+    "personal_support_group": [
+      {
+        "context": {
+          "SEATING_POSITION": "seat_0001"
+        },
+        "target_id": "personal_table_slot_1",
+        "tool_id": "region_0001"
+      },
+      {
+        "context": {
+          "SEATING_POSITION": "seat_0002"
+        },
+        "target_id": "personal_table_slot_2",
+        "tool_id": "region_0003"
+      }
+    ]
+  },
+  "plan_replay_valid": true,
+  "plan_uses_only_grounded_task_objects": true,
+  "preparation_accessibility_valid": true,
+  "role_assignments": {
+    "CUP_SAUCER_SET": [
+      "personal_table_slot_1",
+      "personal_table_slot_2"
+    ],
+    "PERSONAL_CUP_SAUCER_REGION": [
+      "region_0001",
+      "region_0003"
+    ],
+    "REMOTE": "object_0003",
+    "SEATING_PAIR": "SEATING_PAIR",
+    "SEATING_POSITION": [
+      "seat_0001",
+      "seat_0002"
+    ],
+    "SHARED_REMOTE_REGION": "region_0002"
+  },
+  "violations": []
+}

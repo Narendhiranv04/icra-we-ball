@@ -1,0 +1,106 @@
+{"event": "SETTLE_COMPLETED", "region_id": "INITIAL", "settle_steps": 50, "stage": 0}
+{"event": "VIRTUAL_INSPECTION_RIG_POSITIONED", "region_id": "INITIAL", "stage": 0}
+{"event": "INSPECTION_CAPTURED", "region_id": "INITIAL", "stage": 0, "valid_camera_count": 5}
+{"event": "OBJECT_DISCOVERED", "instance_token": "2d8fc5c2f94ca106cd3ca2ac", "object_id": "object_0001", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0001", "point_count": 1776, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply", "object_id": "object_0001", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": true}
+{"event": "OBJECT_DISCOVERED", "instance_token": "e77657e2da41b5c5d300bc7c", "object_id": "object_0002", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0002", "point_count": 3392, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply", "object_id": "object_0002", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": true}
+{"event": "OBJECT_DISCOVERED", "instance_token": "37696b32ef9a5341be93a1c8", "object_id": "object_0003", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0003", "point_count": 4030, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0003/fused.ply", "object_id": "object_0003", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": true}
+{"event": "OBJECT_DISCOVERED", "instance_token": "295d68b6ea2460199859605a", "object_id": "object_0004", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0004", "point_count": 5320, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply", "object_id": "object_0004", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": true}
+{"event": "OBJECT_DISCOVERED", "instance_token": "b6eafbc020dadebe0ac65b04", "object_id": "object_0005", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0005", "point_count": 893, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0005/fused.ply", "object_id": "object_0005", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": null}
+{"event": "OBJECT_DISCOVERED", "instance_token": "ea487c70f3032decafec5c2d", "object_id": "object_0006", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0006", "point_count": 1364, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0006/fused.ply", "object_id": "object_0006", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": false}
+{"event": "OBJECT_DISCOVERED", "instance_token": "3410adefbba3260f8974291c", "object_id": "object_0007", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0007", "point_count": 505, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0007/fused.ply", "object_id": "object_0007", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": null}
+{"event": "OBJECT_DISCOVERED", "instance_token": "3fa3c169623d3ae234555a55", "object_id": "object_0008", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0008", "point_count": 4323, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0008/fused.ply", "object_id": "object_0008", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": false}
+{"event": "OBJECT_DISCOVERED", "instance_token": "7303b1aef1c76962200d42c0", "object_id": "object_0009", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0009", "point_count": 2315, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0009/fused.ply", "object_id": "object_0009", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": true}
+{"camera_id": "inspection_left", "detection_count": 36, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 0}
+{"camera_id": "inspection_right", "detection_count": 47, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 0}
+{"camera_id": "inspection_top", "detection_count": 39, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 0}
+{"camera_id": "inspection_front", "detection_count": 44, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 0}
+{"camera_id": "inspection_close", "detection_count": 29, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 0}
+{"association_score": 0.9550619659160574, "camera_id": "inspection_left", "confidence": 0.721389889717102, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0003", "stage": 0}
+{"association_score": 0.9496740161213846, "camera_id": "inspection_left", "confidence": 0.6253806948661804, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0002", "stage": 0}
+{"association_score": 0.9574105760086538, "camera_id": "inspection_left", "confidence": 0.5836411714553833, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0004", "stage": 0}
+{"association_score": 0.9276091746048476, "camera_id": "inspection_left", "confidence": 0.8267960548400879, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0001", "stage": 0}
+{"association_score": 0.8669023462944405, "camera_id": "inspection_left", "confidence": 0.8240209221839905, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0006", "stage": 0}
+{"association_score": 0.9462102760661205, "camera_id": "inspection_left", "confidence": 0.47026190161705017, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0009", "stage": 0}
+{"association_score": 0.8400175498830318, "camera_id": "inspection_left", "confidence": 0.6325661540031433, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0007", "stage": 0}
+{"association_score": 0.8477418636059396, "camera_id": "inspection_left", "confidence": 0.4833400249481201, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0005", "stage": 0}
+{"association_score": 0.9277932072946294, "camera_id": "inspection_left", "confidence": 0.09056729823350906, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0008", "stage": 0}
+{"association_score": 0.9567936031054837, "camera_id": "inspection_right", "confidence": 0.6743742823600769, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0004", "stage": 0}
+{"association_score": 0.9624129768866612, "camera_id": "inspection_right", "confidence": 0.6424151062965393, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0003", "stage": 0}
+{"association_score": 0.9446510297482837, "camera_id": "inspection_right", "confidence": 0.6005970239639282, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0009", "stage": 0}
+{"association_score": 0.939857155349314, "camera_id": "inspection_right", "confidence": 0.8545657396316528, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0002", "stage": 0}
+{"association_score": 0.9092806520328476, "camera_id": "inspection_right", "confidence": 0.8196806311607361, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0001", "stage": 0}
+{"association_score": 0.8832483691787526, "camera_id": "inspection_right", "confidence": 0.5607149600982666, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0007", "stage": 0}
+{"association_score": 0.8618424411730891, "camera_id": "inspection_right", "confidence": 0.5016539096832275, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0005", "stage": 0}
+{"association_score": 0.552367608836907, "camera_id": "inspection_right", "confidence": 0.3772347867488861, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0006", "stage": 0}
+{"association_score": 0.90179974731085, "camera_id": "inspection_right", "confidence": 0.11365968734025955, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0008", "stage": 0}
+{"association_score": 0.8561031887888024, "camera_id": "inspection_top", "confidence": 0.9308263659477234, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0006", "stage": 0}
+{"association_score": 0.9335617684020237, "camera_id": "inspection_top", "confidence": 0.7734589576721191, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0002", "stage": 0}
+{"association_score": 0.8254753825743261, "camera_id": "inspection_top", "confidence": 0.8348120450973511, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0005", "stage": 0}
+{"association_score": 0.9277452296110279, "camera_id": "inspection_top", "confidence": 0.7153663039207458, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0001", "stage": 0}
+{"association_score": 0.901266535035575, "camera_id": "inspection_top", "confidence": 0.5425986647605896, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0008", "stage": 0}
+{"association_score": 0.9534957294948686, "camera_id": "inspection_top", "confidence": 0.42919921875, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0004", "stage": 0}
+{"association_score": 0.9260758032683531, "camera_id": "inspection_top", "confidence": 0.4373195767402649, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0009", "stage": 0}
+{"association_score": 0.7849056603773585, "camera_id": "inspection_top", "confidence": 0.41104090213775635, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0007", "stage": 0}
+{"association_score": 0.8430756014973332, "camera_id": "inspection_top", "confidence": 0.23427420854568481, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0003", "stage": 0}
+{"association_score": 0.956664533204915, "camera_id": "inspection_front", "confidence": 0.6770889759063721, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0004", "stage": 0}
+{"association_score": 0.9637471051412692, "camera_id": "inspection_front", "confidence": 0.6227717399597168, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0003", "stage": 0}
+{"association_score": 0.9458574709321552, "camera_id": "inspection_front", "confidence": 0.6281622052192688, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0009", "stage": 0}
+{"association_score": 0.932901224703974, "camera_id": "inspection_front", "confidence": 0.8592079877853394, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0002", "stage": 0}
+{"association_score": 0.943943872090129, "camera_id": "inspection_front", "confidence": 0.8317926526069641, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0001", "stage": 0}
+{"association_score": 0.8656090595780284, "camera_id": "inspection_front", "confidence": 0.8505762815475464, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0007", "stage": 0}
+{"association_score": 0.6116211996643406, "camera_id": "inspection_front", "confidence": 0.884782612323761, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0005", "stage": 0}
+{"association_score": 0.5478289231711694, "camera_id": "inspection_front", "confidence": 0.42757877707481384, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0006", "stage": 0}
+{"association_score": 0.9028932257603516, "camera_id": "inspection_front", "confidence": 0.12169952690601349, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0008", "stage": 0}
+{"association_score": 0.9601037361895927, "camera_id": "inspection_close", "confidence": 0.6961544156074524, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0004", "stage": 0}
+{"association_score": 0.9394137671589607, "camera_id": "inspection_close", "confidence": 0.7107824087142944, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0002", "stage": 0}
+{"association_score": 0.954606288981289, "camera_id": "inspection_close", "confidence": 0.4471551775932312, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0009", "stage": 0}
+{"association_score": 0.857530736370897, "camera_id": "inspection_close", "confidence": 0.7183628678321838, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0007", "stage": 0}
+{"association_score": 0.6989198884602303, "camera_id": "inspection_close", "confidence": 0.8400015234947205, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0006", "stage": 0}
+{"association_score": 0.937326848465549, "camera_id": "inspection_close", "confidence": 0.5536707639694214, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "bowl", "object_id": "object_0003", "stage": 0}
+{"association_score": 0.9357218402961396, "camera_id": "inspection_close", "confidence": 0.24937985837459564, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cup", "object_id": "object_0008", "stage": 0}
+{"association_score": 0.7976831863177449, "camera_id": "inspection_close", "confidence": 0.06425456702709198, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "spoon", "object_id": "object_0005", "stage": 0}
+{"elapsed_seconds": 0.00016676197992637753, "event": "SEMANTIC_ROLE_SCOPED_PAIRS_EVALUATED", "observed_object_count": 9, "ordered_distinct_object_pair_count": 72, "pairing_strategy": "semantic_role_scoped", "region_id": "INITIAL", "relation_evaluation_count": 18, "role_binding_phase": "AFTER_SEMANTIC_GATING_AND_PAIRWISE_GEOMETRY", "skipped_relation_pair_count": 54, "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0004", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0005", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0006", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0007", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_GEOMETRY", "object_id": "object_0008", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0001", "role": "coffee_stirrer", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0002", "role": "coffee_stirrer", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "coffee_stirrer", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0004", "role": "coffee_stirrer", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0008", "role": "coffee_stirrer", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0009", "role": "coffee_stirrer", "stage": 0}
+{"counts": {"distinct_assigned_physical_objects": 1, "functionally_assignable_utensils": 3, "geometrically_eligible_utensils": 3, "grounding_eligible_utensils": 3, "raw_observed_utensils": 3, "required_distinct_physical_objects": 1, "required_target_slots": 1, "satisfied_target_slots": 1, "semantically_eligible_utensils": 3}, "event": "FUNCTION_GROUP_EVALUATED", "function": "STIR_COFFEE", "function_group": "coffee_stirring", "policy_mode": "function-aware", "region_id": "INITIAL", "stage": 0, "status": "COMPLETE"}
+{"counts": {"distinct_assigned_physical_objects": 1, "functionally_assignable_utensils": 3, "geometrically_eligible_utensils": 3, "grounding_eligible_utensils": 3, "raw_observed_utensils": 3, "required_distinct_physical_objects": 1, "required_target_slots": 1, "satisfied_target_slots": 1, "semantically_eligible_utensils": 3}, "declared_usage_policy": {"distinct_within_group": true, "mode": "dedicated_per_target", "same_tool_must_cover_all_targets": false, "selection_preference": "deterministic_rank"}, "event": "USAGE_POLICY_EVALUATED", "function_group": "coffee_stirring", "policy_mode": "function-aware", "region_id": "INITIAL", "stage": 0, "status": "COMPLETE"}
+{"counts": {"distinct_assigned_physical_objects": 1, "functionally_assignable_utensils": 3, "geometrically_eligible_utensils": 3, "grounding_eligible_utensils": 3, "raw_observed_utensils": 3, "required_distinct_physical_objects": 1, "required_target_slots": 1, "satisfied_target_slots": 1, "semantically_eligible_utensils": 3}, "event": "FUNCTION_GROUP_COMPLETE", "function_group": "coffee_stirring", "policy_mode": "function-aware", "reason": "ALL_TARGET_SLOTS_ASSIGNED", "region_id": "INITIAL", "stage": 0}
+{"counts": {"distinct_assigned_physical_objects": 1, "functionally_assignable_utensils": 3, "geometrically_eligible_utensils": 3, "grounding_eligible_utensils": 3, "raw_observed_utensils": 3, "required_distinct_physical_objects": 1, "required_target_slots": 1, "satisfied_target_slots": 1, "semantically_eligible_utensils": 3}, "event": "COUNT_REQUIREMENT_SATISFIED", "function_group": "coffee_stirring", "policy_mode": "function-aware", "region_id": "INITIAL", "stage": 0}
+{"dedicated_assignment": true, "event": "TARGET_ASSIGNMENT_CREATED", "function_group": "coffee_stirring", "policy_mode": "function-aware", "region_id": "INITIAL", "reused_assignment": false, "stage": 0, "target_object_id": "object_0001", "utensil_object_id": "object_0005"}
+{"event": "DEDICATED_ASSIGNMENT_CREATED", "function_group": "coffee_stirring", "object_id": "object_0005", "policy_mode": "function-aware", "region_id": "INITIAL", "stage": 0, "target_object_id": "object_0001"}
+{"event": "CANDIDATE_EXCLUDED_FROM_COUNT", "function_group": "coffee_stirring", "object_id": "object_0005", "policy_mode": "function-aware", "reason": "TARGET_ROLE_INELIGIBLE", "region_id": "INITIAL", "stage": 0, "status": "FALSE", "target_object_id": "object_0008"}
+{"event": "CANDIDATE_EXCLUDED_FROM_COUNT", "function_group": "coffee_stirring", "object_id": "object_0006", "policy_mode": "function-aware", "reason": "TARGET_RELATION_FAILED", "region_id": "INITIAL", "stage": 0, "status": "FALSE", "target_object_id": "object_0001"}
+{"event": "CANDIDATE_EXCLUDED_FROM_COUNT", "function_group": "coffee_stirring", "object_id": "object_0006", "policy_mode": "function-aware", "reason": "TARGET_ROLE_INELIGIBLE", "region_id": "INITIAL", "stage": 0, "status": "FALSE", "target_object_id": "object_0008"}
+{"event": "CANDIDATE_EXCLUDED_FROM_COUNT", "function_group": "coffee_stirring", "object_id": "object_0007", "policy_mode": "function-aware", "reason": "TARGET_ROLE_INELIGIBLE", "region_id": "INITIAL", "stage": 0, "status": "FALSE", "target_object_id": "object_0008"}
+{"event": "WITNESS_EVALUATED", "stage": 0, "status": "COMPLETE", "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"}
+{"event": "COMPLETE_WITNESS_FOUND", "stage": 0, "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"}
+{"event": "VERIFIED_TASK_WITNESS_COMPLETE", "ready_for_tamp": true, "stage": 0, "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"}
+{"event": "INSPECTION_STOPPED_COMPLETE", "remaining_regions": ["C1", "C2", "D1", "D2", "B1"], "stage": 0}

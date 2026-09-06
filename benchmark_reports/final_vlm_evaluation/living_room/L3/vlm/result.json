@@ -1,0 +1,208 @@
+{
+  "assignment": {
+    "CUP_SAUCER_SET": [
+      "personal_table_slot_1",
+      "personal_table_slot_2"
+    ],
+    "PERSONAL_CUP_SAUCER_REGION": [
+      "region_0001",
+      "region_0003"
+    ],
+    "REMOTE": "object_0002",
+    "SEATING_PAIR": "SEATING_PAIR",
+    "SEATING_POSITION": [
+      "seat_0001",
+      "seat_0002"
+    ],
+    "SHARED_REMOTE_REGION": "region_0002"
+  },
+  "candidate_plan": [
+    {
+      "action_index": 1,
+      "arguments": [
+        "object_0001"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 2,
+      "arguments": [
+        "object_0001",
+        "region_0001"
+      ],
+      "operator": "PLACE"
+    },
+    {
+      "action_index": 3,
+      "arguments": [
+        "object_0002"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 4,
+      "arguments": [
+        "object_0002",
+        "region_0002"
+      ],
+      "operator": "PLACE"
+    },
+    {
+      "action_index": 5,
+      "arguments": [
+        "object_0003"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 6,
+      "arguments": [
+        "object_0003",
+        "region_0003"
+      ],
+      "operator": "PLACE"
+    },
+    {
+      "action_index": 7,
+      "arguments": [
+        "object_0004"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 8,
+      "arguments": [
+        "object_0004",
+        "region_0001"
+      ],
+      "operator": "PLACE"
+    },
+    {
+      "action_index": 9,
+      "arguments": [
+        "object_0005"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 10,
+      "arguments": [
+        "object_0005",
+        "region_0003"
+      ],
+      "operator": "PLACE"
+    }
+  ],
+  "candidate_search_statistics": {
+    "algorithm": "deterministic_astar_symbolic_state_search",
+    "expanded_states": 822,
+    "frontier_peak": 491,
+    "generated_states": 2200,
+    "is_partial": false,
+    "plan_cost": 10,
+    "plan_length": 10,
+    "satisfied_goals": 5,
+    "search_time_ms": 4.888808005489409,
+    "total_goals": 5,
+    "visited_states": 1312
+  },
+  "canonicalization_succeeded": true,
+  "domain": "living_room",
+  "failure_category": null,
+  "failure_reason": null,
+  "functional_spec_complete": true,
+  "inspected_regions": [],
+  "mode": "vlm",
+  "plan": [
+    {
+      "action_index": 1,
+      "arguments": [
+        "object_0001"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 2,
+      "arguments": [
+        "object_0001",
+        "region_0001"
+      ],
+      "operator": "PLACE"
+    },
+    {
+      "action_index": 3,
+      "arguments": [
+        "object_0002"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 4,
+      "arguments": [
+        "object_0002",
+        "region_0002"
+      ],
+      "operator": "PLACE"
+    },
+    {
+      "action_index": 5,
+      "arguments": [
+        "object_0003"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 6,
+      "arguments": [
+        "object_0003",
+        "region_0003"
+      ],
+      "operator": "PLACE"
+    },
+    {
+      "action_index": 7,
+      "arguments": [
+        "object_0004"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 8,
+      "arguments": [
+        "object_0004",
+        "region_0001"
+      ],
+      "operator": "PLACE"
+    },
+    {
+      "action_index": 9,
+      "arguments": [
+        "object_0005"
+      ],
+      "operator": "PICK"
+    },
+    {
+      "action_index": 10,
+      "arguments": [
+        "object_0005",
+        "region_0003"
+      ],
+      "operator": "PLACE"
+    }
+  ],
+  "search_statistics": {
+    "algorithm": "deterministic_astar_symbolic_state_search",
+    "expanded_states": 822,
+    "frontier_peak": 491,
+    "generated_states": 2200,
+    "is_partial": false,
+    "plan_cost": 10,
+    "plan_length": 10,
+    "satisfied_goals": 5,
+    "search_time_ms": 4.888808005489409,
+    "total_goals": 5,
+    "visited_states": 1312
+  },
+  "status": "ACTION_SEQUENCE_READY",
+  "variant": "L3"
+}

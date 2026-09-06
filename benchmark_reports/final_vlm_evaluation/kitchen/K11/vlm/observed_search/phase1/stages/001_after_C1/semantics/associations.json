@@ -1,0 +1,259 @@
+{
+  "cameras": [
+    {
+      "accepted": [
+        {
+          "association_score": 0.8733641874370732,
+          "detection": {
+            "bbox_xyxy": [
+              512.4220733642578,
+              640.3104667663574,
+              734.7188415527344,
+              685.7368583679199
+            ],
+            "canonical_label": "spoon",
+            "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+            "confidence": 0.06941814720630646,
+            "crop_source_object_id": "object_0004",
+            "detection_id": "inspection_left_crop_000_000",
+            "detector_name": "ultralytics_yolo_world",
+            "detector_version": "8.4.112",
+            "inference_resolution": [
+              352,
+              73
+            ],
+            "input_crop_box_xyxy": [
+              448,
+              626,
+              800,
+              699
+            ],
+            "input_image_path": "semantics/cameras/inspection_left/crops/000_object_0004.png",
+            "input_kind": "MASK_BOUNDED_RGB_CROP",
+            "raw_label": "metal spoon",
+            "source_camera": "inspection_left"
+          },
+          "detection_index": 1,
+          "input_kind_multiplier": 1.5,
+          "matching_score": 0.09094098559233446,
+          "metrics": {
+            "box_fraction_on_mask": 0.21602651589003705,
+            "box_mask_iou": 0.9651004094365373,
+            "box_pixels": 10258,
+            "center_consistency": 0.9968510769443331,
+            "intersection_pixels": 2216,
+            "mask_fraction_inside_box": 1.0,
+            "visible_mask_pixels": 2216
+          },
+          "object_id": "object_0004",
+          "status": "ACCEPTED",
+          "weak": false
+        }
+      ],
+      "camera_id": "inspection_left",
+      "method": "mask_box_overlap_v1",
+      "rejected": [
+        {
+          "association_score": 0.8391072796960596,
+          "detection_index": 0,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.05083690472700703,
+          "metrics": {
+            "box_fraction_on_mask": 0.1907469630395451,
+            "box_mask_iou": 0.8457775489186405,
+            "box_pixels": 11607,
+            "center_consistency": 0.9950211154837377,
+            "intersection_pixels": 2214,
+            "mask_fraction_inside_box": 0.9990974729241877,
+            "visible_mask_pixels": 2216
+          },
+          "object_id": "object_0004",
+          "reason": "ONE_TO_ONE_CONFLICT",
+          "status": "REJECTED",
+          "weak": false
+        }
+      ],
+      "unmatched_detection_indices": [
+        0
+      ],
+      "unmatched_object_ids": []
+    },
+    {
+      "accepted": [],
+      "camera_id": "inspection_right",
+      "method": "mask_box_overlap_v1",
+      "rejected": [],
+      "unmatched_detection_indices": [],
+      "unmatched_object_ids": [
+        "object_0004"
+      ]
+    },
+    {
+      "accepted": [
+        {
+          "association_score": 0.8682489023685319,
+          "detection": {
+            "bbox_xyxy": [
+              453.6456298828125,
+              542.8249530792236,
+              668.9706420898438,
+              592.776252746582
+            ],
+            "canonical_label": "spoon",
+            "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+            "confidence": 0.03387041389942169,
+            "crop_source_object_id": "object_0004",
+            "detection_id": "inspection_top_crop_000_000",
+            "detector_name": "ultralytics_yolo_world",
+            "detector_version": "8.4.112",
+            "inference_resolution": [
+              341,
+              79
+            ],
+            "input_crop_box_xyxy": [
+              391,
+              528,
+              732,
+              607
+            ],
+            "input_image_path": "semantics/cameras/inspection_top/crops/000_object_0004.png",
+            "input_kind": "MASK_BOUNDED_RGB_CROP",
+            "raw_label": "metal spoon",
+            "source_camera": "inspection_top"
+          },
+          "detection_index": 1,
+          "input_kind_multiplier": 1.5,
+          "matching_score": 0.04411192453641113,
+          "metrics": {
+            "box_fraction_on_mask": 0.2107843137254902,
+            "box_mask_iou": 0.9474400871459695,
+            "box_pixels": 11016,
+            "center_consistency": 0.9977123352321604,
+            "intersection_pixels": 2322,
+            "mask_fraction_inside_box": 1.0,
+            "visible_mask_pixels": 2322
+          },
+          "object_id": "object_0004",
+          "status": "ACCEPTED",
+          "weak": false
+        }
+      ],
+      "camera_id": "inspection_top",
+      "method": "mask_box_overlap_v1",
+      "rejected": [
+        {
+          "association_score": 0.8367498201738017,
+          "detection_index": 0,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.03858988480089825,
+          "metrics": {
+            "box_fraction_on_mask": 0.193158953722334,
+            "box_mask_iou": 0.8521739130434782,
+            "box_pixels": 11928,
+            "center_consistency": 0.9860846784683018,
+            "intersection_pixels": 2304,
+            "mask_fraction_inside_box": 0.9922480620155039,
+            "visible_mask_pixels": 2322
+          },
+          "object_id": "object_0004",
+          "reason": "ONE_TO_ONE_CONFLICT",
+          "status": "REJECTED",
+          "weak": false
+        }
+      ],
+      "unmatched_detection_indices": [
+        0
+      ],
+      "unmatched_object_ids": []
+    },
+    {
+      "accepted": [],
+      "camera_id": "inspection_front",
+      "method": "mask_box_overlap_v1",
+      "rejected": [],
+      "unmatched_detection_indices": [],
+      "unmatched_object_ids": [
+        "object_0004"
+      ]
+    },
+    {
+      "accepted": [
+        {
+          "association_score": 0.8696752124854851,
+          "detection": {
+            "bbox_xyxy": [
+              312.1851577758789,
+              677.2616739273071,
+              633.2920532226562,
+              710.7470436096191
+            ],
+            "canonical_label": "spoon",
+            "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+            "confidence": 0.13408663868904114,
+            "crop_source_object_id": "object_0004",
+            "detection_id": "inspection_close_crop_000_000",
+            "detector_name": "ultralytics_yolo_world",
+            "detector_version": "8.4.112",
+            "inference_resolution": [
+              503,
+              49
+            ],
+            "input_crop_box_xyxy": [
+              221,
+              670,
+              724,
+              719
+            ],
+            "input_image_path": "semantics/cameras/inspection_close/crops/000_object_0004.png",
+            "input_kind": "MASK_BOUNDED_RGB_CROP",
+            "raw_label": "dessert spoon",
+            "source_camera": "inspection_close"
+          },
+          "detection_index": 0,
+          "input_kind_multiplier": 1.5,
+          "matching_score": 0.1749177389900345,
+          "metrics": {
+            "box_fraction_on_mask": 0.3127511874314943,
+            "box_mask_iou": 0.8919437340153452,
+            "box_pixels": 10948,
+            "center_consistency": 0.9977660086692457,
+            "intersection_pixels": 3424,
+            "mask_fraction_inside_box": 1.0,
+            "visible_mask_pixels": 3424
+          },
+          "object_id": "object_0004",
+          "status": "ACCEPTED",
+          "weak": false
+        }
+      ],
+      "camera_id": "inspection_close",
+      "method": "mask_box_overlap_v1",
+      "rejected": [
+        {
+          "association_score": 0.8626880712566363,
+          "detection_index": 1,
+          "input_kind_multiplier": 1.5,
+          "matching_score": 0.15504377158040633,
+          "metrics": {
+            "box_fraction_on_mask": 0.3047619047619048,
+            "box_mask_iou": 0.8691588785046729,
+            "box_pixels": 11235,
+            "center_consistency": 0.9968406591618233,
+            "intersection_pixels": 3424,
+            "mask_fraction_inside_box": 1.0,
+            "visible_mask_pixels": 3424
+          },
+          "object_id": "object_0004",
+          "reason": "ONE_TO_ONE_CONFLICT",
+          "status": "REJECTED",
+          "weak": false
+        }
+      ],
+      "unmatched_detection_indices": [
+        1
+      ],
+      "unmatched_object_ids": []
+    }
+  ],
+  "method": "mask_box_overlap_v1"
+}

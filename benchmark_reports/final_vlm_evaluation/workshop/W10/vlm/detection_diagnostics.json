@@ -1,0 +1,614 @@
+{
+  "records": [
+    {
+      "camera_id": "FRONT",
+      "canonical_label": "tool",
+      "confidence": 0.015480187721550465,
+      "depth_point_count": 0,
+      "detection_id": "det_FRONT_full_frame_000",
+      "detector_crop_xyxy": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "detector_vocabulary": [
+        "screwdriver",
+        "wrench",
+        "hammer",
+        "tool",
+        "power driver",
+        "power drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "inference_source": "full_frame",
+      "raw_label": "tool",
+      "raw_yolo_bbox_xyxy": [
+        667,
+        0,
+        1112,
+        355
+      ],
+      "refined_mask_area": 14726,
+      "source_region_id": "INITIAL_WORKBENCH",
+      "stage_index": 0,
+      "status": "REJECTED_STAGE_VOLUME"
+    },
+    {
+      "camera_id": "FRONT",
+      "canonical_label": "tool",
+      "confidence": 0.02398279868066311,
+      "depth_point_count": 0,
+      "detection_id": "det_FRONT_stage_crop_001",
+      "detector_crop_xyxy": [
+        0,
+        27,
+        1280,
+        720
+      ],
+      "detector_vocabulary": [
+        "screwdriver",
+        "wrench",
+        "hammer",
+        "tool",
+        "power driver",
+        "power drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "inference_source": "stage_crop",
+      "raw_label": "tool",
+      "raw_yolo_bbox_xyxy": [
+        667,
+        27,
+        1110,
+        353
+      ],
+      "refined_mask_area": 11055,
+      "source_region_id": "INITIAL_WORKBENCH",
+      "stage_index": 0,
+      "status": "REJECTED_STAGE_VOLUME"
+    },
+    {
+      "camera_id": "RIGHT",
+      "canonical_label": "screwdriver",
+      "centroid_world_m": [
+        -0.23354896903038025,
+        -0.04193233326077461,
+        0.48141881823539734
+      ],
+      "cloud_bounds_world_m": {
+        "maximum_world_m": [
+          -0.16230203211307526,
+          -0.032715439796447754,
+          0.4946403205394745
+        ],
+        "minimum_world_m": [
+          -0.28963398933410645,
+          -0.04909985512495041,
+          0.4721550941467285
+        ]
+      },
+      "confidence": 0.01047709584236145,
+      "depth_point_count": 2927,
+      "detection_id": "det_RIGHT_full_frame_000",
+      "detector_crop_xyxy": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "detector_vocabulary": [
+        "screwdriver",
+        "wrench",
+        "hammer",
+        "tool",
+        "power driver",
+        "power drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "duplicate_group_id": "RIGHT_physical_001",
+      "inference_source": "full_frame",
+      "physical_support_quality": 0.7941152119165488,
+      "raw_label": "screwdriver",
+      "raw_yolo_bbox_xyxy": [
+        614,
+        190,
+        657,
+        520
+      ],
+      "refined_bbox_xyxy": [
+        624,
+        245,
+        657,
+        434
+      ],
+      "refined_mask_area": 2927,
+      "source_region_id": "LEFT_DRAWER",
+      "stage_index": 1,
+      "status": "ACCEPTED"
+    },
+    {
+      "camera_id": "RIGHT",
+      "canonical_label": "screwdriver",
+      "centroid_world_m": [
+        -0.23388995230197906,
+        -0.04177655279636383,
+        0.48166894912719727
+      ],
+      "cloud_bounds_world_m": {
+        "maximum_world_m": [
+          -0.16230203211307526,
+          -0.032715439796447754,
+          0.4946403205394745
+        ],
+        "minimum_world_m": [
+          -0.28963398933410645,
+          -0.04909985512495041,
+          0.4721550941467285
+        ]
+      },
+      "confidence": 0.002565423958003521,
+      "depth_point_count": 2850,
+      "detection_id": "det_RIGHT_full_frame_supplemental_phillips_screwdriver_001",
+      "detector_crop_xyxy": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "detector_vocabulary": [
+        "screwdriver",
+        "wrench",
+        "hammer",
+        "tool",
+        "power driver",
+        "power drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "inference_source": "full_frame_supplemental_phillips_screwdriver",
+      "physical_support_quality": 0.7951719106767569,
+      "raw_label": "Phillips screwdriver",
+      "raw_yolo_bbox_xyxy": [
+        614,
+        190,
+        656,
+        520
+      ],
+      "refined_bbox_xyxy": [
+        624,
+        245,
+        656,
+        434
+      ],
+      "refined_mask_area": 2850,
+      "source_region_id": "LEFT_DRAWER",
+      "stage_index": 1,
+      "status": "ACCEPTED_PRE_DEDUP"
+    },
+    {
+      "camera_id": "RIGHT",
+      "canonical_label": "screwdriver",
+      "centroid_world_m": [
+        -0.25852516293525696,
+        -0.04338640719652176,
+        0.48901626467704773
+      ],
+      "cloud_bounds_world_m": {
+        "maximum_world_m": [
+          -0.2137981504201889,
+          -0.03350334241986275,
+          0.49474793672561646
+        ],
+        "minimum_world_m": [
+          -0.2905426025390625,
+          -0.04927707463502884,
+          0.47867417335510254
+        ]
+      },
+      "confidence": 0.0011844243854284286,
+      "depth_point_count": 1640,
+      "detection_id": "det_RIGHT_stage_crop_supplemental_phillips_screwdriver_002",
+      "detector_crop_xyxy": [
+        0,
+        0,
+        1034,
+        720
+      ],
+      "detector_vocabulary": [
+        "screwdriver",
+        "wrench",
+        "hammer",
+        "tool",
+        "power driver",
+        "power drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "inference_source": "stage_crop_supplemental_phillips_screwdriver",
+      "physical_support_quality": 0.7069217757022636,
+      "raw_label": "Phillips screwdriver",
+      "raw_yolo_bbox_xyxy": [
+        614,
+        193,
+        658,
+        521
+      ],
+      "refined_bbox_xyxy": [
+        624,
+        325,
+        646,
+        435
+      ],
+      "refined_mask_area": 1640,
+      "source_region_id": "LEFT_DRAWER",
+      "stage_index": 1,
+      "status": "ACCEPTED_PRE_DEDUP"
+    },
+    {
+      "camera_id": "RIGHT",
+      "canonical_label": "screwdriver",
+      "confidence": 0.002565423958003521,
+      "detection_id": "det_RIGHT_full_frame_supplemental_phillips_screwdriver_001",
+      "duplicate_group_id": "RIGHT_physical_001",
+      "inference_source": "full_frame_supplemental_phillips_screwdriver",
+      "raw_label": "Phillips screwdriver",
+      "raw_yolo_bbox_xyxy": [
+        614,
+        190,
+        656,
+        520
+      ],
+      "refined_bbox_xyxy": [
+        624,
+        245,
+        656,
+        434
+      ],
+      "retained_detection_id": "det_RIGHT_full_frame_000",
+      "source_region_id": "LEFT_DRAWER",
+      "stage_index": 1,
+      "status": "SUPPRESSED_DUPLICATE"
+    },
+    {
+      "camera_id": "RIGHT",
+      "canonical_label": "screwdriver",
+      "confidence": 0.0011844243854284286,
+      "detection_id": "det_RIGHT_stage_crop_supplemental_phillips_screwdriver_002",
+      "duplicate_group_id": "RIGHT_physical_001",
+      "inference_source": "stage_crop_supplemental_phillips_screwdriver",
+      "raw_label": "Phillips screwdriver",
+      "raw_yolo_bbox_xyxy": [
+        614,
+        193,
+        658,
+        521
+      ],
+      "refined_bbox_xyxy": [
+        624,
+        325,
+        646,
+        435
+      ],
+      "retained_detection_id": "det_RIGHT_full_frame_000",
+      "source_region_id": "LEFT_DRAWER",
+      "stage_index": 1,
+      "status": "SUPPRESSED_DUPLICATE"
+    },
+    {
+      "camera_id": "TOP",
+      "canonical_label": "wrench",
+      "centroid_world_m": [
+        -0.281307190656662,
+        -0.04208553582429886,
+        0.49211713671684265
+      ],
+      "cloud_bounds_world_m": {
+        "maximum_world_m": [
+          -0.12731340527534485,
+          -0.026836084201931953,
+          0.49810460209846497
+        ],
+        "minimum_world_m": [
+          -0.3595227301120758,
+          -0.05259198322892189,
+          0.4789792001247406
+        ]
+      },
+      "confidence": 0.02766573615372181,
+      "depth_point_count": 4313,
+      "detection_id": "det_TOP_full_frame_000",
+      "detector_crop_xyxy": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "detector_vocabulary": [
+        "screwdriver",
+        "wrench",
+        "hammer",
+        "tool",
+        "power driver",
+        "power drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "inference_source": "full_frame",
+      "physical_support_quality": 0.6997859636392406,
+      "raw_label": "wrench",
+      "raw_yolo_bbox_xyxy": [
+        621,
+        184,
+        656,
+        455
+      ],
+      "refined_bbox_xyxy": [
+        622,
+        184,
+        655,
+        453
+      ],
+      "refined_mask_area": 4313,
+      "source_region_id": "LEFT_DRAWER",
+      "stage_index": 1,
+      "status": "ACCEPTED_PRE_DEDUP"
+    },
+    {
+      "camera_id": "TOP",
+      "canonical_label": "tool",
+      "centroid_world_m": [
+        -0.281307190656662,
+        -0.04208553582429886,
+        0.49211713671684265
+      ],
+      "cloud_bounds_world_m": {
+        "maximum_world_m": [
+          -0.12731340527534485,
+          -0.026836084201931953,
+          0.49810460209846497
+        ],
+        "minimum_world_m": [
+          -0.3595227301120758,
+          -0.05259198322892189,
+          0.4789792001247406
+        ]
+      },
+      "confidence": 0.02052559331059456,
+      "depth_point_count": 4313,
+      "detection_id": "det_TOP_full_frame_001",
+      "detector_crop_xyxy": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "detector_vocabulary": [
+        "screwdriver",
+        "wrench",
+        "hammer",
+        "tool",
+        "power driver",
+        "power drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "inference_source": "full_frame",
+      "physical_support_quality": 0.7785360395238594,
+      "raw_label": "tool",
+      "raw_yolo_bbox_xyxy": [
+        621,
+        183,
+        656,
+        455
+      ],
+      "refined_bbox_xyxy": [
+        622,
+        184,
+        655,
+        453
+      ],
+      "refined_mask_area": 4313,
+      "source_region_id": "LEFT_DRAWER",
+      "stage_index": 1,
+      "status": "ACCEPTED_PRE_DEDUP"
+    },
+    {
+      "camera_id": "TOP",
+      "canonical_label": "screwdriver",
+      "centroid_world_m": [
+        -0.31042835116386414,
+        -0.04246916621923447,
+        0.4940313696861267
+      ],
+      "cloud_bounds_world_m": {
+        "maximum_world_m": [
+          -0.24796472489833832,
+          -0.027884243056178093,
+          0.49810460209846497
+        ],
+        "minimum_world_m": [
+          -0.3595227301120758,
+          -0.05259198322892189,
+          0.4832240343093872
+        ]
+      },
+      "confidence": 0.029247285798192024,
+      "depth_point_count": 3146,
+      "detection_id": "det_TOP_full_frame_supplemental_phillips_screwdriver_002",
+      "detector_crop_xyxy": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "detector_vocabulary": [
+        "screwdriver",
+        "wrench",
+        "hammer",
+        "tool",
+        "power driver",
+        "power drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "duplicate_group_id": "TOP_physical_001",
+      "inference_source": "full_frame_supplemental_phillips_screwdriver",
+      "physical_support_quality": 0.8327567432800774,
+      "raw_label": "Phillips screwdriver",
+      "raw_yolo_bbox_xyxy": [
+        620,
+        323,
+        657,
+        455
+      ],
+      "refined_bbox_xyxy": [
+        622,
+        323,
+        653,
+        453
+      ],
+      "refined_mask_area": 3146,
+      "source_region_id": "LEFT_DRAWER",
+      "stage_index": 1,
+      "status": "ACCEPTED"
+    },
+    {
+      "camera_id": "TOP",
+      "canonical_label": "power_driver",
+      "centroid_world_m": [
+        -0.3103078603744507,
+        -0.042465317994356155,
+        0.4940195679664612
+      ],
+      "cloud_bounds_world_m": {
+        "maximum_world_m": [
+          -0.24709884822368622,
+          -0.027884243056178093,
+          0.49810460209846497
+        ],
+        "minimum_world_m": [
+          -0.3595227301120758,
+          -0.05259198322892189,
+          0.4832240343093872
+        ]
+      },
+      "confidence": 0.0014588958583772182,
+      "depth_point_count": 3152,
+      "detection_id": "det_TOP_full_frame_supplemental_cordless_power_drill_003",
+      "detector_crop_xyxy": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "detector_vocabulary": [
+        "screwdriver",
+        "wrench",
+        "hammer",
+        "tool",
+        "power driver",
+        "power drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "inference_source": "full_frame_supplemental_cordless_power_drill",
+      "physical_support_quality": 0.8452168052330874,
+      "raw_label": "cordless power drill",
+      "raw_yolo_bbox_xyxy": [
+        618,
+        322,
+        658,
+        458
+      ],
+      "refined_bbox_xyxy": [
+        622,
+        322,
+        653,
+        453
+      ],
+      "refined_mask_area": 3152,
+      "source_region_id": "LEFT_DRAWER",
+      "stage_index": 1,
+      "status": "ACCEPTED_PRE_DEDUP"
+    },
+    {
+      "camera_id": "TOP",
+      "canonical_label": "wrench",
+      "confidence": 0.02766573615372181,
+      "detection_id": "det_TOP_full_frame_000",
+      "duplicate_group_id": "TOP_physical_001",
+      "inference_source": "full_frame",
+      "raw_label": "wrench",
+      "raw_yolo_bbox_xyxy": [
+        621,
+        184,
+        656,
+        455
+      ],
+      "refined_bbox_xyxy": [
+        622,
+        184,
+        655,
+        453
+      ],
+      "retained_detection_id": "det_TOP_full_frame_supplemental_phillips_screwdriver_002",
+      "source_region_id": "LEFT_DRAWER",
+      "stage_index": 1,
+      "status": "SUPPRESSED_DUPLICATE"
+    },
+    {
+      "camera_id": "TOP",
+      "canonical_label": "tool",
+      "confidence": 0.02052559331059456,
+      "detection_id": "det_TOP_full_frame_001",
+      "duplicate_group_id": "TOP_physical_001",
+      "inference_source": "full_frame",
+      "raw_label": "tool",
+      "raw_yolo_bbox_xyxy": [
+        621,
+        183,
+        656,
+        455
+      ],
+      "refined_bbox_xyxy": [
+        622,
+        184,
+        655,
+        453
+      ],
+      "retained_detection_id": "det_TOP_full_frame_supplemental_phillips_screwdriver_002",
+      "source_region_id": "LEFT_DRAWER",
+      "stage_index": 1,
+      "status": "SUPPRESSED_DUPLICATE"
+    },
+    {
+      "camera_id": "TOP",
+      "canonical_label": "power_driver",
+      "confidence": 0.0014588958583772182,
+      "detection_id": "det_TOP_full_frame_supplemental_cordless_power_drill_003",
+      "duplicate_group_id": "TOP_physical_001",
+      "inference_source": "full_frame_supplemental_cordless_power_drill",
+      "raw_label": "cordless power drill",
+      "raw_yolo_bbox_xyxy": [
+        618,
+        322,
+        658,
+        458
+      ],
+      "refined_bbox_xyxy": [
+        622,
+        322,
+        653,
+        453
+      ],
+      "retained_detection_id": "det_TOP_full_frame_supplemental_phillips_screwdriver_002",
+      "source_region_id": "LEFT_DRAWER",
+      "stage_index": 1,
+      "status": "SUPPRESSED_DUPLICATE"
+    }
+  ]
+}
