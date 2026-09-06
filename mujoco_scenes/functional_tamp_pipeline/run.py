@@ -72,6 +72,10 @@ class _RunState:
     terminal_status: str = "PIPELINE_EXCEPTION"
     failure_reason: str | None = None
     failure_category: str | None = None
+    canonicalization_succeeded: bool = False
+    functional_spec_complete: bool = False
+    candidate_plan: list[dict[str, Any]] | None = None
+    candidate_search_statistics: dict[str, Any] = field(default_factory=dict)
     observer_errors: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -208,21 +212,30 @@ def _load_or_acquire_specification(
             raise FileNotFoundError(f"Specification JSON not found: {spec_path}")
         raw_text = spec_path.read_text(encoding="utf-8")
         data = json.loads(raw_text)
-        graph = FunctionalRequirementGraph.from_dict(data)
-        graph.validate()
-        if graph.domain != domain:
-            raise ValueError(
-                f"Replayed specification domain {graph.domain!r} does not match requested domain {domain!r}"
-            )
-        if mode == "gt" and not graph.source.startswith("GT"):
-            raise ValueError(
-                f"Specification source {graph.source!r} is not compatible with requested mode {mode!r}"
-            )
-        if mode == "vlm" and not graph.source.startswith("VLM"):
-            raise ValueError(
-                f"Specification source {graph.source!r} is not compatible with requested mode {mode!r}"
-            )
-        return graph, "replayed_provider_output", str(spec_path.resolve())
+        if "nodes" in data and "domain" in data:
+            graph = FunctionalRequirementGraph.from_dict(data)
+            graph.validate()
+            if graph.domain != domain:
+                raise ValueError(
+                    f"Replayed specification domain {graph.domain!r} does not match requested domain {domain!r}"
+                )
+            if mode == "gt" and not graph.source.startswith("GT"):
+                raise ValueError(
+                    f"Specification source {graph.source!r} is not compatible with requested mode {mode!r}"
+                )
+            if mode == "vlm" and not graph.source.startswith("VLM"):
+                raise ValueError(
+                    f"Specification source {graph.source!r} is not compatible with requested mode {mode!r}"
+                )
+            return graph, "replayed_provider_output", str(spec_path.resolve())
+        else:
+            if "content" in data and isinstance(data["content"], str):
+                raw_doc = json.loads(data["content"])
+            else:
+                raw_doc = data
+            provider = provider_for_mode(mode)
+            specification = provider.provide(domain, task, images, raw_document=raw_doc)
+            return specification, "replayed_provider_output", str(spec_path.resolve())
 
     provider = provider_for_mode(mode)
     specification = provider.provide(domain, task, images)
@@ -235,7 +248,7 @@ def _acquire_spec_or_fail(
     images: list[Path],
     specification_json: Path | str | None,
 ) -> PipelineResult | None:
-    if state.mode == "vlm" and specification_json is None:
+    if state.mode == "vlm":
         try:
             state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
                 domain=state.domain,
@@ -244,12 +257,15 @@ def _acquire_spec_or_fail(
                 images=images,
                 specification_json=specification_json,
             )
+            state.canonicalization_succeeded = True
             return None
         except VLMSpecificationError as error:
             state.terminal_status = "VLM_SPEC_FAILED"
             cat = getattr(error, "category", None) or "MALFORMED_VLM_SPECIFICATION"
             state.failure_category = cat
             state.failure_reason = str(error)
+            state.canonicalization_succeeded = False
+            state.functional_spec_complete = False
             res = PipelineResult(
                 domain=state.domain,
                 variant=state.variant,
@@ -257,6 +273,8 @@ def _acquire_spec_or_fail(
                 status="VLM_SPEC_FAILED",
                 failure_reason=str(error),
                 failure_category=cat,
+                canonicalization_succeeded=False,
+                functional_spec_complete=False,
             )
             _write_json(state.run_dir / "result.json", res.to_dict())
             return res
@@ -268,6 +286,7 @@ def _acquire_spec_or_fail(
             images=images,
             specification_json=specification_json,
         )
+        state.canonicalization_succeeded = True
         return None
 
 
@@ -300,6 +319,10 @@ def _write_run_manifest(state: _RunState) -> None:
         "finished_at_utc": state.finished_at_utc,
         "pipeline_runtime_seconds": round(state.runtime_sec, 4),
         "terminal_status": state.terminal_status,
+        "canonicalization_succeeded": state.canonicalization_succeeded,
+        "functional_spec_complete": state.functional_spec_complete,
+        "candidate_plan": state.candidate_plan,
+        "candidate_search_statistics": state.candidate_search_statistics,
         "failure_reason": state.failure_reason,
         "failure_category": state.failure_category,
         "observer_errors": list(state.observer_errors),
@@ -607,6 +630,8 @@ def _run_pipeline_impl(
         result = PipelineResult(
             domain=state.domain, variant=state.variant, mode=state.mode, status=satisfaction.status,
             inspected_regions=inspected, failure_reason=reason, failure_category=None,
+            canonicalization_succeeded=True,
+            functional_spec_complete=False,
         )
         _write_json(state.run_dir / "result.json", result.to_dict())
         return result
@@ -618,44 +643,67 @@ def _run_pipeline_impl(
 
     print("[5/5] A* planning", flush=True)
     _emit_event(guarded_observer, "stage_changed", {"stage": "planning"})
-    planned = plan_with_common_astar(
-        WorkshopPlanningCompiler(), satisfaction.assignment, adapter.planning_context()
-    )
-    _write_json(state.run_dir / "action_plan.json", {
-        "planner": planned.search.statistics,
-        "actions": list(planned.actions),
-        "validation": planned.validation,
-        "exploratory_open_actions_excluded": True,
-    })
-    from .audit import audit_plan_grounding
-    plan_audit = audit_plan_grounding(
-        state.specification, adapter.graph, satisfaction, planned.actions, home_region=SURFACE
-    )
-    _write_json(state.run_dir / "plan_grounding_audit.json", plan_audit)
-    _emit_event(guarded_observer, "plan_ready", {
-        "actions": list(planned.actions),
-        "search_statistics": planned.search.statistics,
-    })
-    for action in planned.actions:
-        print(
-            f"  {action['action_index']:02d}. {action['operator']}"
-            f"({', '.join(action['arguments'])})",
-            flush=True,
+    try:
+        from .errors import PlanningCompilationError
+        planned = plan_with_common_astar(
+            WorkshopPlanningCompiler(), satisfaction.assignment, adapter.planning_context()
         )
+        _write_json(state.run_dir / "action_plan.json", {
+            "planner": planned.search.statistics,
+            "actions": list(planned.actions),
+            "validation": planned.validation,
+            "exploratory_open_actions_excluded": True,
+        })
+        from .audit import audit_plan_grounding
+        plan_audit = audit_plan_grounding(
+            state.specification, adapter.graph, satisfaction, planned.actions, home_region=SURFACE
+        )
+        _write_json(state.run_dir / "plan_grounding_audit.json", plan_audit)
+        _emit_event(guarded_observer, "plan_ready", {
+            "actions": list(planned.actions),
+            "search_statistics": planned.search.statistics,
+        })
+        for action in planned.actions:
+            print(
+                f"  {action['action_index']:02d}. {action['operator']}"
+                f"({', '.join(action['arguments'])})",
+                flush=True,
+            )
 
-    result = PipelineResult(
-        domain=state.domain,
-        variant=state.variant,
-        mode=state.mode,
-        status="ACTION_SEQUENCE_READY",
-        inspected_regions=inspected,
-        assignment=satisfaction.assignment,
-        plan=planned.actions,
-        search_statistics=planned.search.statistics,
-        failure_reason=None,
-    )
-    _write_json(state.run_dir / "result.json", result.to_dict())
-    return result
+        result = PipelineResult(
+            domain=state.domain,
+            variant=state.variant,
+            mode=state.mode,
+            status="ACTION_SEQUENCE_READY",
+            inspected_regions=inspected,
+            assignment=satisfaction.assignment,
+            plan=planned.actions,
+            candidate_plan=planned.actions,
+            search_statistics=planned.search.statistics,
+            candidate_search_statistics=planned.search.statistics,
+            failure_reason=None,
+            canonicalization_succeeded=True,
+            functional_spec_complete=True,
+        )
+        _write_json(state.run_dir / "result.json", result.to_dict())
+        return result
+    except PlanningCompilationError as exc:
+        print(f"A* PLANNING COMPILATION REJECTED: {exc}", flush=True)
+        result = PipelineResult(
+            domain=state.domain,
+            variant=state.variant,
+            mode=state.mode,
+            status="CANDIDATE_GRAPH_UNSATISFIABLE",
+            inspected_regions=inspected,
+            assignment=satisfaction.assignment,
+            plan=(),
+            candidate_plan=(),
+            failure_reason=str(exc),
+            canonicalization_succeeded=True,
+            functional_spec_complete=False,
+        )
+        _write_json(state.run_dir / "result.json", result.to_dict())
+        return result
 
 
 def run_pipeline(
@@ -727,6 +775,12 @@ def run_pipeline(
             observation_images=observation_images,
         )
         state.terminal_status = result.status
+        state.canonicalization_succeeded = result.canonicalization_succeeded
+        state.functional_spec_complete = result.functional_spec_complete
+        state.candidate_plan = list(result.candidate_plan) if result.candidate_plan else None
+        state.candidate_search_statistics = result.candidate_search_statistics
+        state.failure_reason = result.failure_reason
+        state.failure_category = result.failure_category
         _emit_event(guarded_observer, "stage_changed", {"stage": "complete"})
         _emit_event(guarded_observer, "run_finished", {
             "terminal_status": result.status,

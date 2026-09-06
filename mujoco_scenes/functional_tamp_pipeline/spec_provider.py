@@ -15,6 +15,7 @@ class FunctionalSpecProvider(ABC):
         domain: str,
         task_instruction: str,
         observation_images: list[Path] | None = None,
+        raw_document: dict[str, Any] | None = None,
     ) -> FunctionalRequirementGraph:
         """Return a normalized functional requirement graph; never a physical assignment."""
 

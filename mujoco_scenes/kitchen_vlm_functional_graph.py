@@ -534,6 +534,7 @@ def compile_vlm_functional_graph(
         raise MalformedVLMSpecificationError("VLM functional specification contains duplicate role IDs")
 
     roles: dict[str, Any] = {}
+    raw_role_by_id: dict[str, dict[str, Any]] = {raw_role_ids[i]: r for i, r in enumerate(roles_raw)}
     vocabulary: dict[str, list[str]] = {}
     canonical_predicates: dict[str, list[Any]] = {"unary": [], "binary": []}
     raw_role_to_canonical: dict[str, str] = {}
@@ -979,11 +980,48 @@ def compile_vlm_functional_graph(
             raise MalformedVLMSpecificationError(f"Operation group {raw_group_id!r} is missing non-empty 'function' field")
 
         fn_group = map_kitchen_interaction_group_function(raw_fn)
+        multi_signal_resolved = False
         if fn_group is None:
-            raise UnmappedFunctionalConceptError(
-                f"Operation group {raw_group_id!r} function {raw_fn!r} cannot be mapped to any active Kitchen "
-                f"operation group (available: {list(KITCHEN_INTERACTION_GROUP_ALIASES.keys())})"
-            )
+            # Multi-signal operation-group interpretation:
+            # Check if broad operation phrase + typed endpoints + capability + relations + task instruction
+            # uniquely resolve to a supported operation group.
+            norm_fn = _phrase(raw_fn)
+            norm_instr = _phrase(task_instruction)
+            raw_t_dict = raw_role_by_id.get(raw_tool_role, {})
+            tool_fn = _phrase(f"{raw_t_dict.get('function', '')} {raw_t_dict.get('description', '')}")
+            raw_rels = [
+                _phrase(rel.get("relation", ""))
+                for rel in valid_doc.get("functional_relations", [])
+                if _identifier(rel.get("subject_role"), "subject") == raw_tool_role
+                and _identifier(rel.get("object_role"), "object") == raw_target_role
+            ]
+
+            if tool_role == "coffee_stirrer" and target_role == "coffee_container":
+                has_coffee_context = any(w in norm_fn for w in ("coffee", "beverage", "drink", "prepare"))
+                has_stir_evidence = (
+                    any(w in tool_fn for w in ("stir", "mix", "agitate", "blend"))
+                    or any(any(w in r for w in ("fit", "insert", "reach", "stir", "inside")) for r in raw_rels)
+                    or any(w in norm_instr for w in ("stir", "stirring", "mix", "mixing"))
+                )
+                if has_coffee_context and has_stir_evidence:
+                    fn_group = "coffee_stirring"
+                    multi_signal_resolved = True
+
+            elif tool_role == "soup_eating_utensil" and target_role == "soup_container":
+                has_soup_context = any(w in norm_fn for w in ("soup", "serve", "eat", "consume"))
+                has_eating_evidence = (
+                    any(w in tool_fn for w in ("eat", "consume", "serve", "feed"))
+                    or any(any(w in r for w in ("fit", "insert", "reach", "inside")) for r in raw_rels)
+                )
+                if has_soup_context and has_eating_evidence:
+                    fn_group = "soup_serving"
+                    multi_signal_resolved = True
+
+            if fn_group is None:
+                raise UnmappedFunctionalConceptError(
+                    f"Operation group {raw_group_id!r} function {raw_fn!r} cannot be mapped to any active Kitchen "
+                    f"operation group (available: {list(KITCHEN_INTERACTION_GROUP_ALIASES.keys())})"
+                )
 
         if tool_role == "CONTEXTUAL_ENVIRONMENT" or target_role == "CONTEXTUAL_ENVIRONMENT":
             concept_accounting["operation_groups"].append({
@@ -1147,7 +1185,7 @@ def compile_vlm_functional_graph(
             "canonical_group": canon_group_id,
             "raw_function": str(raw_fn),
             "canonical_function": canon_fn,
-            "function_mapping_status": "PRESERVED",
+            "function_mapping_status": "MULTI_SIGNAL_OPERATION_INTERPRETATION" if multi_signal_resolved else "PRESERVED",
             "tool_role": tool_role,
             "target_role": target_role,
             "required_target_count": req_target_count,

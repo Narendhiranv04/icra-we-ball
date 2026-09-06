@@ -27,13 +27,14 @@ class VLMSpecProvider(FunctionalSpecProvider):
         domain: str,
         task_instruction: str,
         observation_images: list[Path] | None = None,
+        raw_document: dict[str, Any] | None = None,
     ) -> FunctionalRequirementGraph:
         if domain == "workshop":
-            graph = self._workshop(task_instruction, observation_images or [])
+            graph = self._workshop(task_instruction, observation_images or [], raw_document=raw_document)
         elif domain == "kitchen":
-            graph = self._kitchen(task_instruction, observation_images or [])
+            graph = self._kitchen(task_instruction, observation_images or [], raw_document=raw_document)
         elif domain == "living_room":
-            graph = self._living_room(task_instruction, observation_images or [])
+            graph = self._living_room(task_instruction, observation_images or [], raw_document=raw_document)
         else:
             raise NotImplementedError(f"VLM specification adapter is not implemented for {domain}")
         try:
@@ -51,6 +52,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
         observation_images: list[Path],
         provider: FMRequirementProvider | None = None,
         adapter: FMAdapter | None = None,
+        raw_document: dict[str, Any] | None = None,
     ) -> FunctionalRequirementGraph:
         from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
         from mujoco_scenes.workshop_phase1.requirements import (
@@ -65,7 +67,9 @@ class VLMSpecProvider(FunctionalSpecProvider):
             provider.fm_adapter = adapter
 
         provider.get_requirements(
-            task_instruction, observation_images=observation_images
+            task_instruction,
+            observation_images=observation_images,
+            raw_document=raw_document,
         )
 
         nodes: dict[str, FunctionalRole] = {}
@@ -158,18 +162,22 @@ class VLMSpecProvider(FunctionalSpecProvider):
         task_instruction: str,
         observation_images: list[Path],
         adapter: FMAdapter | None = None,
+        raw_document: dict[str, Any] | None = None,
     ) -> FunctionalRequirementGraph:
         from mujoco_scenes.kitchen_vlm_functional_graph import (
             KITCHEN_OBSERVABLE_REGIONS, compile_vlm_functional_graph,
         )
         from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter
 
-        if adapter is None:
-            adapter = FMAdapter()
-        raw = adapter.generate_kitchen_functional_graph(
-            task_instruction,
-            observation_images=observation_images,
-        )
+        if raw_document is not None:
+            raw = raw_document
+        else:
+            if adapter is None:
+                adapter = FMAdapter()
+            raw = adapter.generate_kitchen_functional_graph(
+                task_instruction,
+                observation_images=observation_images,
+            )
         contract, vocabularies, trace = compile_vlm_functional_graph(
             raw,
             task_instruction=task_instruction,
@@ -308,6 +316,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
         observation_images: list[Path],
         provider: EnvironmentVLMRequirementProvider | None = None,
         adapter: FMAdapter | None = None,
+        raw_document: dict[str, Any] | None = None,
     ) -> FunctionalRequirementGraph:
         from mujoco_scenes.environment_vlm_requirements import (
             EnvironmentVLMRequirementProvider,
@@ -322,6 +331,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
         result = provider.generate_canonical(
             task_instruction,
             observation_images=observation_images,
+            raw_document=raw_document,
         )
         requirements = result["normalized_requirements"]
         canonical_relations = result.get("normalized_relations", [])

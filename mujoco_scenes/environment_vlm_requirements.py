@@ -2003,18 +2003,38 @@ class EnvironmentVLMRequirementProvider:
                         f"Interaction group function {grp.get('function')!r} cannot be mapped to any Living Room operation group"
                     )
 
-                if (t_canon, tgt_canon) == ("CUP_SAUCER_SET", "PERSONAL_CUP_SAUCER_REGION"):
-                    t_canon, tgt_canon = "PERSONAL_CUP_SAUCER_REGION", "CUP_SAUCER_SET"
-                    group_dir_status = "NORMALIZED_TO_CANONICAL_SIGNATURE"
-                else:
-                    group_dir_status = "PRESERVED"
+                import itertools
+                endpoints = [t_key, tgt_key, ctx_key]
+                valid_perms = []
+                for p_tool, p_tgt, p_ctx in itertools.permutations(endpoints):
+                    c_tool = raw_id_to_canon.get(p_tool)
+                    c_tgt = raw_id_to_canon.get(p_tgt)
+                    c_ctx = raw_id_to_canon.get(p_ctx)
+                    if (c_tool, c_tgt, c_ctx) == ("PERSONAL_CUP_SAUCER_REGION", "CUP_SAUCER_SET", "SEATING_POSITION"):
+                        tool_raw_rec = next((r for r in raw_requirements if r["id"] == p_tool), None)
+                        tgt_raw_rec = next((r for r in raw_requirements if r["id"] == p_tgt), None)
+                        ctx_raw_rec = next((r for r in raw_requirements if r["id"] == p_ctx), None)
+                        if tool_raw_rec and tgt_raw_rec and ctx_raw_rec:
+                            if tool_raw_rec.get("entity_kind") in ("REGION", "OBJECT") and tgt_raw_rec.get("entity_kind") == "OBJECT":
+                                valid_perms.append((p_tool, p_tgt, p_ctx))
 
-                if fn_canon != "personal_support_group" or (t_canon, tgt_canon, ctx_canon) != (
-                    "PERSONAL_CUP_SAUCER_REGION", "CUP_SAUCER_SET", "SEATING_POSITION"
-                ):
+                if len(valid_perms) == 1:
+                    norm_t_key, norm_tgt_key, norm_ctx_key = valid_perms[0]
+                    if (norm_t_key, norm_tgt_key, norm_ctx_key) != (t_key, tgt_key, ctx_key):
+                        group_dir_status = "NORMALIZED_TO_CANONICAL_SIGNATURE"
+                    else:
+                        group_dir_status = "PRESERVED"
+                    t_key, tgt_key, ctx_key = norm_t_key, norm_tgt_key, norm_ctx_key
+                    t_canon, tgt_canon, ctx_canon = raw_id_to_canon[t_key], raw_id_to_canon[tgt_key], raw_id_to_canon[ctx_key]
+                elif len(valid_perms) > 1:
+                    raise AmbiguousCanonicalizationError(
+                        f"Multiple valid endpoint permutations for group {gid!r} under function {fn_canon!r}: {valid_perms}"
+                    )
+                else:
                     raise MalformedVLMSpecificationError(
                         f"Group endpoints ({t_canon}, {tgt_canon}, {ctx_canon}) contradict function {grp.get('function')!r}"
                     )
+
                 if fn_canon in seen_group_canonical_ids:
                     continue
                 seen_group_canonical_ids.add(fn_canon)
@@ -2026,11 +2046,8 @@ class EnvironmentVLMRequirementProvider:
                     if map_living_room_operation_group_function(g.get("function", "")) == fn_canon
                 ]
                 total_req_count = sum(int(g.get("required_target_count", 0)) for g in matching_groups)
-                if total_req_count != expected_target_count:
-                    raise MalformedVLMSpecificationError(
-                        f"Group required_target_count={total_req_count} does not match target role count={expected_target_count}"
-                    )
                 req_count = expected_target_count
+                req_count_status = "PRESERVED" if total_req_count == expected_target_count else "RECONCILED_WITH_TARGET_ROLE_CARDINALITY"
 
                 usage_policy = grp["usage_policy"]
                 if usage_policy == "SEQUENTIAL_REUSE_ALLOWED":
@@ -2043,23 +2060,49 @@ class EnvironmentVLMRequirementProvider:
                         f"Living Room group requires usage_policy DEDICATED_PER_TARGET or SEQUENTIAL_REUSE_ALLOWED, got {usage_policy!r}"
                     )
 
-                req_rels: list[str] = []
-                for r in grp["required_relations"]:
-                    s, p, o, _ = canonicalize_living_room_relation(r, t_canon, tgt_canon)
-                    if p != "FITS_SET_ON":
-                        raise MalformedVLMSpecificationError(f"Group required_relations must be FITS_SET_ON, got {p}")
-                    req_rels.append(p)
-                if not req_rels:
-                    raise MalformedVLMSpecificationError("Group required_relations cannot be empty")
+                all_group_rels = list(grp.get("required_relations", [])) + list(grp.get("context_relations", []))
+                for r_item in self.raw_decomposition.get("functional_relations", []):
+                    s_r = _resolve_raw_role_id(r_item.get("subject_role"))
+                    o_r = _resolve_raw_role_id(r_item.get("object_role"))
+                    if {s_r, o_r} == {t_key, tgt_key} or {s_r, o_r} == {t_key, ctx_key}:
+                        all_group_rels.append(r_item.get("relation", ""))
 
+                req_rels: list[str] = []
                 ctx_rels: list[str] = []
-                for r in grp.get("context_relations", []):
-                    s, p, o, _ = canonicalize_living_room_relation(r, t_canon, ctx_canon)
-                    if p != "NEAR_SEAT":
-                        raise MalformedVLMSpecificationError(f"Group context_relations must be NEAR_SEAT, got {p}")
-                    ctx_rels.append(p)
+                for r in all_group_rels:
+                    try:
+                        _, p, _, _ = canonicalize_living_room_relation(r, t_canon, tgt_canon)
+                        if p == "FITS_SET_ON" and "FITS_SET_ON" not in req_rels:
+                            req_rels.append("FITS_SET_ON")
+                    except Exception:
+                        pass
+                    try:
+                        _, p, _, _ = canonicalize_living_room_relation(r, t_canon, ctx_canon)
+                        if p == "NEAR_SEAT" and "NEAR_SEAT" not in ctx_rels:
+                            ctx_rels.append("NEAR_SEAT")
+                    except Exception:
+                        pass
+                    norm_r = _phrase(r)
+                    if any(_contains_phrase(norm_r, k) for k in (
+                        "placed on", "place on", "support", "supports", "hold", "holds", "can hold",
+                        "fits set on", "fits on", "rest on", "rests on",
+                    )):
+                        if "FITS_SET_ON" not in req_rels:
+                            req_rels.append("FITS_SET_ON")
+                    if any(_contains_phrase(norm_r, k) for k in (
+                        "near", "beside", "close to", "accessible", "near seat", "next to",
+                    )):
+                        if "NEAR_SEAT" not in ctx_rels:
+                            ctx_rels.append("NEAR_SEAT")
+
+                if not req_rels:
+                    raise MalformedVLMSpecificationError(
+                        f"Group {gid!r} lacks evidence for required support relation FITS_SET_ON between {t_canon} and {tgt_canon}"
+                    )
                 if not ctx_rels:
-                    raise MalformedVLMSpecificationError("Group context_relations cannot be empty")
+                    raise MalformedVLMSpecificationError(
+                        f"Group {gid!r} lacks evidence for required context relation NEAR_SEAT between {t_canon} and {ctx_canon}"
+                    )
 
                 canonical_operation_groups.append({
                     "id": fn_canon,
@@ -2109,6 +2152,38 @@ class EnvironmentVLMRequirementProvider:
                     )
                 s_canon = raw_id_to_canon[s_key]
                 o_canon = raw_id_to_canon[o_key]
+                endpoints = {s_canon, o_canon}
+
+                # Absorb conflated support relation (e.g. REMOTE placed on PERSONAL_CUP_SAUCER_REGION)
+                if endpoints == {"REMOTE", "PERSONAL_CUP_SAUCER_REGION"}:
+                    concept_accounting["relations"].append({
+                        "raw_subject_role_id": str(s),
+                        "raw_relation_text": str(r),
+                        "raw_object_role_id": str(o),
+                        "canonical_subject_role_id": "PERSONAL_CUP_SAUCER_REGION",
+                        "canonical_predicate": "FITS_ON",
+                        "canonical_object_role_id": "REMOTE",
+                        "direction_status": "ABSORBED_CONFLATED_SUPPORT",
+                        "status": "ABSORBED_CONFLATED_SUPPORT_RELATION",
+                        "reason": "Relation between remote and personal support surface absorbed due to conflated support roles",
+                    })
+                    continue
+
+                # Absorb indirect proximity relation between payload and seating position
+                if endpoints in ({"CUP_SAUCER_SET", "SEATING_POSITION"}, {"REMOTE", "SEATING_POSITION"}):
+                    concept_accounting["relations"].append({
+                        "raw_subject_role_id": str(s),
+                        "raw_relation_text": str(r),
+                        "raw_object_role_id": str(o),
+                        "canonical_subject_role_id": s_canon,
+                        "canonical_predicate": "NEAR_SEAT",
+                        "canonical_object_role_id": o_canon,
+                        "direction_status": "ABSORBED_INDIRECT_PROXIMITY",
+                        "status": "ABSORBED_INDIRECT_PROXIMITY_RELATION",
+                        "reason": "Indirect proximity relation between payload and seating position absorbed; canonical proximity is represented through support region NEAR_SEAT",
+                    })
+                    continue
+
                 canon_s, canon_p, canon_o, dir_status = canonicalize_living_room_relation(
                     r, s_canon, o_canon
                 )

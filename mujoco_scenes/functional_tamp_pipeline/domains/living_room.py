@@ -16,6 +16,7 @@ from mujoco_scenes.region_ablation import create_region_semantic_detector
 from mujoco_scenes.region_ablation2 import DEFAULT_EVALUATION_CONFIG
 
 from ..models import FunctionalSpecification, PipelineResult
+from .. import role_semantic_ontology as semantic_ontology
 from ..scene_graph import ObservedNode, ObservedObject, ObservedRelation, ObservedSceneGraph
 
 
@@ -83,6 +84,20 @@ def compile_living_room_task_from_graph(graph: FunctionalRequirementGraph) -> di
                 "rejected_categories": {
                     cat: 1 for cat in ("floor", "rug", "media_console", "bookshelf", "chair", "armchair", "sofa")
                     if cat not in node.semantic_categories
+                },
+            }
+
+    for fallback_role, fallback_canon in (
+        ("personal_cup_saucer_region", "PERSONAL_CUP_SAUCER_REGION"),
+        ("shared_remote_region", "SHARED_REMOTE_REGION"),
+    ):
+        if fallback_role not in semantic_region_roles:
+            cats = semantic_ontology.get_system_role_semantic_categories("living_room", fallback_canon)
+            semantic_region_roles[fallback_role] = {
+                "accepted_categories": {cat: 1 for cat in cats},
+                "rejected_categories": {
+                    cat: 1 for cat in ("floor", "rug", "media_console", "bookshelf", "chair", "armchair", "sofa")
+                    if cat not in cats
                 },
             }
 
@@ -544,7 +559,23 @@ def run_to_plan(
 
     plan_dir = output_dir / "action_sequence"
     planning = run_living_room_symbolic_pipeline(phase1, plan_dir)
-    plan_payload = json.loads((plan_dir / "plan.json").read_text(encoding="utf-8"))
+    plan_file = plan_dir / "plan.json"
+    if planning.get("status") != "SUCCESS" or not plan_file.exists():
+        fail_detail = planning.get("details") or planning.get("reason") or "Symbolic problem compilation rejected"
+        return PipelineResult(
+            domain="living_room",
+            variant=variant_label,
+            mode=mode,
+            status="CANDIDATE_GRAPH_UNSATISFIABLE",
+            assignment=ground_result.assignment,
+            plan=(),
+            candidate_plan=(),
+            canonicalization_succeeded=True,
+            functional_spec_complete=False,
+            failure_reason=f"CANDIDATE_GRAPH_UNSATISFIABLE: {fail_detail}",
+        )
+
+    plan_payload = json.loads(plan_file.read_text(encoding="utf-8"))
     actions = tuple({
         "action_index": index + 1,
         "operator": row["operator"],
@@ -564,7 +595,15 @@ def run_to_plan(
         encoding="utf-8",
     )
     return PipelineResult(
-        domain="living_room", variant=variant_label, mode=mode,
-        status="ACTION_SEQUENCE_READY", assignment=ground_result.assignment, plan=actions,
+        domain="living_room",
+        variant=variant_label,
+        mode=mode,
+        status="ACTION_SEQUENCE_READY",
+        assignment=ground_result.assignment,
+        plan=actions,
+        candidate_plan=actions,
         search_statistics=planning.get("search_statistics", {}),
+        candidate_search_statistics=planning.get("search_statistics", {}),
+        canonicalization_succeeded=True,
+        functional_spec_complete=True,
     )

@@ -92,8 +92,12 @@ class WorkshopPlanningCompiler:
     def compile_problem(
         self, assignment: dict[str, str], context: dict[str, Any]
     ) -> SymbolicProblem:
-        driver = assignment["driver"]
-        fastener = assignment["fastener"]
+        driver = assignment.get("driver")
+        fastener = assignment.get("fastener")
+        if not driver or not fastener:
+            from ..errors import PlanningCompilationError
+            missing = [r for r, val in [("driver", driver), ("fastener", fastener)] if not val]
+            raise PlanningCompilationError(f"CANDIDATE_GRAPH_UNSATISFIABLE: Missing required role(s) {missing} to instantiate fastening operator")
         sources = context.get("sources", {})
         driver_source = sources.get(driver, assignment.get("driver_source", SURFACE))
         fastener_source = sources.get(fastener, assignment.get("fastener_source", SURFACE))
@@ -324,17 +328,12 @@ class WorkshopDomainAdapter:
         driver_categories = list(driver_node.semantic_categories)
 
         fastener_node = self.specification.nodes.get("fastener")
-        if fastener_node is None:
-            from ..errors import MalformedVLMSpecificationError
-            raise MalformedVLMSpecificationError(
-                "Workshop functional specification must contain canonical role 'fastener'"
-            )
-        if not fastener_node.semantic_categories:
+        if fastener_node is not None and not fastener_node.semantic_categories:
             from ..errors import MalformedVLMSpecificationError
             raise MalformedVLMSpecificationError(
                 "Workshop functional role 'fastener' must have non-empty candidate_categories"
             )
-        fastener_categories = list(fastener_node.semantic_categories)
+        fastener_categories = list(fastener_node.semantic_categories) if fastener_node is not None else []
 
         for track in self.controller.tracker.tracks.values():
             if track.current_semantic_belief.get("status") == "SUPPORTED":

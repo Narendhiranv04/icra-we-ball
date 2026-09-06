@@ -90,6 +90,22 @@ class GFReferenceEvaluationResult:
     operation_group_recall: float = 0.0
     operation_group_precision: float = 0.0
 
+    # Projection & Raw VLM role metrics
+    environment_projected_roles: tuple[str, ...] = ()
+    raw_vlm_roles: tuple[str, ...] = ()
+    raw_vlm_role_recall: float = 0.0
+    raw_vlm_role_precision: float = 0.0
+    raw_vlm_role_f1: float = 0.0
+    runtime_contract_role_coverage: float = 0.0
+    functional_spec_complete: bool = False
+
+    # Pipeline Phase Eligibility & Execution Counts
+    candidate_grounding_eligible: bool = False
+    candidate_grounding_succeeded: bool = False
+    candidate_plan_found: bool = False
+    full_task_plan_eligible: bool = False
+    full_task_plan_found: bool = False
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "domain": self.domain,
@@ -100,6 +116,8 @@ class GFReferenceEvaluationResult:
                 "matched": list(self.matched_roles),
                 "missing": list(self.missing_roles),
                 "extra": list(self.extra_roles),
+                "environment_projected_roles": list(self.environment_projected_roles),
+                "raw_vlm_roles": list(self.raw_vlm_roles),
                 "attribute_mismatches": self.role_attribute_mismatches,
                 "cardinality_diagnostics": self.role_cardinality_diagnostics,
                 "normalization_diagnostics": self.role_normalization_diagnostics,
@@ -144,6 +162,19 @@ class GFReferenceEvaluationResult:
                 "role_precision": self.role_precision,
                 "operation_group_recall": self.operation_group_recall,
                 "operation_group_precision": self.operation_group_precision,
+                # New programmatic metrics
+                "environment_projected_roles": list(self.environment_projected_roles),
+                "raw_vlm_roles": list(self.raw_vlm_roles),
+                "raw_vlm_role_recall": self.raw_vlm_role_recall,
+                "raw_vlm_role_precision": self.raw_vlm_role_precision,
+                "raw_vlm_role_f1": self.raw_vlm_role_f1,
+                "runtime_contract_role_coverage": self.runtime_contract_role_coverage,
+                "functional_spec_complete": self.functional_spec_complete,
+                "candidate_grounding_eligible": self.candidate_grounding_eligible,
+                "candidate_grounding_succeeded": self.candidate_grounding_succeeded,
+                "candidate_plan_found": self.candidate_plan_found,
+                "full_task_plan_eligible": self.full_task_plan_eligible,
+                "full_task_plan_found": self.full_task_plan_found,
             },
         }
 
@@ -154,6 +185,7 @@ def evaluate_gf_against_reference(
     *,
     domain: str | None = None,
     task_instruction: str | None = None,
+    pipeline_result: Any | None = None,
 ) -> GFReferenceEvaluationResult:
     """Deterministically compare candidate G_F against reference G_F without mutating candidate."""
     # Pre-evaluation state snapshots to verify zero mutation invariance
@@ -462,6 +494,82 @@ def evaluate_gf_against_reference(
     assert reference_graph.operation_groups == ref_ops_snapshot, "Evaluator violated reference_graph.operation_groups non-mutation invariant"
     assert reference_graph.to_dict() == ref_dict_snapshot, "Evaluator violated reference_graph.to_dict() non-mutation invariant"
 
+    # Track environment projected vs raw VLM roles
+    trace = candidate_graph.metadata.get("canonicalization_trace", {})
+    acct_roles = trace.get("concept_accounting", {}).get("roles", {})
+    env_projected: set[str] = set()
+    for raw_id, info in acct_roles.items():
+        if not isinstance(info, dict):
+            continue
+        canon = info.get("canonical_role") or info.get("canonical_func")
+        if not canon or canon not in cand_roles:
+            continue
+        status = str(info.get("status", "")).upper()
+        source = str(info.get("role_semantic_source", "")).upper()
+        if (
+            "PROJECTION" in status
+            or "DERIVED" in status
+            or "SYNTHESIZED" in status
+            or "DERIVED" in source
+            or "PROJECTION" in source
+            or "ENVIRONMENT" in source
+        ):
+            env_projected.add(canon)
+
+    raw_to_canon = trace.get("raw_role_to_canonical") or trace.get("raw_id_to_canonical") or {}
+    if raw_to_canon:
+        mapped_canon_roles = set(raw_to_canon.values())
+        for r in cand_roles:
+            if r not in mapped_canon_roles:
+                env_projected.add(r)
+
+    environment_projected_roles = tuple(sorted(env_projected))
+    raw_vlm_roles = tuple(sorted(cand_roles - env_projected))
+    raw_vlm_roles_set = set(raw_vlm_roles)
+    matched_raw_roles = raw_vlm_roles_set & ref_roles
+    raw_vlm_role_recall = len(matched_raw_roles) / len(ref_roles) if ref_roles else 1.0
+    raw_vlm_role_precision = len(matched_raw_roles) / len(raw_vlm_roles_set) if raw_vlm_roles_set else 0.0
+    if raw_vlm_role_precision + raw_vlm_role_recall > 0:
+        raw_vlm_role_f1 = (2.0 * raw_vlm_role_precision * raw_vlm_role_recall) / (raw_vlm_role_precision + raw_vlm_role_recall)
+    else:
+        raw_vlm_role_f1 = 0.0
+
+    runtime_contract_role_coverage = len(matched_roles) / len(ref_roles) if ref_roles else 1.0
+    functional_spec_complete = bool(reference_complete)
+
+    candidate_grounding_eligible = len(cand_roles) > 0
+    candidate_grounding_succeeded = False
+    candidate_plan_found = False
+    full_task_plan_eligible = functional_spec_complete
+    full_task_plan_found = False
+
+    if pipeline_result is not None:
+        p_res = pipeline_result
+        if hasattr(p_res, "to_dict"):
+            p_dict = p_res.to_dict()
+        elif isinstance(p_res, dict):
+            p_dict = p_res
+        else:
+            p_dict = {}
+
+        p_status = p_dict.get("status")
+        p_assignment = p_dict.get("assignment")
+        p_plan = p_dict.get("plan")
+        p_cand_plan = p_dict.get("candidate_plan")
+
+        if p_assignment:
+            candidate_grounding_succeeded = True
+        elif p_status in ("ACTION_SEQUENCE_READY", "CANDIDATE_GRAPH_UNSATISFIABLE") and p_assignment is not None:
+            candidate_grounding_succeeded = True
+
+        if p_cand_plan and len(p_cand_plan) > 0:
+            candidate_plan_found = True
+        elif p_plan and len(p_plan) > 0:
+            candidate_plan_found = True
+
+        if functional_spec_complete and candidate_plan_found:
+            full_task_plan_found = True
+
     return GFReferenceEvaluationResult(
         domain=target_domain,
         task_instruction=target_instruction,
@@ -505,5 +613,17 @@ def evaluate_gf_against_reference(
         role_precision=role_identity_precision,
         operation_group_recall=operation_group_identity_recall,
         operation_group_precision=operation_group_identity_precision,
+        environment_projected_roles=environment_projected_roles,
+        raw_vlm_roles=raw_vlm_roles,
+        raw_vlm_role_recall=raw_vlm_role_recall,
+        raw_vlm_role_precision=raw_vlm_role_precision,
+        raw_vlm_role_f1=raw_vlm_role_f1,
+        runtime_contract_role_coverage=runtime_contract_role_coverage,
+        functional_spec_complete=functional_spec_complete,
+        candidate_grounding_eligible=candidate_grounding_eligible,
+        candidate_grounding_succeeded=candidate_grounding_succeeded,
+        candidate_plan_found=candidate_plan_found,
+        full_task_plan_eligible=full_task_plan_eligible,
+        full_task_plan_found=full_task_plan_found,
     )
 

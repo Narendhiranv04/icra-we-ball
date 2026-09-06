@@ -439,6 +439,10 @@ class PipelineResult:
     search_statistics: dict[str, Any] = field(default_factory=dict)
     failure_reason: str | None = None
     failure_category: str | None = None
+    canonicalization_succeeded: bool = False
+    functional_spec_complete: bool = False
+    candidate_plan: tuple[dict[str, Any], ...] = ()
+    candidate_search_statistics: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -456,6 +460,10 @@ class PipelineResult:
             search_statistics=dict(data.get("search_statistics", {})),
             failure_reason=str(data["failure_reason"]) if data.get("failure_reason") is not None else None,
             failure_category=str(data["failure_category"]) if data.get("failure_category") is not None else None,
+            canonicalization_succeeded=bool(data.get("canonicalization_succeeded", False)),
+            functional_spec_complete=bool(data.get("functional_spec_complete", False)),
+            candidate_plan=tuple(dict(p) for p in data.get("candidate_plan", ())),
+            candidate_search_statistics=dict(data.get("candidate_search_statistics", {})),
         )
 
 

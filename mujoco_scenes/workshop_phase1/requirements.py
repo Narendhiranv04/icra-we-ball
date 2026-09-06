@@ -320,8 +320,12 @@ def map_workshop_context_region_role(raw: dict[str, Any] | str) -> str | None:
         if raw.get("entity_kind") != "REGION":
             return None
         text = f"{raw.get('function', '')} {raw.get('description', '')}"
+        props = " ".join(str(p).lower() for p in raw.get("required_properties", []))
+        cats = " ".join(str(c).lower() for c in raw.get("candidate_categories", []))
+        combined_text = f"{text} {props} {cats}"
     else:
         text = str(raw)
+        combined_text = text
     norm = _phrase(text)
     if not norm:
         return None
@@ -335,12 +339,18 @@ def map_workshop_context_region_role(raw: dict[str, Any] | str) -> str | None:
         )
     ):
         return "MAIN_WORKBENCH_ZONE"
+    # Structural context region recognition (Section 13)
+    if isinstance(raw, dict) and raw.get("entity_kind") == "REGION":
+        comb_norm = _phrase(combined_text)
+        if any(w in comb_norm for w in ("support", "planar", "stable surface", "work surface", "workbench", "table")):
+            return "MAIN_WORKBENCH_ZONE"
     return None
 
 
 WORKSHOP_REASONABLE_AFFORDANCE_NOTE_KEYWORDS = (
     "elongated shape", "rigid structure", "rigid", "slender shape",
     "has fastening points", "fastening points", "fastening point", "mounting points",
+    "has fastening interface", "fastening interface",
     "threaded shaft", "has threaded shaft", "threaded shank", "threaded",
     "screw head", "has screw head", "tool engagement", "has head for tool engagement",
     "driving tip", "has driving tip", "handle for grip", "has handle for grip",
@@ -1060,6 +1070,15 @@ class FMRequirementProvider(RequirementProvider):
                             "canonical_predicate": "PLANAR_SUPPORT",
                             "status": "ABSORBED_INTO_PLANNER_CONTEXT",
                             "destination": "PLANNER_CONTEXT",
+                        })
+                        continue
+                    elif any(norm_p == k or _contains_phrase(norm_p, k) for k in WORKSHOP_REASONABLE_AFFORDANCE_NOTE_KEYWORDS):
+                        concept_accounting["properties"].append({
+                            "raw_role_id": raw_id,
+                            "raw_phrase": prop,
+                            "canonical_predicate": None,
+                            "status": "ABSORBED_NON_EXECUTABLE_AFFORDANCE",
+                            "reason": f"Non-verifier affordance/feature note {prop!r} absorbed",
                         })
                         continue
                     else:
@@ -1814,9 +1833,12 @@ class FMRequirementProvider(RequirementProvider):
         task_instruction: str = CANONICAL_WORKSHOP_INSTRUCTION,
         *,
         observation_images: list[str | Path] | None = None,
+        raw_document: dict[str, Any] | None = None,
     ) -> list[FunctionalRequirement]:
         self._ensure_generated(
-            task_instruction, observation_images=observation_images
+            task_instruction,
+            observation_images=observation_images,
+            raw_document=raw_document,
         )
         return list(self._requirements or [])
 

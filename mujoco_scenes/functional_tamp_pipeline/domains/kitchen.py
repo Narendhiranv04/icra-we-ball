@@ -539,6 +539,8 @@ def run_to_plan(
         return PipelineResult(
             domain="kitchen", variant=variant_label, mode=mode,
             status=ground_result.status, inspected_regions=opened,
+            canonicalization_succeeded=True,
+            functional_spec_complete=False,
             failure_reason=str(ground_result.unsatisfied_relations or ground_result.missing_roles or "NO_COMPLETE_FUNCTIONAL_WITNESS"),
         )
 
@@ -586,11 +588,20 @@ def run_to_plan(
             domain="kitchen", variant=variant_label, mode=mode,
             status="ACTION_SEQUENCE_READY", inspected_regions=opened,
             assignment=assignments, plan=planned.actions,
+            candidate_plan=planned.actions,
             search_statistics=planned.search.statistics,
+            candidate_search_statistics=planned.search.statistics,
+            canonicalization_succeeded=True,
+            functional_spec_complete=True,
         )
     except Exception as exc:
         return PipelineResult(
             domain="kitchen", variant=variant_label, mode=mode,
-            status="INFEASIBLE", inspected_regions=opened,
-            failure_reason=str(exc),
+            status="CANDIDATE_GRAPH_UNSATISFIABLE", inspected_regions=opened,
+            assignment=ground_result.assignment,
+            plan=(),
+            candidate_plan=(),
+            canonicalization_succeeded=True,
+            functional_spec_complete=False,
+            failure_reason=f"CANDIDATE_GRAPH_UNSATISFIABLE: {exc}",
         )
