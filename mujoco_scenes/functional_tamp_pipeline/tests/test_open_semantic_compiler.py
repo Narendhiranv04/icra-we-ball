@@ -294,3 +294,13 @@ def test_region_only_living_partial_graph_does_not_invent_payload_bindings():
     assert not _has_personal_payload_binding({
         'PERSONAL_CUP_SAUCER_REGION': ['region_0001', 'region_0003']})
     assert _has_personal_payload_binding({'CUP_SAUCER_SET': ['slot_1', 'slot_2']})
+
+
+def test_workshop_partial_graph_may_omit_driver():
+    raw = json.loads((Path(__file__).parent/'fixtures/ideal_raw_vlm/workshop_W1.json').read_text())
+    raw['functional_roles'] = [item for item in raw['functional_roles'] if item['id'] != 'role_1']
+    raw['functional_relations'] = [item for item in raw['functional_relations']
+                                   if 'role_1' not in (item['subject_role'], item['object_role'])]
+    raw['interaction_groups'] = []
+    graph = compile_candidate_graph('workshop', 'complete assembly', raw)
+    assert 'driver' not in graph.nodes and graph.metadata['canonicalization_status'] == 'FULL'

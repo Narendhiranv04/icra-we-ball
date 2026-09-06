@@ -385,17 +385,12 @@ class WorkshopDomainAdapter:
 
         # Determine driver and fastener categories directly from G_F specification
         driver_node = self.specification.nodes.get("driver")
-        if driver_node is None:
-            from ..errors import MalformedVLMSpecificationError
-            raise MalformedVLMSpecificationError(
-                "Workshop functional specification must contain canonical role 'driver'"
-            )
-        if not driver_node.semantic_categories:
+        if driver_node is not None and not driver_node.semantic_categories:
             from ..errors import MalformedVLMSpecificationError
             raise MalformedVLMSpecificationError(
                 "Workshop functional role 'driver' must have non-empty candidate_categories"
             )
-        driver_categories = list(driver_node.semantic_categories)
+        driver_categories = list(driver_node.semantic_categories) if driver_node is not None else []
 
         fastener_node = self.specification.nodes.get("fastener")
         if fastener_node is not None and not fastener_node.semantic_categories:
