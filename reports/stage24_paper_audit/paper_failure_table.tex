@@ -1,0 +1,27 @@
+\begin{table}[t]
+\centering
+\small
+\caption{\textbf{ViLaIn-TAMP-Qwen Stage Funnel and Cumulative Conversion Rates.}
+Shows progression across pipeline stages for all 320 non-infrastructure runs.
+Conditional conversion denotes transition probability from the preceding stage.}
+\label{tab:vilain_qwen_funnel}
+\begin{tabular}{l|c|c|c|c}
+\hline
+\textbf{Pipeline Stage} & \textbf{Count / Total} & \textbf{Unconditional \%} & \textbf{95\% Wilson CI} & \textbf{Conversion Rate} \\
+\hline
+Observation Acquired & 320 / 320 & 100.0\% & [98.8, 100.0] & 100.0\% \\
+Object Estimation Valid & 298 / 320 & 93.1\% & [89.8, 95.4] & 93.1\% \\
+Initial State Formulated & 298 / 320 & 93.1\% & [89.8, 95.4] & 100.0\% \\
+Goal State Formulated & 298 / 320 & 93.1\% & [89.8, 95.4] & 100.0\% \\
+Valid PDDL Produced & 298 / 320 & 93.1\% & [89.8, 95.4] & 100.0\% \\
+Fast Downward Invoked & 298 / 320 & 93.1\% & [89.8, 95.4] & 100.0\% \\
+Symbolic Plan Found (PLAN@FD) & 141 / 320 & 44.1\% & [38.7, 49.5] & 47.3\% \\
+VAL Accepted Plan (PLAN@VAL) & 141 / 320 & 44.1\% & [38.7, 49.5] & 100.0\% \\
+Identity Resolution Succeeded & 68 / 320 & 21.2\% & [17.1, 26.1] & 48.2\% \\
+Refinement Passed (PLAN@REFINE) & 18 / 320 & 5.6\% & [3.6, 8.7] & 26.5\% \\
+Physical Execution Succeeded (PLAN@EXEC) & 18 / 320 & 5.6\% & [3.6, 8.7] & 100.0\% \\
+Generated Goal Satisfied & 0 / 320 & 0.0\% & [0.0, 1.2] & 0.0\% \\
+Benchmark Task Succeeded (TASK@FINAL) & 0 / 320 & 0.0\% & [0.0, 1.2] & 0.0\% \\
+\hline
+\end{tabular}
+\end{table}

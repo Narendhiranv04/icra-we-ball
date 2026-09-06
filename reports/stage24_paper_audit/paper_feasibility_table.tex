@@ -1,0 +1,42 @@
+\begin{table}[t]
+\centering
+\small
+\caption{\textbf{ViLaIn-TAMP-Qwen Feasibility Decision Confusion Matrix and Classification Metrics.}
+Evaluated with Task Infeasible as the Positive class. Shows both the historical raw termination rule ($N=298$ evaluated decisions) and post-hoc causal breakdown.}
+\label{tab:vilain_qwen_feasibility}
+\begin{tabular}{l|cc|l}
+\hline
+\multicolumn{4}{c}{\textbf{Confusion Matrix (Raw Termination Rule)}} \\
+\hline
+& \textbf{Predicted Infeasible} & \textbf{Predicted Feasible} & \textbf{Total Actual} \\
+\hline
+\textbf{Actual Infeasible} & 100 (TP) & 14 (FN) & 114 \\
+\textbf{Actual Feasible}   & 179 (FP) & 5 (TN) & 184 \\
+\hline
+\textbf{Total Predicted}   & 279 & 19 & 298 \\
+\hline
+\hline
+\multicolumn{3}{l|}{\textbf{Metric}} & \textbf{Value [95\% CI]} \\
+\hline
+\multicolumn{3}{l|}{Decision Coverage} & 93.1\% (298/320) \\
+\multicolumn{3}{l|}{Accuracy} & 35.2\% [30.0, 40.8] \\
+\multicolumn{3}{l|}{Precision (PPV)} & 35.8\% \\
+\multicolumn{3}{l|}{Recall / Infeasible Recall (TPR)} & 87.7\% \\
+\multicolumn{3}{l|}{Specificity / Feasible Recall (TNR)} & 2.7\% \\
+\multicolumn{3}{l|}{Balanced Accuracy} & 45.2\% \\
+\multicolumn{3}{l|}{F1-Score} & 0.509 \\
+\multicolumn{3}{l|}{False Infeasible Rate (FPR)} & 97.3\% \\
+\multicolumn{3}{l|}{False Feasible Rate (FNR)} & 12.3\% \\
+\hline
+\hline
+\multicolumn{4}{c}{\textbf{Causal Failure Distribution ($N=320$)}} \\
+\hline
+\multicolumn{3}{l|}{Plan Found \& Refined (Executed)} & 18 (5.6\%) \\
+\multicolumn{3}{l|}{Unresolved Invalid CP Correction} & 171 (53.4\%) \\
+\multicolumn{3}{l|}{Unresolved Identity Failure} & 59 (18.4\%) \\
+\multicolumn{3}{l|}{Unresolved Geometric Refinement Failure} & 50 (15.6\%) \\
+\multicolumn{3}{l|}{Unresolved Foundation Model Transport/Timeout} & 22 (6.9\%) \\
+\multicolumn{3}{l|}{Symbolic No Plan after Bounded CP} & 0 (0.0\%) \\
+\hline
+\end{tabular}
+\end{table}

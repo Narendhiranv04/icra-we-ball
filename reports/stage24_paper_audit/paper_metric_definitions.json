@@ -1,0 +1,13 @@
+{
+  "action_sequence_generation_rate": "Proportion of runs where Fast Downward generated at least one parseable symbolic action sequence.",
+  "benchmark_requirement_coverage_micro": "Fraction of total hidden benchmark requirements satisfied in the physical state across all runs.",
+  "execution_ready_plan_rate": "Proportion of runs producing a plan that succeeded in both entity resolution and geometric refinement.",
+  "feasibility_accuracy": "Binary accuracy of predicted infeasibility against ground truth on covered decisions.",
+  "feasibility_decision_coverage": "Proportion of runs with a definitive feasibility evaluation.",
+  "generated_goal_atom_coverage_micro": "Fraction of total generated PDDL goal atoms physically satisfied across all evaluated runs.",
+  "generated_goal_evaluation_coverage": "Proportion of runs where generated goal evaluation was executed.",
+  "generated_goal_satisfaction_rate": "Proportion of evaluated generated goals physically satisfied at the terminal state.",
+  "physical_execution_unconditional": "Proportion of runs where physical simulation executed the complete plan without failure.",
+  "task_success_rate": "Proportion of runs achieving the hidden benchmark goal in physical simulation.",
+  "val_valid_plan_rate": "Proportion of runs where VAL validated at least one symbolic plan."
+}

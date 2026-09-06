@@ -1,0 +1,14 @@
+stage_id,stage_name,count,total_runs,unconditional_rate,unconditional_ci95_low,unconditional_ci95_high,previous_stage_count,conditional_conversion_rate
+1_observation,Observation Acquired,320,320,1.0,0.9881378411686904,1.0,320,1.0
+2_object_estimation,Object Estimation Valid,298,320,0.93125,0.8981054394248181,0.9541634485831773,320,0.93125
+3_initial_state,Initial State Formulated,298,320,0.93125,0.8981054394248181,0.9541634485831773,298,1.0
+4_goal_state,Goal State Formulated,298,320,0.93125,0.8981054394248181,0.9541634485831773,298,1.0
+5_pddl_valid,Valid PDDL Produced,298,320,0.93125,0.8981054394248181,0.9541634485831773,298,1.0
+6_fd_invoked,Fast Downward Invoked,298,320,0.93125,0.8981054394248181,0.9541634485831773,298,1.0
+7_symbolic_plan_found,Symbolic Plan Found (PLAN@FD),141,320,0.440625,0.3872532856407732,0.4954053457204448,298,0.47315436241610737
+8_val_plan_valid,VAL Accepted Plan (PLAN@VAL),141,320,0.440625,0.3872532856407732,0.4954053457204448,141,1.0
+9_identity_success,Identity Resolution Succeeded,68,320,0.2125,0.17122604712662584,0.2605946942013773,141,0.48226950354609927
+10_refinement_success,Refinement Passed (PLAN@REFINE),18,320,0.05625,0.035873595853200255,0.08715407010958715,68,0.2647058823529412
+11_execution_success,Physical Execution Succeeded (PLAN@EXEC),18,320,0.05625,0.035873595853200255,0.08715407010958715,18,1.0
+12_generated_goal_satisfied,Generated Goal Satisfied,0,320,0.0,0.0,0.011862158831309737,18,0.0
+13_task_success,Benchmark Task Succeeded (TASK@FINAL),0,320,0.0,0.0,0.011862158831309737,0,0.0

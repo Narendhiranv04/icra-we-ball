@@ -1,0 +1,128 @@
+{
+  "action_sequence_generation_ci95": [
+    0.3872532856407732,
+    0.4954053457204448
+  ],
+  "action_sequence_generation_count": 141,
+  "action_sequence_generation_rate": 0.440625,
+  "benchmark_requirement_coverage_micro": 0.3286290322580645,
+  "cp_calls": {
+    "count": 320,
+    "iqr": 0.0,
+    "mean": 2.61875,
+    "median": 3.0,
+    "q25": 3.0,
+    "q75": 3.0,
+    "std": 0.9960664824699202
+  },
+  "cp_iteration_counts": {
+    "cp0": 40,
+    "cp1": 1,
+    "cp2": 0,
+    "cp3": 279
+  },
+  "end_to_end_seconds": {
+    "count": 320,
+    "iqr": 105.46817753874835,
+    "mean": 109.72443956398422,
+    "median": 28.063392564499964,
+    "q25": 19.025700975000007,
+    "q75": 124.49387851374836,
+    "std": 171.35946893137452
+  },
+  "execution_attempted_count": 18,
+  "execution_ready_plan_ci95": [
+    0.035873595853200255,
+    0.08715407010958715
+  ],
+  "execution_ready_plan_count": 18,
+  "execution_ready_plan_rate": 0.05625,
+  "execution_success_count": 18,
+  "feasibility_confusion": {
+    "accuracy": 0.3523489932885906,
+    "accuracy_wilson_ci95": [
+      0.30030442750504555,
+      0.40815179204869206
+    ],
+    "actual_feasible_count": 184,
+    "actual_infeasible_count": 114,
+    "balanced_accuracy": 0.4521834477498093,
+    "decision_coverage": 0.93125,
+    "evaluated_runs": 298,
+    "f1_score": 0.5089058524173028,
+    "false_feasible_rate": 0.12280701754385964,
+    "false_infeasible_rate": 0.9728260869565217,
+    "false_negatives": 14,
+    "false_positives": 179,
+    "precision": 0.35842293906810035,
+    "recall": 0.8771929824561403,
+    "specificity": 0.02717391304347826,
+    "total_scheduled_runs": 320,
+    "true_negatives": 5,
+    "true_positives": 100
+  },
+  "feasible_runs": 184,
+  "fm_calls": {
+    "count": 298,
+    "iqr": 1.0,
+    "mean": 7.275167785234899,
+    "median": 7.0,
+    "q25": 7.0,
+    "q75": 8.0,
+    "std": 1.060954745428906
+  },
+  "generated_goal_atom_coverage_micro": 0.0,
+  "generated_goal_evaluated_count": 18,
+  "generated_goal_evaluation_coverage": 0.05625,
+  "generated_goal_satisfaction_ci95": [
+    0.0,
+    0.17587922364665765
+  ],
+  "generated_goal_satisfaction_rate": 0.0,
+  "generated_goal_satisfied_count": 0,
+  "group": "overall",
+  "nonempty_action_sequence_ci95": [
+    0.33274812797827974,
+    0.43874499625146063
+  ],
+  "nonempty_action_sequence_count": 123,
+  "nonempty_action_sequence_rate": 0.384375,
+  "physical_execution_conditional_ci95": [
+    0.8241207763533425,
+    1.0
+  ],
+  "physical_execution_rate_conditional": 1.0,
+  "physical_execution_rate_unconditional": 0.05625,
+  "physical_execution_unconditional_ci95": [
+    0.035873595853200255,
+    0.08715407010958715
+  ],
+  "plan_length": {
+    "count": 141,
+    "iqr": 1.0,
+    "mean": 3.078014184397163,
+    "median": 2.0,
+    "q25": 2.0,
+    "q75": 3.0,
+    "std": 2.4322622396928506
+  },
+  "task_success_ci95": [
+    0.0,
+    0.011862158831309737
+  ],
+  "task_success_count": 0,
+  "task_success_feasible_ci95": [
+    0.0,
+    0.02045053762258643
+  ],
+  "task_success_feasible_count": 0,
+  "task_success_feasible_rate": 0.0,
+  "task_success_rate": 0.0,
+  "total_runs": 320,
+  "val_valid_plan_ci95": [
+    0.3872532856407732,
+    0.4954053457204448
+  ],
+  "val_valid_plan_count": 141,
+  "val_valid_plan_rate": 0.440625
+}
