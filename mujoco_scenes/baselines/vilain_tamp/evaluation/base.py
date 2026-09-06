@@ -12,6 +12,44 @@ class EvaluationContractError(ValueError):
     """Raised when terminal evaluation input is incomplete or inconsistent."""
 
 
+CANONICAL_REQUIREMENT_NAMES: Mapping[str, tuple[str, ...]] = {
+    "kitchen": (
+        "two_distinct_coffee_vessels",
+        "coffee_vessels_physically_served",
+        "coffee_ingredients_and_stirring_verified",
+        "two_distinct_soup_vessels",
+        "coffee_and_soup_vessels_distinct",
+        "soup_vessels_physically_served",
+        "distinct_suitable_soup_utensils_contained",
+        "no_required_object_held",
+    ),
+    "living_room": (
+        "required_payloads_present",
+        "required_supports_present",
+        "left_cup_and_saucer_physically_on_left_table",
+        "right_cup_and_saucer_physically_on_right_table",
+        "remote_physically_on_shared_table",
+        "no_payload_held",
+    ),
+    "workshop": (
+        "compatible_driver_fastener_target_tuple",
+        "fastener_insertion_geometry_valid",
+        "joint_physically_repaired",
+        "first_compatible_driver_used",
+        "driver_left_safely_on_main_workbench",
+        "no_object_held",
+    ),
+}
+
+
+def canonical_requirements_count(domain: str) -> int:
+    """Return the exact canonical benchmark requirement count for a domain."""
+    normalized = domain.strip().lower().replace("-", "_")
+    if normalized not in CANONICAL_REQUIREMENT_NAMES:
+        raise EvaluationContractError(f"unsupported benchmark domain: {domain!r}")
+    return len(CANONICAL_REQUIREMENT_NAMES[normalized])
+
+
 @dataclass(frozen=True)
 class TerminalStateSnapshot(SerializableContract):
     """Neutral physical state captured after baseline execution terminates."""

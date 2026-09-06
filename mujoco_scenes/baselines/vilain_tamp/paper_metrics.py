@@ -15,6 +15,10 @@ from .benchmark_harness import (
     authoritative_feasibility,
     authoritative_requirements_count,
 )
+from .evaluation import (
+    CANONICAL_REQUIREMENT_NAMES,
+    canonical_requirements_count,
+)
 
 
 def wilson_interval(successes: int, total: int, confidence: float = 0.95) -> tuple[float, float]:
@@ -340,7 +344,10 @@ def audit_run(run_dir: Path, config_root: Path | None = None) -> dict[str, Any]:
             if matching_reqs:
                 bme_reqs_total = matching_reqs[0]
             else:
-                bme_reqs_total = 8 if str(domain) == "kitchen" else 6
+                try:
+                    bme_reqs_total = canonical_requirements_count(str(domain))
+                except Exception:
+                    bme_reqs_total = 8 if str(domain) == "kitchen" else 6
         bme_reqs_passed = 0
 
     # Terminal causal category (B2B)
@@ -435,6 +442,51 @@ def audit_run(run_dir: Path, config_root: Path | None = None) -> dict[str, Any]:
                 actions_succeeded = sum(1 for a in trace_actions if a.get("success") is True)
         except Exception:
             pass
+    else:
+        actions_attempted = int(metrics.get("controller_action_count", 0))
+
+    # Initial vs Terminal Goal Coverage (Part 8)
+    initial_bme_file = art_dir / "benchmark" / "initial_benchmark_goal_evaluation.json"
+    initial_bme_reqs_passed = 0
+    if initial_bme_file.is_file():
+        try:
+            with open(initial_bme_file, encoding="utf-8") as f:
+                in_data = json.load(f)
+                initial_bme_reqs_passed = sum(1 for r in in_data.get("requirement_checks", []) if r.get("passed") is True)
+        except Exception:
+            initial_bme_reqs_passed = bme_reqs_passed if actions_attempted == 0 else 0
+    elif actions_attempted == 0 or not exec_attempted:
+        initial_bme_reqs_passed = bme_reqs_passed
+    else:
+        initial_bme_reqs_passed = 0
+
+    initial_goal_coverage = (
+        (initial_bme_reqs_passed / bme_reqs_total) if (gt_feasible and bme_reqs_total > 0) else None
+    )
+    terminal_goal_coverage = (
+        (bme_reqs_passed / bme_reqs_total) if (gt_feasible and bme_reqs_total > 0) else None
+    )
+    delta_goal_coverage = (
+        (terminal_goal_coverage - initial_goal_coverage)
+        if (gt_feasible and terminal_goal_coverage is not None and initial_goal_coverage is not None)
+        else None
+    )
+
+    # Attempt tracking
+    selected_attempt_idx = bresult.get("selected_attempt_index")
+    selected_attempt = None
+    if selected_attempt_idx is not None:
+        for a in attempts:
+            if a["attempt_index"] == selected_attempt_idx:
+                selected_attempt = a
+                break
+    if selected_attempt is None and attempts:
+        for a in attempts:
+            if a["nonempty_plan"]:
+                selected_attempt = a
+                break
+        if selected_attempt is None:
+            selected_attempt = attempts[0]
 
     selected_action_seq_str = "[]"
     if final_plan.is_file():
@@ -447,6 +499,12 @@ def audit_run(run_dir: Path, config_root: Path | None = None) -> dict[str, Any]:
                     )
         except Exception:
             pass
+    elif selected_attempt and selected_attempt.get("actions"):
+        sel_actions = selected_attempt.get("actions", [])
+        if sel_actions:
+            selected_action_seq_str = " -> ".join(
+                f"{a.get('operator')}({', '.join(a.get('arguments', []))})" for a in sel_actions
+            )
     elif plans:
         sel_actions = plans[0].get("actions", [])
         if sel_actions:
@@ -523,6 +581,18 @@ def audit_run(run_dir: Path, config_root: Path | None = None) -> dict[str, Any]:
         "goal_requirements_total": bme_reqs_total,
         "benchmark_requirement_coverage": (bme_reqs_passed / bme_reqs_total) if bme_reqs_total > 0 else None,
         "goal_coverage": (bme_reqs_passed / bme_reqs_total) if (gt_feasible and bme_reqs_total > 0) else None,
+        "initial_requirements_passed": initial_bme_reqs_passed if gt_feasible else None,
+        "initial_requirements_total": bme_reqs_total if gt_feasible else None,
+        "terminal_requirements_passed": bme_reqs_passed if gt_feasible else None,
+        "terminal_requirements_total": bme_reqs_total if gt_feasible else None,
+        "initial_goal_coverage": initial_goal_coverage,
+        "terminal_goal_coverage": terminal_goal_coverage,
+        "delta_goal_coverage": delta_goal_coverage,
+        "selected_attempt_index": selected_attempt_idx,
+        "selected_plan_length": selected_attempt["plan_length"] if selected_attempt else 0,
+        "selected_plan_val_valid": selected_attempt["val_valid"] if selected_attempt else False,
+        "selected_plan_identity_success": selected_attempt["identity_success"] if selected_attempt else False,
+        "selected_plan_refinement_success": selected_attempt["refinement_success"] if selected_attempt else False,
         # Calls and timings
         "fm_calls": raw_vlm_requests,
         "raw_vlm_requests": raw_vlm_requests,
@@ -637,6 +707,25 @@ def compute_group_aggregates(rows: Sequence[Mapping[str, Any]], group_label: str
         sum(goal_cov_macro_list) / len(goal_cov_macro_list) if goal_cov_macro_list else 0.0
     )
 
+    # 3b. Sequence-Induced Goal Gain (Δ Goal Coverage)
+    initial_goal_reqs_passed_feasible = sum(
+        (r.get("initial_requirements_passed") or 0) for r in feasible_rows
+    )
+    initial_goal_coverage_micro = (
+        initial_goal_reqs_passed_feasible / goal_reqs_total_feasible if goal_reqs_total_feasible > 0 else 0.0
+    )
+    delta_goal_coverage_micro = goal_coverage_micro - initial_goal_coverage_micro
+
+    initial_goal_cov_macro_list = [
+        ((r.get("initial_requirements_passed") or 0) / r.get("goal_requirements_total"))
+        for r in feasible_rows
+        if (r.get("goal_requirements_total") or 0) > 0
+    ]
+    initial_goal_coverage_macro = (
+        sum(initial_goal_cov_macro_list) / len(initial_goal_cov_macro_list) if initial_goal_cov_macro_list else 0.0
+    )
+    delta_goal_coverage_macro = goal_coverage_macro - initial_goal_coverage_macro
+
     # 4. False Completion (%)
     declared_completion_count = sum(1 for r in rows if r.get("declared_completion") is True)
     false_completion_count = sum(
@@ -741,6 +830,11 @@ def compute_group_aggregates(rows: Sequence[Mapping[str, Any]], group_label: str
         "goal_requirements_total_feasible": goal_reqs_total_feasible,
         "goal_coverage_micro": goal_coverage_micro,
         "goal_coverage_macro": goal_coverage_macro,
+        "initial_goal_requirements_passed_feasible": initial_goal_reqs_passed_feasible,
+        "initial_goal_coverage_micro": initial_goal_coverage_micro,
+        "initial_goal_coverage_macro": initial_goal_coverage_macro,
+        "delta_goal_coverage_micro": delta_goal_coverage_micro,
+        "delta_goal_coverage_macro": delta_goal_coverage_macro,
         "declared_completion_count": declared_completion_count,
         "false_completion_count": false_completion_count,
         "false_completion_rate": false_completion_rate,
@@ -807,11 +901,11 @@ def compute_stage_funnel(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, An
         ("2_object_estimation", "Object estimation", lambda r: bool(r.get("object_estimation_success"))),
         ("3_pddl_valid", "Valid PDDL", lambda r: bool(r.get("pddl_valid"))),
         ("4_symbolic_plan_found", "PLAN@FD", lambda r: bool(r.get("symbolic_plan_found"))),
-        ("5_nonempty_plan_found", "Non-empty PLAN@FD", lambda r: bool(r.get("symbolic_plan_nonempty"))),
+        ("5_nonempty_plan_found", "NONEMPTY PLAN@FD", lambda r: bool(r.get("symbolic_plan_nonempty"))),
         ("6_val_plan_valid", "PLAN@VAL", lambda r: bool(r.get("val_plan_valid"))),
-        ("7_identity_success", "Identity success", lambda r: bool(r.get("identity_success"))),
-        ("8_physical_plan_found", "Physical plan found / PLAN@REFINE", lambda r: bool(r.get("physical_plan_found"))),
-        ("9_nonempty_exec_success", "Non-empty PLAN@EXEC", lambda r: bool(r.get("nonempty_plan_execution_completed"))),
+        ("7_identity_success", "PLAN@IDENTITY", lambda r: bool(r.get("identity_success"))),
+        ("8_physical_plan_found", "PLAN@REFINE", lambda r: bool(r.get("physical_plan_found"))),
+        ("9_nonempty_exec_success", "PLAN@EXEC", lambda r: bool(r.get("nonempty_plan_execution_completed"))),
         ("10_task_success", "TASK@FINAL", lambda r: bool(r.get("actual_task_success"))),
     ]
 
@@ -953,11 +1047,11 @@ def audit_identity_failures(rows: Sequence[Mapping[str, Any]], results_root: Pat
                         break
 
         if reason == "AMBIGUOUS_ENTITY" or cand_count > 1:
-            classification = "GENUINE_VISUAL_AMBIGUITY"
+            classification = "MULTIPLE_PHYSICAL_CANDIDATES"
         elif cand_count == 0:
-            classification = "MISSING_VISIBLE_ENTITY"
+            classification = "NO_PHYSICAL_CANDIDATE"
         else:
-            classification = "OTHER"
+            classification = "SINGLE_PHYSICAL_CANDIDATE_BUT_UNRESOLVED"
 
         records.append({
             "run_id": run_id,
@@ -980,7 +1074,7 @@ def audit_identity_failures(rows: Sequence[Mapping[str, Any]], results_root: Pat
 
 
 def audit_refinement_failures(rows: Sequence[Mapping[str, Any]], results_root: Path) -> list[dict[str, Any]]:
-    """Audit all 30 REFINEMENT_FAILURE runs."""
+    """Audit all REFINEMENT_FAILURE runs with neutral diagnostic classes."""
     records = []
     ref_runs = [r for r in rows if r.get("raw_terminal_status") == "REFINEMENT_FAILURE"]
 
@@ -1006,6 +1100,16 @@ def audit_refinement_failures(rows: Sequence[Mapping[str, Any]], results_root: P
                         reason_code = rfail.get("reason_code") or details.get("reason_code")
                         break
 
+        stage_str = (stage or "").upper()
+        if "IK" in stage_str:
+            classification = "REFINEMENT_IK_REJECTION"
+        elif "COLLISION" in stage_str:
+            classification = "REFINEMENT_COLLISION_REJECTION"
+        elif "ENVELOPE" in stage_str or "SKILL" in stage_str:
+            classification = "REFINEMENT_SKILL_ENVELOPE_REJECTION"
+        else:
+            classification = "REFINEMENT_OTHER"
+
         records.append({
             "run_id": run_id,
             "domain": r["domain"],
@@ -1015,7 +1119,7 @@ def audit_refinement_failures(rows: Sequence[Mapping[str, Any]], results_root: P
             "operator": operator,
             "failure_stage": stage,
             "reason_code": reason_code,
-            "classification": "GENUINE_GEOMETRIC_FAILURE",
+            "classification": classification,
         })
     return records
 
@@ -1258,6 +1362,44 @@ def generate_manuscript_main_table(
     tex_content = "\n".join(lines) + "\n"
     (output_dir / f"{file_prefix}main_table.tex").write_text(tex_content, encoding="utf-8")
 
+    def pct_str(val: float | None) -> str:
+        return f"{val*100:.1f}\\%" if val is not None else "N/A"
+
+    attr_lines = [
+        r"\begin{table}[t]",
+        r"\centering",
+        r"\small",
+        r"\caption{\textbf{ViLaIn-TAMP-Qwen Sequence-Induced Goal Gain Across Benchmark Domains.}",
+        r"Evaluated over ground-truth feasible variants ($N_{\text{feasible}}=" + str(overall.get("feasible_runs", 0)) + r"$).",
+        r"Initial Goal Coverage reflects requirements satisfied prior to manipulation. Terminal Goal Coverage reflects requirements after execution. $\Delta$ Goal Coverage measures sequence-induced progress.}",
+        r"\label{tab:vilain_goal_attribution}",
+        r"\begin{tabular}{l|c|ccc}",
+        r"\hline",
+        r"\textbf{Goal Coverage Metric} & \textbf{Overall} & \textbf{Kitchen} & \textbf{Living Room} & \textbf{Workshop} \\",
+        r"\hline",
+        f"Feasible Variant Runs & {overall.get('feasible_runs', 0)} & {kitchen.get('feasible_runs', 0)} & {living.get('feasible_runs', 0)} & {workshop.get('feasible_runs', 0)} \\\\",
+        r"\hline",
+        f"Initial Goal Coverage (\\%) & "
+        + f"{rate_str(overall.get('initial_goal_requirements_passed_feasible'), overall.get('goal_requirements_total_feasible'), overall.get('initial_goal_coverage_micro'))} & "
+        + f"{rate_str(kitchen.get('initial_goal_requirements_passed_feasible'), kitchen.get('goal_requirements_total_feasible'), kitchen.get('initial_goal_coverage_micro'))} & "
+        + f"{rate_str(living.get('initial_goal_requirements_passed_feasible'), living.get('goal_requirements_total_feasible'), living.get('initial_goal_coverage_micro'))} & "
+        + f"{rate_str(workshop.get('initial_goal_requirements_passed_feasible'), workshop.get('goal_requirements_total_feasible'), workshop.get('initial_goal_coverage_micro'))} \\\\",
+        f"Terminal Goal Coverage (\\%) & "
+        + f"{rate_str(overall.get('goal_requirements_passed_feasible'), overall.get('goal_requirements_total_feasible'), overall.get('goal_coverage_micro'))} & "
+        + f"{rate_str(kitchen.get('goal_requirements_passed_feasible'), kitchen.get('goal_requirements_total_feasible'), kitchen.get('goal_coverage_micro'))} & "
+        + f"{rate_str(living.get('goal_requirements_passed_feasible'), living.get('goal_requirements_total_feasible'), living.get('goal_coverage_micro'))} & "
+        + f"{rate_str(workshop.get('goal_requirements_passed_feasible'), workshop.get('goal_requirements_total_feasible'), workshop.get('goal_coverage_micro'))} \\\\",
+        f"$\\Delta$ Goal Coverage (\\%) & "
+        + f"{pct_str(overall.get('delta_goal_coverage_micro'))} & "
+        + f"{pct_str(kitchen.get('delta_goal_coverage_micro'))} & "
+        + f"{pct_str(living.get('delta_goal_coverage_micro'))} & "
+        + f"{pct_str(workshop.get('delta_goal_coverage_micro'))} \\\\",
+        r"\hline",
+        r"\end{tabular}",
+        r"\end{table}",
+    ]
+    (output_dir / f"{file_prefix}goal_attribution_table.tex").write_text("\n".join(attr_lines) + "\n", encoding="utf-8")
+
     def format_group_metrics(grp: Mapping[str, Any]) -> dict[str, Any]:
         return {
             "total_runs": grp.get("total_runs"),
@@ -1270,6 +1412,11 @@ def generate_manuscript_main_table(
             "goal_coverage_macro": grp.get("goal_coverage_macro"),
             "goal_requirements_passed_feasible": grp.get("goal_requirements_passed_feasible"),
             "goal_requirements_total_feasible": grp.get("goal_requirements_total_feasible"),
+            "initial_goal_coverage_micro": grp.get("initial_goal_coverage_micro"),
+            "initial_goal_coverage_macro": grp.get("initial_goal_coverage_macro"),
+            "delta_goal_coverage_micro": grp.get("delta_goal_coverage_micro"),
+            "delta_goal_coverage_macro": grp.get("delta_goal_coverage_macro"),
+            "initial_goal_requirements_passed_feasible": grp.get("initial_goal_requirements_passed_feasible"),
             "false_completion_rate": grp.get("false_completion_rate"),
             "false_completion_count": grp.get("false_completion_count"),
             "declared_completion_count": grp.get("declared_completion_count"),
@@ -1497,6 +1644,12 @@ def run_full_paper_analysis(
             "feasible_task_success_count": da["feasible_task_success_count"],
             "goal_coverage_micro": da["goal_coverage_micro"],
             "goal_coverage_macro": da["goal_coverage_macro"],
+            "initial_goal_coverage_micro": da["initial_goal_coverage_micro"],
+            "terminal_goal_coverage_micro": da["goal_coverage_micro"],
+            "delta_goal_coverage_micro": da["delta_goal_coverage_micro"],
+            "initial_goal_coverage_macro": da["initial_goal_coverage_macro"],
+            "terminal_goal_coverage_macro": da["goal_coverage_macro"],
+            "delta_goal_coverage_macro": da["delta_goal_coverage_macro"],
             "false_completion_rate": da["false_completion_rate"],
             "false_completion_count": da["false_completion_count"],
             "declared_completion_count": da["declared_completion_count"],
@@ -1537,6 +1690,12 @@ def run_full_paper_analysis(
             "feasible_task_success_count": pa["feasible_task_success_count"],
             "goal_coverage_micro": pa["goal_coverage_micro"],
             "goal_coverage_macro": pa["goal_coverage_macro"],
+            "initial_goal_coverage_micro": pa["initial_goal_coverage_micro"],
+            "terminal_goal_coverage_micro": pa["goal_coverage_micro"],
+            "delta_goal_coverage_micro": pa["delta_goal_coverage_micro"],
+            "initial_goal_coverage_macro": pa["initial_goal_coverage_macro"],
+            "terminal_goal_coverage_macro": pa["goal_coverage_macro"],
+            "delta_goal_coverage_macro": pa["delta_goal_coverage_macro"],
             "false_completion_rate": pa["false_completion_rate"],
             "false_completion_count": pa["false_completion_count"],
             "declared_completion_count": pa["declared_completion_count"],
@@ -1581,6 +1740,12 @@ def run_full_paper_analysis(
                 "feasible_task_success_count": spa["feasible_task_success_count"],
                 "goal_coverage_micro": spa["goal_coverage_micro"],
                 "goal_coverage_macro": spa["goal_coverage_macro"],
+                "initial_goal_coverage_micro": spa["initial_goal_coverage_micro"],
+                "terminal_goal_coverage_micro": spa["goal_coverage_micro"],
+                "delta_goal_coverage_micro": spa["delta_goal_coverage_micro"],
+                "initial_goal_coverage_macro": spa["initial_goal_coverage_macro"],
+                "terminal_goal_coverage_macro": spa["goal_coverage_macro"],
+                "delta_goal_coverage_macro": spa["delta_goal_coverage_macro"],
                 "false_completion_rate": spa["false_completion_rate"],
                 "false_completion_count": spa["false_completion_count"],
                 "declared_completion_count": spa["declared_completion_count"],
@@ -1626,6 +1791,10 @@ def run_full_paper_analysis(
             "goal_requirements_passed": va["goal_requirements_passed_feasible"] if va["feasible_runs"] > 0 else first_r.get("goal_requirements_passed"),
             "goal_requirements_total": va["goal_requirements_total_feasible"] if va["feasible_runs"] > 0 else first_r.get("goal_requirements_total"),
             "goal_coverage": va["goal_coverage_micro"] if va["feasible_runs"] > 0 else None,
+            "initial_goal_requirements_passed": va["initial_goal_requirements_passed_feasible"] if va["feasible_runs"] > 0 else first_r.get("initial_requirements_passed"),
+            "initial_goal_coverage": va["initial_goal_coverage_micro"] if va["feasible_runs"] > 0 else None,
+            "terminal_goal_coverage": va["goal_coverage_micro"] if va["feasible_runs"] > 0 else None,
+            "delta_goal_coverage": va["delta_goal_coverage_micro"] if va["feasible_runs"] > 0 else None,
             "declared_completion": va["declared_completion_count"] > 0,
             "false_completion": va["false_completion_count"] > 0,
             "any_symbolic_plan": va["action_sequence_generation_count"] > 0,

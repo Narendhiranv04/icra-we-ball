@@ -17,6 +17,7 @@ from urllib.request import urlopen
 import yaml
 
 from .artifacts import atomic_write_json, atomic_write_text
+from .evaluation import canonical_requirements_count
 from .live_fm import DEFAULT_VLLM_BASE_URL
 
 
@@ -90,10 +91,9 @@ def authoritative_feasibility(config_root: Path) -> dict[str, dict[str, bool]]:
 
 
 def authoritative_requirements_count(config_root: Path) -> dict[str, dict[str, int]]:
-    req_counts = {"kitchen": 8, "living_room": 6, "workshop": 6}
     variants = authoritative_variants(config_root)
     return {
-        domain: {v: req_counts.get(domain, 0) for v in var_list}
+        domain: {v: canonical_requirements_count(domain) for v in var_list}
         for domain, var_list in variants.items()
     }
 

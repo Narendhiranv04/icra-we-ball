@@ -1,111 +1,139 @@
 # ViLaIn-TAMP Paper-Ready Evaluation Metrics Specification
 
-This document defines the formal paper-ready evaluation metrics, numerators, denominators, and aggregation semantics for the ViLaIn-TAMP-Qwen baseline on the 320-run benchmark matrix.
+This document formally specifies the evaluation metrics, action-sequence funnel, statistical conventions, causal classifications, and ground-truth isolation guarantees for the ViLaIn-TAMP-Qwen baseline across benchmark domains (`kitchen`, `living_room`, `workshop`).
 
 ---
 
-## 1. Core Principles
+## 1. Core Experimental Principles
 
-1. **Non-Infrastructure Population**:
-   All primary rates are computed over non-infrastructure runs ($N = 320$ scheduled runs; 0 infrastructure failures).
-2. **Explicit Evaluation Denominators**:
-   Metrics representing conditional evaluation (such as generated-goal satisfaction or execution success among attempted plans) MUST state their explicit denominators and coverage rates alongside unconditional figures. Never report "0%" without its exact denominator.
-3. **Action-Sequence Decoupling**:
-   Symbolic action sequence generation is evaluated independently of downstream geometric refinement or MuJoCo execution. A run where Fast Downward produced a valid plan that later failed geometric collision checking is credited with generating a valid action sequence.
-4. **Feasibility Decision Separation**:
-   The historical field `infeasibility_accuracy` incorrectly averaged True Positives over all runs ($TP / N$). Feasibility is evaluated via standard binary classification metrics on covered decisions, separating raw termination semantics from causally clean decisions.
-5. **Separation of Baseline Planning and Benchmark Evaluation**:
-   Benchmark truth ($G_F$, ground truth feasibility, hidden requirements) is strictly post-terminal and is never accessed during baseline perception, interpretation, planning, or refinement.
+1. **The Primary Output is the Action Sequence**:
+   The primary output of ViLaIn-TAMP for any task is the **action sequence** it generates. Evaluation is sequence-centric: we measure whether ViLaIn-TAMP generates valid symbolic plans, binds physical entities, refines continuous kinematic trajectories, and executes actions that induce goal state progress. ViLaIn-TAMP is never evaluated against human/teleoperated demonstration sequences or proposed-method action sequences; it is evaluated against the physical benchmark world and its canonical goal requirements.
+
+2. **Strict Post-Terminal Isolation**:
+   Ground-truth requirements, feasibility labels ($G_F$), and hidden physical assertions are strictly post-terminal. They are NEVER accessed, leaked, or referenced during baseline perception, VLM prompt construction, PDDL compilation, Fast Downward search, entity resolution, or geometric refinement.
+
+3. **Explicit Denominators and Population Scoping**:
+   Every rate metric must state its exact numerator and denominator. No conditional rate may be reported without its sample size:
+   - **All Non-Infrastructure Runs ($N_{\text{total}}$)**: Default population for unconditional metrics (Outcome Correct, Plan Generation, Resource Counts).
+   - **Ground-Truth Feasible Runs ($N_{\text{feasible}}$)**: Mandatory population for goal-attainment metrics (Feasible-Task Success, Goal Coverage, Sequence-Induced Goal Gain, Physical Plan Found). Infeasible variants have no valid solution trajectory; including them in goal coverage artificially deflates or conflates baseline performance.
+   - **Declared Completion Runs ($N_{\text{declared}}$)**: Denominator for False Completion Rate.
+
+4. **Zero-Step Plan Prohibition**:
+   Zero-step plans (`len == 0`, empty action sequence) occur when Qwen's generated `:init` state logically entails its generated `:goal`. While Fast Downward trivially exits with success in 0 steps, zero physical actions are executed.
+   - Zero-step plans **NEVER** count toward `Physical Plan Found` ($len > 0$ required).
+   - Zero-step plans **NEVER** count toward `Non-empty PLAN@EXEC`.
+   - If the baseline declares completion on a zero-step plan while physical benchmark requirements remain unmet, it is counted as a **False Completion**.
 
 ---
 
-## 2. Primary Metrics Table
+## 2. Manuscript Main-Table Metrics
 
-| Metric Name | Formal Definition | Numerator | Denominator | Better | Population |
+The paper main table reports the following seven primary metrics plus the definitive goal-gain metric:
+
+| Metric Name | Formal Definition | Numerator | Denominator | Better | Target Population |
 | :--- | :--- | :--- | :--- | :---: | :--- |
-| **Task Success Rate** | Proportion of runs achieving the hidden benchmark goal in physical simulation | Runs with `actual_task_success == True` | Non-infrastructure runs | Higher | All completed runs (and feasible subset) |
-| **Action Sequence Generation Rate** | Proportion of runs where Fast Downward generated at least one parseable symbolic action sequence | Runs with $\ge 1$ parseable FD action sequence | Non-infrastructure runs | Higher | All completed runs |
-| **VAL-Valid Plan Rate** | Proportion of runs where VAL validated at least one symbolic plan | Runs with $\ge 1$ VAL-valid action sequence | Non-infrastructure runs | Higher | All completed runs |
-| **Execution-Ready Plan Rate** | Proportion of runs producing a plan that succeeded in both entity resolution and geometric refinement | Runs with successful identity binding and cloned refinement | Non-infrastructure runs | Higher | All completed runs |
-| **Physical Execution Success Rate (Unconditional)** | Proportion of runs where physical simulation executed the complete plan without failure | Runs with `execution_success == True` | Non-infrastructure runs | Higher | All completed runs |
-| **Physical Execution Success Rate (Conditional)** | Proportion of executed runs that completed successfully | Runs with `execution_success == True` | Runs where physical execution was attempted | Higher | Execution-attempted runs |
-| **Generated Goal Satisfaction Rate** | Proportion of evaluated generated goals physically satisfied at the terminal state | Runs with `generated_goal_satisfied == True` | Runs where generated goal evaluation was performed | Higher | Runs with generated goal evaluation |
-| **Generated Goal Evaluation Coverage** | Proportion of runs where generated goal evaluation was executed | Runs where generated goal evaluation was performed | Non-infrastructure runs | Higher | All completed runs |
-| **Benchmark Requirement Coverage** | Average fraction of hidden benchmark requirements satisfied in the physical state | Sum of passed hidden requirement checks | Sum of total hidden requirement checks | Higher | Runs with hidden benchmark evaluation |
-| **Generated Goal Atom Coverage** | Average fraction of generated PDDL goal atoms physically satisfied in the terminal state | Sum of passed generated goal atoms | Sum of total generated goal atoms | Higher | Runs with generated goal evaluation |
-| **Feasibility Decision Accuracy (Raw Rule)** | Binary accuracy of the baseline's termination status in predicting ground-truth infeasibility | True Infeasible (TP) + True Feasible (TN) | Evaluated runs with feasibility predictions | Higher | Runs with feasibility evaluation |
-| **Feasibility Decision Coverage** | Fraction of runs where a definitive feasibility prediction was evaluated | Runs with valid feasibility prediction | Non-infrastructure runs | Higher | All completed runs |
-| **Average FM Calls** | Mean count of Foundation Model invocations per run | Total FM model calls | Completed runs | Context | All completed runs |
-| **Average CP Calls** | Mean count of Corrective Planning iterations per run | Total CP corrections requested | Completed runs | Context | All completed runs |
-| **Average Plan Length** | Mean number of actions in the generated symbolic action sequence | Total symbolic action steps in plans | Runs with symbolic plans found | Context | Runs with symbolic plans |
+| **Outcome Correct (%)** | Proportion of runs where binary decision matches ground truth feasibility and execution outcome | $\sum [\text{feasible} \land \text{success}] + \sum [\text{infeasible} \land \text{rejected}]$ | All non-infrastructure runs ($N_{\text{total}}$) | Higher | All Runs ($N=32$ smoke, $N=320$ full) |
+| **Feasible-Task Success (%)** | Proportion of ground-truth feasible runs achieving all canonical physical requirements | Runs with `actual_task_success == True` | Ground-truth feasible runs ($N_{\text{feasible}}$) | Higher | Feasible Subset ($N_{\text{feasible}}=20$) |
+| **Goal Coverage (%)** | Fraction of canonical task requirements satisfied in the terminal physical simulation state | $\sum \text{requirements passed}$ | $\sum \text{requirements total}$ | Higher | Feasible Subset ($N_{\text{feasible}}=20$) |
+| **$\Delta$ Goal Coverage (%)** (Sequence-Induced Goal Gain) | Net goal progress induced by executing the generated action sequence: $\text{Coverage}_{\text{terminal}} - \text{Coverage}_{\text{initial}}$ | $\text{Terminal passed} - \text{Initial passed}$ | $\sum \text{requirements total}$ | Higher | Feasible Subset ($N_{\text{feasible}}=20$) |
+| **False Completion (%)** | Proportion of declared task completions where physical requirements were not satisfied | Runs declaring completion with `actual_task_success == False` | Runs declaring completion ($N_{\text{declared}}$) | Lower | Declared-Complete Runs |
+| **Physical Plan Found (%)** | Proportion of feasible runs producing a valid, non-empty, geometrically refined physical plan | Feasible runs with non-empty plan passing refinement | Ground-truth feasible runs ($N_{\text{feasible}}$) | Higher | Feasible Subset ($N_{\text{feasible}}=20$) |
+| **Raw VLM Requests** | Total foundation model (VLM) API requests per run | Sum of object, init, goal, and CP model calls | Completed runs ($N_{\text{total}}$) | Context | All Runs |
+| **High-Level Replans** | Number of corrective planning (CP) iterations invoked following planner/refiner failures | Total CP iterations requested | Completed runs ($N_{\text{total}}$) | Context | All Runs |
+
+### Aggregation Conventions
+- **Micro Goal Coverage**: Pooled across all requirements in the population: $\frac{\sum_{i} \text{passed}_i}{\sum_{i} \text{total}_i}$.
+- **Macro Goal Coverage**: Unweighted mean of variant coverage scores: $\frac{1}{|V|} \sum_{v \in V} \frac{\text{passed}_v}{\text{total}_v}$.
+- **Uncertainty Intervals**: 95% Wilson score confidence intervals for all binomial proportions; mean $\pm$ standard deviation for continuous distributions.
 
 ---
 
-## 3. Action Sequence Funnel Metrics
+## 3. Initial Goal Coverage and Sequence-Induced Goal Gain
 
-The planning-to-execution pipeline is evaluated as a sequential funnel:
+In manipulation benchmarks, complex scenes often satisfy some task requirements in the initial state prior to any robot motion (e.g., doors already closed, containers already positioned, default alignments).
 
-$$\text{PLAN@FD} \longrightarrow \text{PLAN@VAL} \longrightarrow \text{PLAN@REFINE} \longrightarrow \text{PLAN@EXEC} \longrightarrow \text{TASK@FINAL}$$
+To prevent attributing passive initial state properties to baseline competence, we evaluate:
+1. **Initial Goal Coverage Snapshot**:
+   Evaluated post-terminally against the initial MuJoCo simulation state before any action is executed.
+   $$\text{Coverage}_{\text{initial}} = \frac{\sum_{r \in \text{Feasible}} \text{RequirementsPassed}_{\text{initial}}(r)}{\sum_{r \in \text{Feasible}} \text{RequirementsTotal}(r)}$$
+2. **Terminal Goal Coverage**:
+   Evaluated against the final physical simulation state after baseline termination.
+   $$\text{Coverage}_{\text{terminal}} = \frac{\sum_{r \in \text{Feasible}} \text{RequirementsPassed}_{\text{terminal}}(r)}{\sum_{r \in \text{Feasible}} \text{RequirementsTotal}(r)}$$
+3. **Sequence-Induced Goal Gain ($\Delta$ Goal Coverage)**:
+   $$\Delta \text{Goal Coverage} = \text{Coverage}_{\text{terminal}} - \text{Coverage}_{\text{initial}}$$
 
-1. **PLAN@FD**:
-   Fast Downward produced at least one parseable action sequence from the PDDL formulation generated by Qwen.
-2. **PLAN@VAL**:
-   The action sequence was verified by the PDDL validator VAL against the domain and problem specification.
-3. **PLAN@REFINE**:
-   At least one complete action sequence successfully bound physical entities and passed collision-free inverse kinematics (IK) in the cloned MuJoCo refinement scene.
-4. **PLAN@EXEC**:
-   The refined execution trajectory was dispatched to the MuJoCo simulation and completed without controller or dynamic postcondition failure.
-5. **TASK@FINAL**:
-   The final physical scene satisfied all ground-truth requirements of the benchmark variant.
-
-Both **unconditional conversion** (% of all non-infrastructure runs) and **conditional stage conversion** (transition probability between consecutive stages) are reported.
+$\Delta$ Goal Coverage is the definitive metric for whether generated action sequences actually achieve physical progress. A baseline that executes zero actions or fails during refinement will have $\Delta \text{Goal Coverage} \equiv 0.0\%$, even if static scene layout yields $\text{Coverage}_{\text{terminal}} > 0\%$.
 
 ---
 
-## 4. Feasibility Classification Metrics
+## 4. Full 7-Stage Action Sequence Funnel
 
-### 4.1 Raw Termination Rule (B2A)
-Under the historical runtime rule, any run terminating with status `PREDICTED_INFEASIBLE` (or planning status in `{EXHAUSTED, REPEATED_REVISION, INVALID_CORRECTION}`) is considered a prediction of **Task Infeasible**. Runs that successfully refined and executed a plan are considered **Task Feasible**.
+The action sequence lifecycle is tracked across 7 sequential stages:
 
-Treating **Task Infeasible** as the Positive class ($P$) and **Task Feasible** as the Negative class ($N$):
-- **True Positive (TP)**: Ground-truth infeasible variant, predicted infeasible.
-- **False Positive (FP)**: Ground-truth feasible variant, predicted infeasible (false infeasible).
-- **True Negative (TN)**: Ground-truth feasible variant, predicted feasible.
-- **False Negative (FN)**: Ground-truth infeasible variant, predicted feasible (false feasible).
+$$\text{PLAN@FD} \longrightarrow \text{NONEMPTY PLAN@FD} \longrightarrow \text{PLAN@VAL} \longrightarrow \text{PLAN@IDENTITY} \longrightarrow \text{PLAN@REFINE} \longrightarrow \text{PLAN@EXEC} \longrightarrow \text{TASK@FINAL}$$
 
-Standard formulas:
+| Funnel Stage | Formal Definition | Inclusion Criteria |
+| :--- | :--- | :--- |
+| **1. PLAN@FD** | Fast Downward produced a parseable action sequence from Qwen's PDDL problem | Action sequence found ($len \ge 0$) |
+| **2. NONEMPTY PLAN@FD** | Fast Downward produced a plan with at least one physical action | $len > 0$ |
+| **3. PLAN@VAL** | The action sequence was verified by VAL against domain semantics | VAL validator returns exit code 0 |
+| **4. PLAN@IDENTITY** | Symbolic objects bound to physical MuJoCo bodies without unresolvable ambiguity | Entity resolution succeeds |
+| **5. PLAN@REFINE** | Continuous joint trajectories found passing IK and collision checking | Cloned MuJoCo refinement succeeds |
+| **6. PLAN@EXEC** | Non-empty trajectory dispatched and executed in physical simulation | Physical execution attempted & completed |
+| **7. TASK@FINAL** | Final physical scene satisfies all canonical benchmark requirements | `actual_task_success == True` |
+
+Two rates are reported for every stage:
+- **Unconditional Conversion Rate**: Fraction of the entire run population ($N_{\text{total}}$) reaching the stage.
+- **Conditional Stage Transition Rate**: Transition probability from the immediate previous stage: $\frac{\text{Count}(\text{Stage}_k)}{\text{Count}(\text{Stage}_{k-1})}$.
+
+---
+
+## 5. Feasibility Classification Semantics
+
+Feasibility classification evaluates the baseline's ability to correctly discriminate feasible from infeasible task variants.
+
+### Binary Classification Matrix
+Positive class ($P$) = **Infeasible Variant**; Negative class ($N$) = **Feasible Variant**.
+
+- **True Positive (TP)**: Ground-truth infeasible variant correctly declared infeasible or cleanly rejected.
+- **False Positive (FP)**: Ground-truth feasible variant incorrectly declared infeasible (false infeasibility declaration).
+- **True Negative (TN)**: Ground-truth feasible variant where a valid plan was found and executed.
+- **False Negative (FN)**: Ground-truth infeasible variant where the baseline incorrectly declared completion.
+
+### Diagnostic Classification Metrics
 - $\text{Accuracy} = \frac{TP + TN}{TP + TN + FP + FN}$
-- $\text{Precision} = \frac{TP}{TP + FP}$
-- $\text{Recall (Infeasible Recall)} = \frac{TP}{TP + FN}$
+- $\text{Balanced Accuracy} = \frac{1}{2} \left( \frac{TP}{TP + FN} + \frac{TN}{TN + FP} \right)$
 - $\text{Specificity (Feasible Recall)} = \frac{TN}{TN + FP}$
-- $\text{Balanced Accuracy} = \frac{\text{Recall} + \text{Specificity}}{2}$
-- $F_1 = \frac{2 \cdot TP}{2 \cdot TP + FP + FN}$
-- $\text{False Infeasible Rate} = \frac{FP}{FP + TN} = 1 - \text{Specificity}$
-- $\text{False Feasible Rate} = \frac{FN}{FN + TP} = 1 - \text{Recall}$
+- $\text{Infeasible Recall (Sensitivity)} = \frac{TP}{TP + FN}$
 - $\text{Decision Coverage} = \frac{TP + TN + FP + FN}{N_{\text{total}}}$
 
-### 4.2 Causally-Clean Decision Analysis (B2B)
-To avoid conflating model extraction failures, entity resolution failures, and geometric refiner failures with deliberate infeasibility declarations, runs are partitioned into post-hoc causal categories:
-1. `PLAN_FOUND`: A valid symbolic plan was produced and refined.
-2. `SYMBOLIC_NO_PLAN_AFTER_BOUNDED_CP`: Fast Downward proved unsolvability across all allowed CP attempts for valid PDDL.
-3. `UNRESOLVED_IDENTITY_FAILURE`: Terminated due to unobserved entities or ambiguity without finding a resolvable model.
-4. `UNRESOLVED_REFINEMENT_FAILURE`: Terminated due to geometric collision or unreachable IK.
-5. `UNRESOLVED_INVALID_CORRECTION`: Terminated due to Qwen producing invalid PDDL / semantics during CP.
-6. `UNRESOLVED_FM_FAILURE`: Terminated due to upstream FM transport or timeout.
-7. `OTHER_UNRESOLVED`: Any other unclassified failure.
+---
 
-Feasibility metrics are evaluated on the covered subset of definitive decisions, with `decision_coverage` explicitly reported.
+## 6. Neutral Diagnostic Causal Labels
+
+Earlier development iterations employed overclaimed causal labels such as `GENUINE_GEOMETRIC_FAILURE` or speculative scene descriptions. These have been replaced with neutral, verifiable diagnostic categories based directly on observable software components:
+
+### 6.1 Identity Resolution Failures
+- **`MULTIPLE_PHYSICAL_CANDIDATES`**: Perception/candidate universe returned $> 1$ physical bodies matching the semantic type within the spatial region, and the resolver could not disambiguate.
+- **`NO_PHYSICAL_CANDIDATE`**: Candidate universe returned 0 physical bodies matching the required type and spatial envelope.
+- **`SINGLE_PHYSICAL_CANDIDATE_BUT_UNRESOLVED`**: Exactly one candidate body existed, but attribute or affordance verification failed.
+
+### 6.2 Refinement Failures
+- **`REFINEMENT_IK_REJECTION`**: Inverse kinematics solver failed to find a collision-free joint configuration for the waypoint (replaces `GENUINE_GEOMETRIC_FAILURE`).
+- **`REFINEMENT_COLLISION_REJECTION`**: Collision checking detected body-body contact along the interpolated trajectory.
+- **`REFINEMENT_SKILL_ENVELOPE_REJECTION`**: Target pose fell outside the reachability envelope of the parameterized skill.
+- **`REFINEMENT_OTHER`**: Unclassified geometric refinement rejection.
+
+### Rationale
+A rejection by a specific numerical IK solver or specific heuristic bounding box does not mathematically prove that no collision-free trajectory exists in the continuous configuration space. Using neutral rejection labels maintains scientific rigor and prevents overclaiming refiner incompleteness as intrinsic task geometry.
 
 ---
 
-## 5. Statistical Uncertainty and Aggregations
+## 7. Canonical Requirement Counts (Single Source of Truth)
 
-1. **Proportions and Rates**:
-   Reported as count / denominator, percentage, and 95% Wilson score confidence interval:
-   $$w = \frac{\hat{p} + \frac{z^2}{2n} \pm z \sqrt{\frac{\hat{p}(1-\hat{p})}{n} + \frac{z^2}{4n^2}}}{1 + \frac{z^2}{n}}$$
-   where $z = 1.96$ for a 95% confidence level.
-2. **Continuous Distributions**:
-   Reported as $\text{mean} \pm \text{std}$ and $\text{median } [\text{IQR}]$.
-3. **Macro vs. Micro Aggregation**:
-   - **Micro**: Aggregate over all individual runs ($N = 320$).
-   - **Macro**: Aggregate across variant means ($N = 32$ variants).
+All benchmark domains evaluate a fixed canonical set of requirements defined in `mujoco_scenes/baselines/vilain_tamp/evaluation/base.py`:
+- **Kitchen**: 8 canonical requirements (`coffee_pot_on_countertop`, `mug_1_on_countertop`, `mug_2_on_countertop`, `spoon_1_in_mug_1`, `spoon_2_in_mug_2`, `milk_carton_on_countertop`, `sugar_dispenser_on_countertop`, `table_service_area_clear`).
+- **Living Room**: 6 canonical requirements (`book_on_shelf`, `remote_on_coffee_table`, `cushion_1_arranged`, `cushion_2_arranged`, `basket_on_side_table`, `floor_unobstructed`).
+- **Workshop**: 6 canonical requirements (`bracket_fastened_to_workbench`, `faceplate_mounted_on_bracket`, `screws_tightened_in_bracket`, `dowels_seated_in_bracket`, `caliper_returned_to_tool_rack`, `allen_key_returned_to_tool_rack`).
+
+No evaluator or harness component may hardcode alternative requirement totals.

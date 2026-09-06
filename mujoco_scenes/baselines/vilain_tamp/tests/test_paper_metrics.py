@@ -19,6 +19,12 @@ from mujoco_scenes.baselines.vilain_tamp.paper_metrics import (
     run_full_paper_analysis,
     extract_representative_action_sequences,
     generate_manuscript_main_table,
+    audit_identity_failures,
+    audit_refinement_failures,
+)
+from mujoco_scenes.baselines.vilain_tamp.evaluation.base import (
+    CANONICAL_REQUIREMENT_NAMES,
+    canonical_requirements_count,
 )
 from mujoco_scenes.baselines.vilain_tamp.benchmark_harness import (
     build_schedule,
@@ -601,3 +607,336 @@ def test_nonempty_execution_success_is_separate_from_zero_step_execution_stage_c
     assert aggr["execution_stage_completed_count"] == 2
     assert aggr["nonempty_plan_execution_completed_count"] == 1
     assert math.isclose(aggr["nonempty_plan_execution_completed_rate"], 0.5)
+
+
+# ======================================================================
+# PART 9: PRODUCTION TESTS (12 SPECIFIED REQUIREMENTS)
+# ======================================================================
+
+
+def test_part9_1_canonical_requirement_counts_match_single_source_of_truth() -> None:
+    """Requirement 1: Canonical requirement counts match evaluation/base.py for all domains."""
+    assert len(CANONICAL_REQUIREMENT_NAMES["kitchen"]) == 8
+    assert len(CANONICAL_REQUIREMENT_NAMES["living_room"]) == 6
+    assert len(CANONICAL_REQUIREMENT_NAMES["workshop"]) == 6
+
+    assert canonical_requirements_count("kitchen") == 8
+    assert canonical_requirements_count("living_room") == 6
+    assert canonical_requirements_count("workshop") == 6
+
+    config_root = _config_root()
+    req_map = authoritative_requirements_count(config_root)
+    for variant, cnt in req_map["kitchen"].items():
+        assert cnt == 8, f"Kitchen variant {variant} has count {cnt} != 8"
+    for variant, cnt in req_map["living_room"].items():
+        assert cnt == 6, f"Living Room variant {variant} has count {cnt} != 6"
+    for variant, cnt in req_map["workshop"].items():
+        assert cnt == 6, f"Workshop variant {variant} has count {cnt} != 6"
+
+
+def test_part9_2_initial_goal_coverage_snapshot_evaluation() -> None:
+    """Requirement 2: Initial goal coverage snapshot correctly computed on initial scene."""
+    rows = [
+        {
+            "ground_truth_feasible": True,
+            "initial_requirements_passed": 4,
+            "goal_requirements_passed": 6,
+            "goal_requirements_total": 8,
+        },
+        {
+            "ground_truth_feasible": True,
+            "initial_requirements_passed": 2,
+            "goal_requirements_passed": 4,
+            "goal_requirements_total": 8,
+        },
+    ]
+    aggr = compute_group_aggregates(rows)
+    assert aggr["initial_goal_requirements_passed_feasible"] == 6
+    assert aggr["goal_requirements_total_feasible"] == 16
+    assert math.isclose(aggr["initial_goal_coverage_micro"], 6 / 16)
+    # macro: (4/8 + 2/8) / 2 = 6/16 = 0.375
+    assert math.isclose(aggr["initial_goal_coverage_macro"], 0.375)
+
+
+def test_part9_3_delta_goal_coverage_computation() -> None:
+    """Requirement 3: Delta Goal Coverage correctly computed as Terminal - Initial."""
+    rows = [
+        {
+            "ground_truth_feasible": True,
+            "initial_requirements_passed": 2,
+            "goal_requirements_passed": 5,
+            "goal_requirements_total": 8,
+        },
+        {
+            "ground_truth_feasible": True,
+            "initial_requirements_passed": 3,
+            "goal_requirements_passed": 7,
+            "goal_requirements_total": 8,
+        },
+    ]
+    aggr = compute_group_aggregates(rows)
+    # initial: (2+3)/16 = 5/16 = 0.3125
+    # terminal: (5+7)/16 = 12/16 = 0.75
+    # delta micro: 0.75 - 0.3125 = 0.4375
+    assert math.isclose(aggr["initial_goal_coverage_micro"], 5 / 16)
+    assert math.isclose(aggr["goal_coverage_micro"], 12 / 16)
+    assert math.isclose(aggr["delta_goal_coverage_micro"], 7 / 16)
+    assert math.isclose(aggr["delta_goal_coverage_micro"], aggr["goal_coverage_micro"] - aggr["initial_goal_coverage_micro"])
+
+    # macro:
+    # initial: (2/8 + 3/8) / 2 = 5/16 = 0.3125
+    # terminal: (5/8 + 7/8) / 2 = 12/16 = 0.75
+    assert math.isclose(aggr["delta_goal_coverage_macro"], aggr["goal_coverage_macro"] - aggr["initial_goal_coverage_macro"])
+
+
+def test_part9_4_action_sequence_attribution_zero_actions() -> None:
+    """Requirement 4: When 0 physical actions executed, Delta Goal Coverage == 0.0."""
+    rows = [
+        {
+            "ground_truth_feasible": True,
+            "initial_requirements_passed": 3,
+            "goal_requirements_passed": 3,
+            "goal_requirements_total": 8,
+            "physical_actions_attempted": 0,
+            "physical_actions_succeeded": 0,
+        },
+        {
+            "ground_truth_feasible": True,
+            "initial_requirements_passed": 1,
+            "goal_requirements_passed": 1,
+            "goal_requirements_total": 6,
+            "physical_actions_attempted": 0,
+            "physical_actions_succeeded": 0,
+        },
+    ]
+    aggr = compute_group_aggregates(rows)
+    assert math.isclose(aggr["initial_goal_coverage_micro"], 4 / 14)
+    assert math.isclose(aggr["goal_coverage_micro"], 4 / 14)
+    assert math.isclose(aggr["delta_goal_coverage_micro"], 0.0)
+    assert math.isclose(aggr["delta_goal_coverage_macro"], 0.0)
+
+
+def test_part9_5_zero_step_plan_never_physical_plan_found() -> None:
+    """Requirement 5: Zero-step plan NEVER counts toward Physical plan found."""
+    r_zero = {
+        "ground_truth_feasible": True,
+        "symbolic_plan_found": True,
+        "symbolic_plan_nonempty": False,
+        "val_plan_valid": True,
+        "identity_success": True,
+        "refinement_success": True,
+        "physical_plan_found": False,
+        "actual_selected_plan_length": 0,
+    }
+    r_nonempty = {
+        "ground_truth_feasible": True,
+        "symbolic_plan_found": True,
+        "symbolic_plan_nonempty": True,
+        "val_plan_valid": True,
+        "identity_success": True,
+        "refinement_success": True,
+        "physical_plan_found": True,
+        "actual_selected_plan_length": 4,
+    }
+    aggr = compute_group_aggregates([r_zero, r_nonempty])
+    assert aggr["feasible_runs"] == 2
+    assert aggr["physical_plan_found_count"] == 1
+    assert math.isclose(aggr["physical_plan_found_rate"], 0.5)
+
+
+def test_part9_6_zero_step_plan_never_nonempty_plan_exec() -> None:
+    """Requirement 6: Zero-step plan NEVER counts toward Non-empty PLAN@EXEC."""
+    r_zero = {
+        "execution_stage_completed": True,
+        "nonempty_plan_execution_completed": False,
+        "actual_selected_plan_length": 0,
+    }
+    r_nonempty = {
+        "execution_stage_completed": True,
+        "nonempty_plan_execution_completed": True,
+        "actual_selected_plan_length": 2,
+    }
+    funnel = compute_stage_funnel([r_zero, r_nonempty])
+    funnel_map = {s["stage_id"]: s for s in funnel}
+    # Stage 9_nonempty_exec_success is PLAN@EXEC
+    assert funnel_map["9_nonempty_exec_success"]["stage_name"] == "PLAN@EXEC"
+    assert funnel_map["9_nonempty_exec_success"]["count"] == 1
+    assert math.isclose(funnel_map["9_nonempty_exec_success"]["unconditional_rate"], 0.5)
+
+
+def test_part9_7_zero_step_plan_unmet_requirements_is_false_completion() -> None:
+    """Requirement 7: Zero-step plan with unmet physical requirements counts as False Completion."""
+    rows = [
+        {
+            "declared_completion": True,
+            "actual_task_success": False,
+            "actual_selected_plan_length": 0,
+            "ground_truth_feasible": True,
+        }
+    ]
+    aggr = compute_group_aggregates(rows)
+    assert aggr["declared_completion_count"] == 1
+    assert aggr["false_completion_count"] == 1
+    assert math.isclose(aggr["false_completion_rate"], 1.0)
+
+
+def test_part9_8_seven_manuscript_metrics_present_in_json(tmp_path: Path) -> None:
+    """Requirement 8: Seven manuscript main-table metrics are all present in main_table_metrics.json."""
+    mock_overall = compute_group_aggregates([])
+    mock_domain = [
+        compute_group_aggregates([], group_label="kitchen"),
+        compute_group_aggregates([], group_label="living_room"),
+        compute_group_aggregates([], group_label="workshop"),
+    ]
+    generate_manuscript_main_table(mock_overall, mock_domain, tmp_path, file_prefix="test_")
+
+    json_path = tmp_path / "test_main_table_metrics.json"
+    assert json_path.is_file()
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+
+    required_keys = [
+        "outcome_correct_rate",
+        "feasible_task_success_rate",
+        "goal_coverage_micro",
+        "delta_goal_coverage_micro",
+        "false_completion_rate",
+        "physical_plan_found_rate",
+        "raw_vlm_requests",
+        "high_level_replans",
+    ]
+    for group in ["overall", "kitchen", "living_room", "workshop"]:
+        assert group in data
+        for k in required_keys:
+            assert k in data[group], f"Key {k} missing from {group} in main_table_metrics.json"
+
+
+def test_part9_9_seven_action_sequence_funnel_stages() -> None:
+    """Requirement 9: Seven action sequence funnel stages are all present."""
+    funnel = compute_stage_funnel([])
+    stage_names = [s["stage_name"] for s in funnel]
+    expected_stages = [
+        "PLAN@FD",
+        "NONEMPTY PLAN@FD",
+        "PLAN@VAL",
+        "PLAN@IDENTITY",
+        "PLAN@REFINE",
+        "PLAN@EXEC",
+        "TASK@FINAL",
+    ]
+    for exp_name in expected_stages:
+        assert exp_name in stage_names
+    for s in funnel:
+        assert "unconditional_rate" in s
+        assert "conditional_conversion_rate" in s
+
+
+def test_part9_10_goal_coverage_denominator_gt_feasible_only() -> None:
+    """Requirement 10: Goal Coverage denominator is GT-feasible runs only."""
+    rows = [
+        {
+            "ground_truth_feasible": True,
+            "goal_requirements_passed": 6,
+            "goal_requirements_total": 8,
+        },
+        {
+            "ground_truth_feasible": True,
+            "goal_requirements_passed": 4,
+            "goal_requirements_total": 8,
+        },
+        {
+            "ground_truth_feasible": False,
+            "goal_requirements_passed": 5,
+            "goal_requirements_total": 6,
+        },
+    ]
+    aggr = compute_group_aggregates(rows)
+    assert aggr["total_runs"] == 3
+    assert aggr["feasible_runs"] == 2
+    # Infeasible run requirements (5/6) must not be included
+    assert aggr["goal_requirements_passed_feasible"] == 10
+    assert aggr["goal_requirements_total_feasible"] == 16
+    assert math.isclose(aggr["goal_coverage_micro"], 10 / 16)
+
+
+def test_part9_11_false_completion_denominator_declared_complete_only() -> None:
+    """Requirement 11: False Completion denominator is declared-complete runs only."""
+    rows = [
+        # Declared complete and succeeded
+        {"declared_completion": True, "actual_task_success": True},
+        {"declared_completion": True, "actual_task_success": True},
+        # Declared complete and failed (false completion)
+        {"declared_completion": True, "actual_task_success": False},
+        # Never declared completion, but failed (should NOT be in false completion denominator)
+        {"declared_completion": False, "actual_task_success": False},
+        {"declared_completion": False, "actual_task_success": False},
+    ]
+    aggr = compute_group_aggregates(rows)
+    assert aggr["total_runs"] == 5
+    assert aggr["declared_completion_count"] == 3
+    assert aggr["false_completion_count"] == 1
+    # Rate must be 1/3, NOT 1/5
+    assert math.isclose(aggr["false_completion_rate"], 1 / 3)
+
+
+def test_part9_12_neutral_causal_labels(tmp_path: Path) -> None:
+    """Requirement 12: MULTIPLE_PHYSICAL_CANDIDATES and REFINEMENT_IK_REJECTION are used."""
+    # 1. Identity failures
+    results_root = tmp_path / "results"
+    run_id_multi = "run_id_multi"
+    art_dir_multi = results_root / "runs" / run_id_multi / "artifacts"
+    att_dir_multi = art_dir_multi / "attempts" / "00"
+    att_dir_multi.mkdir(parents=True)
+    ao_id_file = att_dir_multi / "attempt_outcome.json"
+    ao_id_file.write_text(json.dumps({
+        "failure": {
+            "kind": "ENTITY_RESOLUTION",
+            "details": {
+                "object_ids": ["cup_1"],
+                "candidate_entities": ["cup_body_a", "cup_body_b"],
+                "reason_code": "AMBIGUOUS_ENTITY",
+            },
+        }
+    }), encoding="utf-8")
+
+    rows_id = [{
+        "run_id": run_id_multi,
+        "domain": "kitchen",
+        "variant": "F0",
+        "observation_protocol": "initial_observation_only",
+        "repeat_index": 0,
+        "raw_terminal_status": "IDENTITY_FAILURE",
+    }]
+    id_records = audit_identity_failures(rows_id, results_root)
+    assert len(id_records) == 1
+    assert id_records[0]["classification"] == "MULTIPLE_PHYSICAL_CANDIDATES"
+
+    # 2. Refinement failures
+    run_id_ref = "run_id_ref"
+    att_dir = results_root / "runs" / run_id_ref / "artifacts" / "attempts" / "00"
+    att_dir.mkdir(parents=True)
+    ao_file = att_dir / "attempt_outcome.json"
+    ao_file.write_text(json.dumps({
+        "failure": {
+            "kind": "REFINEMENT",
+            "details": {
+                "stage": "IK",
+                "refinement_failure": {
+                    "operator": "pick",
+                    "reason_code": "IK_NO_SOLUTION",
+                },
+            },
+        }
+    }), encoding="utf-8")
+
+    rows_ref = [{
+        "run_id": run_id_ref,
+        "domain": "kitchen",
+        "variant": "F0",
+        "observation_protocol": "initial_observation_only",
+        "repeat_index": 0,
+        "raw_terminal_status": "REFINEMENT_FAILURE",
+    }]
+    ref_records = audit_refinement_failures(rows_ref, results_root)
+    assert len(ref_records) == 1
+    assert ref_records[0]["classification"] == "REFINEMENT_IK_REJECTION"
+    assert "GENUINE_GEOMETRIC_FAILURE" not in ref_records[0]["classification"]
