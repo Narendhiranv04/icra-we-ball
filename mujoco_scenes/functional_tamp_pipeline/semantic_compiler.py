@@ -325,6 +325,14 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         executable_context_role = id_map.get(group.get('context_role')) if context else None
         if domain == 'living_room' and executable_context_role == 'SEATING_POSITION' and 'ACCESSIBLE_FROM_BOTH_SEATS' in context:
             executable_context_role = 'SEATING_PAIR'
+        if group.get('usage_policy') == 'SEQUENTIAL_REUSE_ALLOWED' and tool_role_id in nodes:
+            t_node = nodes[tool_role_id]
+            nodes[tool_role_id] = replace(
+                t_node,
+                binding_policy='REUSABLE',
+                min_count=t_node.min_count or 1,
+                preference=t_node.preference or 'minimize_distinct',
+            )
         groups.append(OperationGroup(id=function if not any(g.id == function for g in groups) else group['id'], function=runtime_function, tool_role=tool_role_id,
             target_role=target_role_id, required_target_count=count, usage_policy=group['usage_policy'],
             required_relations=tuple(dict.fromkeys(required)), context_role=executable_context_role,

@@ -159,8 +159,9 @@ class KitchenPlanningCompiler:
                         soup_pairs.add(pair)
         # Standalone role relations may verify a pair without a group. Dedicated
         # multi-target binding, when expressed, remains authoritative above.
-        if specification is None:
+        if not stir_pairs:
             stir_pairs = {(t, c) for t in coffee_stirrers for c in coffee_targets}
+        if not soup_pairs:
             soup_pairs = set(zip(soup_utensils, soup_targets))
 
         home = "countertop"
