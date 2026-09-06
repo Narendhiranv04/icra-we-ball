@@ -13,6 +13,7 @@ import numpy as np
 
 from .artifacts import atomic_write_json, atomic_write_text, sha256_text
 from .contracts import (
+    FixedSceneEvidence,
     GeneratedPDDLProblem,
     ObjectEstimate,
     ObjectEstimateStatus,
@@ -81,11 +82,13 @@ class ViLaInInterpreter:
         reasoning_client: RecordedFMClient,
         models: InterpreterModels,
         symbolic_contract: VariantActionContract | None = None,
+        fixed_scene_evidence_provider: Any | None = None,
     ) -> None:
         self.object_client = object_client
         self.reasoning_client = reasoning_client
         self.models = models
         self.symbolic_contract = symbolic_contract
+        self.fixed_scene_evidence_provider = fixed_scene_evidence_provider
 
     def interpret(
         self,
@@ -107,6 +110,19 @@ class ViLaInInterpreter:
         symbolic_contract_path = atomic_write_json(
             destination / "interpreter" / "variant_action_contract.json",
             symbolic_contract.to_dict(),
+        )
+
+        fixed_scene_evidence: tuple[FixedSceneEvidence, ...] = ()
+        if self.fixed_scene_evidence_provider is not None:
+            fixed_scene_evidence = tuple(
+                self.fixed_scene_evidence_provider(
+                    observations=observations,
+                    observation_root=observation_root,
+                )
+            )
+        atomic_write_json(
+            destination / "perception" / "fixed_scene_evidence.json",
+            {"fixtures": [item.to_dict() for item in fixed_scene_evidence]},
         )
 
         object_prompt = build_object_estimation_prompt(
@@ -230,14 +246,17 @@ class ViLaInInterpreter:
         initial_prompt = build_initial_state_prompt(
             task_instruction=task_instruction,
             domain=domain,
+            observations=observations,
             objects=estimates,
             fact_candidates=fact_candidates,
             symbolic_contract=symbolic_contract,
+            fixed_scene_evidence=fixed_scene_evidence,
         )
         initial_response, initial_call = self._invoke_reasoning(
             FMCallType.INITIAL_STATE,
             initial_prompt.messages(),
             destination / "interpreter" / "initial_state_call",
+            image_artifacts=initial_prompt.image_artifacts,
             metadata={
                 "selection_field": "true_fact_ids",
                 "fact_candidates": {
@@ -300,11 +319,15 @@ class ViLaInInterpreter:
                 previous_fact_ids=tuple(fact.fact_id for fact in initial_facts),
                 diagnostics=initial_diagnostics,
                 fact_candidates=fact_candidates,
+                observations=observations,
+                objects=estimates,
+                fixed_scene_evidence=fixed_scene_evidence,
             )
             corrected_response, corrected_call = self._invoke_reasoning(
                 FMCallType.INITIAL_STATE,
                 correction_prompt.messages(),
                 destination / "interpreter" / "initial_state_consistency_call",
+                image_artifacts=correction_prompt.image_artifacts,
                 metadata={
                     "selection_field": "true_fact_ids",
                     "bounded_consistency_correction": True,
@@ -582,6 +605,7 @@ class ViLaInInterpreter:
         call_type: FMCallType,
         messages: Sequence[Mapping[str, str]],
         output_root: Path,
+        image_artifacts: Sequence[str] = (),
         metadata: Mapping[str, Any] | None = None,
     ) -> tuple[Any, FMCallRecord]:
         return self.reasoning_client.invoke(
@@ -590,6 +614,7 @@ class ViLaInInterpreter:
                 model=self.models.reasoning_model,
                 revision=self.models.reasoning_model_revision,
                 messages=messages,
+                image_artifacts=tuple(image_artifacts),
                 response_format="json",
                 metadata=dict(metadata or {}),
             ),

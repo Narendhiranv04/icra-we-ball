@@ -90,7 +90,7 @@ Composed of atomic manipulation outcomes for 2 coffee vessels and 2 soup vessels
 
 | Metric Name | Formal Definition | Numerator | Denominator | Better | Target Population |
 | :--- | :--- | :--- | :--- | :---: | :--- |
-| **Outcome Correct (%)** | Proportion of runs where binary decision matches ground truth feasibility and execution outcome | $\sum [\text{feasible} \land \text{success}] + \sum [\text{infeasible} \land \text{rejected}]$ | All non-infrastructure runs ($N_{\text{total}}$) | Higher | All Runs ($N=32$ smoke, $N=320$ full) |
+| **Outcome Correct (%)** | Proportion of runs where binary decision matches ground truth feasibility and execution outcome | $\sum [\text{feasible} \land \text{success}] + \sum [\text{infeasible} \land \text{rejected}]$ | All non-infrastructure runs ($N_{\text{total}}$) | Higher | All Runs ($N=32$ 1-repeat, $N=160$ 5-repeat official `initial_observation_only`) |
 | **Feasible-Task Success (%)** | Proportion of ground-truth feasible runs achieving all canonical benchmark constraints | Runs with `actual_task_success == True` | Ground-truth feasible runs ($N_{\text{feasible}}$) | Higher | Feasible Subset ($N_{\text{feasible}}=20$) |
 | **Goal Coverage (%)** | Fraction of canonical GT terminal manipulation subgoals satisfied in the physical state | $\sum \text{subgoals passed}$ | $\sum \text{subgoals total}$ | Higher | Feasible Subset ($N_{\text{feasible}}=20$) |
 | **Initial Goal Coverage (%)** | Fraction of canonical GT terminal manipulation subgoals satisfied at initial physical state | $\sum \text{initial subgoals passed}$ | $\sum \text{initial subgoals total}$ | Context | Feasible Subset ($N_{\text{feasible}}=20$) |

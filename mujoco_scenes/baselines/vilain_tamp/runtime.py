@@ -16,6 +16,7 @@ from .config import BaselineConfig, Domain, ModelCondition
 from .corrective_planning import CorrectivePlanningLoop
 from .domains import load_domain
 from .identity import BaselineIdentityResolver, EntityCandidate, fixed_entity_binding
+from .live_fixed_evidence import FixedSceneEvidenceProvider
 from .interpreter import InterpreterModels, ViLaInInterpreter
 from .live_fm import (
     DEFAULT_VLLM_BASE_URL,
@@ -223,6 +224,10 @@ def build_live_components(
         base_url=base_url,
         timeout_seconds=config.timeouts.model_seconds,
     )
+    fixed_evidence_provider = FixedSceneEvidenceProvider(
+        scene=observation_runtime.scene,
+        domain=options.domain,
+    )
     interpreter = ViLaInInterpreter(
         object_client=clients.object_client,
         reasoning_client=clients.reasoning_client,
@@ -233,6 +238,7 @@ def build_live_components(
             clients.reasoning_model_revision,
         ),
         symbolic_contract=symbolic_contract,
+        fixed_scene_evidence_provider=fixed_evidence_provider,
     )
     symbolic_planner = FastDownwardPlanner(
         options.fast_downward_path,

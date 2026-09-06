@@ -62,6 +62,7 @@ def test_only_live_runtime_adapters_may_import_simulator() -> None:
         source = path.read_text(encoding="utf-8")
         if path.relative_to(PACKAGE_ROOT).as_posix() in {
             "live_execution.py",
+            "live_fixed_evidence.py",
             "live_observations.py",
             "live_refinement.py",
             "living_controller_runtime.py",

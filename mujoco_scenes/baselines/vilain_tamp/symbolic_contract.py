@@ -218,13 +218,11 @@ def load_variant_action_contract(
         )
     elif domain.key == "living_room":
         regions = loaded.get("regions", {})
-        absent = {str(item) for item in row.get("absent_regions", ())}
         if not isinstance(regions, Mapping):
             raise ValueError("living-room regions must be a mapping")
         inventory = {
             str(region_id).lower(): "support"
             for region_id in regions
-            if str(region_id) not in absent
         }
         inventory["staging"] = "location"
     else:

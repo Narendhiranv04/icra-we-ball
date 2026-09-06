@@ -8,7 +8,7 @@ from typing import Any, Mapping, Sequence
 
 import yaml
 
-from .contracts import ObjectEstimate, ViLaInObservation
+from .contracts import FixedSceneEvidence, ObjectEstimate, ViLaInObservation
 from .domains.registry import DomainDefinition
 from .observations import prompt_observation_payload
 from .symbolic_contract import (
@@ -127,9 +127,11 @@ def build_initial_state_prompt(
     *,
     task_instruction: str,
     domain: DomainDefinition,
+    observations: Sequence[ViLaInObservation] = (),
     objects: Sequence[ObjectEstimate],
     fact_candidates: Sequence[GroundedFact],
     symbolic_contract: VariantActionContract | None = None,
+    fixed_scene_evidence: Sequence[FixedSceneEvidence] = (),
 ) -> PromptBundle:
     contract = symbolic_contract
     type_table = (
@@ -146,33 +148,107 @@ def build_initial_state_prompt(
         if contract is not None
         else ""
     )
+    image_artifacts = tuple(
+        frame.rgb_path
+        for observation in observations
+        for frame in observation.camera_frames
+    )
+    observation_payload = (
+        prompt_observation_payload(observations) if observations else {}
+    )
+
+    movable_objects_payload = [
+        {
+            "object_id": item.object_id,
+            "label": item.label,
+            "pddl_type": item.pddl_type,
+            "estimated_centroid_m": (
+                [round(float(x), 3) for x in item.estimated_centroid_m]
+                if item.estimated_centroid_m is not None
+                else None
+            ),
+            "detections": [
+                {
+                    "stage_id": str(d.get("stage_id", "")),
+                    "camera_id": str(d.get("camera_id", "")),
+                    "bbox_1000": [int(v) for v in d.get("xyxy", d.get("bbox_1000", []))],
+                    "confidence": round(float(d.get("confidence", 1.0)), 3),
+                }
+                for d in item.detections
+            ],
+        }
+        for item in objects
+    ]
+
+    fixed_evidence_payload = [
+        {
+            "symbolic_id": item.symbolic_id,
+            "pddl_type": item.pddl_type,
+            "physically_present": item.physically_present,
+            "world_centroid_m": (
+                [round(float(x), 3) for x in item.centroid_m]
+                if item.centroid_m is not None
+                else None
+            ),
+            "camera_detections": [
+                {
+                    "stage_id": str(p.get("stage_id", "")),
+                    "camera_id": str(p.get("camera_id", "")),
+                    "bbox_1000": [int(v) for v in p.get("bbox_1000", [])],
+                }
+                for p in item.camera_projections
+            ],
+            "description": item.description,
+        }
+        for item in fixed_scene_evidence
+    ]
+
+    obs_text = (
+        f"Observation ordering:\n{_json(observation_payload)}\n\n"
+        if observation_payload
+        else ""
+    )
+    fixed_text = (
+        f"Neutral fixed-scene support evidence:\n{_json(fixed_evidence_payload)}\n\n"
+        if fixed_evidence_payload
+        else ""
+    )
+
     return PromptBundle(
         system_text=(
-            "Infer a PDDL initial state for ViLaIn-TAMP from the supplied "
-            "object estimates and immutable domain."
+            "Infer a PDDL initial state for ViLaIn-TAMP from the supplied RGB scene "
+            "images, movable object detections, neutral fixed-scene evidence, and immutable domain."
         ),
         user_text=(
             f"Task instruction:\n{task_instruction}\n\n"
             f"Fixed domain knowledge:\n{_domain_knowledge_text(domain)}\n\n"
-            f"Object estimates:\n{_json([item.to_dict() for item in objects])}\n\n"
+            f"{obs_text}"
+            f"Movable object estimates:\n{_json(movable_objects_payload)}\n\n"
             f"Exact object ID/type table:\n{_json(dict(type_table))}\n\n"
+            f"{fixed_text}"
             f"{contract_text}"
             "Legal positive grounded facts grouped by predicate:\n"
             f"{_json(_plain_grouped_facts(fact_candidates))}\n\n"
-            "Select only facts that are true in the initial state from the "
-            "observation and public static structure. The task instruction states "
-            "desired outcomes, not facts already achieved. Be conservative: do not "
-            "mark goal effects such as stirred, fastened, inserted, supports, inside, "
-            "or contains as initially true unless the images directly establish them. "
-            "A single-gripper robot cannot be handempty and holding, cannot hold "
-            "multiple objects, and one object cannot be at multiple locations. Closed "
-            "storage is not open or accessible merely because its exterior is visible. "
+            "Select only facts that are true NOW in the initial state from the "
+            "supplied scene images, detected movable object bounding boxes/centroids, and "
+            "neutral fixed-scene evidence. The task instruction states desired outcomes, "
+            "not facts already achieved.\n"
+            "- For at(object, location): select it only when the object's visual and spatial "
+            "evidence supports that location.\n"
+            "- For present(location) or accessible(location): use actual physical fixed-scene "
+            "evidence. If a fixture is physically absent, do not select it.\n"
+            "- A single-gripper robot cannot be handempty and holding, cannot hold "
+            "multiple objects, and one object cannot be at multiple locations.\n"
+            "- Closed storage is not open or accessible merely because its exterior is visible.\n"
+            "- Be conservative: do not mark goal effects such as stirred, fastened, inserted, "
+            "supports, inside, or contains as initially true unless directly established by the scene.\n"
             "False facts are omitted. "
             "Return compact JSON only with exactly this schema: "
             '{"true_fact_ids":["f0001"]}. Use only listed IDs. Return no raw '
             "PDDL, variables, negative literals, Markdown, explanation, plan, "
             "or chain-of-thought."
         ),
+        image_artifacts=image_artifacts,
     )
 
 
@@ -182,24 +258,79 @@ def build_initial_consistency_prompt(
     previous_fact_ids: Sequence[str],
     diagnostics: Sequence[Mapping[str, Any]],
     fact_candidates: Sequence[GroundedFact],
+    observations: Sequence[ViLaInObservation] = (),
+    objects: Sequence[ObjectEstimate] = (),
+    fixed_scene_evidence: Sequence[FixedSceneEvidence] = (),
 ) -> PromptBundle:
+    image_artifacts = tuple(
+        frame.rgb_path
+        for observation in observations
+        for frame in observation.camera_frames
+    )
+    movable_payload = (
+        [
+            {
+                "object_id": item.object_id,
+                "label": item.label,
+                "pddl_type": item.pddl_type,
+                "estimated_centroid_m": (
+                    [round(float(x), 3) for x in item.estimated_centroid_m]
+                    if item.estimated_centroid_m is not None
+                    else None
+                ),
+            }
+            for item in objects
+        ]
+        if objects
+        else []
+    )
+    fixed_payload = (
+        [
+            {
+                "symbolic_id": item.symbolic_id,
+                "pddl_type": item.pddl_type,
+                "physically_present": item.physically_present,
+                "world_centroid_m": (
+                    [round(float(x), 3) for x in item.centroid_m]
+                    if item.centroid_m is not None
+                    else None
+                ),
+            }
+            for item in fixed_scene_evidence
+        ]
+        if fixed_scene_evidence
+        else []
+    )
+    movable_text = (
+        f"Movable object estimates:\n{_json(movable_payload)}\n\n"
+        if movable_payload
+        else ""
+    )
+    fixed_text = (
+        f"Neutral fixed-scene support evidence:\n{_json(fixed_payload)}\n\n"
+        if fixed_payload
+        else ""
+    )
     return PromptBundle(
         system_text=(
-            "Correct one ViLaIn-TAMP initial fact selection using only generic "
-            "physical consistency rules. Never output a plan or PDDL."
+            "Correct one ViLaIn-TAMP initial fact selection using the supplied scene "
+            "images and generic physical consistency rules. Never output a plan or PDDL."
         ),
         user_text=(
             f"Task instruction (desired outcome, not current truth):\n"
             f"{task_instruction}\n\n"
+            f"{movable_text}"
+            f"{fixed_text}"
             f"Previous true fact IDs:\n{_json(list(previous_fact_ids))}\n\n"
             f"Physical consistency diagnostics:\n{_json(list(diagnostics))}\n\n"
             f"Legal initial facts:\n{_json(_plain_grouped_facts(fact_candidates))}\n\n"
             "Return a conservative, physically consistent initial state. Preserve "
-            "only facts supported by the observation or fixed public structure. "
+            "only facts supported by the scene observation or fixed physical structure. "
             "Desired task effects are not initially true merely because the task "
             "requests them. Return exactly {\"true_fact_ids\":[...]} using listed "
             "IDs only, with no PDDL, plan, explanation, or benchmark answer."
         ),
+        image_artifacts=image_artifacts,
     )
 
 

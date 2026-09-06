@@ -1067,9 +1067,13 @@ def compute_stage_funnel(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, An
         count = sum(1 for r in rows if predicate(r))
         stage_counts[stage_id] = count
         prev_count = stage_counts.get(prev_id, n) if prev_id is not None else n
+        if count > prev_count:
+            raise ValueError(
+                f"Funnel nesting invariant violated: {stage_id} ({name}) count {count} "
+                f"exceeds predecessor {prev_id} count {prev_count}"
+            )
         unconditional_rate = count / n if n > 0 else 0.0
         conditional_rate = count / prev_count if prev_count > 0 else 0.0
-        conditional_rate = min(1.0, conditional_rate)
         ci_low, ci_high = wilson_interval(count, n)
         funnel.append({
             "stage_id": stage_id,

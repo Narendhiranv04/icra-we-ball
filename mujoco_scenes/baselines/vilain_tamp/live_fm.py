@@ -216,18 +216,23 @@ class VLLMQwenTransport:
         self, request: FMRequest
     ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         rendered = [dict(message) for message in request.messages]
-        if request.call_type is not FMCallType.OBJECT_ESTIMATION:
+        if request.call_type not in (
+            FMCallType.OBJECT_ESTIMATION,
+            FMCallType.INITIAL_STATE,
+        ):
             if request.image_artifacts:
                 raise FMTransportError("reasoning calls must not contain images")
             return rendered, {}
         if not request.image_artifacts:
-            raise FMTransportError("object estimation requires RGB images")
+            if request.call_type is FMCallType.OBJECT_ESTIMATION:
+                raise FMTransportError("object estimation requires RGB images")
+            return rendered, {}
         user_index = next(
             (index for index, item in enumerate(rendered) if item.get("role") == "user"),
             None,
         )
         if user_index is None:
-            raise FMTransportError("object estimation requires a user message")
+            raise FMTransportError(f"{request.call_type.value} requires a user message")
         text_content = str(rendered[user_index].get("content", ""))
         image_urls, image_metadata = self._model_image_urls(request.image_artifacts)
         content: list[dict[str, Any]] = [

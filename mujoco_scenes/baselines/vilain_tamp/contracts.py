@@ -96,6 +96,19 @@ class ObjectEstimate(SerializableContract):
 
 
 @dataclass(frozen=True)
+class FixedSceneEvidence(SerializableContract):
+    symbolic_id: str
+    pddl_type: str
+    entity_name: str | None
+    physically_present: bool
+    centroid_m: tuple[float, float, float] | None
+    aabb_min_m: tuple[float, float, float] | None
+    aabb_max_m: tuple[float, float, float] | None
+    camera_projections: tuple[Mapping[str, Any], ...] = ()
+    description: str = ""
+
+
+@dataclass(frozen=True)
 class GeneratedPDDLProblem(SerializableContract):
     attempt_index: int
     source: ProblemSource

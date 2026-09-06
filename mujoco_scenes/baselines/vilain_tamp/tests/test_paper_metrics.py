@@ -754,12 +754,25 @@ def test_part9_5_zero_step_plan_never_physical_plan_found() -> None:
 
 def test_part9_6_zero_step_plan_never_nonempty_plan_exec() -> None:
     """Requirement 6: Zero-step plan NEVER counts toward Non-empty PLAN@EXEC."""
+    upstream = {
+        "observation_success": True,
+        "object_estimation_success": True,
+        "pddl_valid": True,
+        "any_plan_fd": True,
+        "any_plan_val": True,
+        "nonempty_plan_fd": True,
+        "nonempty_plan_val": True,
+        "nonempty_plan_identity": True,
+        "nonempty_plan_refine": True,
+    }
     r_zero = {
+        **upstream,
         "execution_stage_completed": True,
         "nonempty_plan_execution_completed": False,
         "actual_selected_plan_length": 0,
     }
     r_nonempty = {
+        **upstream,
         "execution_stage_completed": True,
         "nonempty_plan_execution_completed": True,
         "actual_selected_plan_length": 2,
