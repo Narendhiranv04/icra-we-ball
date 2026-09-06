@@ -366,6 +366,19 @@ def compile_kitchen_contract_from_graph(graph: FunctionalRequirementGraph) -> di
             },
             "relations": list(grp.required_relations),
         }
+        # The legacy joint-witness contract indexes pairwise verifiers from
+        # the top-level relation list. Operation-group requirements already
+        # carry the same expressed semantics, so project them directionally
+        # into that index without inventing any additional relation.
+        for predicate in grp.required_relations:
+            projected = {
+                "predicate": predicate,
+                "subject_role": grp.tool_role,
+                "object_role": grp.target_role,
+                "expected": True,
+            }
+            if projected not in relations_list:
+                relations_list.append(projected)
 
     symbolic_task = graph.metadata.get("symbolic_task")
     if not symbolic_task:

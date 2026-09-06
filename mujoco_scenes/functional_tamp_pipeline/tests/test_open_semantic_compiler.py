@@ -265,3 +265,25 @@ def test_joint_grounding_streams_large_rejection_diagnostics():
     assert result['assignment_evaluations_total_count'] == 6 ** 4
     assert len(result['assignment_evaluations']) == 500
     assert result['assignment_evaluations_truncated'] is True
+
+
+def test_group_relations_project_directionally_into_kitchen_witness_contract():
+    from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import compile_kitchen_contract_from_graph
+    from mujoco_scenes.task_witness import load_task_requirements
+    target = role('target'); target.update(function='contain soup', candidate_categories=['bowl'])
+    tool = role('tool'); tool.update(function='eat soup', candidate_categories=['spoon'])
+    raw = doc(target, tool)
+    raw['interaction_groups'] = [{
+        'id': 'serving', 'function': 'serve soup', 'tool_role': 'tool',
+        'target_role': 'target', 'required_target_count': 1,
+        'usage_policy': 'SEQUENTIAL_REUSE_ALLOWED',
+        'required_relations': ['fits inside', 'placed on'],
+    }]
+    graph = compile_candidate_graph('kitchen', 'serve a meal', raw)
+    contract = compile_kitchen_contract_from_graph(graph)
+    validated = load_task_requirements(contract)
+    assert validated['operation_groups']['soup_serving']['relations'] == ['INSERTABLE_IN']
+    assert ('INSERTABLE_IN', 'soup_eating_utensil', 'soup_container') in {
+        (item['predicate'], item['subject_role'], item['object_role'])
+        for item in validated['relations']
+    }
