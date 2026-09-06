@@ -2,24 +2,24 @@
 \centering
 \small
 \caption{\textbf{ViLaIn-TAMP-Qwen Baseline Performance Across Benchmark Domains.}
-Evaluated over non-infrastructure runs ($N=64$).
-Feasible-task success, Goal coverage, and Physical plan found are evaluated strictly over ground-truth feasible variants ($N_{\text{feasible}}=40$).
+Results for the primary initial-observation-only ViLaIn-TAMP-Qwen condition ($N=32$).
+Feasible-task success, Goal coverage, and Physical plan found are evaluated strictly over ground-truth feasible variants ($N_{\text{feasible}}=20$).
 False completion reports rate over declared-complete runs ($N_{\text{declared}}$). Zero-step plans do not count toward Physical plan found.}
 \label{tab:vilain_qwen_main}
 \begin{tabular}{l|c|ccc}
 \hline
 \textbf{Metric} & \textbf{Overall} & \textbf{Kitchen} & \textbf{Living Room} & \textbf{Workshop} \\
 \hline
-Total Non-Infrastructure Runs & 64 & 24 & 20 & 20 \\
-Feasible Variant Runs & 40 & 12 & 12 & 16 \\
+Total Non-Infrastructure Runs & 32 & 12 & 10 & 10 \\
+Feasible Variant Runs & 20 & 6 & 6 & 8 \\
 \hline
-Outcome correct (\%) $\uparrow$ & 3.1\% (2/64) & 4.2\% (1/24) & 0.0\% (0/20) & 5.0\% (1/20) \\
-Feasible-task success (\%) $\uparrow$ & 0.0\% (0/40) & 0.0\% (0/12) & 0.0\% (0/12) & 0.0\% (0/16) \\
-Goal coverage (\%) $\uparrow$ & 1.6\% (4/252) & 0.0\% (0/144) & 6.7\% (4/60) & 0.0\% (0/48) \\
+Outcome correct (\%) $\uparrow$ & 3.1\% (1/32) & 8.3\% (1/12) & 0.0\% (0/10) & 0.0\% (0/10) \\
+Feasible-task success (\%) $\uparrow$ & 0.0\% (0/20) & 0.0\% (0/6) & 0.0\% (0/6) & 0.0\% (0/8) \\
+Goal coverage (\%) $\uparrow$ & 1.6\% (2/126) & 0.0\% (0/72) & 6.7\% (2/30) & 0.0\% (0/24) \\
 False completion (\%) $\downarrow$ & 100.0\% (1/1) & N/A & 100.0\% (1/1) & N/A \\
-Physical plan found (\%) $\uparrow$ & 0.0\% (0/40) & 0.0\% (0/12) & 0.0\% (0/12) & 0.0\% (0/16) \\
-Raw VLM requests $\downarrow$ & 5.56 $\pm$ 2.83 & 3.58 $\pm$ 3.62 & 6.85 $\pm$ 0.91 & 6.65 $\pm$ 1.24 \\
-High-level replans (\#) $\downarrow$ & 2.34 $\pm$ 1.24 & 1.50 $\pm$ 1.50 & 2.85 $\pm$ 0.65 & 2.85 $\pm$ 0.65 \\
+Physical plan found (\%) $\uparrow$ & 0.0\% (0/20) & 0.0\% (0/6) & 0.0\% (0/6) & 0.0\% (0/8) \\
+Raw VLM requests $\downarrow$ & 6.91 $\pm$ 0.91 & 7.17 $\pm$ 0.69 & 6.70 $\pm$ 1.10 & 6.80 $\pm$ 0.87 \\
+High-level replans (\#) $\downarrow$ & 2.91 $\pm$ 0.52 & 3.00 $\pm$ 0.00 & 2.70 $\pm$ 0.90 & 3.00 $\pm$ 0.00 \\
 \hline
 \end{tabular}
 \end{table*}

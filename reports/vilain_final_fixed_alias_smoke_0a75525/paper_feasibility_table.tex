@@ -1,8 +1,8 @@
 \begin{table}[t]
 \centering
 \small
-\caption{\textbf{ViLaIn-TAMP-Qwen Feasibility Decision Confusion Matrix and Classification Metrics.}
-Evaluated with Task Infeasible as the Positive class ($N=51$).}
+\caption{\textbf{Supplementary Feasibility Analysis: ViLaIn-TAMP-Qwen Decision Confusion Matrix and Metrics.}
+Evaluated with Task Infeasible as the Positive class on the primary initial-observation-only condition ($N=32$, Decision Coverage: 100.0\%).}
 \label{tab:vilain_qwen_feasibility}
 \begin{tabular}{l|cc|l}
 \hline
@@ -10,35 +10,23 @@ Evaluated with Task Infeasible as the Positive class ($N=51$).}
 \hline
 & \textbf{Predicted Infeasible} & \textbf{Predicted Feasible} & \textbf{Total Actual} \\
 \hline
-\textbf{Actual Infeasible} & 18 (TP) & 0 (FN) & 18 \\
-\textbf{Actual Feasible}   & 32 (FP) & 1 (TN) & 33 \\
+\textbf{Actual Infeasible} & 12 (TP) & 0 (FN) & 12 \\
+\textbf{Actual Feasible}   & 19 (FP) & 1 (TN) & 20 \\
 \hline
-\textbf{Total Predicted}   & 50 & 1 & 51 \\
+\textbf{Total Predicted}   & 31 & 1 & 32 \\
 \hline
 \hline
 \multicolumn{3}{l|}{\textbf{Metric}} & \textbf{Value [95\% CI]} \\
 \hline
-\multicolumn{3}{l|}{Decision Coverage} & 79.7\% (51/64) \\
-\multicolumn{3}{l|}{Accuracy} & 37.3\% [25.3, 51.0] \\
-\multicolumn{3}{l|}{Precision (PPV)} & 36.0\% \\
+\multicolumn{3}{l|}{Decision Coverage} & 100.0\% (32/32) \\
+\multicolumn{3}{l|}{Accuracy} & 40.6\% [25.5, 57.7] \\
+\multicolumn{3}{l|}{Precision (PPV)} & 38.7\% \\
 \multicolumn{3}{l|}{Recall / Infeasible Recall (TPR)} & 100.0\% \\
-\multicolumn{3}{l|}{Specificity / Feasible Recall (TNR)} & 3.0\% \\
-\multicolumn{3}{l|}{Balanced Accuracy} & 51.5\% \\
-\multicolumn{3}{l|}{F1-Score} & 0.529 \\
-\multicolumn{3}{l|}{False Infeasible Rate (FPR)} & 97.0\% \\
+\multicolumn{3}{l|}{Specificity / Feasible Recall (TNR)} & 5.0\% \\
+\multicolumn{3}{l|}{Balanced Accuracy} & 52.5\% \\
+\multicolumn{3}{l|}{F1-Score} & 0.558 \\
+\multicolumn{3}{l|}{False Infeasible Rate (FPR)} & 95.0\% \\
 \multicolumn{3}{l|}{False Feasible Rate (FNR)} & 0.0\% \\
-\hline
-\hline
-\multicolumn{4}{c}{\textbf{Causal Failure Distribution ($N=64$)}} \\
-\hline
-\multicolumn{3}{l|}{UNRESOLVED_FM_FAILURE} & 12 (18.8\%) \\
-\multicolumn{3}{l|}{UNRESOLVED_UNREACHABLE_CORRECTED_GOAL} & 21 (32.8\%) \\
-\multicolumn{3}{l|}{UNRESOLVED_REFINEMENT_FAILURE} & 2 (3.1\%) \\
-\multicolumn{3}{l|}{UNRESOLVED_IDENTITY_FAILURE} & 15 (23.4\%) \\
-\multicolumn{3}{l|}{SYMBOLIC_NO_PLAN_AFTER_BOUNDED_CP} & 5 (7.8\%) \\
-\multicolumn{3}{l|}{UNRESOLVED_INVALID_CORRECTIVE_SELECTION} & 2 (3.1\%) \\
-\multicolumn{3}{l|}{UNRESOLVED_INCONSISTENT_CORRECTIVE_FACT_SET} & 5 (7.8\%) \\
-\multicolumn{3}{l|}{PLAN_FOUND} & 2 (3.1\%) \\
 \hline
 \end{tabular}
 \end{table}

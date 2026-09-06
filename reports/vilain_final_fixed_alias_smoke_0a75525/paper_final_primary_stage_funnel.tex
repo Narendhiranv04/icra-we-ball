@@ -1,0 +1,25 @@
+\begin{table}[t]
+\centering
+\small
+\caption{\textbf{ViLaIn-TAMP-Qwen Primary Action Sequence Generation Funnel.}
+Evaluated on the primary initial-observation-only condition ($N=32$).
+Conversion rate indicates progression from the immediately preceding pipeline stage.}
+\label{tab:vilain_primary_funnel}
+\begin{tabular}{l|cc|c}
+\hline
+\textbf{Pipeline Stage} & \textbf{Count / 32} & \textbf{Unconditional (\%)} & \textbf{Conversion (\%)} \\
+\hline
+Observation & 32 / 32 & 100.0\% & 100.0\% \\
+Object Estimation & 32 / 32 & 100.0\% & 100.0\% \\
+Valid PDDL & 32 / 32 & 100.0\% & 100.0\% \\
+ANY PLAN @ FD & 16 / 32 & 50.0\% & 50.0\% \\
+ANY PLAN @ VAL & 16 / 32 & 50.0\% & 100.0\% \\
+NONEMPTY PLAN @ FD & 15 / 32 & 46.9\% & 93.8\% \\
+NONEMPTY PLAN @ VAL & 15 / 32 & 46.9\% & 100.0\% \\
+NONEMPTY PLAN @ IDENTITY & 4 / 32 & 12.5\% & 26.7\% \\
+NONEMPTY PLAN @ REFINE & 0 / 32 & 0.0\% & 0.0\% \\
+NONEMPTY PLAN @ EXEC & 0 / 32 & 0.0\% & 0.0\% \\
+TASK @ FINAL & 0 / 32 & 0.0\% & 0.0\% \\
+\hline
+\end{tabular}
+\end{table}

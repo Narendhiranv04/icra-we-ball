@@ -1,0 +1,12 @@
+stage_id,stage_name,count,total_runs,unconditional_rate,previous_stage_count,conditional_conversion_rate
+1_observation,Observation,32,32,1.0,32,1.0
+2_object_estimation,Object Estimation,32,32,1.0,32,1.0
+3_valid_pddl,Valid PDDL,32,32,1.0,32,1.0
+4_any_plan_fd,ANY PLAN @ FD,16,32,0.5,32,0.5
+4b_any_plan_val,ANY PLAN @ VAL,16,32,0.5,16,1.0
+5_nonempty_plan_fd,NONEMPTY PLAN @ FD,15,32,0.46875,16,0.9375
+6_nonempty_plan_val,NONEMPTY PLAN @ VAL,15,32,0.46875,15,1.0
+7_nonempty_plan_identity,NONEMPTY PLAN @ IDENTITY,4,32,0.125,15,0.266667
+8_nonempty_plan_refine,NONEMPTY PLAN @ REFINE,0,32,0.0,4,0.0
+9_nonempty_plan_exec,NONEMPTY PLAN @ EXEC,0,32,0.0,0,0.0
+10_task_final,TASK @ FINAL,0,32,0.0,0,0.0

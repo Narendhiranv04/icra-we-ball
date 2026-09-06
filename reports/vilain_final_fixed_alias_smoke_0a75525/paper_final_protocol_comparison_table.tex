@@ -1,0 +1,32 @@
+\begin{table*}[t]
+\centering
+\small
+\caption{\textbf{ViLaIn-TAMP-Qwen Protocol Comparison: Primary vs. Supplementary Inspection.}
+Comparison between primary initial-observation-only ($N=32$) and supplementary fixed-full-inspection ($N=32$) protocols.
+Goal coverage and physical plan metrics are evaluated over ground-truth feasible runs ($N_{\text{feasible}}=20$ per protocol).}
+\label{tab:vilain_protocol_comparison}
+\begin{tabular}{l|cc}
+\hline
+\textbf{Metric} & \textbf{Initial Observation Only (Primary)} & \textbf{Fixed Full Inspection (Supplementary)} \\
+\hline
+Total Non-Infrastructure Runs & 32 & 32 \\
+Feasible Variant Runs & 20 & 20 \\
+\hline
+Outcome correct (\%) $\uparrow$ & 3.1\% (1/32) & 3.1\% (1/32) \\
+Feasible-task success (\%) $\uparrow$ & 0.0\% (0/20) & 0.0\% (0/20) \\
+Initial Goal coverage (\%) & 1.6\% (2/126) & 1.6\% (2/126) \\
+Terminal Goal coverage (\%) & 1.6\% (2/126) & 1.6\% (2/126) \\
+$\Delta$ Goal coverage (\%) & 0.0\% (0/126) & 0.0\% (0/126) \\
+False completion (\%) $\downarrow$ & 100.0\% (1/1) & N/A (0/0) \\
+Physical plan found (\%) $\uparrow$ & 0.0\% (0/20) & 0.0\% (0/20) \\
+ANY PLAN @ FD (\%) & 50.0\% (16/32) & 31.2\% (10/32) \\
+NONEMPTY PLAN @ FD (\%) & 46.9\% (15/32) & 28.1\% (9/32) \\
+NONEMPTY PLAN @ VAL (\%) & 46.9\% (15/32) & 28.1\% (9/32) \\
+NONEMPTY PLAN @ IDENTITY (\%) & 12.5\% (4/32) & 0.0\% (0/32) \\
+NONEMPTY PLAN @ REFINE (\%) & 0.0\% (0/32) & 0.0\% (0/32) \\
+Raw VLM requests $\downarrow$ & 6.91 $\pm$ 0.91 & 4.22 $\pm$ 3.40 \\
+High-level replans (\#) $\downarrow$ & 2.91 $\pm$ 0.52 & 1.78 $\pm$ 1.47 \\
+End-to-end seconds $\downarrow$ & 29.15 $\pm$ 17.44 & 34.53 $\pm$ 23.76 \\
+\hline
+\end{tabular}
+\end{table*}
