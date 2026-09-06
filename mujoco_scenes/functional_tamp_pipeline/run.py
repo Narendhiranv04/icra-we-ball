@@ -667,6 +667,7 @@ def _run_pipeline_impl(
     _emit_event(guarded_observer, "stage_changed", {"stage": "planning"})
     try:
         from .errors import PlanningCompilationError
+        from mujoco_scenes.symbolic_planning_core import NoSymbolicPlan
         planned = plan_with_common_astar(
             WorkshopPlanningCompiler(),
             satisfaction.assignment,
@@ -724,7 +725,7 @@ def _run_pipeline_impl(
         )
         _write_json(state.run_dir / "result.json", result.to_dict())
         return result
-    except PlanningCompilationError as exc:
+    except (PlanningCompilationError, NoSymbolicPlan) as exc:
         print(f"A* PLANNING COMPILATION REJECTED: {exc}", flush=True)
         result = PipelineResult(
             domain=state.domain,
