@@ -184,9 +184,15 @@ Before returning the JSON, silently decompose the user instruction into its atom
    - contextual support or fixed target.
 2. For a physical connection/assembly operation, distinguish the component that remains in the final assembly from any reusable implement used to establish that connection.
 3. For material-transfer/preparation operations, represent the required source or provider for each explicitly required material unless the material is explicitly stated to already be present in its target.
-4. Propagate explicit quantifiers such as 'each', 'both', and numerical counts into role cardinalities, binding policies, or interaction groups.
-5. Do not reuse one functional role across different causal functions unless the task semantics actually permit the same physical object to satisfy both.
-6. Before emitting the JSON, verify:
+4. For placement, staging, or arrangement tasks, represent BOTH the movable payload items to be placed (entity_kind: OBJECT, e.g. drinkware/refreshment items, handheld devices) AND the supporting surfaces or destinations (entity_kind: REGION, e.g. tables/stands).
+5. When tasks reference contextual anchors, target persons, or reference locations:
+   - For individual references (e.g. each person/seat, each user, joint frame), represent as a distinct contextual reference (entity_kind: FIXED_TARGET, e.g. viewer seating position, mounting frame, binding_policy: DISTINCT) participating in spatial relations (e.g. 'near seat', 'fastened to').
+   - For collective/shared references (e.g. both people/seats, shared seating area), represent as a shared contextual reference (entity_kind: FIXED_TARGET, e.g. paired viewer seating area, binding_policy: SHARED) participating in accessibility relations (e.g. 'accessible from both seats').
+6. Propagate explicit quantifiers such as 'each', 'both', and numerical counts into role cardinalities, binding policies, or interaction groups. An individual/dedicated requirement uses binding_policy: DISTINCT and interaction group usage_policy: DEDICATED_PER_TARGET.
+7. Do not reuse one functional role across different causal functions unless the task semantics actually permit the same physical object to satisfy both.
+8. Before emitting the JSON, verify:
+   - every declared functional role participates in at least one functional relation or interaction group;
+   - relations connect each movable item to its declared supporting destination (e.g. refreshments to individual tables, entertainment control to shared table);
    - every task clause is covered by at least one role/relation/group;
    - every transformation has its necessary participants;
    - quantities are represented;

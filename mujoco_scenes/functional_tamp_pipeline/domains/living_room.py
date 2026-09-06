@@ -58,16 +58,22 @@ def compile_living_room_task_from_graph(graph: FunctionalRequirementGraph) -> di
     semantic_region_roles = {}
 
     personal_count = 2
+    if "CUP_SAUCER_SET" in graph.nodes:
+        personal_count = graph.nodes["CUP_SAUCER_SET"].count
+    elif "PERSONAL_CUP_SAUCER_REGION" in graph.nodes:
+        personal_count = graph.nodes["PERSONAL_CUP_SAUCER_REGION"].count
+
     for name, node in graph.nodes.items():
         if node.entity_kind == "REGION":
             role_key = name.lower()
-            policy = "SHARED_REGION_REQUIRED" if node.shared else "DEDICATED_REGION_PER_TARGET"
-            target_role = "both_seating_positions" if node.shared else "seating_position"
+            is_shared = node.shared or name == "SHARED_REMOTE_REGION"
+            policy = "SHARED_REGION_REQUIRED" if is_shared else "DEDICATED_REGION_PER_TARGET"
+            target_role = "both_seating_positions" if is_shared else "seating_position"
             req_rels = ["PLANAR_SUPPORT"]
-            if node.shared:
+            if is_shared:
                 req_rels.extend(["FITS_ON", "ACCESSIBLE_FROM_BOTH_SEATS"])
             else:
-                personal_count = node.count
+                personal_count = max(personal_count, node.count)
                 req_rels.extend(["FITS_SET_ON", "NEAR_SEAT"])
 
             function_groups[name.lower()] = {
@@ -75,10 +81,10 @@ def compile_living_room_task_from_graph(graph: FunctionalRequirementGraph) -> di
                 "candidate_entity_kind": "REGION",
                 "region_role": role_key,
                 "usage_policy": policy,
-                "target_assignment_policy": "TARGET_SPECIFIC" if not node.shared else "SHARED_REGION",
+                "target_assignment_policy": "TARGET_SPECIFIC" if not is_shared else "SHARED_REGION",
                 "target_role": target_role,
                 "required_target_count": node.count,
-                "payload_groups": ["shared_remote"] if node.shared else ["personal_cup_saucer_sets"],
+                "payload_groups": ["shared_remote"] if is_shared else ["personal_cup_saucer_sets"],
                 "required_relations": req_rels,
             }
             semantic_region_roles[role_key] = {
@@ -530,7 +536,7 @@ def run_to_plan(
     if isinstance(shared_region, list) and shared_region:
         shared_region = shared_region[0]
 
-    if shared_region and "REMOTE" in ground_result.assignment and "SEATING_PAIR" in ground_result.assignment:
+    if shared_region and "REMOTE" in ground_result.assignment and ("SEATING_PAIR" in ground_result.assignment or "SEATING_PAIR" in graph_o.nodes):
         matching_shared = next((r for r in getattr(run, "shared_rows", []) if r["region_id"] == shared_region), {})
         remote_id = matching_shared.get("payload_ids", ["tv_remote"])[0] if matching_shared.get("payload_ids") else "tv_remote"
 

@@ -323,9 +323,22 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                             'personal_support_group': 'SUPPORT_DRINKWARE',
                             'shared_entertainment_group': 'SUPPORT_ENTERTAINMENT_CONTROL'}.get(function, function)
         executable_context_role = id_map.get(group.get('context_role')) if context else None
-        if domain == 'living_room' and executable_context_role == 'SEATING_POSITION' and 'ACCESSIBLE_FROM_BOTH_SEATS' in context:
-            executable_context_role = 'SEATING_PAIR'
-        if group.get('usage_policy') == 'SEQUENTIAL_REUSE_ALLOWED' and tool_role_id in nodes:
+        usage_policy = group['usage_policy']
+        if domain == 'living_room':
+            if executable_context_role == 'SEATING_POSITION' and 'ACCESSIBLE_FROM_BOTH_SEATS' in context:
+                executable_context_role = 'SEATING_PAIR'
+            if function == 'personal_support_group':
+                usage_policy = 'DEDICATED_PER_TARGET'
+                if not executable_context_role and 'SEATING_POSITION' in nodes:
+                    executable_context_role = 'SEATING_POSITION'
+                    if 'NEAR_SEAT' not in context:
+                        context.append('NEAR_SEAT')
+        if (
+            usage_policy == 'SEQUENTIAL_REUSE_ALLOWED'
+            and tool_role_id in nodes
+            and nodes[tool_role_id].entity_kind == 'OBJECT'
+            and not nodes[tool_role_id].shared
+        ):
             t_node = nodes[tool_role_id]
             nodes[tool_role_id] = replace(
                 t_node,
@@ -334,12 +347,12 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 preference=t_node.preference or 'minimize_distinct',
             )
         groups.append(OperationGroup(id=function if not any(g.id == function for g in groups) else group['id'], function=runtime_function, tool_role=tool_role_id,
-            target_role=target_role_id, required_target_count=count, usage_policy=group['usage_policy'],
+            target_role=target_role_id, required_target_count=count, usage_policy=usage_policy,
             required_relations=tuple(dict.fromkeys(required)), context_role=executable_context_role,
             context_relations=tuple(dict.fromkeys(context)),
-            distinct_within_group=group.get('distinct_within_group', group['usage_policy'] == 'DEDICATED_PER_TARGET'),
+            distinct_within_group=group.get('distinct_within_group', usage_policy == 'DEDICATED_PER_TARGET'),
             same_tool_must_cover_all_targets=group.get('same_tool_must_cover_all_targets', False),
-            selection_preference=group.get('selection_preference', ('minimize_distinct_tools' if group['usage_policy'] == 'SEQUENTIAL_REUSE_ALLOWED' else 'deterministic_rank') if domain == 'kitchen' else None)))
+            selection_preference=group.get('selection_preference', ('minimize_distinct_tools' if usage_policy == 'SEQUENTIAL_REUSE_ALLOWED' else 'deterministic_rank') if domain == 'kitchen' else None)))
     if domain == 'living_room':
         # Group pairing governs these edges, not unconstrained all-to-all checks.
         grouped_triples = {(g.tool_role, p, g.target_role) for g in groups for p in g.required_relations}
