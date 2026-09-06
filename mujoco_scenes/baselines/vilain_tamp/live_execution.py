@@ -21,7 +21,7 @@ from .execution.workshop import (
     WorkshopExecutionAdapter,
     build_workshop_controller_contract,
 )
-from .identity import EntityBinding
+from .identity import EntityBinding, resolve_geometry_entity_name
 from .runner import ExecutionStageResult
 
 
@@ -586,6 +586,10 @@ class MuJoCoPhysicalStateObserver:
         self.mujoco.mj_forward(self.model, self.data)
         all_bindings = {**self.fixed_bindings, **self.bindings}
         entity_to_id = {binding.entity_name: object_id for object_id, binding in all_bindings.items()}
+        for object_id, binding in all_bindings.items():
+            if getattr(binding, "geometry_entity_name", None):
+                entity_to_id.setdefault(binding.geometry_entity_name, object_id)
+            entity_to_id.setdefault(resolve_geometry_entity_name(binding.entity_name), object_id)
 
         all_scene_bodies = [
             self.mujoco.mj_id2name(self.model, self.mujoco.mjtObj.mjOBJ_BODY, i)
@@ -735,7 +739,8 @@ class MuJoCoPhysicalStateObserver:
         )
 
     def _entity_state(self, entity: str) -> Mapping[str, Any]:
-        body_id = self.mujoco.mj_name2id(self.model, self.mujoco.mjtObj.mjOBJ_BODY, entity)
+        geometry_entity = resolve_geometry_entity_name(entity)
+        body_id = self.mujoco.mj_name2id(self.model, self.mujoco.mjtObj.mjOBJ_BODY, geometry_entity)
         if body_id < 0:
             return {"present": False, "entity_name": entity}
         self.mujoco.mj_forward(self.model, self.data)
@@ -773,7 +778,8 @@ class MuJoCoPhysicalStateObserver:
         }
 
     def _articulation(self, entity: str) -> Mapping[str, Any]:
-        body_id = self.mujoco.mj_name2id(self.model, self.mujoco.mjtObj.mjOBJ_BODY, entity)
+        geometry_entity = resolve_geometry_entity_name(entity)
+        body_id = self.mujoco.mj_name2id(self.model, self.mujoco.mjtObj.mjOBJ_BODY, geometry_entity)
         if body_id < 0:
             region_states = getattr(self.scene, "get_region_observation_states", None)
             if callable(region_states):

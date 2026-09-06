@@ -8,7 +8,7 @@ from typing import Any, Mapping, Sequence
 import numpy as np
 
 from .contracts import ExecutionProjection
-from .identity import EntityBinding
+from .identity import EntityBinding, resolve_geometry_entity_name
 
 
 class LivingControllerError(RuntimeError):
@@ -267,8 +267,9 @@ class LivingRoomPhysicalController:
         }
 
     def _body_position(self, entity: str) -> np.ndarray:
+        geometry_entity = resolve_geometry_entity_name(entity)
         body_id = self.mujoco.mj_name2id(
-            self.scene.model, self.mujoco.mjtObj.mjOBJ_BODY, entity
+            self.scene.model, self.mujoco.mjtObj.mjOBJ_BODY, geometry_entity
         )
         if body_id < 0:
             raise LivingControllerError(f"unknown physical body {entity!r}")
@@ -276,8 +277,9 @@ class LivingRoomPhysicalController:
         return np.asarray(self.scene.data.xpos[body_id], dtype=float).copy()
 
     def _body_aabb(self, entity: str) -> tuple[np.ndarray, np.ndarray]:
+        geometry_entity = resolve_geometry_entity_name(entity)
         body_id = self.mujoco.mj_name2id(
-            self.scene.model, self.mujoco.mjtObj.mjOBJ_BODY, entity
+            self.scene.model, self.mujoco.mjtObj.mjOBJ_BODY, geometry_entity
         )
         if body_id < 0:
             raise LivingControllerError(f"unknown physical body {entity!r}")

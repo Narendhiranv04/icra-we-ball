@@ -73,6 +73,7 @@ class EntityBinding(SerializableContract):
     confidence: float
     observation_stage_ids: tuple[str, ...]
     evidence_artifacts: tuple[str, ...]
+    geometry_entity_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -264,16 +265,72 @@ class BaselineIdentityResolver:
         )
 
 
+FIXED_FIXTURE_GEOMETRY_BODIES: dict[str, str] = {
+    # Workshop
+    "LEFT_DRAWER": "left_tool_drawer",
+    "RIGHT_DRAWER": "right_tool_drawer",
+    "TOOL_CABINET": "tool_cabinet",
+    "MAIN_WORKBENCH_ZONE": "workbench",
+    "MAIN_WORKBENCH": "workbench",
+    "main_workbench_zone_surface": "workbench",
+    "main_workbench_zone": "workshop_frame_joint",
+    "main_workbench": "workbench",
+    "left_drawer": "left_tool_drawer",
+    "right_drawer": "right_tool_drawer",
+    "tool_cabinet": "tool_cabinet",
+    "workshop_frame_joint": "workshop_frame_joint",
+    # Kitchen
+    "D1": "drawer_D1_tray",
+    "D2": "drawer_D2_tray",
+    "C1": "cabinet_C1",
+    "C2": "cabinet_C2",
+    "B1": "box_B1",
+    "d1": "drawer_D1_tray",
+    "d2": "drawer_D2_tray",
+    "c1": "cabinet_C1",
+    "c2": "cabinet_C2",
+    "b1": "box_B1",
+    "countertop": "countertop",
+    "serving_area": "serving_area",
+    # Living Room
+    "staging": "a2_staging",
+    "a2_staging": "a2_staging",
+    "staging_surface": "a2_staging",
+    "left_table": "a2_personal_left",
+    "right_table": "a2_personal_right",
+    "coffee_table": "a2_control_table",
+    "personal_table_left": "a2_personal_left",
+    "personal_table_right": "a2_personal_right",
+    "shared_table": "a2_control_table",
+    "a2_personal_left": "a2_personal_left",
+    "a2_personal_right": "a2_personal_right",
+    "a2_control_table": "a2_control_table",
+}
+
+
+def resolve_geometry_entity_name(entity_name: str) -> str:
+    """Resolve controller-facing or symbolic fixture IDs to physical MuJoCo bodies."""
+    if not isinstance(entity_name, str):
+        return entity_name
+    return FIXED_FIXTURE_GEOMETRY_BODIES.get(entity_name, entity_name)
+
+
 def fixed_entity_binding(
     symbolic_id: str,
     entity_name: str,
     *,
     broad_class: str,
+    geometry_entity_name: str | None = None,
     evidence_artifacts: Sequence[str] = (),
 ) -> EntityBinding:
     """Represent a public fixed-location identity for execution projection."""
     if not symbolic_id.strip() or not entity_name.strip() or not broad_class.strip():
         raise ValueError("fixed entity identity fields must not be empty")
+    resolved_geometry = (
+        geometry_entity_name
+        if geometry_entity_name is not None
+        else resolve_geometry_entity_name(entity_name)
+    )
     return EntityBinding(
         object_id=symbolic_id,
         entity_name=entity_name,
@@ -289,6 +346,7 @@ def fixed_entity_binding(
         confidence=1.0,
         observation_stage_ids=(),
         evidence_artifacts=tuple(evidence_artifacts),
+        geometry_entity_name=resolved_geometry,
     )
 
 

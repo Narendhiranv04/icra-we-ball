@@ -15,7 +15,12 @@ from .attempt import TAMPAttemptRunner
 from .config import BaselineConfig, Domain, ModelCondition
 from .corrective_planning import CorrectivePlanningLoop
 from .domains import load_domain
-from .identity import BaselineIdentityResolver, EntityCandidate, fixed_entity_binding
+from .identity import (
+    BaselineIdentityResolver,
+    EntityCandidate,
+    fixed_entity_binding,
+    resolve_geometry_entity_name,
+)
 from .live_fixed_evidence import FixedSceneEvidenceProvider
 from .interpreter import InterpreterModels, ViLaInInterpreter
 from .live_fm import (
@@ -354,7 +359,7 @@ def _fixed_structural_bindings(
             for region, entity in regions.items()
             if str(region).lower() in inventory
         }
-        names["staging"] = "staging"
+        names["staging"] = "a2_staging"
     else:
         del variant
         names = {
@@ -372,6 +377,7 @@ def _fixed_structural_bindings(
             symbolic_id,
             names[symbolic_id],
             broad_class=object_type,
+            geometry_entity_name=resolve_geometry_entity_name(names[symbolic_id]),
         )
         for symbolic_id, object_type in inventory.items()
         if object_type in {"location", "storage", "surface", "support", "target"}

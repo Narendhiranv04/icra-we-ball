@@ -13,6 +13,7 @@ import numpy as np
 
 from .artifacts import atomic_write_json, sha256_bytes
 from .contracts import RefinementStage, SymbolicAction
+from .identity import resolve_geometry_entity_name
 from .refinement import (
     MuJoCoSequenceRefiner,
     PlanningSceneStateAdapter,
@@ -1101,8 +1102,9 @@ class MuJoCoGeometryKernel:
     def _entity_geometry(
         self, scene: MuJoCoPlanningScene, entity_name: str
     ) -> EntityGeometry:
+        geometry_name = resolve_geometry_entity_name(entity_name)
         body_id = scene.mujoco.mj_name2id(
-            scene.model, scene.mujoco.mjtObj.mjOBJ_BODY, entity_name
+            scene.model, scene.mujoco.mjtObj.mjOBJ_BODY, geometry_name
         )
         if body_id < 0:
             raise LiveRefinementError(
@@ -1145,9 +1147,10 @@ class MuJoCoGeometryKernel:
     def _named_grasp_positions(
         self, scene: MuJoCoPlanningScene, entity_name: str
     ) -> tuple[np.ndarray, ...]:
-        normalized = entity_name.lower().replace("-", "_")
+        geometry_name = resolve_geometry_entity_name(entity_name)
+        normalized = geometry_name.lower().replace("-", "_")
         entity_body = scene.mujoco.mj_name2id(
-            scene.model, scene.mujoco.mjtObj.mjOBJ_BODY, entity_name
+            scene.model, scene.mujoco.mjtObj.mjOBJ_BODY, geometry_name
         )
         body_ids = _body_descendants(scene.model, int(entity_body))
         site_body_ids = getattr(scene.model, "site_bodyid", None)
@@ -1789,8 +1792,9 @@ def _gripper_rotation(scene: MuJoCoPlanningScene, data: Any) -> np.ndarray:
 def _create_attachment(
     scene: MuJoCoPlanningScene, entity_name: str, data: Any
 ) -> PayloadAttachment:
+    geometry_name = resolve_geometry_entity_name(entity_name)
     body_id = scene.mujoco.mj_name2id(
-        scene.model, scene.mujoco.mjtObj.mjOBJ_BODY, entity_name
+        scene.model, scene.mujoco.mjtObj.mjOBJ_BODY, geometry_name
     )
     if body_id < 0:
         raise LiveRefinementError(
@@ -1882,8 +1886,9 @@ def _open_articulation(
 
 
 def _resolve_articulation_joint(scene: MuJoCoPlanningScene, entity_name: str) -> int:
+    geometry_name = resolve_geometry_entity_name(entity_name)
     body_id = scene.mujoco.mj_name2id(
-        scene.model, scene.mujoco.mjtObj.mjOBJ_BODY, entity_name
+        scene.model, scene.mujoco.mjtObj.mjOBJ_BODY, geometry_name
     )
     if body_id < 0:
         raise LiveRefinementError(
