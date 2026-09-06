@@ -29,8 +29,10 @@ from .corrective_planning import CorrectivePlanningResult, CorrectiveRunStatus
 from .domains.registry import DomainDefinition, load_domain
 from .evaluation import (
     HiddenBenchmarkContext,
+    SubgoalCoverageEvaluation,
     TerminalStateSnapshot,
     evaluate_hidden_benchmark,
+    evaluate_terminal_subgoals,
 )
 from .interpreter import InterpretationResult
 from .observations import ObservationAcquisitionResult
@@ -239,6 +241,14 @@ class BaselineRunner:
 
         record_event("RUN_STARTED", domain=options.domain.value, variant=options.variant)
 
+        initial_physical_state: TerminalStateSnapshot | None = None
+        if options.execute and components.execution is not None:
+            initial_physical_state = components.execution.terminal_without_execution(
+                domain=options.domain.value,
+                variant=options.variant,
+                predicted_infeasible=False,
+            )
+
         stage_times: dict[str, float] = {}
         stage_started = self.clock()
         observation = components.observation.acquire()
@@ -310,6 +320,9 @@ class BaselineRunner:
         benchmark_status = "NOT_EVALUATED"
         execution_status = "NOT_REQUESTED_PLANNING_ONLY"
         benchmark_evaluation: BenchmarkGoalEvaluation | None = None
+        initial_benchmark_evaluation: BenchmarkGoalEvaluation | None = None
+        terminal_subgoal_evaluation: SubgoalCoverageEvaluation | None = None
+        initial_subgoal_evaluation: SubgoalCoverageEvaluation | None = None
         generated_goal_evaluation: Mapping[str, Any] | None = None
         execution_result: ExecutionStageResult | None = None
 
@@ -379,6 +392,17 @@ class BaselineRunner:
             benchmark_evaluation = evaluate_hidden_benchmark(
                 terminal_state, effect_ledger, hidden_context
             )
+            terminal_subgoal_evaluation = evaluate_terminal_subgoals(
+                terminal_state, effect_ledger, hidden_context
+            )
+            if initial_physical_state is not None:
+                initial_subgoal_evaluation = evaluate_terminal_subgoals(
+                    initial_physical_state, (), hidden_context
+                )
+                initial_benchmark_evaluation = evaluate_hidden_benchmark(
+                    initial_physical_state, (), hidden_context
+                )
+
             benchmark_status = (
                 "SUCCESS"
                 if benchmark_evaluation.benchmark_outcome_correct
@@ -396,6 +420,40 @@ class BaselineRunner:
                 benchmark_evaluation.to_dict(),
             )
             artifact_paths["benchmark_goal_evaluation"] = str(hidden_path)
+
+            terminal_subgoal_path = atomic_write_json(
+                benchmark_root / "terminal_subgoal_evaluation.json",
+                terminal_subgoal_evaluation.to_dict(),
+            )
+            artifact_paths["terminal_subgoal_evaluation"] = str(terminal_subgoal_path)
+
+            if initial_subgoal_evaluation is not None:
+                initial_subgoal_path = atomic_write_json(
+                    benchmark_root / "initial_subgoal_evaluation.json",
+                    initial_subgoal_evaluation.to_dict(),
+                )
+                artifact_paths["initial_subgoal_evaluation"] = str(initial_subgoal_path)
+
+            if initial_benchmark_evaluation is not None:
+                initial_bme_path = atomic_write_json(
+                    benchmark_root / "initial_benchmark_goal_evaluation.json",
+                    initial_benchmark_evaluation.to_dict(),
+                )
+                artifact_paths["initial_benchmark_goal_evaluation"] = str(initial_bme_path)
+
+            if initial_physical_state is not None:
+                initial_state_path = atomic_write_json(
+                    benchmark_root / "initial_state_snapshot.json",
+                    initial_physical_state.to_dict(),
+                )
+                artifact_paths["initial_state_snapshot"] = str(initial_state_path)
+
+            terminal_state_path = atomic_write_json(
+                benchmark_root / "terminal_state_snapshot.json",
+                terminal_state.to_dict(),
+            )
+            artifact_paths["terminal_state_snapshot"] = str(terminal_state_path)
+
             record_event("BENCHMARK_EVALUATION_COMPLETE", status=benchmark_status)
 
         metrics = self._metrics(
@@ -403,7 +461,11 @@ class BaselineRunner:
             interpretation=interpretation,
             planning=planning,
             execution=execution_result,
+            execution_plan=execution_plan,
             benchmark=benchmark_evaluation,
+            initial_benchmark=initial_benchmark_evaluation,
+            terminal_subgoal=terminal_subgoal_evaluation,
+            initial_subgoal=initial_subgoal_evaluation,
             generated_goal=generated_goal_evaluation,
             stage_times=stage_times,
             total_seconds=self.clock() - started,
@@ -594,6 +656,10 @@ class BaselineRunner:
         generated_goal: Mapping[str, Any] | None,
         stage_times: Mapping[str, float],
         total_seconds: float,
+        execution_plan: BaselineExecutionPlan | None = None,
+        initial_benchmark: BenchmarkGoalEvaluation | None = None,
+        terminal_subgoal: SubgoalCoverageEvaluation | None = None,
+        initial_subgoal: SubgoalCoverageEvaluation | None = None,
     ) -> Mapping[str, Any]:
         usage: dict[str, float] = {}
         call_counts = {
@@ -690,6 +756,56 @@ class BaselineRunner:
             "inspected_region_count": len(observation.inspection_trace),
             "inspection_opening_seconds": inspection_seconds,
             "inspection_travel_seconds": None,
+            "selected_attempt_index": (
+                execution_plan.selected_attempt_index if execution_plan else None
+            ),
+            "selected_plan_sha256": (
+                getattr(execution_plan, "plan_sha256", None)
+                or (
+                    execution_plan.symbolic_plan.plan_sha256
+                    if (execution_plan and getattr(execution_plan, "symbolic_plan", None))
+                    else None
+                )
+            ),
+            "selected_plan_length": (
+                len(
+                    getattr(execution_plan, "actions", None)
+                    or getattr(execution_plan, "normalized_actions", None)
+                    or (
+                        execution_plan.symbolic_plan.actions
+                        if (execution_plan and getattr(execution_plan, "symbolic_plan", None))
+                        else ()
+                    )
+                )
+                if execution_plan
+                else 0
+            ),
+            "initial_subgoals_total": (
+                initial_subgoal.total_subgoals if initial_subgoal else None
+            ),
+            "initial_subgoals_passed": (
+                initial_subgoal.passed_subgoals if initial_subgoal else None
+            ),
+            "initial_goal_coverage": (
+                initial_subgoal.coverage if initial_subgoal else None
+            ),
+            "terminal_subgoals_total": (
+                terminal_subgoal.total_subgoals if terminal_subgoal else None
+            ),
+            "terminal_subgoals_passed": (
+                terminal_subgoal.passed_subgoals if terminal_subgoal else None
+            ),
+            "terminal_goal_coverage": (
+                terminal_subgoal.coverage if terminal_subgoal else None
+            ),
+            "delta_goal_coverage": (
+                terminal_subgoal.coverage - initial_subgoal.coverage
+                if terminal_subgoal is not None and initial_subgoal is not None
+                else None
+            ),
+            "initial_actual_benchmark_success": (
+                initial_benchmark.actual_task_success if initial_benchmark else None
+            ),
         }
 
 

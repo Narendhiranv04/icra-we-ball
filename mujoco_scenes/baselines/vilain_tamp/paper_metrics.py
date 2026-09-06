@@ -17,7 +17,13 @@ from .benchmark_harness import (
 )
 from .evaluation import (
     CANONICAL_REQUIREMENT_NAMES,
+    CANONICAL_SUBGOAL_COUNTS,
+    SubgoalCoverageEvaluation,
     canonical_requirements_count,
+    canonical_subgoal_count,
+    canonical_terminal_subgoals,
+    evaluate_terminal_subgoals,
+    initial_snapshot_from_config,
 )
 
 
@@ -159,22 +165,32 @@ def extract_run_attempts(artifacts_root: Path, run_id: str) -> list[dict[str, An
             except Exception:
                 pass
 
+        att_nonempty_fd = len(actions) > 0 if has_plan else False
+        att_nonempty_val = bool(att_nonempty_fd and val_valid)
+        att_nonempty_identity = bool(att_nonempty_val and id_success)
+        att_nonempty_refine = bool(att_nonempty_identity and ref_success)
+
         records.append({
             "run_id": run_id,
             "attempt_index": att_idx,
             "problem_sha256": plan_sha,
+            "plan_sha256": plan_sha,
             "plan_cost": plan_cost,
             "plan_artifact": str(plan_json.resolve()) if has_plan else None,
             "actions": actions,
             "plan_length": len(actions) if has_plan else None,
             "plan_found": has_plan,
-            "nonempty_plan": len(actions) > 0 if has_plan else False,
+            "nonempty_plan": att_nonempty_fd,
             "val_valid": val_valid,
             "identity_attempted": id_attempted,
             "identity_success": id_success,
             "refinement_attempted": ref_attempted,
             "refinement_success": ref_success,
             "attempt_success": outcome_success,
+            "attempt_nonempty_fd": att_nonempty_fd,
+            "attempt_nonempty_val": att_nonempty_val,
+            "attempt_nonempty_identity": att_nonempty_identity,
+            "attempt_nonempty_refine": att_nonempty_refine,
             "failure_kind": fail_kind,
             "failure_summary": fail_summary,
         })
@@ -231,7 +247,7 @@ def audit_run(run_dir: Path, config_root: Path | None = None) -> dict[str, Any]:
     fd_invoked = pddl_valid and (len(attempts) > 0 or raw_status != "FM_OBJECT_FAILURE")
 
     plans = [a for a in attempts if a["plan_found"]]
-    nonempty_plans = [a for a in attempts if a["nonempty_plan"]]
+    nonempty_plans = [a for a in attempts if a.get("attempt_nonempty_fd", a.get("nonempty_plan", False))]
     val_valid_plans = [a for a in attempts if a["val_valid"]]
 
     first_plan_idx = plans[0]["attempt_index"] if plans else None
@@ -239,6 +255,14 @@ def audit_run(run_dir: Path, config_root: Path | None = None) -> dict[str, Any]:
     any_plan = len(plans) > 0
     any_nonempty_plan = len(nonempty_plans) > 0
     any_val_valid = len(val_valid_plans) > 0
+
+    # Strict attempt-level progression indicators
+    any_plan_fd = any_plan
+    any_plan_val = any_val_valid
+    nonempty_plan_fd = any_nonempty_plan
+    nonempty_plan_val = any(a.get("attempt_nonempty_val", False) for a in attempts)
+    nonempty_plan_identity = any(a.get("attempt_nonempty_identity", False) for a in attempts)
+    nonempty_plan_refine = any(a.get("attempt_nonempty_refine", False) for a in attempts)
 
     best_plan_len = None
     if nonempty_plans:
@@ -350,11 +374,77 @@ def audit_run(run_dir: Path, config_root: Path | None = None) -> dict[str, Any]:
                     bme_reqs_total = 8 if str(domain) == "kitchen" else 6
         bme_reqs_passed = 0
 
-    # Terminal causal category (B2B)
+    # Attempt tracking & Provenance (Part 6.3)
+    selected_attempt_idx = bresult.get("selected_attempt_index")
+    selected_attempt = None
+    if selected_attempt_idx is not None:
+        for a in attempts:
+            if a["attempt_index"] == selected_attempt_idx:
+                selected_attempt = a
+                break
+    if selected_attempt is None and attempts:
+        for a in attempts:
+            if a.get("attempt_nonempty_refine"):
+                selected_attempt = a
+                break
+        if selected_attempt is None:
+            for a in attempts:
+                if a["nonempty_plan"]:
+                    selected_attempt = a
+                    break
+        if selected_attempt is None:
+            selected_attempt = attempts[0]
+
+    selected_action_seq_str = "[]"
+    if final_plan.is_file():
+        try:
+            with open(final_plan, encoding="utf-8") as f:
+                actions = json.load(f).get("actions", [])
+                if actions:
+                    selected_action_seq_str = " -> ".join(
+                        f"{a.get('operator')}({', '.join(a.get('arguments', []))})" for a in actions
+                    )
+        except Exception:
+            pass
+    elif selected_attempt and selected_attempt.get("actions"):
+        sel_actions = selected_attempt.get("actions", [])
+        if sel_actions:
+            selected_action_seq_str = " -> ".join(
+                f"{a.get('operator')}({', '.join(a.get('arguments', []))})" for a in sel_actions
+            )
+    elif plans:
+        sel_actions = plans[0].get("actions", [])
+        if sel_actions:
+            selected_action_seq_str = " -> ".join(
+                f"{a.get('operator')}({', '.join(a.get('arguments', []))})" for a in sel_actions
+            )
+
+    provenance_consistent = True
+    provenance_diagnostics: list[str] = []
+    if final_plan.is_file():
+        try:
+            with open(final_plan, encoding="utf-8") as f:
+                fp_data = json.load(f)
+                fp_att = fp_data.get("selected_attempt_index")
+                fp_sha = fp_data.get("plan_sha256") or fp_data.get("selected_plan_sha256")
+                if selected_attempt_idx is not None and fp_att is not None and fp_att != selected_attempt_idx:
+                    provenance_consistent = False
+                    provenance_diagnostics.append(f"attempt mismatch: final_plan has {fp_att}, baseline has {selected_attempt_idx}")
+                att_sha = (selected_attempt.get("plan_sha256") or selected_attempt.get("problem_sha256")) if selected_attempt else None
+                if selected_attempt and fp_sha and att_sha and fp_sha != att_sha:
+                    provenance_consistent = False
+                    provenance_diagnostics.append(f"sha mismatch: final_plan {fp_sha} != attempt {att_sha}")
+        except Exception as e:
+            provenance_consistent = False
+            provenance_diagnostics.append(str(e))
+
+    # Terminal causal category (B2B) & CP diagnostic classification (Part 7)
     cp_file = art_dir / "corrective_planning_result.json"
     cp_terminal_kind = None
     cp_terminal_stage = None
     cp_terminal_summary = None
+    cp_diagnostics: Sequence[Any] = ()
+    cp_classified_label = None
     if cp_file.is_file():
         try:
             with open(cp_file, encoding="utf-8") as f:
@@ -364,6 +454,22 @@ def audit_run(run_dir: Path, config_root: Path | None = None) -> dict[str, Any]:
                 cp_terminal_summary = tfail.get("summary")
                 details = tfail.get("details") or {}
                 cp_terminal_stage = details.get("stage")
+                cp_diagnostics = details.get("diagnostics") or ()
+                cp_status = cp_data.get("status")
+                sum_lower = (cp_terminal_summary or "").lower()
+                diag_str = " ".join(str(d).lower() for d in cp_diagnostics)
+                if "repeats" in sum_lower or "repeated" in sum_lower or cp_status == "REPEATED_REVISION":
+                    cp_classified_label = "REPEATED_CORRECTION"
+                elif "unknown_fact" in diag_str or "unknown fact" in diag_str:
+                    cp_classified_label = "UNKNOWN_FACT_ID"
+                elif "malformed" in diag_str or "parse" in diag_str or "json" in diag_str:
+                    cp_classified_label = "MALFORMED_CORRECTIVE_RESPONSE"
+                elif "inconsistent" in diag_str or "contradict" in diag_str:
+                    cp_classified_label = "INCONSISTENT_CORRECTIVE_FACT_SET"
+                elif "unreachable" in diag_str:
+                    cp_classified_label = "UNREACHABLE_CORRECTED_GOAL"
+                elif cp_terminal_kind == "INVALID_CORRECTION":
+                    cp_classified_label = "INVALID_CORRECTIVE_SELECTION"
         except Exception:
             pass
 
@@ -376,7 +482,7 @@ def audit_run(run_dir: Path, config_root: Path | None = None) -> dict[str, Any]:
     elif raw_status == "IDENTITY_FAILURE":
         causal_category = "UNRESOLVED_IDENTITY_FAILURE"
     elif cp_terminal_kind == "INVALID_CORRECTION":
-        causal_category = "UNRESOLVED_INVALID_CORRECTION"
+        causal_category = f"UNRESOLVED_{cp_classified_label}" if cp_classified_label else "UNRESOLVED_INVALID_CORRECTIVE_SELECTION"
     elif raw_status == "NO_PLAN" or cp_terminal_kind == "NO_PLAN" or cp_terminal_stage == "NO_PLAN":
         causal_category = "SYMBOLIC_NO_PLAN_AFTER_BOUNDED_CP"
     elif cp_terminal_kind == "ENTITY_RESOLUTION":
@@ -402,16 +508,19 @@ def audit_run(run_dir: Path, config_root: Path | None = None) -> dict[str, Any]:
             and not infra_failure
         )
 
-    # Physical plan found: non-empty + VAL-valid + identity-resolved + refinement-succeeded
-    physical_plan_found = any(
-        a["nonempty_plan"] and a["val_valid"] and a["identity_success"] and a["refinement_success"]
-        for a in attempts
-    )
+    # Strict same-attempt physical plan found
+    physical_plan_found = nonempty_plan_refine
 
     execution_stage_completed = bool(exec_success)
-    nonempty_plan_execution_completed = bool(
-        exec_success and final_selected_plan_len is not None and final_selected_plan_len > 0
+    selected_has_nonempty_refine = (
+        selected_attempt.get("attempt_nonempty_refine", False) if selected_attempt else nonempty_plan_refine
     )
+    nonempty_plan_execution_completed = bool(
+        exec_success and (final_selected_plan_len or 0) > 0 and selected_has_nonempty_refine
+    )
+    nonempty_plan_exec = nonempty_plan_execution_completed
+    task_final = bool(nonempty_plan_exec and actual_task_success)
+
     declared_completion = bool(exec_success or raw_status in {"SUCCESS", "BENCHMARK_FAILURE"})
     false_completion = bool(declared_completion and not actual_task_success)
 
@@ -445,26 +554,71 @@ def audit_run(run_dir: Path, config_root: Path | None = None) -> dict[str, Any]:
     else:
         actions_attempted = int(metrics.get("controller_action_count", 0))
 
-    # Initial vs Terminal Goal Coverage (Part 8)
-    initial_bme_file = art_dir / "benchmark" / "initial_benchmark_goal_evaluation.json"
-    initial_bme_reqs_passed = 0
-    if initial_bme_file.is_file():
+    # Initial vs Terminal Goal Coverage from canonical GT manipulation subgoals (Part 2, 3, 5)
+    term_sge_file = art_dir / "benchmark" / "terminal_subgoal_evaluation.json"
+    init_sge_file = art_dir / "benchmark" / "initial_subgoal_evaluation.json"
+
+    terminal_subgoals_total = canonical_subgoal_count(domain) if domain else 0
+    terminal_subgoals_passed = 0
+    terminal_subgoal_eval = None
+
+    if term_sge_file.is_file():
         try:
-            with open(initial_bme_file, encoding="utf-8") as f:
-                in_data = json.load(f)
-                initial_bme_reqs_passed = sum(1 for r in in_data.get("requirement_checks", []) if r.get("passed") is True)
+            with open(term_sge_file, encoding="utf-8") as f:
+                sge_data = json.load(f)
+                terminal_subgoals_total = sge_data.get("total_subgoals", terminal_subgoals_total)
+                terminal_subgoals_passed = sge_data.get("passed_subgoals", 0)
+                terminal_subgoal_eval = sge_data
         except Exception:
-            initial_bme_reqs_passed = bme_reqs_passed if actions_attempted == 0 else 0
-    elif actions_attempted == 0 or not exec_attempted:
-        initial_bme_reqs_passed = bme_reqs_passed
-    else:
-        initial_bme_reqs_passed = 0
+            pass
+    elif domain and variant:
+        try:
+            from .production_execution import BenchmarkRegistryHiddenContextProvider
+            ctx_provider = BenchmarkRegistryHiddenContextProvider(config_root)
+            hidden_ctx = ctx_provider.load(domain, variant)
+            init_snap = initial_snapshot_from_config(domain, variant, config_root)
+            subgoal_eval = evaluate_terminal_subgoals(init_snap, (), hidden_ctx)
+            terminal_subgoals_total = subgoal_eval.total_subgoals
+            terminal_subgoals_passed = subgoal_eval.passed_subgoals
+            terminal_subgoal_eval = subgoal_eval.to_dict()
+        except Exception:
+            pass
+
+    initial_subgoals_total = terminal_subgoals_total
+    initial_subgoals_passed = 0
+    initial_subgoal_eval = None
+
+    if init_sge_file.is_file():
+        try:
+            with open(init_sge_file, encoding="utf-8") as f:
+                init_sge_data = json.load(f)
+                initial_subgoals_total = init_sge_data.get("total_subgoals", initial_subgoals_total)
+                initial_subgoals_passed = init_sge_data.get("passed_subgoals", 0)
+                initial_subgoal_eval = init_sge_data
+        except Exception:
+            pass
+    elif domain and variant:
+        try:
+            from .production_execution import BenchmarkRegistryHiddenContextProvider
+            ctx_provider = BenchmarkRegistryHiddenContextProvider(config_root)
+            hidden_ctx = ctx_provider.load(domain, variant)
+            init_snap = initial_snapshot_from_config(domain, variant, config_root)
+            init_eval = evaluate_terminal_subgoals(init_snap, (), hidden_ctx)
+            initial_subgoals_total = init_eval.total_subgoals
+            initial_subgoals_passed = init_eval.passed_subgoals
+            initial_subgoal_eval = init_eval.to_dict()
+        except Exception:
+            initial_subgoals_passed = terminal_subgoals_passed if actions_attempted == 0 else 0
 
     initial_goal_coverage = (
-        (initial_bme_reqs_passed / bme_reqs_total) if (gt_feasible and bme_reqs_total > 0) else None
+        (initial_subgoals_passed / initial_subgoals_total)
+        if (gt_feasible and initial_subgoals_total > 0)
+        else None
     )
     terminal_goal_coverage = (
-        (bme_reqs_passed / bme_reqs_total) if (gt_feasible and bme_reqs_total > 0) else None
+        (terminal_subgoals_passed / terminal_subgoals_total)
+        if (gt_feasible and terminal_subgoals_total > 0)
+        else None
     )
     delta_goal_coverage = (
         (terminal_goal_coverage - initial_goal_coverage)
@@ -472,49 +626,14 @@ def audit_run(run_dir: Path, config_root: Path | None = None) -> dict[str, Any]:
         else None
     )
 
-    # Attempt tracking
-    selected_attempt_idx = bresult.get("selected_attempt_index")
-    selected_attempt = None
-    if selected_attempt_idx is not None:
-        for a in attempts:
-            if a["attempt_index"] == selected_attempt_idx:
-                selected_attempt = a
-                break
-    if selected_attempt is None and attempts:
-        for a in attempts:
-            if a["nonempty_plan"]:
-                selected_attempt = a
-                break
-        if selected_attempt is None:
-            selected_attempt = attempts[0]
-
-    selected_action_seq_str = "[]"
-    if final_plan.is_file():
-        try:
-            with open(final_plan, encoding="utf-8") as f:
-                actions = json.load(f).get("actions", [])
-                if actions:
-                    selected_action_seq_str = " -> ".join(
-                        f"{a.get('operator')}({', '.join(a.get('arguments', []))})" for a in actions
-                    )
-        except Exception:
-            pass
-    elif selected_attempt and selected_attempt.get("actions"):
-        sel_actions = selected_attempt.get("actions", [])
-        if sel_actions:
-            selected_action_seq_str = " -> ".join(
-                f"{a.get('operator')}({', '.join(a.get('arguments', []))})" for a in sel_actions
-            )
-    elif plans:
-        sel_actions = plans[0].get("actions", [])
-        if sel_actions:
-            selected_action_seq_str = " -> ".join(
-                f"{a.get('operator')}({', '.join(a.get('arguments', []))})" for a in sel_actions
-            )
-
     term_fail_cause = ""
     if raw_status != "SUCCESS":
-        term_fail_cause = cp_terminal_summary or cp_terminal_kind or raw_status
+        if cp_classified_label:
+            term_fail_cause = cp_classified_label
+        elif cp_terminal_summary:
+            term_fail_cause = cp_terminal_summary
+        else:
+            term_fail_cause = cp_terminal_kind or raw_status
 
     return {
         "run_id": run_id,
@@ -556,6 +675,17 @@ def audit_run(run_dir: Path, config_root: Path | None = None) -> dict[str, Any]:
         "outcome_correct": outcome_correct,
         "generated_goal_evaluated": gge_evaluated,
         "hidden_benchmark_evaluated": bme_evaluated,
+        # Strict same-attempt sequence funnel booleans
+        "any_plan_fd": any_plan_fd,
+        "any_plan_val": any_plan_val,
+        "nonempty_plan_fd": nonempty_plan_fd,
+        "nonempty_plan_val": nonempty_plan_val,
+        "nonempty_plan_identity": nonempty_plan_identity,
+        "nonempty_plan_refine": nonempty_plan_refine,
+        "nonempty_plan_exec": nonempty_plan_exec,
+        "task_final": task_final,
+        "provenance_consistent": provenance_consistent,
+        "provenance_diagnostics": provenance_diagnostics,
         # Action sequence metrics
         "first_plan_attempt_index": first_plan_idx,
         "first_nonempty_plan_attempt_index": first_nonempty_plan_idx,
@@ -576,18 +706,24 @@ def audit_run(run_dir: Path, config_root: Path | None = None) -> dict[str, Any]:
         "generated_goal_atoms_total": gge_atoms_total,
         "generated_goal_atom_coverage": (gge_atoms_passed / gge_atoms_total) if gge_atoms_total > 0 else None,
         "benchmark_requirements_passed": bme_reqs_passed,
-        "goal_requirements_passed": bme_reqs_passed,
+        "goal_requirements_passed": terminal_subgoals_passed,
         "benchmark_requirements_total": bme_reqs_total,
-        "goal_requirements_total": bme_reqs_total,
+        "goal_requirements_total": terminal_subgoals_total,
         "benchmark_requirement_coverage": (bme_reqs_passed / bme_reqs_total) if bme_reqs_total > 0 else None,
-        "goal_coverage": (bme_reqs_passed / bme_reqs_total) if (gt_feasible and bme_reqs_total > 0) else None,
-        "initial_requirements_passed": initial_bme_reqs_passed if gt_feasible else None,
-        "initial_requirements_total": bme_reqs_total if gt_feasible else None,
-        "terminal_requirements_passed": bme_reqs_passed if gt_feasible else None,
-        "terminal_requirements_total": bme_reqs_total if gt_feasible else None,
+        "goal_coverage": terminal_goal_coverage,
+        "initial_requirements_passed": initial_subgoals_passed if gt_feasible else None,
+        "initial_requirements_total": initial_subgoals_total if gt_feasible else None,
+        "terminal_requirements_passed": terminal_subgoals_passed if gt_feasible else None,
+        "terminal_requirements_total": terminal_subgoals_total if gt_feasible else None,
         "initial_goal_coverage": initial_goal_coverage,
         "terminal_goal_coverage": terminal_goal_coverage,
         "delta_goal_coverage": delta_goal_coverage,
+        "initial_subgoals_passed": initial_subgoals_passed,
+        "initial_subgoals_total": initial_subgoals_total,
+        "terminal_subgoals_passed": terminal_subgoals_passed,
+        "terminal_subgoals_total": terminal_subgoals_total,
+        "initial_subgoal_eval": initial_subgoal_eval,
+        "terminal_subgoal_eval": terminal_subgoal_eval,
         "selected_attempt_index": selected_attempt_idx,
         "selected_plan_length": selected_attempt["plan_length"] if selected_attempt else 0,
         "selected_plan_val_valid": selected_attempt["val_valid"] if selected_attempt else False,
@@ -894,27 +1030,46 @@ def compute_group_aggregates(rows: Sequence[Mapping[str, Any]], group_label: str
 
 
 def compute_stage_funnel(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
-    """Compute unconditional and sequential stage funnel metrics across 10 stages."""
+    """Compute unconditional and sequential stage funnel metrics.
+
+    Maintains diagnostic ANY PLAN counts and the strictly nested same-attempt
+    action-sequence funnel:
+    NONEMPTY PLAN@FD -> NONEMPTY PLAN@VAL -> NONEMPTY PLAN@IDENTITY -> NONEMPTY PLAN@REFINE -> PLAN@EXEC -> TASK@FINAL.
+    All conditional conversion rates in the action-sequence chain are <= 100%.
+    """
     n = len(rows)
+
+    def _pred(r: Mapping[str, Any], key: str, fallback_key: str | None = None) -> bool:
+        if key in r and r[key] is not None:
+            return bool(r[key])
+        if fallback_key is not None and fallback_key in r and r[fallback_key] is not None:
+            return bool(r[fallback_key])
+        return False
+
     stages = [
-        ("1_observation", "Observation", lambda r: bool(r.get("observation_success"))),
-        ("2_object_estimation", "Object estimation", lambda r: bool(r.get("object_estimation_success"))),
-        ("3_pddl_valid", "Valid PDDL", lambda r: bool(r.get("pddl_valid"))),
-        ("4_symbolic_plan_found", "PLAN@FD", lambda r: bool(r.get("symbolic_plan_found"))),
-        ("5_nonempty_plan_found", "NONEMPTY PLAN@FD", lambda r: bool(r.get("symbolic_plan_nonempty"))),
-        ("6_val_plan_valid", "PLAN@VAL", lambda r: bool(r.get("val_plan_valid"))),
-        ("7_identity_success", "PLAN@IDENTITY", lambda r: bool(r.get("identity_success"))),
-        ("8_physical_plan_found", "PLAN@REFINE", lambda r: bool(r.get("physical_plan_found"))),
-        ("9_nonempty_exec_success", "PLAN@EXEC", lambda r: bool(r.get("nonempty_plan_execution_completed"))),
-        ("10_task_success", "TASK@FINAL", lambda r: bool(r.get("actual_task_success"))),
+        ("1_observation", "Observation", lambda r: _pred(r, "observation_success"), None),
+        ("2_object_estimation", "Object estimation", lambda r: _pred(r, "object_estimation_success"), "1_observation"),
+        ("3_pddl_valid", "Valid PDDL", lambda r: _pred(r, "pddl_valid"), "2_object_estimation"),
+        ("4_any_plan_fd", "ANY PLAN@FD", lambda r: _pred(r, "any_plan_fd", "symbolic_plan_found"), "3_pddl_valid"),
+        ("4b_any_plan_val", "ANY PLAN@VAL", lambda r: _pred(r, "any_plan_val", "val_plan_valid"), "4_any_plan_fd"),
+        ("5_nonempty_plan_fd", "NONEMPTY PLAN@FD", lambda r: _pred(r, "nonempty_plan_fd", "symbolic_plan_nonempty"), "3_pddl_valid"),
+        ("6_nonempty_plan_val", "NONEMPTY PLAN@VAL", lambda r: _pred(r, "nonempty_plan_val", "val_plan_valid") and _pred(r, "nonempty_plan_fd", "symbolic_plan_nonempty"), "5_nonempty_plan_fd"),
+        ("7_nonempty_plan_identity", "NONEMPTY PLAN@IDENTITY", lambda r: _pred(r, "nonempty_plan_identity", "identity_success") and _pred(r, "nonempty_plan_val", "val_plan_valid") and _pred(r, "nonempty_plan_fd", "symbolic_plan_nonempty"), "6_nonempty_plan_val"),
+        ("8_nonempty_plan_refine", "NONEMPTY PLAN@REFINE", lambda r: _pred(r, "nonempty_plan_refine", "physical_plan_found"), "7_nonempty_plan_identity"),
+        ("9_nonempty_exec_success", "NONEMPTY PLAN@EXEC", lambda r: _pred(r, "nonempty_plan_exec", "nonempty_plan_execution_completed"), "8_nonempty_plan_refine"),
+        ("10_task_success", "TASK@FINAL", lambda r: _pred(r, "task_final", "actual_task_success") and _pred(r, "nonempty_plan_exec", "nonempty_plan_execution_completed"), "9_nonempty_exec_success"),
     ]
 
+    stage_counts: dict[str, int] = {}
     funnel = []
-    prev_count = n
-    for stage_id, name, predicate in stages:
+
+    for stage_id, name, predicate, prev_id in stages:
         count = sum(1 for r in rows if predicate(r))
+        stage_counts[stage_id] = count
+        prev_count = stage_counts.get(prev_id, n) if prev_id is not None else n
         unconditional_rate = count / n if n > 0 else 0.0
         conditional_rate = count / prev_count if prev_count > 0 else 0.0
+        conditional_rate = min(1.0, conditional_rate)
         ci_low, ci_high = wilson_interval(count, n)
         funnel.append({
             "stage_id": stage_id,
@@ -926,7 +1081,6 @@ def compute_stage_funnel(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, An
             "previous_stage_count": prev_count,
             "conditional_conversion_rate": conditional_rate,
         })
-        prev_count = count
     return funnel
 
 
@@ -1837,6 +1991,7 @@ def run_full_paper_analysis(
             "conditional_conversion_rate": s["conditional_conversion_rate"],
         })
     write_csv_dicts(output_root / f"{file_prefix}stage_funnel.csv", funnel_flat)
+    write_csv_dicts(output_root / f"{file_prefix}sequence_funnel.csv", funnel_flat)
 
     # Feasibility Metrics & Confusion Matrix
     confusion = overall["feasibility_confusion"]
@@ -1896,11 +2051,101 @@ def run_full_paper_analysis(
         json.dumps(rep_sequences, indent=2, sort_keys=True), encoding="utf-8"
     )
 
+    # Subgoal definitions JSON (Part 11)
+    from .evaluation.subgoals import CANONICAL_SUBGOAL_COUNTS
+    subgoal_definitions = {
+        "kitchen": {
+            "canonical_subgoal_count": CANONICAL_SUBGOAL_COUNTS["kitchen"],
+            "description": "12 canonical terminal manipulation outcomes: 8 coffee subgoals (on serving support, water delivered, coffee delivered, stirred for 2 vessels) and 4 soup subgoals (on serving support, soup utensil contained for 2 vessels).",
+            "categories": {
+                "coffee_vessel_placement": 2,
+                "coffee_water_delivery": 2,
+                "coffee_powder_delivery": 2,
+                "coffee_stirred": 2,
+                "soup_vessel_placement": 2,
+                "soup_utensil_contained": 2,
+            },
+            "excluded_passive_structural": [
+                "two distinct coffee vessels exist",
+                "two distinct soup vessels exist",
+                "coffee and soup vessel groups disjoint",
+                "no required object held",
+            ],
+        },
+        "living_room": {
+            "canonical_subgoal_count": CANONICAL_SUBGOAL_COUNTS["living_room"],
+            "description": "5 canonical terminal manipulation placement subgoals: left cup ON left table, left saucer ON left table, right cup ON right table, right saucer ON right table, remote ON shared coffee table.",
+            "subgoals": [
+                "(cup_left, ON, personal_table_left)",
+                "(saucer_left, ON, personal_table_left)",
+                "(cup_right, ON, personal_table_right)",
+                "(saucer_right, ON, personal_table_right)",
+                "(remote, ON, coffee_table_shared)",
+            ],
+            "excluded_passive_structural": [
+                "required payloads present",
+                "required supports present",
+                "no payload held",
+            ],
+        },
+        "workshop": {
+            "canonical_subgoal_count": CANONICAL_SUBGOAL_COUNTS["workshop"],
+            "description": "3 canonical terminal manipulation completion subgoals: compatible screw inserted in target, joint fastened / fully driven, selected driver placed safely on main workbench.",
+            "subgoals": [
+                "(compatible_screw, INSERTED_IN, repair_joint)",
+                "(repair_joint, FASTENED, true)",
+                "(selected_driver, ON, main_workbench)",
+            ],
+            "excluded_passive_structural": [
+                "driver/screw compatibility checks",
+                "procedural first-driver constraint",
+                "no object held",
+            ],
+        },
+    }
+    (output_root / f"{file_prefix}subgoal_definitions.json").write_text(
+        json.dumps(subgoal_definitions, indent=2, sort_keys=True), encoding="utf-8"
+    )
+
+    # Initial and terminal subgoal evaluations jsonl (Part 11)
+    with (output_root / f"{file_prefix}initial_subgoal_evaluations.jsonl").open("w", encoding="utf-8") as f:
+        for r in completed_rows:
+            f.write(json.dumps({
+                "run_id": r.get("run_id"),
+                "domain": r.get("domain"),
+                "variant": r.get("variant"),
+                "observation_protocol": r.get("observation_protocol"),
+                "repeat_index": r.get("repeat_index"),
+                "ground_truth_feasible": r.get("ground_truth_feasible"),
+                "initial_subgoals_passed": r.get("initial_subgoals_passed"),
+                "initial_subgoals_total": r.get("initial_subgoals_total"),
+                "initial_goal_coverage": r.get("initial_goal_coverage"),
+                "initial_subgoal_eval": r.get("initial_subgoal_eval"),
+            }, sort_keys=True) + "\n")
+
+    with (output_root / f"{file_prefix}terminal_subgoal_evaluations.jsonl").open("w", encoding="utf-8") as f:
+        for r in completed_rows:
+            f.write(json.dumps({
+                "run_id": r.get("run_id"),
+                "domain": r.get("domain"),
+                "variant": r.get("variant"),
+                "observation_protocol": r.get("observation_protocol"),
+                "repeat_index": r.get("repeat_index"),
+                "ground_truth_feasible": r.get("ground_truth_feasible"),
+                "terminal_subgoals_passed": r.get("terminal_subgoals_passed"),
+                "terminal_subgoals_total": r.get("terminal_subgoals_total"),
+                "terminal_goal_coverage": r.get("terminal_goal_coverage"),
+                "delta_goal_coverage": r.get("delta_goal_coverage"),
+                "terminal_subgoal_eval": r.get("terminal_subgoal_eval"),
+            }, sort_keys=True) + "\n")
+
     # Metric definitions JSON
     definitions = {
         "outcome_correct": "Proportion of runs with correct outcome: actual task success for GT-feasible tasks, or clean symbolic rejection under bounded CP without unresolved execution/refinement/identity failures for GT-infeasible tasks.",
         "feasible_task_success": "Proportion of GT-feasible runs where the hidden benchmark goal was physically achieved (denominator: scheduled GT-feasible runs).",
-        "goal_coverage": "Micro-average fraction of hidden benchmark requirement checks satisfied across all scheduled GT-feasible runs.",
+        "goal_coverage": "Micro-average fraction of canonical GT terminal manipulation subgoals satisfied in the physical state across all scheduled GT-feasible runs (excludes passive structural prerequisites).",
+        "initial_goal_coverage": "Micro-average fraction of canonical GT terminal manipulation subgoals satisfied at initial physical state across all scheduled GT-feasible runs.",
+        "delta_goal_coverage": "Change in goal coverage from initial state to terminal state (TerminalGoalCoverage - InitialGoalCoverage).",
         "false_completion": "Proportion of declared-complete runs where hidden benchmark evaluation failed (denominator: runs where runtime declared completion).",
         "physical_plan_found": "Proportion of GT-feasible runs yielding at least one non-empty, VAL-valid, identity-resolved, and refinement-passed physical action plan (zero-step plans excluded).",
         "raw_vlm_requests": "Total foundation model calls made per run across object estimation, initial state, goal state, and corrective planning.",
@@ -1920,13 +2165,24 @@ def run_full_paper_analysis(
     }
     (output_root / f"{file_prefix}metric_definitions.json").write_text(json.dumps(definitions, indent=2, sort_keys=True), encoding="utf-8")
 
+    try:
+        import subprocess
+        eval_commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=Path(__file__).parent, text=True
+        ).strip()
+    except Exception:
+        eval_commit = "unknown"
+    beh_commit = audited_rows[0].get("source_commit") if audited_rows else "2c3c402c25cbd87ac0e3873231d971c854524f11"
+
     # Audit summary
     audit_summary = {
         "results_root": str(results_root),
         "total_scheduled_runs": len(audited_rows),
         "completed_non_infrastructure_runs": len(completed_rows),
         "infrastructure_failures": len(audited_rows) - len(completed_rows),
-        "source_commit": audited_rows[0]["source_commit"] if audited_rows else None,
+        "source_commit": beh_commit,
+        "behavior_commit": beh_commit,
+        "evaluation_commit": eval_commit,
         "runs_with_symbolic_plan": sum(1 for r in completed_rows if r["symbolic_plan_found"]),
         "runs_with_nonempty_plan": sum(1 for r in completed_rows if r["symbolic_plan_nonempty"]),
         "runs_with_val_valid_plan": sum(1 for r in completed_rows if r["val_plan_valid"]),

@@ -282,7 +282,40 @@ def _ledger(domain: str) -> list[Mapping[str, Any]]:
 
 
 def _expected_files(scenario: Mapping[str, Any]) -> set[str]:
-    common = {"baseline_manifest.json", "run_config.json", "events.jsonl", "observations/inspection_trace.json", "observations/observation_manifest.json", "observations/stages/000_initial/cameras/front/rgb.png", "observations/stages/000_initial/cameras/front/depth.npy", "observations/stages/000_initial/cameras/front/camera.json", "perception/request.json", "perception/raw_response.txt", "perception/model_metadata.json", "perception/object_estimates.json", "interpreter/initial_state_request.json", "interpreter/initial_state_raw.txt", "interpreter/initial_state_model_metadata.json", "interpreter/goal_request.json", "interpreter/goal_raw.txt", "interpreter/goal_model_metadata.json", "interpreter/initial_state.pddlfrag", "interpreter/goal.pddlfrag", "interpreter/domain.pddl", "interpreter/problem_initial.pddl", "interpreter/generation_artifacts.json", "corrective_planning_result.json", "benchmark/benchmark_goal_evaluation.json", "metrics.json", "baseline_run_result.json"}
+    common = {
+        "baseline_manifest.json",
+        "run_config.json",
+        "events.jsonl",
+        "observations/inspection_trace.json",
+        "observations/observation_manifest.json",
+        "observations/stages/000_initial/cameras/front/rgb.png",
+        "observations/stages/000_initial/cameras/front/depth.npy",
+        "observations/stages/000_initial/cameras/front/camera.json",
+        "perception/request.json",
+        "perception/raw_response.txt",
+        "perception/model_metadata.json",
+        "perception/object_estimates.json",
+        "interpreter/initial_state_request.json",
+        "interpreter/initial_state_raw.txt",
+        "interpreter/initial_state_model_metadata.json",
+        "interpreter/goal_request.json",
+        "interpreter/goal_raw.txt",
+        "interpreter/goal_model_metadata.json",
+        "interpreter/initial_state.pddlfrag",
+        "interpreter/goal.pddlfrag",
+        "interpreter/domain.pddl",
+        "interpreter/problem_initial.pddl",
+        "interpreter/generation_artifacts.json",
+        "corrective_planning_result.json",
+        "benchmark/benchmark_goal_evaluation.json",
+        "benchmark/initial_benchmark_goal_evaluation.json",
+        "benchmark/initial_state_snapshot.json",
+        "benchmark/terminal_state_snapshot.json",
+        "benchmark/initial_subgoal_evaluation.json",
+        "benchmark/terminal_subgoal_evaluation.json",
+        "metrics.json",
+        "baseline_run_result.json",
+    }
     for index in range(int(scenario["expected_attempts"])):
         label = "00_initial" if index == 0 else f"{index:02d}_cp"
         common.update({f"attempts/{label}/problem.pddl", f"attempts/{label}/pddl_validation.json", f"attempts/{label}/planner/command.json", f"attempts/{label}/planner/stdout.txt", f"attempts/{label}/planner/stderr.txt", f"attempts/{label}/planner/sas_plan", f"attempts/{label}/planner/symbolic_plan.json", f"attempts/{label}/planner/plan_validation.json", f"attempts/{label}/refinement/refinement.json", f"attempts/{label}/refinement/failures.json", f"attempts/{label}/refinement/traces/trace.json", f"attempts/{label}/execution_projection.json"})
