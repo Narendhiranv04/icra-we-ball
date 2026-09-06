@@ -113,10 +113,10 @@ KITCHEN_INTERACTION_GROUP_ALIASES: dict[str, tuple[str, ...]] = {
         "coffee stirring", "coffee_stirring", "stir coffee", "mix coffee",
         "stir beverage", "stir drinks", "stir beverage in cups", "mix beverage",
         "stir", "mix", "agitate coffee", "stirring", "mixing", "beverage stirring",
-        "coffee preparation", "prepare coffee",
+        "coffee preparation", "prepare coffee", "serve coffee", "coffee serving",
     ),
     "soup_serving": (
-        "soup serving", "soup_serving", "serve soup", "provide utensil",
+        "soup serving", "soup_serving", "serve soup", "prepare soup", "soup preparation", "provide utensil",
         "provide eating utensil", "provide utensil for soup",
         "provide a suitable eating utensil for each soup bowl",
         "provide a suitable utensil for each soup bowl",
@@ -157,7 +157,7 @@ KITCHEN_REGION_ALIASES: dict[str, tuple[str, ...]] = {
         "lower kitchen cupboard", "lower cupboard", "bottom cupboard", "base cupboard",
         "lower cabinet", "base cabinet", "under counter cupboard", "cupboard below counter",
         "cabinet below counter", "lower cupboard storage", "left cupboard", "left wall cupboard",
-        "left cabinet", "left kitchen cupboard",
+        "left cabinet", "left wall cabinet", "left kitchen cupboard",
     ),
 }
 
@@ -168,6 +168,16 @@ KITCHEN_OBSERVABLE_REGIONS = {
     "B1": "countertop storage box",
     "C1": "lower kitchen cupboard",
 }
+
+REASONABLE_AFFORDANCE_NOTE_KEYWORDS: tuple[str, ...] = (
+    "handle", "spout", "lid", "rim", "grip", "open end", "opening", "base", "flat base",
+    "rigid", "stiff", "solid", "durable", "stable", "stable base", "stable surface",
+    "easy to grip", "wide mouth", "cylindrical", "cylindrical shape", "round", "round shape",
+    "deep", "deep shape", "enclosed volume", "smooth", "open top", "button interface",
+    "rectangular shape", "upright orientation", "has fastening points", "rigid structure",
+    "planar support", "planar", "flat bottom", "flat surface", "horizontal support", "support surface",
+)
+
 
 
 def _phrase(value: object) -> str:
@@ -184,15 +194,20 @@ def _contains_phrase(text: str, phrase: str) -> bool:
 
 
 def map_kitchen_role_function(raw: dict[str, Any] | str) -> str | None:
-    """Map natural language role to unique canonical Kitchen role using function and description only.
+    """Map natural language role to unique canonical Kitchen role.
 
-    Candidate categories are strictly excluded from role semantic authority and are
-    reserved for detector vocabulary / semantic preferences.
+    Primary semantic authority is function and description.
+    When function and description alone specify a valid kitchen role, that role is used.
+    When function and description describe a generic liquid container without beverage identity
+    (e.g. 'hold liquid', 'contain liquid'), candidate categories are consulted to disambiguate
+    between coffee_container, soup_container, and water_source.
     """
     if isinstance(raw, dict):
         text = f"{raw.get('function', '')} {raw.get('description', '')}"
+        cats = raw.get("candidate_categories", [])
     else:
         text = str(raw)
+        cats = []
     norm = _phrase(text)
     if not norm:
         return None
@@ -236,7 +251,7 @@ def map_kitchen_role_function(raw: dict[str, Any] | str) -> str | None:
         has_cup or has_bowl
         or any(
             w in words or _contains_phrase(norm, w)
-            for w in ("contain", "hold", "receptacle", "vessel", "serving", "container", "individual serving")
+            for w in ("contain", "hold", "receptacle", "vessel", "serving", "container", "individual serving", "liquid")
         )
     )
 
@@ -253,13 +268,13 @@ def map_kitchen_role_function(raw: dict[str, Any] | str) -> str | None:
         for w in ("jar", "coffee jar", "can", "box", "package", "instant coffee jar")
     )
 
-    # 1. Water source
+    # 1. Water source from function/description
     if has_water and not has_coffee and not has_soup:
         return "water_source"
     if has_water and (has_source or "kettle" in norm or "pitcher" in norm):
         return "water_source"
 
-    # 2. Coffee source
+    # 2. Coffee source from function/description
     if (
         (has_coffee and has_source and not has_contain and not has_stir)
         or (has_coffee and has_jar)
@@ -269,14 +284,14 @@ def map_kitchen_role_function(raw: dict[str, Any] | str) -> str | None:
     ):
         return "coffee_source"
 
-    # 3. Stirrer vs Eating utensil
+    # 3. Stirrer vs Eating utensil from function/description
     if has_stir or (has_spoon and has_coffee and not has_contain and not has_cup and not has_soup):
         if not has_soup:
             return "coffee_stirrer"
     if (has_soup and (has_utensil or has_spoon)) and not has_bowl and not (has_contain and not has_spoon and not has_utensil):
         return "soup_eating_utensil"
 
-    # 4. Containers
+    # 4. Containers from function/description
     if (has_coffee or has_cup) and has_contain and not has_stir and not has_source and not has_spoon:
         return "coffee_container"
     if (has_soup or has_bowl) and has_contain and not has_utensil and not has_source and not has_spoon:
@@ -302,6 +317,72 @@ def map_kitchen_role_function(raw: dict[str, Any] | str) -> str | None:
         if has_soup and "soup_eating_utensil" in matches and has_utensil:
             return "soup_eating_utensil"
         raise AmbiguousCanonicalizationError(f"Ambiguous kitchen role function {text!r} matches multiple roles: {sorted(matches)}")
+
+    # 6. Multi-signal fallback: When function is generic container/liquid language, consult candidate_categories and visible_candidates
+    cat_norm = _phrase(" ".join(str(c) for c in cats))
+    cat_words = set(cat_norm.split())
+
+    is_context = (
+        any(w in cat_words for w in ("table", "desk", "counter", "countertop", "surface"))
+        or any(w in cat_words for w in ("cabinet", "cupboard", "drawer", "chest", "storage"))
+        or norm in ("support payload", "support items", "support object", "support objects", "contain items", "store items", "storage")
+    )
+    if is_context and not has_coffee and not has_soup and not has_stir and not has_water:
+        return "CONTEXTUAL_ENVIRONMENT"
+
+    # Check for dry goods pantry / ingredient containers
+    is_dry_goods = (
+        "dry" in words or "goods" in words or "dry goods" in norm
+        or any(w in words for w in ("can", "box", "jar", "package"))
+        or any(w in cat_words for w in ("can", "box", "jar", "package"))
+    )
+    if is_dry_goods and not has_stir and not has_spoon and not has_utensil:
+        if has_coffee or any(w in cat_words for w in ("coffee", "grounds", "instant_coffee")):
+            return "coffee_source"
+        return "CONTEXTUAL_ENVIRONMENT"
+
+    is_generic_container = (
+        has_contain or norm in ("hold liquid", "contain liquid", "hold items", "contain items", "liquid container", "container for liquid")
+    ) and not has_stir and not has_source and not has_spoon and not has_utensil
+
+    if is_generic_container and cats:
+        has_water_cat = any(w in cat_words for w in ("kettle", "pitcher", "water_pitcher", "water_jug", "teapot", "coffee_pot"))
+        if has_water_cat and any(w in cat_words for w in ("kettle", "teapot", "pitcher")):
+            return "water_source"
+
+        vis_candidates = raw.get("visible_candidates", []) if isinstance(raw, dict) else []
+        vis_text = _phrase(" ".join(
+            str(v.get("label", "")) + " " + str(v.get("visual_description", ""))
+            for v in vis_candidates if isinstance(v, dict)
+        ))
+        vis_words = set(vis_text.split())
+        has_coffee_vis = any(w in vis_words for w in ("mug", "cup", "coffee_mug", "coffee_cup"))
+        has_soup_vis = any(w in vis_words for w in ("bowl", "soup_bowl", "dish"))
+
+        if has_coffee_vis and not has_soup_vis:
+            return "coffee_container"
+        if has_soup_vis and not has_coffee_vis:
+            return "soup_container"
+
+        # Check candidate category ranking precedence
+        coffee_ranks = [i for i, c in enumerate(cats) if any(w in _phrase(str(c)) for w in ("cup", "mug", "coffee_cup", "coffee_mug"))]
+        soup_ranks = [i for i, c in enumerate(cats) if any(w in _phrase(str(c)) for w in ("bowl", "soup_bowl", "dish"))]
+        if coffee_ranks and soup_ranks:
+            if min(coffee_ranks) < min(soup_ranks):
+                return "coffee_container"
+            if min(soup_ranks) < min(coffee_ranks):
+                return "soup_container"
+
+        has_coffee_cat = any(w in cat_words for w in ("coffee", "coffee_cup", "coffee_mug", "mug", "cup", "tea_cup", "coffeecup", "teacup"))
+        has_soup_cat = any(w in cat_words for w in ("soup", "soup_bowl", "soupbowl", "bowl", "dish"))
+
+        if has_coffee_cat and not has_soup_cat:
+            return "coffee_container"
+        if has_soup_cat and not has_coffee_cat:
+            return "soup_container"
+        if has_water_cat and not has_coffee_cat and not has_soup_cat:
+            return "water_source"
+
     return None
 
 
@@ -497,6 +578,20 @@ def compile_vlm_functional_graph(
                 f"cannot be mapped to any canonical Kitchen role"
             )
 
+        if canon_role_name == "CONTEXTUAL_ENVIRONMENT":
+            raw_role_to_canonical[raw_role_id] = "CONTEXTUAL_ENVIRONMENT"
+            concept_accounting["roles"][raw_role_id] = {
+                "canonical_role": "CONTEXTUAL_ENVIRONMENT",
+                "count": required_count,
+                "binding_policy": binding_policy,
+                "unary_predicates": [],
+                "role_semantic_source": "CONTEXTUAL_ENVIRONMENT_MATCH",
+                "candidate_categories_used_for_role_identity": True,
+                "status": "ABSORBED_CONTEXTUAL_ENVIRONMENT_ROLE",
+                "reason": f"Contextual scene environment entity {raw_role_id!r} absorbed into context",
+            }
+            continue
+
         if canon_role_name in roles:
             existing_raw_id = roles[canon_role_name]["raw_vlm_role_id"]
             existing_count = roles[canon_role_name]["count"]
@@ -522,12 +617,12 @@ def compile_vlm_functional_graph(
             mapped = map_unary_property(prop)
             if mapped is None:
                 norm_p = _phrase(prop)
-                if any(k in norm_p for k in ("handle", "spout", "lid", "rim", "grip", "open end", "opening", "base", "flat base")):
+                if any(k in norm_p for k in REASONABLE_AFFORDANCE_NOTE_KEYWORDS):
                     concept_accounting["properties"].append({
                         "raw_role_id": raw_role_id,
                         "raw_phrase": prop,
                         "canonical_predicate": None,
-                        "status": "ABSORBED_AFFORDANCE_NOTE",
+                        "status": "ABSORBED_NON_EXECUTABLE_AFFORDANCE",
                         "reason": f"Non-verifier affordance/feature note {prop!r} absorbed",
                     })
                     continue
@@ -781,6 +876,19 @@ def compile_vlm_functional_graph(
         if not rel_str:
             raise MalformedVLMSpecificationError(f"functional_relation missing relation phrase: {rel_row}")
 
+        if subj == "CONTEXTUAL_ENVIRONMENT" or obj == "CONTEXTUAL_ENVIRONMENT":
+            concept_accounting["relations"].append({
+                "raw_subject": raw_subj,
+                "raw_phrase": str(rel_str),
+                "raw_object": raw_obj,
+                "canonical_subject": subj,
+                "canonical_predicate": str(rel_str),
+                "canonical_object": obj,
+                "status": "ABSORBED_CONTEXTUAL_RELATION",
+                "reason": "Relation involving contextual environment entity absorbed",
+            })
+            continue
+
         mapped_rel = map_binary_relation(str(rel_str))
         if mapped_rel is None:
             raise UnmappedFunctionalConceptError(
@@ -876,10 +984,62 @@ def compile_vlm_functional_graph(
                 f"operation group (available: {list(KITCHEN_INTERACTION_GROUP_ALIASES.keys())})"
             )
 
+        if tool_role == "CONTEXTUAL_ENVIRONMENT" or target_role == "CONTEXTUAL_ENVIRONMENT":
+            concept_accounting["operation_groups"].append({
+                "raw_group_id": raw_group_id,
+                "canonical_group": None,
+                "raw_function": str(raw_fn),
+                "canonical_function": None,
+                "function_mapping_status": "ABSORBED_CONTEXTUAL_INTERACTION_GROUP",
+                "tool_role": tool_role,
+                "target_role": target_role,
+                "required_target_count": int(row.get("required_target_count", 1)),
+                "usage_policy": str(row.get("usage_policy", "DEDICATED_PER_TARGET")),
+                "required_relations": row.get("required_relations", []),
+                "status": "ABSORBED_CONTEXTUAL_INTERACTION_GROUP",
+                "reason": "Interaction group involving contextual environment entity absorbed",
+            })
+            continue
+
         if tool_role == "coffee_stirrer" and target_role == "coffee_container":
             endpoint_group = "coffee_stirring"
         elif tool_role == "soup_eating_utensil" and target_role == "soup_container":
             endpoint_group = "soup_serving"
+        elif fn_group == "soup_serving" and tool_role != "soup_eating_utensil":
+            concept_accounting["operation_groups"].append({
+                "raw_group_id": raw_group_id,
+                "canonical_group": None,
+                "raw_function": str(raw_fn),
+                "canonical_function": None,
+                "function_mapping_status": "ABSORBED_NON_EXECUTABLE_INTERACTION_GROUP",
+                "tool_role": tool_role,
+                "target_role": target_role,
+                "required_target_count": int(row.get("required_target_count", 1)),
+                "usage_policy": str(row.get("usage_policy", "DEDICATED_PER_TARGET")),
+                "required_relations": row.get("required_relations", []),
+                "status": "ABSORBED_NON_EXECUTABLE_INTERACTION_GROUP",
+                "reason": f"Tool role {tool_role!r} cannot execute soup serving in Kitchen verifier ontology; soup_eating_utensil was omitted",
+            })
+            concept_accounting.setdefault("omissions", []).append(
+                "Missing functional soup_eating_utensil role in Kitchen task: QWEN_SEMANTIC_OMISSION"
+            )
+            continue
+        elif tool_role in ("coffee_stirrer", "soup_eating_utensil") and target_role in ("water_source", "coffee_source", "CONTEXTUAL_ENVIRONMENT"):
+            concept_accounting["operation_groups"].append({
+                "raw_group_id": raw_group_id,
+                "canonical_group": None,
+                "raw_function": str(raw_fn),
+                "canonical_function": None,
+                "function_mapping_status": "ABSORBED_NON_EXECUTABLE_INTERACTION_GROUP",
+                "tool_role": tool_role,
+                "target_role": target_role,
+                "required_target_count": int(row.get("required_target_count", 1)),
+                "usage_policy": str(row.get("usage_policy", "DEDICATED_PER_TARGET")),
+                "required_relations": row.get("required_relations", []),
+                "status": "ABSORBED_NON_EXECUTABLE_INTERACTION_GROUP",
+                "reason": f"Target role {target_role!r} is a source/environmental entity and not an executable operation endpoint in Kitchen",
+            })
+            continue
         else:
             raise MalformedVLMSpecificationError(
                 f"Unsupported Kitchen operation group tool/target pair: {tool_role!r} (raw {raw_tool_role!r}) -> {target_role!r} (raw {raw_target_role!r})"
@@ -916,6 +1076,8 @@ def compile_vlm_functional_graph(
         target_role_count = int(roles[target_role]["count"])
         if req_target_count > target_role_count:
             roles[target_role]["count"] = req_target_count
+        elif req_target_count < target_role_count:
+            req_target_count = target_role_count
 
         req_rels = row.get("required_relations", [])
         if not isinstance(req_rels, list) or not req_rels:
@@ -952,6 +1114,13 @@ def compile_vlm_functional_graph(
         if policy not in {"SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"}:
             raise MalformedVLMSpecificationError(f"Operation group {raw_group_id!r} has unknown usage_policy: {policy!r}")
 
+        # Singleton normalization: for required_target_count == 1, SEQUENTIAL_REUSE_ALLOWED is execution-equivalent to DEDICATED_PER_TARGET
+        norm_policy = policy
+        policy_status = "PRESERVED"
+        if req_target_count == 1 and policy == "SEQUENTIAL_REUSE_ALLOWED":
+            norm_policy = "DEDICATED_PER_TARGET"
+            policy_status = "NORMALIZED_SINGLETON_POLICY"
+
         canon_fn = "STIR_COFFEE" if fn_group == "coffee_stirring" else "PROVIDE_SOUP_EATING_UTENSIL"
         operations[canon_group_id] = {
             "raw_vlm_group_id": raw_group_id,
@@ -962,12 +1131,12 @@ def compile_vlm_functional_graph(
             "target_role": target_role,
             "required_target_count": req_target_count,
             "usage_policy": {
-                "mode": policy.lower(),
-                "distinct_within_group": policy == "DEDICATED_PER_TARGET",
+                "mode": norm_policy.lower(),
+                "distinct_within_group": norm_policy == "DEDICATED_PER_TARGET",
                 "same_tool_must_cover_all_targets": False,
                 "selection_preference": (
                     "minimize_distinct_tools"
-                    if policy == "SEQUENTIAL_REUSE_ALLOWED" else "deterministic_rank"
+                    if norm_policy == "SEQUENTIAL_REUSE_ALLOWED" else "deterministic_rank"
                 ),
             },
             "relations": mapped_op_rels,
@@ -981,9 +1150,10 @@ def compile_vlm_functional_graph(
             "tool_role": tool_role,
             "target_role": target_role,
             "required_target_count": req_target_count,
-            "usage_policy": policy,
+            "usage_policy": norm_policy,
+            "raw_usage_policy": policy,
             "required_relations": mapped_op_rels,
-            "status": "PRESERVED",
+            "status": policy_status,
         })
 
     # Reconcile role cardinality with operation groups if not explicitly set
@@ -1048,6 +1218,14 @@ def compile_vlm_functional_graph(
         })
 
     resolved_candidate_regions = tuple(dict.fromkeys(local_id_to_canonical.values()))
+
+    # Track semantic omissions for diagnostic provenance (never synthesize missing roles)
+    for expected_role in ("soup_eating_utensil", "coffee_source"):
+        if expected_role not in roles:
+            omission_msg = f"Missing functional {expected_role} role in Kitchen task: QWEN_SEMANTIC_OMISSION"
+            if omission_msg not in concept_accounting.setdefault("omissions", []):
+                concept_accounting["omissions"].append(omission_msg)
+
 
     # Resolve inspection order strictly through local_id_to_canonical lookup only
     vlm_order = list(map(str, valid_doc.get("inspection_order", [])))

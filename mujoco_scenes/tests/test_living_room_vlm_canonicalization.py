@@ -364,11 +364,12 @@ def test_required_properties_fail_closed():
     with pytest.raises(MalformedVLMSpecificationError, match="PLANAR_SUPPORT requested on non-REGION role"):
         provider.generate_canonical(raw_document=doc_obj_prop)
 
-    # 4. Unsupported checker properties (OPEN_CAVITY / ELONGATED_OBJECT) -> UnsupportedCheckerCapabilityError
-    doc_unsupported = create_ideal_living_room_doc()
-    doc_unsupported["functional_roles"][2]["required_properties"] = ["open cavity"]
-    with pytest.raises(UnsupportedCheckerCapabilityError, match="is not supported in Living Room domain"):
-        provider.generate_canonical(raw_document=doc_unsupported)
+    # 4. Reasonable non-executable affordance notes (e.g. "open cavity" on drinkware) -> ABSORBED_NON_EXECUTABLE_AFFORDANCE
+    doc_affordance = create_ideal_living_room_doc()
+    doc_affordance["functional_roles"][2]["required_properties"] = ["open cavity"]
+    res_aff = provider.generate_canonical(raw_document=doc_affordance)
+    prop_acct = res_aff["canonicalization_trace"]["concept_accounting"]["properties"]
+    assert any(p["status"] == "ABSORBED_NON_EXECUTABLE_AFFORDANCE" and "open cavity" in p["raw_phrase"] for p in prop_acct)
 
     # 5. Unknown property -> UnmappedFunctionalConceptError
     doc_unknown = create_ideal_living_room_doc()

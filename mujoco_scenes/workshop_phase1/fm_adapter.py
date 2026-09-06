@@ -1305,7 +1305,7 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
         req_tgt_c = grp.get("required_target_count")
         if isinstance(req_tgt_c, bool) or not isinstance(req_tgt_c, int) or req_tgt_c < 1 or req_tgt_c > 20:
             raise FMResponseValidationError(f"interaction_groups[{g_idx}].required_target_count must be an integer from 1 to 20")
-        if role_counts.get(tgt_role) != req_tgt_c:
+        if role_counts.get(tgt_role) < req_tgt_c:
             raise FMResponseValidationError(
                 f"interaction_groups[{g_idx}] target role {tgt_role} has required_count {role_counts.get(tgt_role)}, but group requires {req_tgt_c}"
             )

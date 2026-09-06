@@ -435,11 +435,20 @@ def test_workshop_group_usage_policy_enforced():
     from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
     from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
     from mujoco_scenes.functional_tamp_pipeline.tests.test_ideal_fixtures import load_ideal_fixture
+    # Singleton SEQUENTIAL_REUSE_ALLOWED normalized to DEDICATED_PER_TARGET
     data = load_ideal_fixture("workshop")
     data["interaction_groups"][0]["usage_policy"] = "SEQUENTIAL_REUSE_ALLOWED"
     provider = FMRequirementProvider()
+    res = provider.generate_canonical(raw_document=data)
+    acct = provider.canonicalization_trace["concept_accounting"]["operation_groups"][0]
+    assert acct["policy_status"] == "NORMALIZED_SINGLETON_POLICY"
+
+    # Non-singleton target_count > 1 with SEQUENTIAL_REUSE_ALLOWED -> MalformedVLMSpecificationError
+    data_non_singleton = load_ideal_fixture("workshop")
+    data_non_singleton["interaction_groups"][0]["required_target_count"] = 2
+    data_non_singleton["interaction_groups"][0]["usage_policy"] = "SEQUENTIAL_REUSE_ALLOWED"
     with pytest.raises(MalformedVLMSpecificationError, match="invalid usage_policy 'SEQUENTIAL_REUSE_ALLOWED', expected 'DEDICATED_PER_TARGET'"):
-        provider.generate_canonical(raw_document=data)
+        provider.generate_canonical(raw_document=data_non_singleton)
 
 
 def test_workshop_group_context_regressions():

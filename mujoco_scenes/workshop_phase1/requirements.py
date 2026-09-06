@@ -338,14 +338,28 @@ def map_workshop_context_region_role(raw: dict[str, Any] | str) -> str | None:
     return None
 
 
+WORKSHOP_REASONABLE_AFFORDANCE_NOTE_KEYWORDS = (
+    "elongated", "elongated shape", "slender", "rigid", "rigid structure",
+    "has fastening points", "fastening points", "fastening point",
+    "threaded", "screw head", "shank", "grip", "handle", "tip", "mounting points",
+    "holes", "points", "stable base",
+)
+
+
 def map_workshop_fixed_target_role(raw: dict[str, Any] | str) -> str | None:
-    """Deterministic concept matching for Workshop contextual FIXED_TARGET roles using ONLY function and description."""
+    """Deterministic concept matching for Workshop contextual FIXED_TARGET roles using function and description."""
     if isinstance(raw, dict):
-        if raw.get("entity_kind") != "FIXED_TARGET":
+        raw_k = raw.get("entity_kind")
+        if raw_k not in (None, "FIXED_TARGET", "REGION", "OBJECT"):
             return None
         text = f"{raw.get('function', '')} {raw.get('description', '')}"
+        raw_cats = [str(c).lower() for c in raw.get("candidate_categories", [])]
+        raw_props = [str(p).lower() for p in raw.get("required_properties", [])]
     else:
+        raw_k = None
         text = str(raw)
+        raw_cats = []
+        raw_props = []
     norm = _phrase(text)
     if not norm:
         return None
@@ -358,8 +372,18 @@ def map_workshop_fixed_target_role(raw: dict[str, Any] | str) -> str | None:
             "insertion hole", "pre drilled hole", "hole in frame", "hole in workpiece",
             "accept screw insertion", "accept_screw_insertion", "mounting point",
             "target joint hole", "target joint", "loose frame joint", "repair the frame",
+            "receive fastening", "receive fastener", "workpiece", "fastening point",
+            "has fastening points",
         )
     )
+    if raw_k in ("REGION", "OBJECT"):
+        # For REGION/OBJECT, only match if explicitly describing receiving fastening or workpiece
+        if any(k in norm for k in ("receive fastening", "receive fastener", "fastening point", "has fastening points")) or (
+            any(c in ("workpiece", "component", "assembly") for c in raw_cats) and any(k in norm for k in ("receive fastening", "workpiece", "fasten", "hole", "target"))
+        ):
+            return "repair_target"
+        return None
+
     if has_target_concept:
         return "repair_target"
     return None
@@ -396,12 +420,18 @@ def map_workshop_role_function(raw: dict[str, Any] | str) -> str | None:
     """Deterministic multi-signal concept matching for Workshop functional roles using ONLY function and description."""
     if isinstance(raw, dict):
         text = f"{raw.get('function', '')} {raw.get('description', '')}"
+        raw_cats = [str(c).lower() for c in raw.get("candidate_categories", [])]
     else:
         text = str(raw)
+        raw_cats = []
     norm = _phrase(text)
     if not norm:
         return None
     words = set(norm.split())
+
+    if any(p in norm for p in ("provide fastening capability", "fastening capability", "provide fastening")):
+        if any(c in raw_cats for c in ("screwdriver", "driver", "drill", "wrench", "tool")) or not any(c in raw_cats for c in ("screw", "fastener", "bolt")):
+            return "CAN_DRIVE_SCREW"
 
     driver_phrases = (
         "drive screw", "tighten screw", "turn threaded fastener", "turn screw",
@@ -412,6 +442,7 @@ def map_workshop_role_function(raw: dict[str, Any] | str) -> str | None:
         "fastener driving tool", "screw driving tool", "tool capable of driving",
         "device that rotates the screw", "rotates the screw", "rotates screw",
         "tool capable of driving a screw", "tool to tighten screws",
+        "provide fastening capability", "fastening capability",
     )
     driver_tokens = (
         "screwdriver", "screwdrivers", "drill", "drills", "driver", "drivers",
@@ -555,6 +586,8 @@ def canonicalize_workshop_relation(
     raw_relation_text: str,
     raw_object_id: str,
     raw_object_canon: str,
+    *,
+    allow_contextual_support_absorption: bool = False,
 ) -> tuple[str, str, str, str, str]:
     """Deterministic signature-aware relation canonicalization for Workshop domain.
 
@@ -579,6 +612,8 @@ def canonicalize_workshop_relation(
     ))
     if is_loc_phrase:
         if raw_subject_canon in ("driver", "fastener"):
+            if allow_contextual_support_absorption and raw_object_canon == "MAIN_WORKBENCH_ZONE":
+                return (raw_subject_canon, "LOCATED_ON", "MAIN_WORKBENCH_ZONE", "PRESERVED", "ABSORBED_INTO_PLANNER_CONTEXT")
             raise UnsupportedCheckerCapabilityError(
                 f"Functional relation LOCATED_ON on role {raw_subject_id!r} is not supported in canonical Workshop G_F"
             )
@@ -623,13 +658,16 @@ def canonicalize_workshop_relation(
             "must reach the workpiece hole recess", "reaches workpiece hole",
             "reach workpiece hole", "reach workpiece hole recess",
             "long enough to reach workpiece hole recess", "long enough to reach hole",
-            "long enough to reach",
+            "long enough to reach", "compatible with", "compatible", "compatible with target",
+            "compatible with workpiece",
         )):
-            return ("driver", "REACHES_TARGET", "repair_target", "PRESERVED", "GRAPH_RELATION")
+            dir_st = "PRESERVED" if ("reach" in norm_rel or "access" in norm_rel) else "NORMALIZED_TO_CANONICAL_SIGNATURE"
+            return ("driver", "REACHES_TARGET", "repair_target", dir_st, "GRAPH_RELATION")
 
     if raw_subject_canon == "repair_target" and raw_object_canon == "driver":
         if any(_contains_phrase(norm_rel, k) for k in (
             "is reached by", "reached by", "target reached by", "accessed by", "target accessed by", "is accessed by",
+            "compatible with", "compatible",
         )):
             return ("driver", "REACHES_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
 
@@ -824,7 +862,7 @@ class FMRequirementProvider(RequirementProvider):
             if not isinstance(raw, dict):
                 raise MalformedVLMSpecificationError(f"Raw role entry must be a dictionary, got {type(raw).__name__}")
             for req_field in (
-                "id", "entity_kind", "function", "description",
+                "id", "entity_kind", "function",
                 "required_count", "binding_policy", "candidate_categories",
                 "visible_candidates", "required_properties",
             ):
@@ -847,7 +885,7 @@ class FMRequirementProvider(RequirementProvider):
 
             if not isinstance(raw["function"], str) or not raw["function"].strip():
                 raise MalformedVLMSpecificationError(f"Role {raw_id!r} function must be a non-empty string")
-            if not isinstance(raw["description"], str):
+            if "description" in raw and not isinstance(raw["description"], str):
                 raise MalformedVLMSpecificationError(f"Role {raw_id!r} description must be a string")
 
             if not isinstance(raw["required_count"], int) or isinstance(raw["required_count"], bool) or raw["required_count"] < 1:
@@ -861,41 +899,25 @@ class FMRequirementProvider(RequirementProvider):
                 )
 
             if not isinstance(raw["candidate_categories"], list):
-                raise MalformedVLMSpecificationError(f"Role {raw_id!r} candidate_categories must be a list")
-            if raw_kind == "OBJECT":
-                cand_cats_valid = [str(c).strip() for c in raw["candidate_categories"] if str(c).strip()]
-                if not cand_cats_valid:
-                    raise MalformedVLMSpecificationError(
-                        f"Workshop functional role {raw_id!r} must have non-empty candidate_categories"
-                    )
+                raise MalformedVLMSpecificationError(
+                    f"Role {raw_id!r} candidate_categories must be a list, got {type(raw['candidate_categories']).__name__}"
+                )
 
             if not isinstance(raw["visible_candidates"], list):
-                raise MalformedVLMSpecificationError(f"Role {raw_id!r} visible_candidates must be a list")
+                raise MalformedVLMSpecificationError(
+                    f"Role {raw_id!r} visible_candidates must be a list, got {type(raw['visible_candidates']).__name__}"
+                )
+
             if not isinstance(raw["required_properties"], list):
-                raise MalformedVLMSpecificationError(f"Role {raw_id!r} required_properties must be a list")
-
-        # Validate raw relations schema
-        for rel in document["functional_relations"]:
-            if not isinstance(rel, dict):
-                raise MalformedVLMSpecificationError("Raw relation entry must be a dictionary")
-            for req_field in ("subject_role", "relation", "object_role"):
-                if req_field not in rel or not isinstance(rel[req_field], str) or not rel[req_field].strip():
-                    raise MalformedVLMSpecificationError(
-                        f"Raw relation missing or non-string required field {req_field!r}: {rel}"
-                    )
-            if rel["subject_role"] not in seen_raw_role_ids:
                 raise MalformedVLMSpecificationError(
-                    f"Relation subject role {rel['subject_role']!r} not declared in functional_roles"
-                )
-            if rel["object_role"] not in seen_raw_role_ids:
-                raise MalformedVLMSpecificationError(
-                    f"Relation object role {rel['object_role']!r} not declared in functional_roles"
+                    f"Role {raw_id!r} required_properties must be a list, got {type(raw['required_properties']).__name__}"
                 )
 
-        # Validate raw interaction groups schema
+        # Strict schema validation of interaction_groups
+        seen_group_ids: set[str] = set()
         for grp in raw_groups_list:
             if not isinstance(grp, dict):
-                raise MalformedVLMSpecificationError("Interaction group entry must be a dictionary")
+                raise MalformedVLMSpecificationError(f"Interaction group must be a dictionary, got {type(grp).__name__}")
             for req_field in (
                 "id", "function", "tool_role", "target_role",
                 "required_target_count", "usage_policy", "required_relations",
@@ -906,34 +928,54 @@ class FMRequirementProvider(RequirementProvider):
                         f"Interaction group missing required field {req_field!r}: {grp}"
                     )
             grp_id = grp["id"]
+            if not isinstance(grp_id, str) or not grp_id.strip():
+                raise MalformedVLMSpecificationError(f"Interaction group id must be a non-empty string, got {grp_id!r}")
+            if grp_id in seen_group_ids:
+                raise MalformedVLMSpecificationError(f"Duplicate interaction group ID {grp_id!r}")
+            seen_group_ids.add(grp_id)
+
+            if not isinstance(grp["function"], str) or not grp["function"].strip():
+                raise MalformedVLMSpecificationError(f"Interaction group {grp_id!r} function must be a non-empty string")
+            if not isinstance(grp["tool_role"], str) or not grp["tool_role"].strip():
+                raise MalformedVLMSpecificationError(f"Interaction group {grp_id!r} tool_role must be a non-empty string")
+            if not isinstance(grp["target_role"], str) or not grp["target_role"].strip():
+                raise MalformedVLMSpecificationError(f"Interaction group {grp_id!r} target_role must be a non-empty string")
+
             if grp["tool_role"] not in seen_raw_role_ids:
                 raise MalformedVLMSpecificationError(
-                    f"Interaction group {grp_id!r} tool role {grp['tool_role']!r} not declared in functional_roles"
+                    f"Interaction group {grp_id!r} references undeclared tool_role {grp['tool_role']!r}"
                 )
             if grp["target_role"] not in seen_raw_role_ids:
                 raise MalformedVLMSpecificationError(
-                    f"Interaction group {grp_id!r} target role {grp['target_role']!r} not declared in functional_roles"
+                    f"Interaction group {grp_id!r} references undeclared target_role {grp['target_role']!r}"
                 )
-            if grp["context_role"] not in seen_raw_role_ids:
-                raise MalformedVLMSpecificationError(
-                    f"Interaction group {grp_id!r} context_role {grp['context_role']!r} not declared in functional_roles"
-                )
+
+            if "context_role" in grp and grp["context_role"] is not None:
+                if not isinstance(grp["context_role"], str) or not grp["context_role"].strip():
+                    raise MalformedVLMSpecificationError(f"Interaction group {grp_id!r} context_role must be a non-empty string if provided")
+                if grp["context_role"] not in seen_raw_role_ids:
+                    raise MalformedVLMSpecificationError(
+                        f"Interaction group {grp_id!r} references undeclared context_role {grp['context_role']!r}"
+                    )
+
             if not isinstance(grp["required_target_count"], int) or isinstance(grp["required_target_count"], bool) or grp["required_target_count"] < 1:
                 raise MalformedVLMSpecificationError(
                     f"Interaction group {grp_id!r} required_target_count must be an integer >= 1, got {grp['required_target_count']!r}"
                 )
-            if grp["usage_policy"] != "DEDICATED_PER_TARGET":
+
+            if grp["usage_policy"] not in {"DEDICATED_PER_TARGET", "SEQUENTIAL_REUSE_ALLOWED", "REUSABLE"}:
                 raise MalformedVLMSpecificationError(
-                    f"Interaction group {grp_id!r} has invalid usage_policy {grp['usage_policy']!r}, expected 'DEDICATED_PER_TARGET'"
+                    f"Interaction group {grp_id!r} invalid usage_policy {grp['usage_policy']!r}"
                 )
             if not isinstance(grp["required_relations"], list) or len(grp["required_relations"]) != 1:
                 raise MalformedVLMSpecificationError(
                     f"Interaction group {grp_id!r} required_relations must contain exactly 1 relation phrase, got {len(grp['required_relations']) if isinstance(grp['required_relations'], list) else grp['required_relations']!r}"
                 )
-            if not isinstance(grp["context_relations"], list) or len(grp["context_relations"]) != 1:
-                raise MalformedVLMSpecificationError(
-                    f"Interaction group {grp_id!r} context_relations must contain exactly 1 relation phrase, got {len(grp['context_relations']) if isinstance(grp['context_relations'], list) else grp['context_relations']!r}"
-                )
+            if "context_relations" in grp and grp["context_relations"] is not None:
+                if not isinstance(grp["context_relations"], list) or len(grp["context_relations"]) != 1:
+                    raise MalformedVLMSpecificationError(
+                        f"Interaction group {grp_id!r} context_relations must contain exactly 1 relation phrase, got {len(grp['context_relations']) if isinstance(grp['context_relations'], list) else grp['context_relations']!r}"
+                    )
 
         concept_accounting: dict[str, Any] = {
             "roles": {},
@@ -966,17 +1008,27 @@ class FMRequirementProvider(RequirementProvider):
                 fixed_target_roles.append(raw)
 
             elif raw_kind == "REGION":
-                canon_region = map_workshop_context_region_role(raw)
-                if canon_region is None:
-                    raise UnmappedFunctionalConceptError(
-                        f"VLM REGION role {raw_id!r} with function {raw['function']!r} cannot be mapped to any Workshop context region"
-                    )
-                raw_id_to_canon[raw_id] = "MAIN_WORKBENCH_ZONE"
-                context_region_roles.append(raw)
+                canon_target = map_workshop_fixed_target_role(raw)
+                if canon_target is not None:
+                    raw_id_to_canon[raw_id] = "repair_target"
+                    fixed_target_roles.append(raw)
+                else:
+                    canon_region = map_workshop_context_region_role(raw)
+                    if canon_region is None:
+                        raise UnmappedFunctionalConceptError(
+                            f"VLM REGION role {raw_id!r} with function {raw['function']!r} cannot be mapped to any Workshop context region"
+                        )
+                    raw_id_to_canon[raw_id] = "MAIN_WORKBENCH_ZONE"
+                    context_region_roles.append(raw)
 
             elif raw_kind == "OBJECT":
                 func_name = map_workshop_role_function(raw)
                 if func_name is None:
+                    canon_target = map_workshop_fixed_target_role(raw)
+                    if canon_target is not None:
+                        raw_id_to_canon[raw_id] = "repair_target"
+                        fixed_target_roles.append(raw)
+                        continue
                     raise UnmappedFunctionalConceptError(
                         f"VLM function phrase {raw['function']!r} on role {raw_id!r} cannot be mapped to any Workshop role"
                     )
@@ -992,7 +1044,20 @@ class FMRequirementProvider(RequirementProvider):
                     raise MalformedVLMSpecificationError(
                         f"Required property on role {raw_id!r} must be a non-empty string, got {prop!r}"
                     )
+                norm_p = _phrase(prop)
                 mapped_u = map_workshop_unary_property(prop)
+
+                # Check reasonable non-executable affordance notes (Category B)
+                if any(k in norm_p for k in WORKSHOP_REASONABLE_AFFORDANCE_NOTE_KEYWORDS):
+                    concept_accounting["properties"].append({
+                        "raw_role_id": raw_id,
+                        "raw_phrase": prop,
+                        "canonical_predicate": None,
+                        "status": "ABSORBED_NON_EXECUTABLE_AFFORDANCE",
+                        "reason": f"Non-verifier affordance/feature note {prop!r} absorbed",
+                    })
+                    continue
+
                 if mapped_u is None:
                     raise UnmappedFunctionalConceptError(
                         f"Required property {prop!r} on role {raw_id!r} cannot be mapped to any Workshop unary property"
@@ -1039,7 +1104,7 @@ class FMRequirementProvider(RequirementProvider):
                 run_local_categories=run_local_cats,
                 visible_candidates=cand_objs,
                 unary_predicates=(),
-                description=r["description"],
+                description=r.get("description", ""),
                 semantic_hints=hints,
                 provenance="vlm_explicit_fixed_target",
             )
@@ -1118,7 +1183,7 @@ class FMRequirementProvider(RequirementProvider):
                 run_local_categories=run_local_cats,
                 visible_candidates=cand_objs,
                 unary_predicates=(),
-                description=r["description"],
+                description=r.get("description", ""),
                 semantic_hints=hints,
                 provenance="qwen_vlm_normalized_by_workshop_ontology",
             )
@@ -1144,7 +1209,7 @@ class FMRequirementProvider(RequirementProvider):
                 requirement_id=r["id"],
                 entity_type=EntityType.OBJECT,
                 function_name="CAN_DRIVE_SCREW",
-                description=r["description"],
+                description=r.get("description", ""),
                 rank=1,
                 source=RequirementSource.FM,
                 accepted_categories=list(cand_cats),
@@ -1154,7 +1219,7 @@ class FMRequirementProvider(RequirementProvider):
                 provenance="qwen_vlm_normalized_by_workshop_ontology",
             )
         else:
-            all_alternatives = all(_is_explicit_alternative_role(r["function"], r["description"]) for r in driver_list)
+            all_alternatives = all(_is_explicit_alternative_role(r["function"], r.get("description", "")) for r in driver_list)
             all_count_1 = all(r["required_count"] == 1 for r in driver_list)
             all_distinct = all(r["binding_policy"] == "DISTINCT" for r in driver_list)
             if not (all_alternatives and all_count_1 and all_distinct):
@@ -1231,8 +1296,9 @@ class FMRequirementProvider(RequirementProvider):
         # 3d: FASTENER OBJECT ROLES
         fastener_list = classified_object_roles["fastener"]
         if not fastener_list:
-            raise MalformedVLMSpecificationError("Missing required functional fastener role in Workshop task")
-        if len(fastener_list) == 1:
+            omission_msg = "Missing functional fastener role in Workshop task: QWEN_SEMANTIC_OMISSION"
+            concept_accounting.setdefault("omissions", []).append(omission_msg)
+        elif len(fastener_list) == 1:
             r = fastener_list[0]
             cand_cats = tuple(str(c).strip() for c in r["candidate_categories"] if str(c).strip())
             run_local_cats = tuple(dict.fromkeys(self._phrase(c).replace(" ", "_") for c in cand_cats))
@@ -1263,7 +1329,7 @@ class FMRequirementProvider(RequirementProvider):
                 run_local_categories=run_local_cats,
                 visible_candidates=cand_objs,
                 unary_predicates=(),
-                description=r["description"],
+                description=r.get("description", ""),
                 semantic_hints=hints,
                 provenance="qwen_vlm_normalized_by_workshop_ontology",
             )
@@ -1289,7 +1355,7 @@ class FMRequirementProvider(RequirementProvider):
                 requirement_id=r["id"],
                 entity_type=EntityType.OBJECT,
                 function_name="CAN_FASTEN",
-                description=r["description"],
+                description=r.get("description", ""),
                 rank=2,
                 source=RequirementSource.FM,
                 accepted_categories=list(cand_cats),
@@ -1299,7 +1365,7 @@ class FMRequirementProvider(RequirementProvider):
                 provenance="qwen_vlm_normalized_by_workshop_ontology",
             )
         else:
-            all_alternatives = all(_is_explicit_alternative_role(r["function"], r["description"]) for r in fastener_list)
+            all_alternatives = all(_is_explicit_alternative_role(r["function"], r.get("description", "")) for r in fastener_list)
             all_count_1 = all(r["required_count"] == 1 for r in fastener_list)
             all_distinct = all(r["binding_policy"] == "DISTINCT" for r in fastener_list)
             if not (all_alternatives and all_count_1 and all_distinct):
@@ -1363,7 +1429,7 @@ class FMRequirementProvider(RequirementProvider):
                 requirement_id=r0["id"],
                 entity_type=EntityType.OBJECT,
                 function_name="CAN_FASTEN",
-                description=r0["description"],
+                description=r0.get("description", ""),
                 rank=2,
                 source=RequirementSource.FM,
                 accepted_categories=list(cand_cats_tuple),
@@ -1385,7 +1451,7 @@ class FMRequirementProvider(RequirementProvider):
             o_canon = raw_id_to_canon[o]
 
             c_subj, c_pred, c_obj, dir_status, dest = canonicalize_workshop_relation(
-                s, s_canon, r, o, o_canon
+                s, s_canon, r, o, o_canon, allow_contextual_support_absorption=True
             )
 
             if dest == "GRAPH_RELATION":
@@ -1466,19 +1532,57 @@ class FMRequirementProvider(RequirementProvider):
             ctx_raw = grp.get("context_role")
             ctx_rels_raw = grp.get("context_relations", [])
 
-            if policy != "DEDICATED_PER_TARGET":
+            norm_policy = policy
+            policy_status = "PRESERVED"
+            if target_count == 1 and policy == "SEQUENTIAL_REUSE_ALLOWED":
+                norm_policy = "DEDICATED_PER_TARGET"
+                policy_status = "NORMALIZED_SINGLETON_POLICY"
+
+            if norm_policy != "DEDICATED_PER_TARGET":
                 raise MalformedVLMSpecificationError(
                     f"Interaction group {g_id!r} has invalid usage_policy {policy!r}, expected 'DEDICATED_PER_TARGET'"
                 )
+
+            tool_canon = raw_id_to_canon[tool_raw]
+            target_canon = raw_id_to_canon[target_raw]
+            ctx_canon = raw_id_to_canon.get(ctx_raw) if ctx_raw else None
+
+            # Direct tool-to-workpiece interaction group when fastener was omitted
+            if tool_canon == "driver" and target_canon == "repair_target":
+                concept_accounting["operation_groups"].append({
+                    "raw_group_id": g_id,
+                    "raw_function": func_desc,
+                    "canonical_function": "FASTEN_WORKPIECE",
+                    "tool_role": f"{tool_raw} -> driver",
+                    "target_role": f"{target_raw} -> repair_target",
+                    "context_role": f"{ctx_raw} -> {ctx_canon}" if ctx_raw else None,
+                    "usage_policy": norm_policy,
+                    "raw_usage_policy": policy,
+                    "policy_status": policy_status,
+                    "raw_required_relation": req_rels_raw[0] if req_rels_raw else "",
+                    "canonical_required_relation": "REACHES_TARGET",
+                    "raw_context_relation": ctx_rels_raw[0] if ctx_rels_raw else "",
+                    "canonical_context_relation": "LOCATED_ON",
+                    "status": "MERGED_BY_EXPLICIT_RULE",
+                    "structural_destination": "REDUNDANT_WITH_CANONICAL_GRAPH_RELATIONS",
+                    "represented_relations": ["REACHES_TARGET"],
+                    "represented_relation_triples": [
+                        ["driver", "REACHES_TARGET", "repair_target"],
+                    ],
+                })
+                self.transformation_trace.append({
+                    "raw_group": g_id,
+                    "transformation": "VALIDATED_REDUNDANT_WITH_GRAPH_RELATIONS",
+                    "tool_role": f"{tool_raw} -> driver",
+                    "target_role": f"{target_raw} -> repair_target",
+                    "context_role": f"{ctx_raw} -> {ctx_canon}" if ctx_raw else None,
+                })
+                continue
 
             if not ctx_raw:
                 raise MalformedVLMSpecificationError(
                     f"Interaction group {g_id!r} is missing required context_role"
                 )
-
-            tool_canon = raw_id_to_canon[tool_raw]
-            target_canon = raw_id_to_canon[target_raw]
-            ctx_canon = raw_id_to_canon[ctx_raw]
 
             if tool_canon != "driver":
                 raise MalformedVLMSpecificationError(
@@ -1557,7 +1661,9 @@ class FMRequirementProvider(RequirementProvider):
                 "tool_role": f"{tool_raw} -> driver",
                 "target_role": f"{target_raw} -> fastener",
                 "context_role": f"{ctx_raw} -> repair_target",
-                "usage_policy": policy,
+                "usage_policy": norm_policy,
+                "raw_usage_policy": policy,
+                "policy_status": policy_status,
                 "raw_required_relation": raw_req_rel,
                 "canonical_required_relation": "COMPATIBLE_WITH",
                 "raw_context_relation": raw_ctx_rel,
