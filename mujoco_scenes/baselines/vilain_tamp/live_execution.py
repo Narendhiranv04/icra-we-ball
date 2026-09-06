@@ -586,56 +586,124 @@ class MuJoCoPhysicalStateObserver:
         self.mujoco.mj_forward(self.model, self.data)
         all_bindings = {**self.fixed_bindings, **self.bindings}
         entity_to_id = {binding.entity_name: object_id for object_id, binding in all_bindings.items()}
+
+        all_scene_bodies = [
+            self.mujoco.mj_id2name(self.model, self.mujoco.mjtObj.mjOBJ_BODY, i)
+            for i in range(self.model.nbody)
+        ]
+        physical_bodies = [
+            name for name in all_scene_bodies
+            if name and name != "world" and not any(name.startswith(p) for p in self.robot_body_prefixes)
+        ]
+
         objects: dict[str, Mapping[str, Any]] = {}
-        held = []
+        held: list[str] = []
         contained: dict[str, list[str]] = {}
         articulation: dict[str, Mapping[str, Any]] = {}
-        for object_id, binding in all_bindings.items():
-            raw = self._entity_state(binding.entity_name)
+
+        for body_name in physical_bodies:
+            raw = self._entity_state(body_name)
             support_entity = raw.get("support_entity")
-            support_id = entity_to_id.get(str(support_entity)) if support_entity else None
+            inside = (
+                self._inside_footprint(body_name, str(support_entity))
+                if support_entity else False
+            )
             record = {
                 **raw,
-                "support": support_id,
+                "support": support_entity,
                 "released": raw.get("held") is False,
-                "inside_support_footprint": (
-                    self._inside_footprint(binding.entity_name, str(support_entity))
-                    if support_entity else False
-                ),
+                "inside_support_footprint": inside,
             }
             record.pop("support_entity", None)
-            objects[object_id] = record
-            if binding.entity_name != object_id:
-                objects[binding.entity_name] = {
-                    **record,
-                    "support": support_entity,
-                    "symbolic_alias": object_id,
-                }
+            objects[body_name] = record
             if raw.get("held") is True:
-                held.append(object_id)
-            articulation[object_id] = self._articulation(binding.entity_name)
-        for container_id, container in all_bindings.items():
+                held_id = entity_to_id.get(body_name, body_name)
+                if held_id not in held:
+                    held.append(held_id)
+            articulation[body_name] = self._articulation(body_name)
+
+        for object_id, binding in all_bindings.items():
+            if binding.entity_name in objects:
+                raw_rec = dict(objects[binding.entity_name])
+                support_entity = raw_rec.get("support")
+                support_id = entity_to_id.get(str(support_entity)) if support_entity else None
+                objects[object_id] = {
+                    **raw_rec,
+                    "support": support_id,
+                }
+                objects[binding.entity_name]["symbolic_alias"] = object_id
+                if object_id not in articulation:
+                    articulation[object_id] = articulation[binding.entity_name]
+            else:
+                raw = self._entity_state(binding.entity_name)
+                support_entity = raw.get("support_entity")
+                support_id = entity_to_id.get(str(support_entity)) if support_entity else None
+                record = {
+                    **raw,
+                    "support": support_id,
+                    "released": raw.get("held") is False,
+                    "inside_support_footprint": (
+                        self._inside_footprint(binding.entity_name, str(support_entity))
+                        if support_entity else False
+                    ),
+                }
+                record.pop("support_entity", None)
+                objects[object_id] = record
+                if binding.entity_name != object_id:
+                    objects[binding.entity_name] = {
+                        **record,
+                        "support": support_entity,
+                        "symbolic_alias": object_id,
+                    }
+                if raw.get("held") is True and object_id not in held:
+                    held.append(object_id)
+                articulation[object_id] = self._articulation(binding.entity_name)
+
+        for c_name in physical_bodies:
             members = [
-                object_id for object_id, binding in self.bindings.items()
-                if object_id != container_id and self._contained(binding.entity_name, container.entity_name)
+                m_name for m_name in physical_bodies
+                if m_name != c_name and self._contained(m_name, c_name)
             ]
             if members:
-                contained[container_id] = sorted(members)
-                physical_members = sorted(
-                    all_bindings[item].entity_name for item in members
-                )
-                contained[container.entity_name] = physical_members
-                for member_id in members:
-                    physical_member = all_bindings[member_id].entity_name
-                    member_state = objects[member_id]
+                contained[c_name] = sorted(members)
+                for m_name in members:
+                    m_state = objects[m_name]
                     contained_stably = bool(
-                        member_state.get("released") is True
-                        and member_state.get("stable") is True
+                        m_state.get("released") is True
+                        and m_state.get("stable") is True
                     )
-                    member_state["contained_stably"] = contained_stably
-                    if physical_member in objects:
-                        objects[physical_member]["contained_stably"] = contained_stably
-            if container.entity_name != container_id:
+                    m_state["contained_stably"] = contained_stably
+                if c_name in entity_to_id:
+                    c_id = entity_to_id[c_name]
+                    sym_members = sorted(entity_to_id.get(m, m) for m in members)
+                    contained[c_id] = sym_members
+                    for s_m in sym_members:
+                        if s_m in objects:
+                            objects[s_m]["contained_stably"] = contained_stably
+
+        for container_id, container in all_bindings.items():
+            if container_id not in contained:
+                members = [
+                    object_id for object_id, binding in self.bindings.items()
+                    if object_id != container_id and self._contained(binding.entity_name, container.entity_name)
+                ]
+                if members:
+                    contained[container_id] = sorted(members)
+                    physical_members = sorted(
+                        all_bindings[item].entity_name for item in members
+                    )
+                    contained[container.entity_name] = physical_members
+                    for member_id in members:
+                        physical_member = all_bindings[member_id].entity_name
+                        member_state = objects[member_id]
+                        contained_stably = bool(
+                            member_state.get("released") is True
+                            and member_state.get("stable") is True
+                        )
+                        member_state["contained_stably"] = contained_stably
+                        if physical_member in objects:
+                            objects[physical_member]["contained_stably"] = contained_stably
+            if container.entity_name != container_id and container_id in articulation:
                 articulation[container.entity_name] = articulation[container_id]
 
         measurements = dict(self.action_measurements)
