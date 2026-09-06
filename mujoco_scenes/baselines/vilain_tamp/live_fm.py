@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import argparse
 import base64
+from collections import OrderedDict
 from dataclasses import dataclass
+from io import BytesIO
 import json
 import mimetypes
 import os
@@ -32,6 +34,7 @@ PAPER_QWEN_MODEL = "Qwen2.5-VL-7B-Instruct"
 PAPER_QWEN_SOURCE = "Qwen/Qwen2.5-VL-7B-Instruct"
 PAPER_REASONING_MODEL = "gpt-4o-2024-08-06"
 DEFAULT_VLLM_BASE_URL = "http://127.0.0.1:18000/v1"
+VLLM_MAX_VISION_IMAGES = 8
 _FULL_COMMIT = re.compile(r"^[0-9a-fA-F]{40}$")
 
 
@@ -139,7 +142,7 @@ class VLLMQwenTransport:
             raise FMTransportError(
                 "the running vLLM server does not expose an immutable revision"
             )
-        messages = self._messages(request)
+        messages, image_metadata = self._messages_with_metadata(request)
         client = self._client
         if client is None:
             require_vilain_environment()
@@ -201,15 +204,22 @@ class VLLMQwenTransport:
                 "max_tokens": self.max_tokens,
                 "thinking_enabled": False,
                 "finish_reason": finish_reason,
+                **image_metadata,
             },
         )
 
     def _messages(self, request: FMRequest) -> list[dict[str, Any]]:
+        messages, _ = self._messages_with_metadata(request)
+        return messages
+
+    def _messages_with_metadata(
+        self, request: FMRequest
+    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         rendered = [dict(message) for message in request.messages]
         if request.call_type is not FMCallType.OBJECT_ESTIMATION:
             if request.image_artifacts:
                 raise FMTransportError("reasoning calls must not contain images")
-            return rendered
+            return rendered, {}
         if not request.image_artifacts:
             raise FMTransportError("object estimation requires RGB images")
         user_index = next(
@@ -219,15 +229,48 @@ class VLLMQwenTransport:
         if user_index is None:
             raise FMTransportError("object estimation requires a user message")
         text_content = str(rendered[user_index].get("content", ""))
+        image_urls, image_metadata = self._model_image_urls(request.image_artifacts)
         content: list[dict[str, Any]] = [
-            {"type": "image_url", "image_url": {"url": self._data_url(path)}}
-            for path in request.image_artifacts
+            {"type": "image_url", "image_url": {"url": url}}
+            for url in image_urls
         ]
         content.append({"type": "text", "text": text_content})
         rendered[user_index] = {"role": "user", "content": content}
-        return rendered
+        return rendered, image_metadata
 
-    def _data_url(self, value: str) -> str:
+    def _model_image_urls(
+        self, image_artifacts: Sequence[str]
+    ) -> tuple[list[str], dict[str, Any]]:
+        resolved = [(value, self._resolve_image(value)) for value in image_artifacts]
+        if len(resolved) <= VLLM_MAX_VISION_IMAGES:
+            return [self._path_data_url(path) for _, path in resolved], {
+                "source_image_count": len(resolved),
+                "model_image_count": len(resolved),
+                "vision_image_packing": "none",
+            }
+
+        stages: OrderedDict[str, list[Path]] = OrderedDict()
+        for value, path in resolved:
+            parts = Path(value).parts
+            stage = next((part for part in parts if part.startswith("stages")), None)
+            if stage == "stages":
+                stage_index = parts.index(stage)
+                stage = parts[stage_index + 1] if stage_index + 1 < len(parts) else stage
+            stages.setdefault(stage or path.parent.name, []).append(path)
+        if len(stages) > VLLM_MAX_VISION_IMAGES:
+            raise FMTransportError(
+                "MULTIMODAL_IMAGE_LIMIT: observation has more than "
+                f"{VLLM_MAX_VISION_IMAGES} stages"
+            )
+        urls = [self._contact_sheet_data_url(paths) for paths in stages.values()]
+        return urls, {
+            "source_image_count": len(resolved),
+            "model_image_count": len(urls),
+            "vision_image_packing": "one_contact_sheet_per_observation_stage",
+            "packed_stage_ids": list(stages),
+        }
+
+    def _resolve_image(self, value: str) -> Path:
         candidate = Path(value)
         resolved = (
             candidate.resolve()
@@ -240,9 +283,40 @@ class VLLMQwenTransport:
             raise FMTransportError(f"image escapes observation root: {value}") from error
         if not resolved.is_file():
             raise FMTransportError(f"object-estimation image is missing: {value}")
+        return resolved
+
+    @staticmethod
+    def _path_data_url(resolved: Path) -> str:
         mime = mimetypes.guess_type(resolved.name)[0] or "image/png"
         encoded = base64.b64encode(resolved.read_bytes()).decode("ascii")
         return f"data:{mime};base64,{encoded}"
+
+    @staticmethod
+    def _contact_sheet_data_url(paths: Sequence[Path]) -> str:
+        try:
+            from PIL import Image, ImageOps
+        except ImportError as error:
+            raise FMTransportError(
+                "Pillow is required to pack multi-stage observation images"
+            ) from error
+        tile_size = (448, 336)
+        columns = min(3, len(paths))
+        rows = (len(paths) + columns - 1) // columns
+        sheet = Image.new("RGB", (tile_size[0] * columns, tile_size[1] * rows))
+        for index, path in enumerate(paths):
+            with Image.open(path) as source:
+                tile = ImageOps.contain(source.convert("RGB"), tile_size)
+                x = (index % columns) * tile_size[0]
+                y = (index // columns) * tile_size[1]
+                sheet.paste(tile, (x, y))
+        encoded = BytesIO()
+        sheet.save(encoded, format="JPEG", quality=90, optimize=True)
+        return "data:image/jpeg;base64," + base64.b64encode(encoded.getvalue()).decode(
+            "ascii"
+        )
+
+    def _data_url(self, value: str) -> str:
+        return self._path_data_url(self._resolve_image(value))
 
 
 def build_paper_faithful_clients(

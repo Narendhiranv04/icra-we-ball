@@ -57,13 +57,15 @@ def test_production_source_has_no_proposed_method_references() -> None:
     assert not violations, "forbidden source references:\n" + "\n".join(violations)
 
 
-def test_only_live_adapter_may_import_simulator() -> None:
+def test_only_live_runtime_adapters_may_import_simulator() -> None:
     for path in PRODUCTION_FILES:
         source = path.read_text(encoding="utf-8")
         if path.relative_to(PACKAGE_ROOT).as_posix() in {
             "live_execution.py",
             "live_observations.py",
             "live_refinement.py",
+            "living_controller_runtime.py",
+            "production_execution.py",
             "runtime.py",
         }:
             continue

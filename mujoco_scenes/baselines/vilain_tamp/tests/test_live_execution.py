@@ -90,6 +90,10 @@ class RecordingPrimitives:
                 "stir_motion_verified": self.success,
                 "drive_motion_verified": self.success,
                 "joint_repaired": self.success,
+                "radial_error_m": 0.001,
+                "insertion_depth_m": 0.012,
+                "vertical_axis_error_rad": 0.01,
+                "head_above_tip_m": 0.02,
             }
 
         return call

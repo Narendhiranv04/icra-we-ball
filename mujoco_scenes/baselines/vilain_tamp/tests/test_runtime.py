@@ -92,13 +92,15 @@ def test_production_factory_composes_planning_only_components(
     assert components.interpreter.models.reasoning_model == "qwen35-9b"
     assert components.corrective_planning.max_corrections == 3
 
-    with pytest.raises(RuntimeCompositionError, match="planning-only"):
-        build_live_components(
-            config,
-            RunOptions(**{**options.__dict__, "execute": True}),
-            served_model_id="qwen35-9b",
-            model_clients=clients,
-        )
+    live = build_live_components(
+        config,
+        RunOptions(**{**options.__dict__, "execute": True}),
+        served_model_id="qwen35-9b",
+        model_clients=clients,
+    )
+    assert live.execution is not None
+    assert live.hidden_context is not None
+    assert live.generated_goal_evaluator is not None
 
 
 def test_cli_help_is_side_effect_free(capsys: pytest.CaptureFixture[str]) -> None:

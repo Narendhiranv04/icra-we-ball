@@ -283,6 +283,68 @@ def test_vllm_transport_is_localhost_only_and_normalizes_multimodal_call(
         )
 
 
+def test_vllm_transport_packs_many_views_per_observation_stage(
+    tmp_path: Path,
+) -> None:
+    fake = FakeOpenAIClient()
+    fake.create = lambda **kwargs: (
+        fake.calls.append(kwargs)
+        or type(
+            "Response",
+            (),
+            {
+                "id": "chatcmpl-packed",
+                "model": "qwen35-9b",
+                "choices": [
+                    type(
+                        "Choice",
+                        (),
+                        {"message": type("Message", (), {"content": '{"objects": []}'})()},
+                    )()
+                ],
+                "usage": FakeUsage(),
+            },
+        )()
+    )
+    from PIL import Image
+
+    artifacts = []
+    for stage in ("000_initial", "001_d1", "002_d2"):
+        for camera in range(5):
+            path = Path("stages") / stage / "cameras" / f"camera_{camera}" / "rgb.png"
+            absolute = tmp_path / path
+            absolute.parent.mkdir(parents=True, exist_ok=True)
+            Image.new("RGB", (32, 24), (camera * 20, 0, 0)).save(absolute)
+            artifacts.append(str(path))
+    transport = VLLMQwenTransport(
+        image_root=tmp_path,
+        served_model_id="qwen35-9b",
+        client=fake,
+    )
+    response = transport.complete(
+        FMRequest(
+            call_type=FMCallType.OBJECT_ESTIMATION,
+            model="qwen35-9b",
+            revision=None,
+            messages=({"role": "user", "content": "return JSON"},),
+            image_artifacts=tuple(artifacts),
+            response_format="json",
+        )
+    )
+
+    content = fake.calls[0]["messages"][0]["content"]
+    images = [part for part in content if part["type"] == "image_url"]
+    assert len(images) == 3
+    assert all(part["image_url"]["url"].startswith("data:image/jpeg;base64,") for part in images)
+    assert response.provider_metadata["source_image_count"] == 15
+    assert response.provider_metadata["model_image_count"] == 3
+    assert response.provider_metadata["packed_stage_ids"] == [
+        "000_initial",
+        "001_d1",
+        "002_d2",
+    ]
+
+
 def test_vllm_transport_supports_text_reasoning_and_qwen_only_clients(
     tmp_path: Path,
 ) -> None:

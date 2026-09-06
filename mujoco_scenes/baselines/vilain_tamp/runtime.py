@@ -24,6 +24,12 @@ from .live_fm import (
 )
 from .live_observations import create_live_observation_runtime
 from .live_refinement import create_live_refinement_runtime
+from .live_execution import LiveExecutionStage
+from .live_evaluation import PhysicalGeneratedGoalEvaluator
+from .production_execution import (
+    BenchmarkRegistryHiddenContextProvider,
+    ProductionRuntimeProvider,
+)
 from .planner import FastDownwardPlanner, VALAdapter
 from .runner import RunOptions, RunnerComponents
 from .symbolic_contract import load_variant_action_contract
@@ -183,8 +189,6 @@ def build_live_components(
     """Compose existing live stages without performing observation or inference."""
     if config.model_condition is not ModelCondition.QWEN_ONLY:
         raise RuntimeCompositionError("live production runtime requires vilain_tamp_qwen")
-    if options.execute:
-        raise RuntimeCompositionError("Stage 22 production composition is planning-only")
     if options.fast_downward_path is None or options.val_path is None:
         raise RuntimeCompositionError("Fast Downward and VAL paths are required")
 
@@ -274,11 +278,28 @@ def build_live_components(
     # are created later by BaselineRunner. Bind them per run without exposing
     # any scene truth to the interpreter.
     corrective = _EstimateBindingCorrectivePlanning(corrective, attempt_runner)
+    execution = None
+    hidden_context = None
+    generated_goal_evaluator = None
+    if options.execute:
+        runtime_provider = ProductionRuntimeProvider(
+            scene=observation_runtime.scene,
+            domain=options.domain,
+            variant=options.variant,
+            corrective=corrective,
+            fixed_bindings=fixed_bindings,
+        )
+        execution = LiveExecutionStage(runtime_provider)
+        hidden_context = BenchmarkRegistryHiddenContextProvider(config_root)
+        generated_goal_evaluator = PhysicalGeneratedGoalEvaluator()
     return RunnerComponents(
         task_instruction=_task_instruction(options.domain),
         observation=observation_runtime.protocol,
         interpreter=interpreter,
         corrective_planning=corrective,
+        execution=execution,
+        hidden_context=hidden_context,
+        generated_goal_evaluator=generated_goal_evaluator,
     )
 
 
@@ -287,10 +308,12 @@ class _EstimateBindingCorrectivePlanning:
         self.loop = loop
         self.attempt = attempt
         self.max_corrections = loop.max_corrections
+        self.last_result: Any | None = None
 
     def run(self, *, object_estimates: Sequence[Any], **kwargs: Any) -> Any:
         self.attempt.object_estimates = tuple(object_estimates)
-        return self.loop.run(object_estimates=object_estimates, **kwargs)
+        self.last_result = self.loop.run(object_estimates=object_estimates, **kwargs)
+        return self.last_result
 
 
 def _task_instruction(domain: Domain) -> str:
@@ -330,8 +353,10 @@ def _fixed_structural_bindings(
         del variant
         names = {
             key: (
-                "MAIN_WORKBENCH_ZONE"
-                if key.startswith("main_workbench_zone")
+                "workshop_frame_joint"
+                if key == "main_workbench_zone"
+                else "MAIN_WORKBENCH_ZONE"
+                if key == "main_workbench_zone_surface"
                 else key.upper()
             )
             for key in inventory

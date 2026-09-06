@@ -255,9 +255,43 @@ class WorkshopLiveControllerFacade:
                 arguments[0], self._before.get(str(request["action_instance_id"]), {})
             )
         elif operator == "PLACE":
-            result = self.physical_state.verify_place(
-                arguments[0], arguments[1], contained=pddl_operator == "insert"
-            )
+            if pddl_operator == "insert":
+                physical = dict(
+                    self.physical_state.verify_place(
+                        arguments[0], arguments[1], contained=False
+                    )
+                )
+                radial = controller_result.get("radial_error_m")
+                depth = controller_result.get("insertion_depth_m")
+                orientation = controller_result.get("vertical_axis_error_rad")
+                head_above_tip = controller_result.get("head_above_tip_m")
+                geometry_verified = bool(
+                    isinstance(radial, (int, float))
+                    and float(radial) <= 0.004
+                    and isinstance(depth, (int, float))
+                    and 0.008 <= float(depth) <= 0.018
+                    and isinstance(orientation, (int, float))
+                    and float(orientation) <= 0.05
+                    and isinstance(head_above_tip, (int, float))
+                    and float(head_above_tip) > 0.0
+                )
+                result = {
+                    **physical,
+                    "success": bool(physical.get("success") and geometry_verified),
+                    "insertion_geometry_verified": geometry_verified,
+                    "radial_error_m": radial,
+                    "depth_m": depth,
+                    "orientation_error_rad": orientation,
+                    "head_above_tip": (
+                        float(head_above_tip) > 0.0
+                        if isinstance(head_above_tip, (int, float))
+                        else False
+                    ),
+                }
+            else:
+                result = self.physical_state.verify_place(
+                    arguments[0], arguments[1], contained=False
+                )
         else:
             result = self.physical_state.verify_skill(
                 "DRIVE", arguments, controller_result
@@ -296,7 +330,17 @@ class LiveExecutionStage:
         output_root: Path,
     ) -> ExecutionStageResult:
         domain_key = _domain_key(domain)
-        runtime = self.runtime_provider(domain_key, variant)
+        execution_provider = getattr(self.runtime_provider, "for_execution", None)
+        runtime = (
+            execution_provider(
+                domain_key,
+                variant,
+                execution_plan=execution_plan,
+                projections=tuple(projections),
+            )
+            if callable(execution_provider)
+            else self.runtime_provider(domain_key, variant)
+        )
         if not isinstance(runtime, LiveDomainRuntime):
             raise LiveExecutionError("runtime provider returned an invalid runtime")
         projections = tuple(projections)
@@ -663,6 +707,16 @@ class MuJoCoPhysicalStateObserver:
     def _articulation(self, entity: str) -> Mapping[str, Any]:
         body_id = self.mujoco.mj_name2id(self.model, self.mujoco.mjtObj.mjOBJ_BODY, entity)
         if body_id < 0:
+            region_states = getattr(self.scene, "get_region_observation_states", None)
+            if callable(region_states):
+                states = region_states()
+                record = states.get(entity) if isinstance(states, Mapping) else None
+                if isinstance(record, Mapping):
+                    return {
+                        "present": True,
+                        "open": record.get("open") is True,
+                        "physical_region_state": dict(record),
+                    }
             return {"present": False, "open": False}
         joints = [
             index
