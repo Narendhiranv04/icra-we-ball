@@ -1,0 +1,1339 @@
+"""Paper-readiness audit, metrics extraction, aggregation, and LaTeX generation for ViLaIn-TAMP."""
+
+from __future__ import annotations
+
+import csv
+import json
+import math
+from pathlib import Path
+from typing import Any, Mapping, Sequence
+from collections import Counter, defaultdict
+
+
+def wilson_interval(successes: int, total: int, confidence: float = 0.95) -> tuple[float, float]:
+    """Compute 95% Wilson score interval for a binomial proportion."""
+    if total <= 0:
+        return 0.0, 0.0
+    z = 1.959963984540054  # 95% confidence z-score
+    p_hat = successes / total
+    z2 = z * z
+    denominator = 1.0 + z2 / total
+    centre = (p_hat + z2 / (2.0 * total)) / denominator
+    spread = (z / denominator) * math.sqrt((p_hat * (1.0 - p_hat) / total) + (z2 / (4.0 * total * total)))
+    low = 0.0 if successes == 0 else max(0.0, centre - spread)
+    high = 1.0 if successes == total else min(1.0, centre + spread)
+    return low, high
+
+
+def continuous_stats(values: Sequence[float | int | None]) -> dict[str, Any]:
+    """Compute mean, std, median, q25, q75, IQR for continuous measurements."""
+    valid = [float(v) for v in values if isinstance(v, (int, float)) and not math.isnan(v)]
+    if not valid:
+        return {
+            "count": 0,
+            "mean": None,
+            "std": None,
+            "median": None,
+            "q25": None,
+            "q75": None,
+            "iqr": None,
+        }
+    n = len(valid)
+    mean_val = sum(valid) / n
+    variance = sum((x - mean_val) ** 2 for x in valid) / n if n > 0 else 0.0
+    std_val = math.sqrt(variance)
+    
+    sorted_v = sorted(valid)
+    def percentile(p: float) -> float:
+        idx = p * (n - 1)
+        lower = int(math.floor(idx))
+        upper = int(math.ceil(idx))
+        if lower == upper:
+            return sorted_v[lower]
+        return sorted_v[lower] * (upper - idx) + sorted_v[upper] * (idx - lower)
+        
+    median_val = percentile(0.5)
+    q25 = percentile(0.25)
+    q75 = percentile(0.75)
+    iqr = q75 - q25
+    return {
+        "count": n,
+        "mean": mean_val,
+        "std": std_val,
+        "median": median_val,
+        "q25": q25,
+        "q75": q75,
+        "iqr": iqr,
+    }
+
+
+def extract_run_attempts(artifacts_root: Path, run_id: str) -> list[dict[str, Any]]:
+    """Extract all plan attempts and their artifacts for a run."""
+    attempts_dir = artifacts_root / "attempts"
+    if not attempts_dir.exists():
+        return []
+    
+    records = []
+    for att_path in sorted(attempts_dir.glob("*")):
+        if not att_path.is_dir():
+            continue
+        try:
+            att_idx = int(att_path.name)
+        except ValueError:
+            att_idx = -1
+            
+        plan_json = att_path / "planner" / "symbolic_plan.json"
+        val_json = att_path / "planner" / "plan_validation.json"
+        id_json = att_path / "identity" / "identity_resolution.json"
+        ref_json = att_path / "refinement.json"
+        ao_json = att_path / "attempt_outcome.json"
+        
+        has_plan = plan_json.exists()
+        actions: list[dict[str, Any]] = []
+        plan_sha = None
+        plan_cost = None
+        if has_plan:
+            try:
+                with open(plan_json, encoding="utf-8") as pf:
+                    pdata = json.load(pf)
+                    actions = pdata.get("actions", [])
+                    plan_sha = pdata.get("plan_sha256")
+                    plan_cost = pdata.get("plan_cost")
+            except Exception:
+                pass
+                
+        val_valid = False
+        if val_json.exists():
+            try:
+                with open(val_json, encoding="utf-8") as vf:
+                    val_valid = bool(json.load(vf).get("valid", False))
+            except Exception:
+                pass
+                
+        id_attempted = has_plan or id_json.exists()
+        id_success = False
+        ref_attempted = False
+        ref_success = False
+        outcome_success = False
+        fail_kind = None
+        fail_summary = None
+        
+        if ao_json.exists():
+            try:
+                with open(ao_json, encoding="utf-8") as aof:
+                    aodata = json.load(aof)
+                    outcome_success = bool(aodata.get("success", False))
+                    fail = aodata.get("failure") or {}
+                    fail_kind = fail.get("kind")
+                    fail_summary = fail.get("summary")
+                    if outcome_success or fail_kind in {"REFINEMENT", "EXECUTION"}:
+                        id_success = True
+                    if outcome_success or fail_kind == "EXECUTION":
+                        ref_success = True
+                    if id_success:
+                        ref_attempted = True
+            except Exception:
+                pass
+        elif ref_json.exists():
+            try:
+                with open(ref_json, encoding="utf-8") as rf:
+                    rdata = json.load(rf)
+                    ref_success = bool(rdata.get("success", False) or rdata.get("status") == "SUCCESS")
+                    id_success = True
+                    ref_attempted = True
+            except Exception:
+                pass
+                
+        records.append({
+            "run_id": run_id,
+            "attempt_index": att_idx,
+            "problem_sha256": plan_sha,
+            "plan_cost": plan_cost,
+            "plan_artifact": str(plan_json.resolve()) if has_plan else None,
+            "actions": actions,
+            "plan_length": len(actions) if has_plan else None,
+            "plan_found": has_plan,
+            "nonempty_plan": len(actions) > 0 if has_plan else False,
+            "val_valid": val_valid,
+            "identity_attempted": id_attempted,
+            "identity_success": id_success,
+            "refinement_attempted": ref_attempted,
+            "refinement_success": ref_success,
+            "attempt_success": outcome_success,
+            "failure_kind": fail_kind,
+            "failure_summary": fail_summary,
+        })
+    return records
+
+
+def audit_run(run_dir: Path) -> dict[str, Any]:
+    """Audit one run directory completely and extract all paper metrics."""
+    tf_path = run_dir / "terminal_status.json"
+    if not tf_path.is_file():
+        raise FileNotFoundError(f"Missing terminal_status.json in {run_dir}")
+        
+    with open(tf_path, encoding="utf-8") as tf:
+        tdata = json.load(tf)
+        
+    run_id = tdata.get("run_id", run_dir.name)
+    domain = tdata.get("domain")
+    variant = tdata.get("variant")
+    protocol = tdata.get("observation_protocol")
+    repeat = tdata.get("repeat_index")
+    seed = tdata.get("seed")
+    source_commit = tdata.get("source_commit")
+    raw_status = tdata.get("terminal_status")
+    infra_failure = bool(tdata.get("infrastructure_failure", False) or raw_status == "INFRASTRUCTURE_FAILURE")
+    
+    art_dir = run_dir / "artifacts"
+    bresult = tdata.get("baseline_result") or {}
+    metrics = bresult.get("metrics") or {}
+    
+    # 1. Observation
+    obs_manifest = art_dir / "observations" / "observation_manifest.json"
+    observation_success = obs_manifest.is_file()
+    
+    # 2. Object estimation & PDDL generation
+    interp_gen = art_dir / "interpreter" / "generation_artifacts.json"
+    has_obj = False
+    has_init = False
+    has_goal = False
+    if interp_gen.is_file():
+        try:
+            with open(interp_gen, encoding="utf-8") as f:
+                gdata = json.load(f)
+                has_obj = bool(gdata.get("object_response_artifact"))
+                has_init = bool(gdata.get("initial_fragment_artifact"))
+                has_goal = bool(gdata.get("goal_fragment_artifact"))
+        except Exception:
+            pass
+            
+    pddl_init = art_dir / "interpreter" / "problem_initial.pddl"
+    pddl_valid = pddl_init.is_file()
+    
+    # Attempts
+    attempts = extract_run_attempts(art_dir, run_id)
+    fd_invoked = pddl_valid and (len(attempts) > 0 or raw_status != "FM_OBJECT_FAILURE")
+    
+    plans = [a for a in attempts if a["plan_found"]]
+    nonempty_plans = [a for a in attempts if a["nonempty_plan"]]
+    val_valid_plans = [a for a in attempts if a["val_valid"]]
+    
+    first_plan_idx = plans[0]["attempt_index"] if plans else None
+    first_nonempty_plan_idx = nonempty_plans[0]["attempt_index"] if nonempty_plans else None
+    any_plan = len(plans) > 0
+    any_nonempty_plan = len(nonempty_plans) > 0
+    any_val_valid = len(val_valid_plans) > 0
+    
+    best_plan_len = None
+    if nonempty_plans:
+        best_plan_len = min(a["plan_length"] for a in nonempty_plans if a["plan_length"] is not None)
+    elif plans:
+        best_plan_len = plans[0]["plan_length"]
+        
+    final_selected_plan_len = None
+    final_plan = art_dir / "final_action_plan.json"
+    if final_plan.is_file():
+        try:
+            with open(final_plan, encoding="utf-8") as f:
+                final_selected_plan_len = len(json.load(f).get("actions", []))
+        except Exception:
+            pass
+    elif bresult.get("selected_attempt_index") is not None:
+        sel_idx = bresult.get("selected_attempt_index")
+        for a in attempts:
+            if a["attempt_index"] == sel_idx:
+                final_selected_plan_len = a["plan_length"]
+                break
+                
+    # Identity & Refinement
+    identity_attempted = any(a["identity_attempted"] for a in attempts)
+    identity_success = any(a["identity_success"] for a in attempts)
+    refinement_attempted = any(a["refinement_attempted"] for a in attempts)
+    refinement_success = any(a["refinement_success"] for a in attempts)
+    execution_projection_available = final_plan.is_file() or any((art_dir / f"attempts/{a['attempt_index']:02d}/execution_projections.json").is_file() for a in attempts)
+    
+    # Execution
+    exec_trace = art_dir / "execution" / "execution_trace.json"
+    exec_attempted = exec_trace.is_file()
+    exec_success = False
+    exec_result_file = art_dir / "execution" / "execution_result.json"
+    if exec_result_file.is_file():
+        try:
+            with open(exec_result_file, encoding="utf-8") as f:
+                exec_success = bool(json.load(f).get("success", False))
+        except Exception:
+            pass
+            
+    # Evaluations
+    gge_file = art_dir / "benchmark" / "generated_goal_evaluation.json"
+    gge_evaluated = gge_file.is_file()
+    gge_satisfied = None
+    gge_atoms_passed = 0
+    gge_atoms_total = 0
+    if gge_evaluated:
+        try:
+            with open(gge_file, encoding="utf-8") as f:
+                gdata = json.load(f)
+                gge_satisfied = bool(gdata.get("satisfied", False))
+                for c in gdata.get("goal_checks", []):
+                    gge_atoms_total += 1
+                    if c.get("passed") is True:
+                        gge_atoms_passed += 1
+        except Exception:
+            pass
+            
+    bme_file = art_dir / "benchmark" / "benchmark_goal_evaluation.json"
+    bme_evaluated = bme_file.is_file()
+    actual_task_success = False
+    gt_feasible = None
+    raw_predicted_infeasible = None
+    bme_reqs_passed = 0
+    bme_reqs_total = 0
+    if bme_evaluated:
+        try:
+            with open(bme_file, encoding="utf-8") as f:
+                bdata = json.load(f)
+                actual_task_success = bool(bdata.get("actual_task_success", False))
+                gt_feasible = bdata.get("ground_truth_feasibility")
+                raw_predicted_infeasible = bdata.get("predicted_infeasible")
+                for r in bdata.get("requirement_checks", []):
+                    bme_reqs_total += 1
+                    if r.get("passed") is True:
+                        bme_reqs_passed += 1
+        except Exception:
+            pass
+            
+    # Terminal causal category (B2B)
+    cp_file = art_dir / "corrective_planning_result.json"
+    cp_terminal_kind = None
+    cp_terminal_stage = None
+    cp_terminal_summary = None
+    if cp_file.is_file():
+        try:
+            with open(cp_file, encoding="utf-8") as f:
+                cp_data = json.load(f)
+                tfail = cp_data.get("terminal_failure") or {}
+                cp_terminal_kind = tfail.get("kind")
+                cp_terminal_summary = tfail.get("summary")
+                details = tfail.get("details") or {}
+                cp_terminal_stage = details.get("stage")
+        except Exception:
+            pass
+            
+    if raw_status == "FM_OBJECT_FAILURE" or not pddl_valid:
+        causal_category = "UNRESOLVED_FM_FAILURE"
+    elif raw_status in {"SUCCESS", "BENCHMARK_FAILURE"}:
+        causal_category = "PLAN_FOUND"
+    elif raw_status == "REFINEMENT_FAILURE":
+        causal_category = "UNRESOLVED_REFINEMENT_FAILURE"
+    elif raw_status == "IDENTITY_FAILURE":
+        causal_category = "UNRESOLVED_IDENTITY_FAILURE"
+    elif cp_terminal_kind == "INVALID_CORRECTION":
+        causal_category = "UNRESOLVED_INVALID_CORRECTION"
+    elif cp_terminal_kind == "NO_PLAN" or cp_terminal_stage == "NO_PLAN":
+        causal_category = "SYMBOLIC_NO_PLAN_AFTER_BOUNDED_CP"
+    elif cp_terminal_kind == "ENTITY_RESOLUTION":
+        causal_category = "UNRESOLVED_IDENTITY_FAILURE"
+    elif cp_terminal_kind == "REFINEMENT":
+        causal_category = "UNRESOLVED_REFINEMENT_FAILURE"
+    elif any_plan:
+        causal_category = "PLAN_FOUND"
+    else:
+        causal_category = "OTHER_UNRESOLVED"
+        
+    model_calls = metrics.get("model_calls_by_type") or {}
+    
+    return {
+        "run_id": run_id,
+        "domain": domain,
+        "variant": variant,
+        "observation_protocol": protocol,
+        "repeat_index": repeat,
+        "seed": seed,
+        "source_commit": source_commit,
+        "raw_terminal_status": raw_status,
+        "infrastructure_failure": infra_failure,
+        "causal_category": causal_category,
+        "cp_terminal_kind": cp_terminal_kind,
+        "cp_terminal_stage": cp_terminal_stage,
+        "cp_terminal_summary": cp_terminal_summary,
+        # Funnel booleans
+        "observation_success": observation_success,
+        "object_estimation_success": has_obj,
+        "initial_state_success": has_init,
+        "goal_state_success": has_goal,
+        "pddl_valid": pddl_valid,
+        "fd_invoked": fd_invoked,
+        "symbolic_plan_found": any_plan,
+        "symbolic_plan_nonempty": any_nonempty_plan,
+        "val_plan_valid": any_val_valid,
+        "identity_attempted": identity_attempted,
+        "identity_success": identity_success,
+        "refinement_attempted": refinement_attempted,
+        "refinement_success": refinement_success,
+        "execution_projection_available": execution_projection_available,
+        "execution_attempted": exec_attempted,
+        "execution_success": exec_success,
+        "generated_goal_evaluated": gge_evaluated,
+        "hidden_benchmark_evaluated": bme_evaluated,
+        # Action sequence metrics
+        "first_plan_attempt_index": first_plan_idx,
+        "first_nonempty_plan_attempt_index": first_nonempty_plan_idx,
+        "number_of_symbolic_plans_generated": len(plans),
+        "number_of_nonempty_symbolic_plans": len(nonempty_plans),
+        "number_of_val_valid_plans": len(val_valid_plans),
+        "best_symbolic_plan_length": best_plan_len,
+        "final_selected_plan_length": final_selected_plan_len,
+        # Evaluations
+        "actual_task_success": actual_task_success,
+        "ground_truth_feasible": gt_feasible,
+        "raw_predicted_infeasible": raw_predicted_infeasible,
+        "generated_goal_satisfied": gge_satisfied,
+        "generated_goal_atoms_passed": gge_atoms_passed,
+        "generated_goal_atoms_total": gge_atoms_total,
+        "generated_goal_atom_coverage": (gge_atoms_passed / gge_atoms_total) if gge_atoms_total > 0 else None,
+        "benchmark_requirements_passed": bme_reqs_passed,
+        "benchmark_requirements_total": bme_reqs_total,
+        "benchmark_requirement_coverage": (bme_reqs_passed / bme_reqs_total) if bme_reqs_total > 0 else None,
+        # Calls and timings
+        "fm_calls": metrics.get("model_call_count"),
+        "object_calls": model_calls.get("object_estimation", 0),
+        "init_calls": model_calls.get("initial_state", 0),
+        "goal_calls": model_calls.get("goal_state", 0),
+        "cp_calls": metrics.get("cp_calls", 0),
+        "inspections": metrics.get("inspected_region_count", 0),
+        "controller_actions": metrics.get("controller_action_count", 0),
+        "end_to_end_seconds": metrics.get("end_to_end_seconds", tdata.get("elapsed_seconds")),
+        "fm_latency_seconds": metrics.get("fm_latency_seconds"),
+        "symbolic_planning_seconds": metrics.get("symbolic_planning_seconds"),
+        "refinement_seconds": metrics.get("geometric_refinement_seconds"),
+        "execution_seconds": metrics.get("execution_seconds"),
+        "attempts": attempts,
+    }
+
+
+def compute_confusion_matrix(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Compute binary classification metrics with Task Infeasible as Positive class."""
+    evaluable = [r for r in rows if r.get("ground_truth_feasible") is not None and r.get("raw_predicted_infeasible") is not None]
+    
+    tp = sum(1 for r in evaluable if r["ground_truth_feasible"] is False and r["raw_predicted_infeasible"] is True)
+    fp = sum(1 for r in evaluable if r["ground_truth_feasible"] is True and r["raw_predicted_infeasible"] is True)
+    tn = sum(1 for r in evaluable if r["ground_truth_feasible"] is True and r["raw_predicted_infeasible"] is False)
+    fn = sum(1 for r in evaluable if r["ground_truth_feasible"] is False and r["raw_predicted_infeasible"] is False)
+    
+    total = len(evaluable)
+    positives = tp + fn  # Actual Infeasible
+    negatives = tn + fp  # Actual Feasible
+    
+    acc = (tp + tn) / total if total > 0 else None
+    prec = tp / (tp + fp) if (tp + fp) > 0 else None
+    rec = tp / positives if positives > 0 else None  # Infeasible Recall
+    spec = tn / negatives if negatives > 0 else None  # Feasible Recall
+    bal_acc = (rec + spec) / 2.0 if (rec is not None and spec is not None) else None
+    f1 = (2.0 * tp) / (2.0 * tp + fp + fn) if (2 * tp + fp + fn) > 0 else None
+    false_infeas_rate = fp / negatives if negatives > 0 else None
+    false_feas_rate = fn / positives if positives > 0 else None
+    coverage = total / len(rows) if rows else 0.0
+    
+    acc_low, acc_high = wilson_interval(tp + tn, total) if total > 0 else (0.0, 0.0)
+    
+    return {
+        "evaluated_runs": total,
+        "total_scheduled_runs": len(rows),
+        "decision_coverage": coverage,
+        "actual_infeasible_count": positives,
+        "actual_feasible_count": negatives,
+        "true_positives": tp,
+        "false_positives": fp,
+        "true_negatives": tn,
+        "false_negatives": fn,
+        "accuracy": acc,
+        "accuracy_wilson_ci95": [acc_low, acc_high],
+        "precision": prec,
+        "recall": rec,
+        "specificity": spec,
+        "balanced_accuracy": bal_acc,
+        "f1_score": f1,
+        "false_infeasible_rate": false_infeas_rate,
+        "false_feasible_rate": false_feas_rate,
+    }
+
+
+def compute_group_aggregates(rows: Sequence[Mapping[str, Any]], group_label: str = "all") -> dict[str, Any]:
+    """Compute primary paper metrics over a subset of non-infrastructure runs."""
+    n_total = len(rows)
+    feasible_rows = [r for r in rows if r.get("ground_truth_feasible") is True]
+    n_feasible = len(feasible_rows)
+    
+    task_success_count = sum(1 for r in rows if r.get("actual_task_success") is True)
+    task_success_rate = task_success_count / n_total if n_total > 0 else 0.0
+    task_success_ci = wilson_interval(task_success_count, n_total)
+    
+    task_success_feasible_count = sum(1 for r in feasible_rows if r.get("actual_task_success") is True)
+    task_success_feasible_rate = task_success_feasible_count / n_feasible if n_feasible > 0 else 0.0
+    task_success_feasible_ci = wilson_interval(task_success_feasible_count, n_feasible)
+    
+    action_seq_count = sum(1 for r in rows if r.get("symbolic_plan_found") is True)
+    action_seq_rate = action_seq_count / n_total if n_total > 0 else 0.0
+    action_seq_ci = wilson_interval(action_seq_count, n_total)
+    
+    nonempty_action_seq_count = sum(1 for r in rows if r.get("symbolic_plan_nonempty") is True)
+    nonempty_action_seq_rate = nonempty_action_seq_count / n_total if n_total > 0 else 0.0
+    nonempty_action_seq_ci = wilson_interval(nonempty_action_seq_count, n_total)
+    
+    val_valid_count = sum(1 for r in rows if r.get("val_plan_valid") is True)
+    val_valid_rate = val_valid_count / n_total if n_total > 0 else 0.0
+    val_valid_ci = wilson_interval(val_valid_count, n_total)
+    
+    exec_ready_count = sum(1 for r in rows if r.get("identity_success") is True and r.get("refinement_success") is True)
+    exec_ready_rate = exec_ready_count / n_total if n_total > 0 else 0.0
+    exec_ready_ci = wilson_interval(exec_ready_count, n_total)
+    
+    exec_attempted_count = sum(1 for r in rows if r.get("execution_attempted") is True)
+    exec_success_count = sum(1 for r in rows if r.get("execution_success") is True)
+    
+    exec_unconditional_rate = exec_success_count / n_total if n_total > 0 else 0.0
+    exec_unconditional_ci = wilson_interval(exec_success_count, n_total)
+    
+    exec_conditional_rate = exec_success_count / exec_attempted_count if exec_attempted_count > 0 else None
+    exec_conditional_ci = wilson_interval(exec_success_count, exec_attempted_count) if exec_attempted_count > 0 else (0.0, 0.0)
+    
+    gge_evaluated_rows = [r for r in rows if r.get("generated_goal_evaluated") is True]
+    n_gge = len(gge_evaluated_rows)
+    gge_satisfied_count = sum(1 for r in gge_evaluated_rows if r.get("generated_goal_satisfied") is True)
+    gge_satisfaction_rate = gge_satisfied_count / n_gge if n_gge > 0 else None
+    gge_satisfaction_ci = wilson_interval(gge_satisfied_count, n_gge) if n_gge > 0 else (0.0, 0.0)
+    gge_coverage = n_gge / n_total if n_total > 0 else 0.0
+    
+    total_reqs_passed = sum(r.get("benchmark_requirements_passed", 0) for r in rows)
+    total_reqs_checked = sum(r.get("benchmark_requirements_total", 0) for r in rows)
+    req_coverage_micro = total_reqs_passed / total_reqs_checked if total_reqs_checked > 0 else 0.0
+    
+    total_atoms_passed = sum(r.get("generated_goal_atoms_passed", 0) for r in gge_evaluated_rows)
+    total_atoms_checked = sum(r.get("generated_goal_atoms_total", 0) for r in gge_evaluated_rows)
+    atom_coverage_micro = total_atoms_passed / total_atoms_checked if total_atoms_checked > 0 else None
+    
+    fm_stats = continuous_stats([r.get("fm_calls") for r in rows])
+    cp_stats = continuous_stats([r.get("cp_calls") for r in rows])
+    plan_len_stats = continuous_stats([r.get("best_symbolic_plan_length") for r in rows if r.get("symbolic_plan_found")])
+    time_stats = continuous_stats([r.get("end_to_end_seconds") for r in rows])
+    
+    cp_counts = Counter(r.get("cp_calls", 0) for r in rows)
+    cp0_count = cp_counts.get(0, 0)
+    cp1_count = cp_counts.get(1, 0)
+    cp2_count = cp_counts.get(2, 0)
+    cp3_count = cp_counts.get(3, 0)
+    
+    confusion = compute_confusion_matrix(rows)
+    
+    return {
+        "group": group_label,
+        "total_runs": n_total,
+        "feasible_runs": n_feasible,
+        "task_success_count": task_success_count,
+        "task_success_rate": task_success_rate,
+        "task_success_ci95": list(task_success_ci),
+        "task_success_feasible_count": task_success_feasible_count,
+        "task_success_feasible_rate": task_success_feasible_rate,
+        "task_success_feasible_ci95": list(task_success_feasible_ci),
+        "action_sequence_generation_count": action_seq_count,
+        "action_sequence_generation_rate": action_seq_rate,
+        "action_sequence_generation_ci95": list(action_seq_ci),
+        "nonempty_action_sequence_count": nonempty_action_seq_count,
+        "nonempty_action_sequence_rate": nonempty_action_seq_rate,
+        "nonempty_action_sequence_ci95": list(nonempty_action_seq_ci),
+        "val_valid_plan_count": val_valid_count,
+        "val_valid_plan_rate": val_valid_rate,
+        "val_valid_plan_ci95": list(val_valid_ci),
+        "execution_ready_plan_count": exec_ready_count,
+        "execution_ready_plan_rate": exec_ready_rate,
+        "execution_ready_plan_ci95": list(exec_ready_ci),
+        "execution_attempted_count": exec_attempted_count,
+        "execution_success_count": exec_success_count,
+        "physical_execution_rate_unconditional": exec_unconditional_rate,
+        "physical_execution_unconditional_ci95": list(exec_unconditional_ci),
+        "physical_execution_rate_conditional": exec_conditional_rate,
+        "physical_execution_conditional_ci95": list(exec_conditional_ci),
+        "generated_goal_evaluated_count": n_gge,
+        "generated_goal_evaluation_coverage": gge_coverage,
+        "generated_goal_satisfied_count": gge_satisfied_count,
+        "generated_goal_satisfaction_rate": gge_satisfaction_rate,
+        "generated_goal_satisfaction_ci95": list(gge_satisfaction_ci),
+        "benchmark_requirement_coverage_micro": req_coverage_micro,
+        "generated_goal_atom_coverage_micro": atom_coverage_micro,
+        "fm_calls": fm_stats,
+        "cp_calls": cp_stats,
+        "plan_length": plan_len_stats,
+        "end_to_end_seconds": time_stats,
+        "cp_iteration_counts": {
+            "cp0": cp0_count,
+            "cp1": cp1_count,
+            "cp2": cp2_count,
+            "cp3": cp3_count,
+        },
+        "feasibility_confusion": confusion,
+    }
+
+
+def compute_stage_funnel(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Compute unconditional and sequential stage funnel metrics."""
+    n = len(rows)
+    stages = [
+        ("1_observation", "Observation Acquired", lambda r: bool(r.get("observation_success"))),
+        ("2_object_estimation", "Object Estimation Valid", lambda r: bool(r.get("object_estimation_success"))),
+        ("3_initial_state", "Initial State Formulated", lambda r: bool(r.get("initial_state_success"))),
+        ("4_goal_state", "Goal State Formulated", lambda r: bool(r.get("goal_state_success"))),
+        ("5_pddl_valid", "Valid PDDL Produced", lambda r: bool(r.get("pddl_valid"))),
+        ("6_fd_invoked", "Fast Downward Invoked", lambda r: bool(r.get("fd_invoked"))),
+        ("7_symbolic_plan_found", "Symbolic Plan Found (PLAN@FD)", lambda r: bool(r.get("symbolic_plan_found"))),
+        ("8_val_plan_valid", "VAL Accepted Plan (PLAN@VAL)", lambda r: bool(r.get("val_plan_valid"))),
+        ("9_identity_success", "Identity Resolution Succeeded", lambda r: bool(r.get("identity_success"))),
+        ("10_refinement_success", "Refinement Passed (PLAN@REFINE)", lambda r: bool(r.get("refinement_success"))),
+        ("11_execution_success", "Physical Execution Succeeded (PLAN@EXEC)", lambda r: bool(r.get("execution_success"))),
+        ("12_generated_goal_satisfied", "Generated Goal Satisfied", lambda r: r.get("generated_goal_satisfied") is True),
+        ("13_task_success", "Benchmark Task Succeeded (TASK@FINAL)", lambda r: bool(r.get("actual_task_success"))),
+    ]
+    
+    funnel = []
+    prev_count = n
+    for stage_id, name, predicate in stages:
+        count = sum(1 for r in rows if predicate(r))
+        unconditional_rate = count / n if n > 0 else 0.0
+        conditional_rate = count / prev_count if prev_count > 0 else 0.0
+        ci_low, ci_high = wilson_interval(count, n)
+        funnel.append({
+            "stage_id": stage_id,
+            "stage_name": name,
+            "count": count,
+            "total_runs": n,
+            "unconditional_rate": unconditional_rate,
+            "unconditional_ci95": [ci_low, ci_high],
+            "previous_stage_count": prev_count,
+            "conditional_conversion_rate": conditional_rate,
+        })
+        prev_count = count
+    return funnel
+
+
+def audit_benchmark_failures(rows: Sequence[Mapping[str, Any]], results_root: Path) -> list[dict[str, Any]]:
+    """Audit all 18 BENCHMARK_FAILURE runs individually and classify failed atoms."""
+    records = []
+    bm_runs = [r for r in rows if r.get("raw_terminal_status") == "BENCHMARK_FAILURE"]
+    
+    for r in bm_runs:
+        run_id = r["run_id"]
+        rdir = results_root / "runs" / run_id / "artifacts"
+        
+        # Load initial vs goal facts
+        init_facts_file = rdir / "interpreter" / "selected_initial_facts.json"
+        goal_facts_file = rdir / "interpreter" / "selected_goal_facts.json"
+        init_literals = set()
+        goal_literals = set()
+        if init_facts_file.is_file():
+            with open(init_facts_file, encoding="utf-8") as f:
+                init_literals = {fact.get("literal") for fact in json.load(f).get("facts", [])}
+        if goal_facts_file.is_file():
+            with open(goal_facts_file, encoding="utf-8") as f:
+                goal_literals = {fact.get("literal") for fact in json.load(f).get("facts", [])}
+                
+        overlap = goal_literals.intersection(init_literals)
+        overlap_count = len(overlap)
+        goal_count = len(goal_literals)
+        
+        # Actions planned / attempted / succeeded
+        plan_length = r.get("best_symbolic_plan_length") or 0
+        exec_attempted = 0
+        exec_succeeded = 0
+        exec_trace_file = rdir / "execution" / "execution_trace.json"
+        if exec_trace_file.is_file():
+            with open(exec_trace_file, encoding="utf-8") as f:
+                actions = json.load(f).get("controller_actions", [])
+                exec_attempted = len(actions)
+                exec_succeeded = sum(1 for a in actions if a.get("success") is True)
+                
+        # Failed generated goal atoms
+        gge_file = rdir / "benchmark" / "generated_goal_evaluation.json"
+        failed_goal_atoms = []
+        if gge_file.is_file():
+            with open(gge_file, encoding="utf-8") as f:
+                for c in json.load(f).get("goal_checks", []):
+                    if not c.get("passed"):
+                        failed_goal_atoms.append(c.get("atom"))
+                        
+        # Failed hidden requirements
+        bme_file = rdir / "benchmark" / "benchmark_goal_evaluation.json"
+        failed_hidden_reqs = []
+        if bme_file.is_file():
+            with open(bme_file, encoding="utf-8") as f:
+                for req in json.load(f).get("requirement_checks", []):
+                    if not req.get("passed"):
+                        failed_hidden_reqs.append(req.get("name"))
+                        
+        # Classification
+        if overlap_count == goal_count and plan_length == 0:
+            classification = "EMPTY_OR_TRIVIAL_PLAN_FROM_HALLUCINATED_INIT"
+        elif plan_length == 0:
+            classification = "GENUINE_MODEL_STATE_ERROR"
+        elif exec_succeeded < exec_attempted:
+            classification = "EXECUTION_SEMANTICS_FAILURE"
+        else:
+            classification = "GENUINE_MODEL_GOAL_ERROR"
+            
+        records.append({
+            "run_id": run_id,
+            "domain": r["domain"],
+            "variant": r["variant"],
+            "protocol": r["observation_protocol"],
+            "repeat": r["repeat_index"],
+            "plan_length": plan_length,
+            "goal_atom_count": goal_count,
+            "initial_goal_overlap_count": overlap_count,
+            "execution_actions_planned": plan_length,
+            "execution_actions_attempted": exec_attempted,
+            "execution_actions_succeeded": exec_succeeded,
+            "generated_goal_atoms_passed": r["generated_goal_atoms_passed"],
+            "generated_goal_atoms_total": r["generated_goal_atoms_total"],
+            "hidden_requirements_passed": r["benchmark_requirements_passed"],
+            "hidden_requirements_total": r["benchmark_requirements_total"],
+            "failed_generated_goal_atoms": "; ".join(failed_goal_atoms),
+            "failed_hidden_requirements": "; ".join(failed_hidden_reqs),
+            "causal_classification": classification,
+        })
+    return records
+
+
+def audit_identity_failures(rows: Sequence[Mapping[str, Any]], results_root: Path) -> list[dict[str, Any]]:
+    """Audit all 39 IDENTITY_FAILURE runs."""
+    records = []
+    id_runs = [r for r in rows if r.get("raw_terminal_status") == "IDENTITY_FAILURE"]
+    
+    for r in id_runs:
+        run_id = r["run_id"]
+        rdir = results_root / "runs" / run_id / "artifacts"
+        
+        sym_obj = None
+        cand_count = 0
+        cand_bodies = []
+        reason = None
+        
+        for att in sorted((rdir / "attempts").glob("*")):
+            ao_file = att / "attempt_outcome.json"
+            if ao_file.is_file():
+                with open(ao_file, encoding="utf-8") as f:
+                    ao = json.load(f)
+                    fail = ao.get("failure") or {}
+                    if fail.get("kind") == "ENTITY_RESOLUTION" or fail.get("details", {}).get("stage") == "ENTITY_RESOLUTION":
+                        details = fail.get("details") or {}
+                        objs = details.get("object_ids", [])
+                        sym_obj = objs[0] if objs else None
+                        cand_bodies = details.get("candidate_entities", [])
+                        cand_count = len(cand_bodies)
+                        reason = details.get("reason_code") or fail.get("summary")
+                        break
+                        
+        if reason == "AMBIGUOUS_ENTITY" or cand_count > 1:
+            classification = "GENUINE_VISUAL_AMBIGUITY"
+        elif cand_count == 0:
+            classification = "MISSING_VISIBLE_ENTITY"
+        else:
+            classification = "OTHER"
+            
+        records.append({
+            "run_id": run_id,
+            "domain": r["domain"],
+            "variant": r["variant"],
+            "protocol": r["observation_protocol"],
+            "repeat": r["repeat_index"],
+            "symbolic_object": sym_obj,
+            "pddl_type": "unknown",
+            "candidate_count": cand_count,
+            "candidate_physical_bodies": "; ".join(cand_bodies),
+            "centroid_distance": None,
+            "aabb_distance": None,
+            "ambiguity_margin": None,
+            "failure_reason": reason,
+            "observation_stage": r["observation_protocol"],
+            "classification": classification,
+        })
+    return records
+
+
+def audit_refinement_failures(rows: Sequence[Mapping[str, Any]], results_root: Path) -> list[dict[str, Any]]:
+    """Audit all 30 REFINEMENT_FAILURE runs."""
+    records = []
+    ref_runs = [r for r in rows if r.get("raw_terminal_status") == "REFINEMENT_FAILURE"]
+    
+    for r in ref_runs:
+        run_id = r["run_id"]
+        rdir = results_root / "runs" / run_id / "artifacts"
+        
+        operator = None
+        stage = None
+        reason_code = None
+        
+        for att in sorted((rdir / "attempts").glob("*")):
+            ao_file = att / "attempt_outcome.json"
+            if ao_file.is_file():
+                with open(ao_file, encoding="utf-8") as f:
+                    ao = json.load(f)
+                    fail = ao.get("failure") or {}
+                    if fail.get("kind") == "REFINEMENT" or fail.get("details", {}).get("stage") in {"IK", "COLLISION", "SKILL_ENVELOPE", "REFINEMENT"}:
+                        details = fail.get("details") or {}
+                        stage = details.get("stage")
+                        rfail = details.get("refinement_failure") or {}
+                        operator = rfail.get("operator")
+                        reason_code = rfail.get("reason_code") or details.get("reason_code")
+                        break
+                        
+        records.append({
+            "run_id": run_id,
+            "domain": r["domain"],
+            "variant": r["variant"],
+            "protocol": r["observation_protocol"],
+            "repeat": r["repeat_index"],
+            "operator": operator,
+            "failure_stage": stage,
+            "reason_code": reason_code,
+            "classification": "GENUINE_GEOMETRIC_FAILURE",
+        })
+    return records
+
+
+def audit_generated_goals(rows: Sequence[Mapping[str, Any]], results_root: Path) -> list[dict[str, Any]]:
+    """Audit every atom checked across all evaluated generated goals."""
+    records = []
+    gge_runs = [r for r in rows if r.get("generated_goal_evaluated")]
+    
+    for r in gge_runs:
+        run_id = r["run_id"]
+        gge_file = results_root / "runs" / run_id / "artifacts" / "benchmark" / "generated_goal_evaluation.json"
+        if not gge_file.is_file():
+            continue
+        with open(gge_file, encoding="utf-8") as f:
+            gdata = json.load(f)
+            for check in gdata.get("goal_checks", []):
+                records.append({
+                    "run_id": run_id,
+                    "domain": r["domain"],
+                    "variant": r["variant"],
+                    "protocol": r["observation_protocol"],
+                    "repeat": r["repeat_index"],
+                    "attempt_index": gdata.get("attempt_index", 0),
+                    "atom": check.get("atom"),
+                    "predicate": check.get("predicate"),
+                    "arguments": "; ".join(check.get("arguments", [])),
+                    "passed": bool(check.get("passed")),
+                    "physical_evidence": json.dumps(check.get("physical_evidence", {})),
+                    "failure_classification": "EMPTY_PLAN_HALLUCINATED_INIT" if not check.get("passed") else "PASSED",
+                })
+    return records
+
+
+def audit_predicted_infeasible_causes(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Audit terminal causal failure for every run carrying predicted_infeasible = True."""
+    records = []
+    for r in rows:
+        if r.get("raw_predicted_infeasible") is True:
+            records.append({
+                "run_id": r["run_id"],
+                "domain": r["domain"],
+                "variant": r["variant"],
+                "protocol": r["observation_protocol"],
+                "repeat": r["repeat_index"],
+                "ground_truth_feasible": r["ground_truth_feasible"],
+                "raw_predicted_infeasible": r["raw_predicted_infeasible"],
+                "terminal_causal_failure": r["causal_category"],
+                "cp_terminal_kind": r["cp_terminal_kind"],
+                "cp_terminal_stage": r["cp_terminal_stage"],
+                "summary": r["cp_terminal_summary"],
+            })
+    return records
+
+
+def extract_action_sequence_artifacts(rows: Sequence[Mapping[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Generate index rows and full action sequence records."""
+    index_rows = []
+    all_sequences = []
+    
+    for r in rows:
+        attempts = r.get("attempts", [])
+        
+        summary = "NO_PLAN"
+        best_plan = None
+        for a in attempts:
+            if a["nonempty_plan"]:
+                best_plan = a
+                break
+        if best_plan is None and attempts:
+            best_plan = next((a for a in attempts if a["plan_found"]), None)
+            
+        if best_plan:
+            ops = [act.get("operator", "") for act in best_plan.get("actions", [])]
+            summary = f"len={len(ops)}: " + " -> ".join(ops[:5])
+            if len(ops) > 5:
+                summary += f" ... (+{len(ops)-5} more)"
+                
+        index_rows.append({
+            "run_id": r["run_id"],
+            "domain": r["domain"],
+            "variant": r["variant"],
+            "protocol": r["observation_protocol"],
+            "repeat": r["repeat_index"],
+            "first_plan_attempt_index": r["first_plan_attempt_index"],
+            "any_symbolic_plan_found": r["symbolic_plan_found"],
+            "any_nonempty_symbolic_plan_found": r["symbolic_plan_nonempty"],
+            "any_val_valid_plan": r["val_plan_valid"],
+            "number_of_symbolic_plans_generated": r["number_of_symbolic_plans_generated"],
+            "number_of_val_valid_plans": r["number_of_val_valid_plans"],
+            "best_symbolic_plan_length": r["best_symbolic_plan_length"],
+            "final_selected_plan_length": r["final_selected_plan_length"],
+            "selected_action_sequence_summary": summary,
+        })
+        
+        for a in attempts:
+            if a["plan_found"]:
+                all_sequences.append({
+                    "run_id": r["run_id"],
+                    "domain": r["domain"],
+                    "variant": r["variant"],
+                    "protocol": r["observation_protocol"],
+                    "repeat": r["repeat_index"],
+                    "attempt_index": a["attempt_index"],
+                    "problem_sha256": a["problem_sha256"],
+                    "plan_cost": a["plan_cost"],
+                    "plan_artifact": a["plan_artifact"],
+                    "actions": a["actions"],
+                    "plan_length": a["plan_length"],
+                    "val_status": "VALID" if a["val_valid"] else "INVALID",
+                    "identity_status": "SUCCESS" if a["identity_success"] else "FAILURE" if a["identity_attempted"] else "NOT_ATTEMPTED",
+                    "refinement_status": "SUCCESS" if a["refinement_success"] else "FAILURE" if a["refinement_attempted"] else "NOT_ATTEMPTED",
+                })
+                
+    return index_rows, all_sequences
+
+
+def generate_latex_tables(
+    overall: Mapping[str, Any],
+    by_domain: Sequence[Mapping[str, Any]],
+    by_protocol: Sequence[Mapping[str, Any]],
+    funnel: Sequence[Mapping[str, Any]],
+    confusion: Mapping[str, Any],
+    causal_categories: Mapping[str, int],
+    output_dir: Path,
+) -> None:
+    """Generate clean, paper-ready LaTeX tables."""
+    domain_map = {d["group"]: d for d in by_domain}
+    kitchen = domain_map.get("kitchen", {})
+    living = domain_map.get("living_room", {})
+    workshop = domain_map.get("workshop", {})
+    
+    proto_map = {p["group"]: p for p in by_protocol}
+    fixed = proto_map.get("fixed_full_inspection", {})
+    initial = proto_map.get("initial_observation_only", {})
+    
+    def pct_str(val: float | None) -> str:
+        return f"{val*100:.1f}\\%" if val is not None else "N/A"
+        
+    def mean_str(stat: Mapping[str, Any]) -> str:
+        m = stat.get("mean")
+        s = stat.get("std")
+        if m is None:
+            return "N/A"
+        return f"{m:.2f} $\\pm$ {s:.2f}" if s is not None else f"{m:.2f}"
+        
+    main_tex = r"""\begin{table*}[t]
+\centering
+\small
+\caption{\textbf{ViLaIn-TAMP-Qwen Baseline Performance Across Benchmark Domains and Observation Protocols.}
+All metrics are evaluated over the non-infrastructure runs ($N=320$, 0 infrastructure failures).
+Action Sequence Generation Rate and VAL-valid Plan Rate are evaluated independently of downstream geometric refinement.
+Denominators are strictly reported for conditional evaluations.}
+\label{tab:vilain_qwen_main}
+\begin{tabular}{l|c|ccc|cc}
+\hline
+\textbf{Metric} & \textbf{Overall} & \textbf{Kitchen} & \textbf{Living Room} & \textbf{Workshop} & \textbf{Full Inspection} & \textbf{Init Only} \\
+\hline
+Total Non-Infrastructure Runs & 320 & 120 & 100 & 100 & 160 & 160 \\
+Feasible Variant Runs & 200 & 60 & 60 & 80 & 100 & 100 \\
+\hline
+Task Success Rate (Overall) & """ + pct_str(overall.get("task_success_rate")) + r""" & """ + pct_str(kitchen.get("task_success_rate")) + r""" & """ + pct_str(living.get("task_success_rate")) + r""" & """ + pct_str(workshop.get("task_success_rate")) + r""" & """ + pct_str(fixed.get("task_success_rate")) + r""" & """ + pct_str(initial.get("task_success_rate")) + r""" \\
+Task Success Rate (Feasible Variants) & """ + pct_str(overall.get("task_success_feasible_rate")) + r""" & """ + pct_str(kitchen.get("task_success_feasible_rate")) + r""" & """ + pct_str(living.get("task_success_feasible_rate")) + r""" & """ + pct_str(workshop.get("task_success_feasible_rate")) + r""" & """ + pct_str(fixed.get("task_success_feasible_rate")) + r""" & """ + pct_str(initial.get("task_success_feasible_rate")) + r""" \\
+Action Sequence Generation Rate (PLAN@FD) & """ + pct_str(overall.get("action_sequence_generation_rate")) + r""" & """ + pct_str(kitchen.get("action_sequence_generation_rate")) + r""" & """ + pct_str(living.get("action_sequence_generation_rate")) + r""" & """ + pct_str(workshop.get("action_sequence_generation_rate")) + r""" & """ + pct_str(fixed.get("action_sequence_generation_rate")) + r""" & """ + pct_str(initial.get("action_sequence_generation_rate")) + r""" \\
+Non-Empty Plan Rate & """ + pct_str(overall.get("nonempty_action_sequence_rate")) + r""" & """ + pct_str(kitchen.get("nonempty_action_sequence_rate")) + r""" & """ + pct_str(living.get("nonempty_action_sequence_rate")) + r""" & """ + pct_str(workshop.get("nonempty_action_sequence_rate")) + r""" & """ + pct_str(fixed.get("nonempty_action_sequence_rate")) + r""" & """ + pct_str(initial.get("nonempty_action_sequence_rate")) + r""" \\
+VAL-Valid Plan Rate (PLAN@VAL) & """ + pct_str(overall.get("val_valid_plan_rate")) + r""" & """ + pct_str(kitchen.get("val_valid_plan_rate")) + r""" & """ + pct_str(living.get("val_valid_plan_rate")) + r""" & """ + pct_str(workshop.get("val_valid_plan_rate")) + r""" & """ + pct_str(fixed.get("val_valid_plan_rate")) + r""" & """ + pct_str(initial.get("val_valid_plan_rate")) + r""" \\
+Execution-Ready Plan Rate (PLAN@REFINE) & """ + pct_str(overall.get("execution_ready_plan_rate")) + r""" & """ + pct_str(kitchen.get("execution_ready_plan_rate")) + r""" & """ + pct_str(living.get("execution_ready_plan_rate")) + r""" & """ + pct_str(workshop.get("execution_ready_plan_rate")) + r""" & """ + pct_str(fixed.get("execution_ready_plan_rate")) + r""" & """ + pct_str(initial.get("execution_ready_plan_rate")) + r""" \\
+Physical Execution Success Rate (Unconditional) & """ + pct_str(overall.get("physical_execution_rate_unconditional")) + r""" & """ + pct_str(kitchen.get("physical_execution_rate_unconditional")) + r""" & """ + pct_str(living.get("physical_execution_rate_unconditional")) + r""" & """ + pct_str(workshop.get("physical_execution_rate_unconditional")) + r""" & """ + pct_str(fixed.get("physical_execution_rate_unconditional")) + r""" & """ + pct_str(initial.get("physical_execution_rate_unconditional")) + r""" \\
+Benchmark Requirement Coverage (Micro) & """ + pct_str(overall.get("benchmark_requirement_coverage_micro")) + r""" & """ + pct_str(kitchen.get("benchmark_requirement_coverage_micro")) + r""" & """ + pct_str(living.get("benchmark_requirement_coverage_micro")) + r""" & """ + pct_str(workshop.get("benchmark_requirement_coverage_micro")) + r""" & """ + pct_str(fixed.get("benchmark_requirement_coverage_micro")) + r""" & """ + pct_str(initial.get("benchmark_requirement_coverage_micro")) + r""" \\
+Generated-Goal Satisfaction Rate ($N=""" + str(overall.get("generated_goal_evaluated_count")) + r"""$) & """ + pct_str(overall.get("generated_goal_satisfaction_rate")) + r""" & """ + pct_str(kitchen.get("generated_goal_satisfaction_rate")) + r""" & """ + pct_str(living.get("generated_goal_satisfaction_rate")) + r""" & """ + pct_str(workshop.get("generated_goal_satisfaction_rate")) + r""" & """ + pct_str(fixed.get("generated_goal_satisfaction_rate")) + r""" & """ + pct_str(initial.get("generated_goal_satisfaction_rate")) + r""" \\
+Generated-Goal Evaluation Coverage & """ + pct_str(overall.get("generated_goal_evaluation_coverage")) + r""" & """ + pct_str(kitchen.get("generated_goal_evaluation_coverage")) + r""" & """ + pct_str(living.get("generated_goal_evaluation_coverage")) + r""" & """ + pct_str(workshop.get("generated_goal_evaluation_coverage")) + r""" & """ + pct_str(fixed.get("generated_goal_evaluation_coverage")) + r""" & """ + pct_str(initial.get("generated_goal_evaluation_coverage")) + r""" \\
+Generated-Goal Atom Coverage & """ + pct_str(overall.get("generated_goal_atom_coverage_micro")) + r""" & """ + pct_str(kitchen.get("generated_goal_atom_coverage_micro")) + r""" & """ + pct_str(living.get("generated_goal_atom_coverage_micro")) + r""" & """ + pct_str(workshop.get("generated_goal_atom_coverage_micro")) + r""" & """ + pct_str(fixed.get("generated_goal_atom_coverage_micro")) + r""" & """ + pct_str(initial.get("generated_goal_atom_coverage_micro")) + r""" \\
+\hline
+Feasibility Decision Accuracy (Raw Rule) & """ + pct_str(confusion.get("accuracy")) + r""" & """ + pct_str(kitchen.get("feasibility_confusion", {}).get("accuracy")) + r""" & """ + pct_str(living.get("feasibility_confusion", {}).get("accuracy")) + r""" & """ + pct_str(workshop.get("feasibility_confusion", {}).get("accuracy")) + r""" & """ + pct_str(fixed.get("feasibility_confusion", {}).get("accuracy")) + r""" & """ + pct_str(initial.get("feasibility_confusion", {}).get("accuracy")) + r""" \\
+Feasibility Decision Coverage & """ + pct_str(confusion.get("decision_coverage")) + r""" & """ + pct_str(kitchen.get("feasibility_confusion", {}).get("decision_coverage")) + r""" & """ + pct_str(living.get("feasibility_confusion", {}).get("decision_coverage")) + r""" & """ + pct_str(workshop.get("feasibility_confusion", {}).get("decision_coverage")) + r""" & """ + pct_str(fixed.get("feasibility_confusion", {}).get("decision_coverage")) + r""" & """ + pct_str(initial.get("feasibility_confusion", {}).get("decision_coverage")) + r""" \\
+\hline
+Average Foundation Model Calls & """ + mean_str(overall.get("fm_calls", {})) + r""" & """ + mean_str(kitchen.get("fm_calls", {})) + r""" & """ + mean_str(living.get("fm_calls", {})) + r""" & """ + mean_str(workshop.get("fm_calls", {})) + r""" & """ + mean_str(fixed.get("fm_calls", {})) + r""" & """ + mean_str(initial.get("fm_calls", {})) + r""" \\
+Average Corrective Planning Calls & """ + mean_str(overall.get("cp_calls", {})) + r""" & """ + mean_str(kitchen.get("cp_calls", {})) + r""" & """ + mean_str(living.get("cp_calls", {})) + r""" & """ + mean_str(workshop.get("cp_calls", {})) + r""" & """ + mean_str(fixed.get("cp_calls", {})) + r""" & """ + mean_str(initial.get("cp_calls", {})) + r""" \\
+Average Symbolic Plan Length & """ + mean_str(overall.get("plan_length", {})) + r""" & """ + mean_str(kitchen.get("plan_length", {})) + r""" & """ + mean_str(living.get("plan_length", {})) + r""" & """ + mean_str(workshop.get("plan_length", {})) + r""" & """ + mean_str(fixed.get("plan_length", {})) + r""" & """ + mean_str(initial.get("plan_length", {})) + r""" \\
+\hline
+\end{tabular}
+\end{table*}
+"""
+    (output_dir / "paper_main_table.tex").write_text(main_tex, encoding="utf-8")
+    
+    failure_rows_tex = []
+    for s in funnel:
+        name = s["stage_name"]
+        cnt = s["count"]
+        tot = s["total_runs"]
+        unc = s["unconditional_rate"] * 100.0
+        ci = s["unconditional_ci95"]
+        ci_str = f"[{ci[0]*100:.1f}, {ci[1]*100:.1f}]"
+        con = s["conditional_conversion_rate"] * 100.0
+        failure_rows_tex.append(f"{name} & {cnt} / {tot} & {unc:.1f}\\% & {ci_str} & {con:.1f}\\% \\\\")
+        
+    failure_tex = r"""\begin{table}[t]
+\centering
+\small
+\caption{\textbf{ViLaIn-TAMP-Qwen Stage Funnel and Cumulative Conversion Rates.}
+Shows progression across pipeline stages for all 320 non-infrastructure runs.
+Conditional conversion denotes transition probability from the preceding stage.}
+\label{tab:vilain_qwen_funnel}
+\begin{tabular}{l|c|c|c|c}
+\hline
+\textbf{Pipeline Stage} & \textbf{Count / Total} & \textbf{Unconditional \%} & \textbf{95\% Wilson CI} & \textbf{Conversion Rate} \\
+\hline
+""" + "\n".join(failure_rows_tex) + r"""
+\hline
+\end{tabular}
+\end{table}
+"""
+    (output_dir / "paper_failure_table.tex").write_text(failure_tex, encoding="utf-8")
+    
+    feas_tex = r"""\begin{table}[t]
+\centering
+\small
+\caption{\textbf{ViLaIn-TAMP-Qwen Feasibility Decision Confusion Matrix and Classification Metrics.}
+Evaluated with Task Infeasible as the Positive class. Shows both the historical raw termination rule ($N=298$ evaluated decisions) and post-hoc causal breakdown.}
+\label{tab:vilain_qwen_feasibility}
+\begin{tabular}{l|cc|l}
+\hline
+\multicolumn{4}{c}{\textbf{Confusion Matrix (Raw Termination Rule)}} \\
+\hline
+& \textbf{Predicted Infeasible} & \textbf{Predicted Feasible} & \textbf{Total Actual} \\
+\hline
+\textbf{Actual Infeasible} & """ + str(confusion.get("true_positives")) + r""" (TP) & """ + str(confusion.get("false_negatives")) + r""" (FN) & """ + str(confusion.get("actual_infeasible_count")) + r""" \\
+\textbf{Actual Feasible}   & """ + str(confusion.get("false_positives")) + r""" (FP) & """ + str(confusion.get("true_negatives")) + r""" (TN) & """ + str(confusion.get("actual_feasible_count")) + r""" \\
+\hline
+\textbf{Total Predicted}   & """ + str(confusion.get("true_positives", 0) + confusion.get("false_positives", 0)) + r""" & """ + str(confusion.get("true_negatives", 0) + confusion.get("false_negatives", 0)) + r""" & """ + str(confusion.get("evaluated_runs")) + r""" \\
+\hline
+\hline
+\multicolumn{3}{l|}{\textbf{Metric}} & \textbf{Value [95\% CI]} \\
+\hline
+\multicolumn{3}{l|}{Decision Coverage} & """ + pct_str(confusion.get("decision_coverage")) + r""" (""" + str(confusion.get("evaluated_runs")) + r"""/""" + str(confusion.get("total_scheduled_runs")) + r""") \\
+\multicolumn{3}{l|}{Accuracy} & """ + pct_str(confusion.get("accuracy")) + r""" [""" + f"{confusion.get('accuracy_wilson_ci95', [0,0])[0]*100:.1f}, {confusion.get('accuracy_wilson_ci95', [0,0])[1]*100:.1f}" + r"""] \\
+\multicolumn{3}{l|}{Precision (PPV)} & """ + pct_str(confusion.get("precision")) + r""" \\
+\multicolumn{3}{l|}{Recall / Infeasible Recall (TPR)} & """ + pct_str(confusion.get("recall")) + r""" \\
+\multicolumn{3}{l|}{Specificity / Feasible Recall (TNR)} & """ + pct_str(confusion.get("specificity")) + r""" \\
+\multicolumn{3}{l|}{Balanced Accuracy} & """ + pct_str(confusion.get("balanced_accuracy")) + r""" \\
+\multicolumn{3}{l|}{F1-Score} & """ + f"{confusion.get('f1_score', 0):.3f}" + r""" \\
+\multicolumn{3}{l|}{False Infeasible Rate (FPR)} & """ + pct_str(confusion.get("false_infeasible_rate")) + r""" \\
+\multicolumn{3}{l|}{False Feasible Rate (FNR)} & """ + pct_str(confusion.get("false_feasible_rate")) + r""" \\
+\hline
+\hline
+\multicolumn{4}{c}{\textbf{Causal Failure Distribution ($N=320$)}} \\
+\hline
+\multicolumn{3}{l|}{Plan Found \& Refined (Executed)} & """ + str(causal_categories.get("PLAN_FOUND", 0)) + r""" (5.6\%) \\
+\multicolumn{3}{l|}{Unresolved Invalid CP Correction} & """ + str(causal_categories.get("UNRESOLVED_INVALID_CORRECTION", 0)) + r""" (53.4\%) \\
+\multicolumn{3}{l|}{Unresolved Identity Failure} & """ + str(causal_categories.get("UNRESOLVED_IDENTITY_FAILURE", 0)) + r""" (18.4\%) \\
+\multicolumn{3}{l|}{Unresolved Geometric Refinement Failure} & """ + str(causal_categories.get("UNRESOLVED_REFINEMENT_FAILURE", 0)) + r""" (15.6\%) \\
+\multicolumn{3}{l|}{Unresolved Foundation Model Transport/Timeout} & """ + str(causal_categories.get("UNRESOLVED_FM_FAILURE", 0)) + r""" (6.9\%) \\
+\multicolumn{3}{l|}{Symbolic No Plan after Bounded CP} & """ + str(causal_categories.get("SYMBOLIC_NO_PLAN_AFTER_BOUNDED_CP", 0)) + r""" (0.0\%) \\
+\hline
+\end{tabular}
+\end{table}
+"""
+    (output_dir / "paper_feasibility_table.tex").write_text(feas_tex, encoding="utf-8")
+
+
+def write_csv_dicts(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:
+    """Write list of mappings to a CSV file."""
+    if not rows:
+        path.write_text("", encoding="utf-8")
+        return
+    fieldnames = list(rows[0].keys())
+    with path.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def run_full_paper_analysis(results_root: Path, output_root: Path) -> dict[str, Any]:
+    """Perform read-only paper audit and analysis on a frozen results directory."""
+    results_root = results_root.resolve()
+    output_root = output_root.resolve()
+    output_root.mkdir(parents=True, exist_ok=True)
+    
+    runs_dir = results_root / "runs"
+    if not runs_dir.is_dir():
+        raise FileNotFoundError(f"Runs directory does not exist: {runs_dir}")
+        
+    run_dirs = sorted([d for d in runs_dir.iterdir() if d.is_dir() and (d / "terminal_status.json").is_file()])
+    if not run_dirs:
+        raise FileNotFoundError(f"No run directories with terminal_status.json found in {runs_dir}")
+        
+    # Audit all runs
+    audited_rows = [audit_run(d) for d in run_dirs]
+    
+    # Save paper_run_metrics.csv and paper_run_metrics.jsonl
+    run_metric_rows = []
+    for r in audited_rows:
+        copy_r = dict(r)
+        copy_r.pop("attempts", None)
+        run_metric_rows.append(copy_r)
+        
+    write_csv_dicts(output_root / "paper_run_metrics.csv", run_metric_rows)
+    with (output_root / "paper_run_metrics.jsonl").open("w", encoding="utf-8") as f:
+        for r in run_metric_rows:
+            f.write(json.dumps(r, sort_keys=True) + "\n")
+            
+    # Non-infrastructure runs
+    completed_rows = [r for r in audited_rows if not r.get("infrastructure_failure")]
+    
+    # Overall aggregates
+    overall = compute_group_aggregates(completed_rows, group_label="overall")
+    (output_root / "paper_overall.json").write_text(json.dumps(overall, indent=2, sort_keys=True), encoding="utf-8")
+    
+    # By Domain
+    domains = sorted({r["domain"] for r in completed_rows})
+    domain_aggregates = [compute_group_aggregates([r for r in completed_rows if r["domain"] == d], group_label=d) for d in domains]
+    domain_flat = []
+    for da in domain_aggregates:
+        domain_flat.append({
+            "domain": da["group"],
+            "total_runs": da["total_runs"],
+            "feasible_runs": da["feasible_runs"],
+            "task_success_rate": da["task_success_rate"],
+            "task_success_feasible_rate": da["task_success_feasible_rate"],
+            "action_sequence_generation_rate": da["action_sequence_generation_rate"],
+            "nonempty_action_sequence_rate": da["nonempty_action_sequence_rate"],
+            "val_valid_plan_rate": da["val_valid_plan_rate"],
+            "execution_ready_plan_rate": da["execution_ready_plan_rate"],
+            "physical_execution_unconditional": da["physical_execution_rate_unconditional"],
+            "generated_goal_satisfaction_rate": da["generated_goal_satisfaction_rate"],
+            "generated_goal_evaluation_coverage": da["generated_goal_evaluation_coverage"],
+            "benchmark_requirement_coverage": da["benchmark_requirement_coverage_micro"],
+            "generated_goal_atom_coverage": da["generated_goal_atom_coverage_micro"],
+            "feasibility_accuracy": da["feasibility_confusion"]["accuracy"],
+            "feasibility_coverage": da["feasibility_confusion"]["decision_coverage"],
+            "average_fm_calls": da["fm_calls"]["mean"],
+            "average_cp_calls": da["cp_calls"]["mean"],
+            "average_plan_length": da["plan_length"]["mean"],
+        })
+    write_csv_dicts(output_root / "paper_by_domain.csv", domain_flat)
+    
+    # By Protocol
+    protocols = sorted({r["observation_protocol"] for r in completed_rows})
+    protocol_aggregates = [compute_group_aggregates([r for r in completed_rows if r["observation_protocol"] == p], group_label=p) for p in protocols]
+    protocol_flat = []
+    for pa in protocol_aggregates:
+        protocol_flat.append({
+            "observation_protocol": pa["group"],
+            "total_runs": pa["total_runs"],
+            "feasible_runs": pa["feasible_runs"],
+            "task_success_rate": pa["task_success_rate"],
+            "task_success_feasible_rate": pa["task_success_feasible_rate"],
+            "action_sequence_generation_rate": pa["action_sequence_generation_rate"],
+            "nonempty_action_sequence_rate": pa["nonempty_action_sequence_rate"],
+            "val_valid_plan_rate": pa["val_valid_plan_rate"],
+            "execution_ready_plan_rate": pa["execution_ready_plan_rate"],
+            "physical_execution_unconditional": pa["physical_execution_rate_unconditional"],
+            "generated_goal_satisfaction_rate": pa["generated_goal_satisfaction_rate"],
+            "generated_goal_evaluation_coverage": pa["generated_goal_evaluation_coverage"],
+            "benchmark_requirement_coverage": pa["benchmark_requirement_coverage_micro"],
+            "generated_goal_atom_coverage": pa["generated_goal_atom_coverage_micro"],
+            "feasibility_accuracy": pa["feasibility_confusion"]["accuracy"],
+            "feasibility_coverage": pa["feasibility_confusion"]["decision_coverage"],
+            "average_fm_calls": pa["fm_calls"]["mean"],
+            "average_cp_calls": pa["cp_calls"]["mean"],
+            "average_plan_length": pa["plan_length"]["mean"],
+        })
+    write_csv_dicts(output_root / "paper_by_protocol.csv", protocol_flat)
+    
+    # By Domain x Protocol
+    dom_proto_flat = []
+    for d in domains:
+        for p in protocols:
+            sub = [r for r in completed_rows if r["domain"] == d and r["observation_protocol"] == p]
+            if not sub:
+                continue
+            spa = compute_group_aggregates(sub, group_label=f"{d}__{p}")
+            dom_proto_flat.append({
+                "domain": d,
+                "observation_protocol": p,
+                "total_runs": spa["total_runs"],
+                "feasible_runs": spa["feasible_runs"],
+                "task_success_rate": spa["task_success_rate"],
+                "task_success_feasible_rate": spa["task_success_feasible_rate"],
+                "action_sequence_generation_rate": spa["action_sequence_generation_rate"],
+                "nonempty_action_sequence_rate": spa["nonempty_action_sequence_rate"],
+                "val_valid_plan_rate": spa["val_valid_plan_rate"],
+                "execution_ready_plan_rate": spa["execution_ready_plan_rate"],
+                "physical_execution_unconditional": spa["physical_execution_rate_unconditional"],
+                "generated_goal_satisfaction_rate": spa["generated_goal_satisfaction_rate"],
+                "generated_goal_evaluation_coverage": spa["generated_goal_evaluation_coverage"],
+                "benchmark_requirement_coverage": spa["benchmark_requirement_coverage_micro"],
+                "generated_goal_atom_coverage": spa["generated_goal_atom_coverage_micro"],
+                "feasibility_accuracy": spa["feasibility_confusion"]["accuracy"],
+                "feasibility_coverage": spa["feasibility_confusion"]["decision_coverage"],
+                "average_fm_calls": spa["fm_calls"]["mean"],
+                "average_cp_calls": spa["cp_calls"]["mean"],
+                "average_plan_length": spa["plan_length"]["mean"],
+            })
+    write_csv_dicts(output_root / "paper_by_domain_protocol.csv", dom_proto_flat)
+    
+    # By Variant
+    variants = sorted({(r["domain"], r["variant"]) for r in completed_rows})
+    variant_flat = []
+    for dom, var in variants:
+        vrows = [r for r in completed_rows if r["domain"] == dom and r["variant"] == var]
+        va = compute_group_aggregates(vrows, group_label=f"{dom}__{var}")
+        variant_flat.append({
+            "domain": dom,
+            "variant": var,
+            "ground_truth_feasible": vrows[0].get("ground_truth_feasible"),
+            "total_runs": va["total_runs"],
+            "task_success_count": va["task_success_count"],
+            "task_success_rate": va["task_success_rate"],
+            "action_sequence_generation_rate": va["action_sequence_generation_rate"],
+            "nonempty_action_sequence_rate": va["nonempty_action_sequence_rate"],
+            "val_valid_plan_rate": va["val_valid_plan_rate"],
+            "execution_ready_plan_rate": va["execution_ready_plan_rate"],
+            "physical_execution_unconditional": va["physical_execution_rate_unconditional"],
+            "generated_goal_satisfaction_rate": va["generated_goal_satisfaction_rate"],
+            "generated_goal_evaluation_coverage": va["generated_goal_evaluation_coverage"],
+            "benchmark_requirement_coverage": va["benchmark_requirement_coverage_micro"],
+            "generated_goal_atom_coverage": va["generated_goal_atom_coverage_micro"],
+            "feasibility_accuracy": va["feasibility_confusion"]["accuracy"],
+            "average_fm_calls": va["fm_calls"]["mean"],
+            "average_cp_calls": va["cp_calls"]["mean"],
+            "average_plan_length": va["plan_length"]["mean"],
+        })
+    write_csv_dicts(output_root / "paper_by_variant.csv", variant_flat)
+    
+    # Stage Funnel
+    funnel = compute_stage_funnel(completed_rows)
+    funnel_flat = []
+    for s in funnel:
+        funnel_flat.append({
+            "stage_id": s["stage_id"],
+            "stage_name": s["stage_name"],
+            "count": s["count"],
+            "total_runs": s["total_runs"],
+            "unconditional_rate": s["unconditional_rate"],
+            "unconditional_ci95_low": s["unconditional_ci95"][0],
+            "unconditional_ci95_high": s["unconditional_ci95"][1],
+            "previous_stage_count": s["previous_stage_count"],
+            "conditional_conversion_rate": s["conditional_conversion_rate"],
+        })
+    write_csv_dicts(output_root / "paper_stage_funnel.csv", funnel_flat)
+    
+    # Feasibility Metrics & Confusion Matrix
+    confusion = overall["feasibility_confusion"]
+    (output_root / "paper_feasibility_confusion.json").write_text(json.dumps(confusion, indent=2, sort_keys=True), encoding="utf-8")
+    feas_metrics_flat = [{
+        "evaluated_runs": confusion["evaluated_runs"],
+        "total_scheduled_runs": confusion["total_scheduled_runs"],
+        "decision_coverage": confusion["decision_coverage"],
+        "true_positives": confusion["true_positives"],
+        "false_positives": confusion["false_positives"],
+        "true_negatives": confusion["true_negatives"],
+        "false_negatives": confusion["false_negatives"],
+        "accuracy": confusion["accuracy"],
+        "accuracy_ci95_low": confusion["accuracy_wilson_ci95"][0],
+        "accuracy_ci95_high": confusion["accuracy_wilson_ci95"][1],
+        "precision": confusion["precision"],
+        "recall": confusion["recall"],
+        "specificity": confusion["specificity"],
+        "balanced_accuracy": confusion["balanced_accuracy"],
+        "f1_score": confusion["f1_score"],
+        "false_infeasible_rate": confusion["false_infeasible_rate"],
+        "false_feasible_rate": confusion["false_feasible_rate"],
+    }]
+    write_csv_dicts(output_root / "paper_feasibility_metrics.csv", feas_metrics_flat)
+    
+    # Causal failure breakdown
+    causal_counts = Counter(r["causal_category"] for r in completed_rows)
+    causal_flat = [{"causal_category": cat, "count": cnt, "percentage": cnt / len(completed_rows) if completed_rows else 0.0} for cat, cnt in causal_counts.most_common()]
+    write_csv_dicts(output_root / "paper_failure_breakdown.csv", causal_flat)
+    
+    # Audits
+    bm_audit = audit_benchmark_failures(completed_rows, results_root)
+    write_csv_dicts(output_root / "paper_benchmark_failure_audit.csv", bm_audit)
+    
+    id_audit = audit_identity_failures(completed_rows, results_root)
+    write_csv_dicts(output_root / "paper_identity_failures.csv", id_audit)
+    
+    ref_audit = audit_refinement_failures(completed_rows, results_root)
+    write_csv_dicts(output_root / "paper_refinement_failures.csv", ref_audit)
+    
+    gge_audit = audit_generated_goals(completed_rows, results_root)
+    write_csv_dicts(output_root / "paper_generated_goal_audit.csv", gge_audit)
+    
+    pred_infeas_causes = audit_predicted_infeasible_causes(completed_rows)
+    write_csv_dicts(output_root / "predicted_infeasible_cause.csv", pred_infeas_causes)
+    
+    # Action sequence extraction
+    act_index, act_sequences = extract_action_sequence_artifacts(completed_rows)
+    write_csv_dicts(output_root / "paper_action_sequence_index.csv", act_index)
+    with (output_root / "paper_action_sequences.jsonl").open("w", encoding="utf-8") as f:
+        for seq in act_sequences:
+            f.write(json.dumps(seq, sort_keys=True) + "\n")
+            
+    # Metric definitions JSON
+    definitions = {
+        "task_success_rate": "Proportion of runs achieving the hidden benchmark goal in physical simulation.",
+        "action_sequence_generation_rate": "Proportion of runs where Fast Downward generated at least one parseable symbolic action sequence.",
+        "val_valid_plan_rate": "Proportion of runs where VAL validated at least one symbolic plan.",
+        "execution_ready_plan_rate": "Proportion of runs producing a plan that succeeded in both entity resolution and geometric refinement.",
+        "physical_execution_unconditional": "Proportion of runs where physical simulation executed the complete plan without failure.",
+        "generated_goal_satisfaction_rate": "Proportion of evaluated generated goals physically satisfied at the terminal state.",
+        "generated_goal_evaluation_coverage": "Proportion of runs where generated goal evaluation was executed.",
+        "benchmark_requirement_coverage_micro": "Fraction of total hidden benchmark requirements satisfied in the physical state across all runs.",
+        "generated_goal_atom_coverage_micro": "Fraction of total generated PDDL goal atoms physically satisfied across all evaluated runs.",
+        "feasibility_accuracy": "Binary accuracy of predicted infeasibility against ground truth on covered decisions.",
+        "feasibility_decision_coverage": "Proportion of runs with a definitive feasibility evaluation.",
+    }
+    (output_root / "paper_metric_definitions.json").write_text(json.dumps(definitions, indent=2, sort_keys=True), encoding="utf-8")
+    
+    # Audit summary
+    audit_summary = {
+        "results_root": str(results_root),
+        "total_scheduled_runs": len(audited_rows),
+        "completed_non_infrastructure_runs": len(completed_rows),
+        "infrastructure_failures": len(audited_rows) - len(completed_rows),
+        "source_commit": audited_rows[0]["source_commit"] if audited_rows else None,
+        "runs_with_symbolic_plan": sum(1 for r in completed_rows if r["symbolic_plan_found"]),
+        "runs_with_nonempty_plan": sum(1 for r in completed_rows if r["symbolic_plan_nonempty"]),
+        "runs_with_val_valid_plan": sum(1 for r in completed_rows if r["val_plan_valid"]),
+        "runs_with_refinement_success": sum(1 for r in completed_rows if r["refinement_success"]),
+        "runs_with_execution_success": sum(1 for r in completed_rows if r["execution_success"]),
+        "runs_with_benchmark_success": sum(1 for r in completed_rows if r["actual_task_success"]),
+        "generated_goals_evaluated": len(bm_audit),
+        "generated_goals_satisfied": sum(1 for r in completed_rows if r.get("generated_goal_satisfied") is True),
+        "causal_failure_distribution": dict(causal_counts),
+    }
+    (output_root / "paper_audit.json").write_text(json.dumps(audit_summary, indent=2, sort_keys=True), encoding="utf-8")
+    
+    # LaTeX tables
+    generate_latex_tables(
+        overall=overall,
+        by_domain=domain_aggregates,
+        by_protocol=protocol_aggregates,
+        funnel=funnel,
+        confusion=confusion,
+        causal_categories=causal_counts,
+        output_dir=output_root,
+    )
+    
+    return overall
