@@ -72,9 +72,10 @@ def evaluate_all_variants(
     output_root: Path,
     specification_root: Optional[Path] = None,
     dry_run: bool = True,
+    resume: bool = False,
 ) -> Dict[str, Any]:
     output_root = Path(output_root)
-    if spec_source == "live" and output_root.exists() and any(output_root.iterdir()):
+    if spec_source == "live" and not resume and output_root.exists() and any(output_root.iterdir()):
         raise ValueError(f"Refusing to overwrite an existing live matrix: {output_root}")
     output_root.mkdir(parents=True, exist_ok=True)
 
@@ -89,6 +90,14 @@ def evaluate_all_variants(
 
     from mujoco_scenes.functional_tamp_pipeline.evaluation_metrics import candidate_plan_valid, format_rate
     records: List[Dict[str, Any]] = []
+    if resume:
+        records_path = output_root / "evaluation_records.json"
+        if not records_path.exists():
+            raise ValueError(f"Cannot resume without {records_path}")
+        records = json.loads(records_path.read_text(encoding="utf-8"))
+        if any(r.get("terminal_status") == "PIPELINE_EXCEPTION" for r in records):
+            raise ValueError("Remove/archive the trailing failed record before resuming")
+    completed = {(r["domain"], r["variant"]) for r in records}
 
     # Total variant counts
     total_variants = sum(len(v) for v in DOMAINS.values())
@@ -100,6 +109,9 @@ def evaluate_all_variants(
     for domain, variants in DOMAINS.items():
         print(f"\n=== Running Domain: {domain.upper()} ({len(variants)} variants) ===")
         for variant in variants:
+            if (domain, variant) in completed:
+                print(f"  [{variant}] preserved from prior segment")
+                continue
             is_feasible = variant in FEASIBLE_VARIANTS[domain]
             is_recovery = variant in RECOVERY_VARIANTS[domain]
 
@@ -417,7 +429,7 @@ def evaluate_all_variants(
     print(table_md)
     print(diag_md)
     from mujoco_scenes.functional_tamp_pipeline.evaluation_metrics import write_detailed_report
-    errors = write_detailed_report(output_root, records, live=spec_source == "live")
+    errors = write_detailed_report(output_root, records, live=spec_source == "live" and not resume)
     if errors:
         raise RuntimeError("INVALID BENCHMARK: " + "; ".join(errors))
     return summary
@@ -432,6 +444,8 @@ def main():
     parser.add_argument("--specification-root", type=Path, default=None,
                         help="Path to root containing per-variant specifications (required for --spec-source replay, forbidden for live)")
     parser.add_argument("--dry-run", action="store_true", default=True)
+    parser.add_argument("--resume", action="store_true",
+                        help="Preserve completed records and run only missing variants in an existing output root")
     args = parser.parse_args()
 
     evaluate_all_variants(
@@ -440,6 +454,7 @@ def main():
         output_root=args.output_root,
         specification_root=args.specification_root,
         dry_run=args.dry_run,
+        resume=args.resume,
     )
 
 
