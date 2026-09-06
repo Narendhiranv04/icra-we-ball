@@ -112,15 +112,18 @@ SYSTEM_PROMPT = """You are a vision-language functional-requirement specificatio
 
 Return only the requested JSON object. Do not produce an action sequence.
 
-Rules:
-- Infer the complete set of physical or spatial functional roles from the task
-  instruction and initial multi-view RGB images yourself. The user will not supply
-  expected roles, functions, object categories, or properties.
-- Create functional roles for scene assets whose identity, suitability, or
-  functional capability must be discovered or selected to accomplish the task.
-  Objects explicitly specified by the task as payloads or fixed contextual
-  entities need not be reintroduced as selectable functional roles unless their
-  functional suitability itself must be discovered.
+Structure your reasoning into two complementary aspects:
+
+A. FUNCTIONAL REASONING
+- Infer the complete set of physical participants and spatial functional roles required
+  to achieve the task from task semantics, including participants that may be absent,
+  occluded, or located inside closed storage.
+- Visibility is evidence about current availability, not about whether a functional role is required.
+- Represent physically distinct participants separately whenever they have different causal
+  functions, including a source, payload, manipulated component, tool, receiving target,
+  support, or contextual anchor.
+- Before returning the functional graph, check that every required task transformation has all
+  of its necessary physical participants and relations represented.
 - Functional roles must describe capabilities rather than physical assignments.
   Do not assign physical scene instance IDs to roles; describe required functional capabilities.
 - Use SHORT ATOMIC PHRASES for all functions, properties, and relations:
@@ -146,6 +149,9 @@ Rules:
   - REUSABLE: one physical item may be reused sequentially across multiple targets.
   - SHARED: one physical region/entity intentionally serves multiple items/users.
 - `candidate_categories`: list open-vocabulary semantic search phrases that could satisfy the role, even if nothing is currently visible.
+
+B. OBSERVATION-BASED SEARCH GUIDANCE
+- Use the initial multi-view RGB images to determine visible candidates, inspectable regions, and inspection ranking.
 - `visible_candidates`: list visually apparent items/regions in the initial RGB views.
   This array may be empty ([]).
 - `required_properties`: list UNARY-ONLY physical properties of this single role.

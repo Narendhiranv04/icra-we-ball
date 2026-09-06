@@ -88,7 +88,11 @@ def _reject(reason: str, status: str, details: str) -> None:
     raise LivingRoomCompilationError(reason, status, details)
 
 
-def compile_living_room_problem(variant_dir: str | Path) -> LivingRoomCompilation:
+def compile_living_room_problem(
+    variant_dir: str | Path,
+    *,
+    allow_partial: bool = False,
+) -> LivingRoomCompilation:
     """Compile the exact selected Phase-1 witness; never rerun allocation."""
     variant_path = Path(variant_dir)
     manifest = source_manifest(variant_path)
@@ -114,8 +118,10 @@ def compile_living_room_problem(variant_dir: str | Path) -> LivingRoomCompilatio
             status,
             "Witness selections differ from production region assignments",
         )
-    if len(selected) != 3:
+    if not allow_partial and len(selected) != 3:
         _reject("INVALID_ASSIGNMENT_COUNT", status, "Expected exactly three slots")
+    elif allow_partial and not selected:
+        _reject("INVALID_ASSIGNMENT_COUNT", status, "No assignments in witness")
 
     bindings: list[dict[str, str]] = []
     personal = []
@@ -160,18 +166,22 @@ def compile_living_room_problem(variant_dir: str | Path) -> LivingRoomCompilatio
             shared.append(assignment)
         else:
             _reject("UNKNOWN_FUNCTION", status, str(function_id))
-    if len(seen_payloads) != 5:
-        _reject("INCOMPLETE_PAYLOAD_COVERAGE", status, str(sorted(seen_payloads)))
-    if len(personal) != 2 or len(shared) != 1:
-        _reject("INVALID_FUNCTION_COVERAGE", status, "Expected 2 personal + 1 shared")
-    if personal[0]["region_id"] == personal[1]["region_id"]:
-        _reject("PERSONAL_REGIONS_NOT_DISTINCT", status, "Personal regions must differ")
-    shared_payloads = [
-        binding for binding in bindings
-        if binding["function_id"] == "SHARED_REMOTE_REGION"
-    ]
-    if len({item["region_id"] for item in shared_payloads}) != 1:
-        _reject("SHARED_REGION_MISMATCH", status, "Remote must have one shared destination")
+    if not allow_partial:
+        if len(seen_payloads) != 5:
+            _reject("INCOMPLETE_PAYLOAD_COVERAGE", status, str(sorted(seen_payloads)))
+        if len(personal) != 2 or len(shared) != 1:
+            _reject("INVALID_FUNCTION_COVERAGE", status, "Expected 2 personal + 1 shared")
+        if personal[0]["region_id"] == personal[1]["region_id"]:
+            _reject("PERSONAL_REGIONS_NOT_DISTINCT", status, "Personal regions must differ")
+        shared_payloads = [
+            binding for binding in bindings
+            if binding["function_id"] == "SHARED_REMOTE_REGION"
+        ]
+        if len({item["region_id"] for item in shared_payloads}) != 1:
+            _reject("SHARED_REGION_MISMATCH", status, "Remote must have one shared destination")
+    else:
+        if not seen_payloads:
+            _reject("INCOMPLETE_PAYLOAD_COVERAGE", status, "No candidate payloads grounded")
 
     objects = sorted(seen_payloads)
     regions = sorted({binding["region_id"] for binding in bindings})
@@ -314,14 +324,17 @@ def render_problem_pddl(compilation: LivingRoomCompilation) -> str:
 
 
 def run_living_room_symbolic_pipeline(
-    variant_dir: str | Path, output_dir: str | Path
+    variant_dir: str | Path,
+    output_dir: str | Path,
+    *,
+    allow_partial: bool = False,
 ) -> dict[str, Any]:
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     manifest = source_manifest(Path(variant_dir))
     _write_json(output / "phase1_source_manifest.json", manifest)
     try:
-        compilation = compile_living_room_problem(variant_dir)
+        compilation = compile_living_room_problem(variant_dir, allow_partial=allow_partial)
     except LivingRoomCompilationError as error:
         _write_json(output / "compilation_result.json", error.result)
         return error.result
@@ -344,8 +357,8 @@ def run_living_room_symbolic_pipeline(
             "goal_count": len(compilation.symbolic["goal_atoms"]),
         },
     )
-    result = deterministic_astar(compilation.problem)
-    replay = independent_replay(compilation.problem, result.plan)
+    result = deterministic_astar(compilation.problem, allow_partial=allow_partial)
+    replay = independent_replay(compilation.problem, result.plan, allow_partial=allow_partial)
     plan_records = [action_json(index, action) for index, action in enumerate(result.plan)]
     _write_json(
         output / "plan.json",
@@ -367,6 +380,7 @@ def run_living_room_symbolic_pipeline(
         "plan_cost": result.statistics["plan_cost"],
         "search_statistics": result.statistics,
         "bindings": compilation.symbolic["witness_selected_bindings"],
+        "is_partial": result.statistics.get("is_partial", False),
     }
 
 

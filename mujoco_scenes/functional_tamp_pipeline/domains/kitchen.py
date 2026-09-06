@@ -538,7 +538,8 @@ def run_to_plan(
     if not ground_result.complete or not ground_result.assignment:
         return PipelineResult(
             domain="kitchen", variant=variant_label, mode=mode,
-            status=ground_result.status, inspected_regions=opened,
+            status="NO_MEANINGFUL_CANDIDATE_PLAN" if mode == "vlm" else ground_result.status,
+            inspected_regions=opened,
             canonicalization_succeeded=True,
             functional_spec_complete=False,
             failure_reason=str(ground_result.unsatisfied_relations or ground_result.missing_roles or "NO_COMPLETE_FUNCTIONAL_WITNESS"),
@@ -563,6 +564,7 @@ def run_to_plan(
         planned = plan_with_common_astar(
             KitchenPlanningCompiler(), assignments,
             {"compiled_observed_state": compiled},
+            allow_partial=(mode == "vlm"),
         )
         plan_dir = output_dir / "action_sequence"
         plan_dir.mkdir(parents=True, exist_ok=True)
@@ -584,24 +586,38 @@ def run_to_plan(
             json.dumps(audit, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
+        is_partial = planned.search.statistics.get("is_partial", False)
+        is_full_plan = (not is_partial and planned.validation.get("goal_status") == "GOAL_SATISFIED")
+        if is_full_plan:
+            status = "ACTION_SEQUENCE_READY"
+            spec_complete = True
+        elif planned.actions:
+            status = "PARTIAL_ACTION_SEQUENCE_READY"
+            spec_complete = False
+        else:
+            status = "NO_MEANINGFUL_CANDIDATE_PLAN" if mode == "vlm" else "CANDIDATE_GRAPH_UNSATISFIABLE"
+            spec_complete = False
+
         return PipelineResult(
             domain="kitchen", variant=variant_label, mode=mode,
-            status="ACTION_SEQUENCE_READY", inspected_regions=opened,
-            assignment=assignments, plan=planned.actions,
+            status=status, inspected_regions=opened,
+            assignment=assignments,
+            plan=planned.actions if is_full_plan else (),
             candidate_plan=planned.actions,
             search_statistics=planned.search.statistics,
             candidate_search_statistics=planned.search.statistics,
             canonicalization_succeeded=True,
-            functional_spec_complete=True,
+            functional_spec_complete=spec_complete,
         )
     except Exception as exc:
         return PipelineResult(
             domain="kitchen", variant=variant_label, mode=mode,
-            status="CANDIDATE_GRAPH_UNSATISFIABLE", inspected_regions=opened,
+            status="NO_MEANINGFUL_CANDIDATE_PLAN" if mode == "vlm" else "CANDIDATE_GRAPH_UNSATISFIABLE",
+            inspected_regions=opened,
             assignment=ground_result.assignment,
             plan=(),
             candidate_plan=(),
             canonicalization_succeeded=True,
             functional_spec_complete=False,
-            failure_reason=f"CANDIDATE_GRAPH_UNSATISFIABLE: {exc}",
+            failure_reason=f"NO_MEANINGFUL_CANDIDATE_PLAN: {exc}" if mode == "vlm" else f"CANDIDATE_GRAPH_UNSATISFIABLE: {exc}",
         )

@@ -79,8 +79,16 @@ def _heuristic(problem: SymbolicProblem, state: frozenset[Atom]) -> int:
     return len(problem.goal_atoms - state)
 
 
-def deterministic_astar(problem: SymbolicProblem) -> SearchResult:
-    """Return a unit/positive-cost plan with deterministic expansion order."""
+def deterministic_astar(
+    problem: SymbolicProblem,
+    *,
+    allow_partial: bool = False,
+) -> SearchResult:
+    """Return a unit/positive-cost plan with deterministic expansion order.
+
+    If allow_partial is True and no full plan exists, returns the best partial plan
+    discovered during the search that maximizes candidate goals satisfied with minimum cost.
+    """
     started = time.perf_counter()
     initial = problem.initial_atoms
     frontier: list[tuple[int, int, int, frozenset[Atom]]] = []
@@ -93,11 +101,30 @@ def deterministic_astar(problem: SymbolicProblem) -> SearchResult:
     expanded = 0
     generated = 0
     frontier_peak = 1
+
+    # Lexicographic tracking for best-effort partial plan:
+    # 1. Maximize candidate goals satisfied (must exceed initial state satisfaction)
+    # 2. Minimize action cost
+    initial_satisfied = len(problem.goal_atoms & initial)
+    best_partial_state: frozenset[Atom] | None = None
+    best_partial_satisfied = initial_satisfied
+    best_partial_cost = 10**18
+
     while frontier:
         _score, cost, _serial, state = heappop(frontier)
         if cost != best_cost.get(state):
             continue
         expanded += 1
+
+        satisfied_count = len(problem.goal_atoms & state)
+        if satisfied_count > best_partial_satisfied:
+            best_partial_satisfied = satisfied_count
+            best_partial_cost = cost
+            best_partial_state = state
+        elif satisfied_count == best_partial_satisfied and cost < best_partial_cost:
+            best_partial_cost = cost
+            best_partial_state = state
+
         if problem.goal_atoms <= state:
             plan: list[SymbolicAction] = []
             cursor = state
@@ -118,6 +145,9 @@ def deterministic_astar(problem: SymbolicProblem) -> SearchResult:
                     "plan_cost": sum(action.cost for action in plan),
                     "plan_length": len(plan),
                     "search_time_ms": elapsed_ms,
+                    "is_partial": False,
+                    "satisfied_goals": len(problem.goal_atoms),
+                    "total_goals": len(problem.goal_atoms),
                 },
             )
         for action in applicable_actions(problem, state):
@@ -139,11 +169,41 @@ def deterministic_astar(problem: SymbolicProblem) -> SearchResult:
                 ),
             )
         frontier_peak = max(frontier_peak, len(frontier))
+
+    if allow_partial and best_partial_state is not None and best_partial_satisfied > initial_satisfied:
+        plan: list[SymbolicAction] = []
+        cursor = best_partial_state
+        while parents[cursor] is not None:
+            previous, action = parents[cursor]
+            plan.append(action)
+            cursor = previous
+        plan.reverse()
+        elapsed_ms = (time.perf_counter() - started) * 1000.0
+        return SearchResult(
+            tuple(plan),
+            {
+                "algorithm": "deterministic_astar_symbolic_state_search",
+                "expanded_states": expanded,
+                "generated_states": generated,
+                "visited_states": len(best_cost),
+                "frontier_peak": frontier_peak,
+                "plan_cost": sum(action.cost for action in plan),
+                "plan_length": len(plan),
+                "search_time_ms": elapsed_ms,
+                "is_partial": True,
+                "satisfied_goals": best_partial_satisfied,
+                "total_goals": len(problem.goal_atoms),
+            },
+        )
+
     raise NoSymbolicPlan("Deterministic symbolic search found no valid plan")
 
 
 def independent_replay(
-    problem: SymbolicProblem, plan: Iterable[SymbolicAction]
+    problem: SymbolicProblem,
+    plan: Iterable[SymbolicAction],
+    *,
+    allow_partial: bool = False,
 ) -> dict:
     """Replay a plan without calling ``apply_action`` or planner successors."""
     state = set(problem.initial_atoms)
@@ -179,10 +239,23 @@ def independent_replay(
         state.difference_update(action.delete_effects)
         state.update(action.add_effects)
     missing_goals = sorted(problem.goal_atoms - state)
+    satisfied_goals = sorted(problem.goal_atoms.intersection(state))
+
+    if not missing_goals:
+        status = "VALID"
+        goal_status = "GOAL_SATISFIED"
+    elif allow_partial and satisfied_goals:
+        status = "VALID"
+        goal_status = "PARTIAL_GOAL_SATISFIED"
+    else:
+        status = "INVALID"
+        goal_status = "GOAL_NOT_SATISFIED"
+
     return {
-        "status": "VALID" if not missing_goals else "INVALID",
-        "goal_status": "GOAL_SATISFIED" if not missing_goals else "GOAL_NOT_SATISFIED",
+        "status": status,
+        "goal_status": goal_status,
         "missing_goals": [list(atom) for atom in missing_goals],
+        "satisfied_goals": [list(atom) for atom in satisfied_goals],
         "final_atoms": [list(atom) for atom in sorted(state)],
         "steps": steps,
         "validator": "independent_symbolic_replay_v1",

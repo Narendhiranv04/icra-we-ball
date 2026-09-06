@@ -646,7 +646,10 @@ def _run_pipeline_impl(
     try:
         from .errors import PlanningCompilationError
         planned = plan_with_common_astar(
-            WorkshopPlanningCompiler(), satisfaction.assignment, adapter.planning_context()
+            WorkshopPlanningCompiler(),
+            satisfaction.assignment,
+            adapter.planning_context(),
+            allow_partial=(state.mode == "vlm"),
         )
         _write_json(state.run_dir / "action_plan.json", {
             "planner": planned.search.statistics,
@@ -670,20 +673,32 @@ def _run_pipeline_impl(
                 flush=True,
             )
 
+        is_partial = planned.search.statistics.get("is_partial", False)
+        is_full_plan = not is_partial
+        if is_full_plan:
+            status = "ACTION_SEQUENCE_READY"
+            spec_complete = True
+        elif planned.actions:
+            status = "PARTIAL_ACTION_SEQUENCE_READY"
+            spec_complete = False
+        else:
+            status = "NO_MEANINGFUL_CANDIDATE_PLAN" if state.mode == "vlm" else "CANDIDATE_GRAPH_UNSATISFIABLE"
+            spec_complete = False
+
         result = PipelineResult(
             domain=state.domain,
             variant=state.variant,
             mode=state.mode,
-            status="ACTION_SEQUENCE_READY",
+            status=status,
             inspected_regions=inspected,
             assignment=satisfaction.assignment,
-            plan=planned.actions,
+            plan=planned.actions if is_full_plan else (),
             candidate_plan=planned.actions,
             search_statistics=planned.search.statistics,
             candidate_search_statistics=planned.search.statistics,
             failure_reason=None,
             canonicalization_succeeded=True,
-            functional_spec_complete=True,
+            functional_spec_complete=spec_complete,
         )
         _write_json(state.run_dir / "result.json", result.to_dict())
         return result
@@ -693,7 +708,7 @@ def _run_pipeline_impl(
             domain=state.domain,
             variant=state.variant,
             mode=state.mode,
-            status="CANDIDATE_GRAPH_UNSATISFIABLE",
+            status="NO_MEANINGFUL_CANDIDATE_PLAN" if state.mode == "vlm" else "CANDIDATE_GRAPH_UNSATISFIABLE",
             inspected_regions=inspected,
             assignment=satisfaction.assignment,
             plan=(),

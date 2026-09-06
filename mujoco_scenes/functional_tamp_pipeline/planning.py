@@ -25,10 +25,12 @@ def plan_with_common_astar(
     compiler: PlanningCompiler,
     assignment: dict[str, str],
     context: dict[str, Any],
+    *,
+    allow_partial: bool = False,
 ) -> PlannedSequence:
     problem = compiler.compile_problem(assignment, context)
-    search = deterministic_astar(problem)
-    validation = independent_replay(problem, search.plan)
+    search = deterministic_astar(problem, allow_partial=allow_partial)
+    validation = independent_replay(problem, search.plan, allow_partial=allow_partial)
     if validation["status"] != "VALID":
         raise RuntimeError(f"A* plan failed independent replay: {validation}")
     actions = tuple({

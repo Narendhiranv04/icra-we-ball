@@ -558,7 +558,7 @@ def run_to_plan(
     )
 
     plan_dir = output_dir / "action_sequence"
-    planning = run_living_room_symbolic_pipeline(phase1, plan_dir)
+    planning = run_living_room_symbolic_pipeline(phase1, plan_dir, allow_partial=(mode == "vlm"))
     plan_file = plan_dir / "plan.json"
     if planning.get("status") != "SUCCESS" or not plan_file.exists():
         fail_detail = planning.get("details") or planning.get("reason") or "Symbolic problem compilation rejected"
@@ -566,7 +566,7 @@ def run_to_plan(
             domain="living_room",
             variant=variant_label,
             mode=mode,
-            status="CANDIDATE_GRAPH_UNSATISFIABLE",
+            status="NO_MEANINGFUL_CANDIDATE_PLAN" if mode == "vlm" else "CANDIDATE_GRAPH_UNSATISFIABLE",
             assignment=ground_result.assignment,
             plan=(),
             candidate_plan=(),
@@ -594,16 +594,28 @@ def run_to_plan(
         json.dumps(plan_audit, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    is_partial = planning.get("is_partial", False)
+    is_full_plan = (not is_partial and len(actions) == 10)
+    if is_full_plan:
+        status = "ACTION_SEQUENCE_READY"
+        spec_complete = True
+    elif actions:
+        status = "PARTIAL_ACTION_SEQUENCE_READY"
+        spec_complete = False
+    else:
+        status = "NO_MEANINGFUL_CANDIDATE_PLAN" if mode == "vlm" else "CANDIDATE_GRAPH_UNSATISFIABLE"
+        spec_complete = False
+
     return PipelineResult(
         domain="living_room",
         variant=variant_label,
         mode=mode,
-        status="ACTION_SEQUENCE_READY",
+        status=status,
         assignment=ground_result.assignment,
-        plan=actions,
+        plan=actions if is_full_plan else (),
         candidate_plan=actions,
         search_statistics=planning.get("search_statistics", {}),
         candidate_search_statistics=planning.get("search_statistics", {}),
         canonicalization_succeeded=True,
-        functional_spec_complete=True,
+        functional_spec_complete=spec_complete,
     )

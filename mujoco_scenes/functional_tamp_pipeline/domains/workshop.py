@@ -94,23 +94,15 @@ class WorkshopPlanningCompiler:
     ) -> SymbolicProblem:
         driver = assignment.get("driver")
         fastener = assignment.get("fastener")
-        if not driver or not fastener:
+        if not driver and not fastener:
             from ..errors import PlanningCompilationError
-            missing = [r for r, val in [("driver", driver), ("fastener", fastener)] if not val]
-            raise PlanningCompilationError(f"CANDIDATE_GRAPH_UNSATISFIABLE: Missing required role(s) {missing} to instantiate fastening operator")
+            raise PlanningCompilationError(
+                "CANDIDATE_GRAPH_UNSATISFIABLE: Neither driver nor fastener grounded in candidate assignment"
+            )
         sources = context.get("sources", {})
-        driver_source = sources.get(driver, assignment.get("driver_source", SURFACE))
-        fastener_source = sources.get(fastener, assignment.get("fastener_source", SURFACE))
         opened = set(context.get("opened_regions", ()))
         target = context.get("target_joint", TARGET)
         surface = context.get("work_surface", SURFACE)
-
-        initial = {
-            ("hand_empty",),
-            ("at", driver, driver_source),
-            ("at", fastener, fastener_source),
-        }
-        initial.update(("open", region) for region in opened)
 
         def source_preconditions(obj: str, source: str) -> set[tuple[str, ...]]:
             conditions = {("hand_empty",), ("at", obj, source)}
@@ -118,44 +110,98 @@ class WorkshopPlanningCompiler:
                 conditions.add(("open", source))
             return conditions
 
-        actions = (
-            _action(
-                "PICK", (fastener, fastener_source),
-                source_preconditions(fastener, fastener_source),
-                {("holding", fastener)},
-                {("hand_empty",), ("at", fastener, fastener_source)},
-            ),
-            _action(
-                "PLACE", (fastener, target),
-                {("holding", fastener)},
-                {("hand_empty",), ("at", fastener, target), ("inserted", fastener, target)},
-                {("holding", fastener)},
-            ),
-            _action(
-                "PICK", (driver, driver_source),
-                source_preconditions(driver, driver_source),
-                {("holding", driver)},
-                {("hand_empty",), ("at", driver, driver_source)},
-            ),
-            _action(
-                "SCREW", (driver, fastener, target),
-                {("holding", driver), ("inserted", fastener, target)},
-                {("repaired", target)},
-                set(),
-            ),
-            _action(
-                "PLACE", (driver, surface),
-                {("holding", driver), ("repaired", target)},
-                {("hand_empty",), ("at", driver, surface)},
-                {("holding", driver)},
-            ),
-        )
+        initial: set[tuple[str, ...]] = {("hand_empty",)}
+        initial.update(("open", region) for region in opened)
+        actions: list[SymbolicAction] = []
+        goals: set[tuple[str, ...]] = set()
+
+        if driver and fastener:
+            driver_source = sources.get(driver, assignment.get("driver_source", SURFACE))
+            fastener_source = sources.get(fastener, assignment.get("fastener_source", SURFACE))
+            initial.add(("at", driver, driver_source))
+            initial.add(("at", fastener, fastener_source))
+            actions.extend([
+                _action(
+                    "PICK", (fastener, fastener_source),
+                    source_preconditions(fastener, fastener_source),
+                    {("holding", fastener)},
+                    {("hand_empty",), ("at", fastener, fastener_source)},
+                ),
+                _action(
+                    "PLACE", (fastener, target),
+                    {("holding", fastener)},
+                    {("hand_empty",), ("at", fastener, target), ("inserted", fastener, target)},
+                    {("holding", fastener)},
+                ),
+                _action(
+                    "PICK", (driver, driver_source),
+                    source_preconditions(driver, driver_source),
+                    {("holding", driver)},
+                    {("hand_empty",), ("at", driver, driver_source)},
+                ),
+                _action(
+                    "SCREW", (driver, fastener, target),
+                    {("holding", driver), ("inserted", fastener, target)},
+                    {("repaired", target)},
+                    set(),
+                ),
+                _action(
+                    "PLACE", (driver, surface),
+                    {("holding", driver), ("repaired", target)},
+                    {("hand_empty",), ("at", driver, surface)},
+                    {("holding", driver)},
+                ),
+            ])
+            goals.update({
+                ("repaired", target), ("at", driver, surface), ("hand_empty",),
+            })
+        elif driver and not fastener:
+            # Candidate plan: stage driver onto work surface; fastening is uninstantiable
+            driver_source = sources.get(driver, assignment.get("driver_source", SURFACE))
+            initial.add(("at", driver, driver_source))
+            actions.extend([
+                _action(
+                    "PICK", (driver, driver_source),
+                    source_preconditions(driver, driver_source),
+                    {("holding", driver)},
+                    {("hand_empty",), ("at", driver, driver_source)},
+                ),
+                _action(
+                    "PLACE", (driver, surface),
+                    {("holding", driver)},
+                    {("hand_empty",), ("at", driver, surface)},
+                    {("holding", driver)},
+                ),
+            ])
+            goals.update({
+                ("repaired", target), ("at", driver, surface), ("hand_empty",),
+            })
+        elif fastener and not driver:
+            # Candidate plan: place fastener at target; fastening is uninstantiable
+            fastener_source = sources.get(fastener, assignment.get("fastener_source", SURFACE))
+            initial.add(("at", fastener, fastener_source))
+            actions.extend([
+                _action(
+                    "PICK", (fastener, fastener_source),
+                    source_preconditions(fastener, fastener_source),
+                    {("holding", fastener)},
+                    {("hand_empty",), ("at", fastener, fastener_source)},
+                ),
+                _action(
+                    "PLACE", (fastener, target),
+                    {("holding", fastener)},
+                    {("hand_empty",), ("at", fastener, target), ("inserted", fastener, target)},
+                    {("holding", fastener)},
+                ),
+            ])
+            goals.update({
+                ("repaired", target), ("inserted", fastener, target), ("hand_empty",),
+            })
+
         return SymbolicProblem(
             initial_atoms=frozenset(initial),
-            goal_atoms=frozenset({
-                ("repaired", target), ("at", driver, surface), ("hand_empty",),
-            }),
-            actions=actions,
+            goal_atoms=frozenset(goals),
+            actions=tuple(actions),
         )
 
 
@@ -163,7 +209,7 @@ class WorkshopDomainAdapter:
     """Run staged Workshop evidence acquisition without variant solution data."""
 
     task_instruction = (
-        "Identify compatible components needed for the repair, and complete the fastening at the marked workbench location"
+        "Fasten the frame joint on the workpiece using a compatible screw and a driver from the workshop storage."
     )
 
     def __init__(
