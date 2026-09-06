@@ -117,9 +117,6 @@ LIVING_REGION_ROLE_ALIASES = {
         "fixed individual side table surface beside each viewer seating position for supporting drinkware",
         "side table surface beside viewer",
         "personal table surface for drinkware",
-        "support refreshment",
-        "refreshment support",
-        "support refreshments",
         "individual drink surface",
         "personal drinkware surface",
         "personal surface",
@@ -130,9 +127,6 @@ LIVING_REGION_ROLE_ALIASES = {
         "right viewer individual side table",
     ),
     "SHARED_REMOTE_REGION": (
-        "support entertainment device",
-        "support entertainment",
-        "entertainment support",
         "shared remote support",
         "support the television remote",
         "shared control surface",
@@ -159,13 +153,6 @@ LIVING_REGION_ROLE_ALIASES = {
 
 LIVING_OBJECT_ROLE_ALIASES = {
     "CUP_SAUCER_SET": (
-        "hold refreshment",
-        "contain refreshment",
-        "refreshment container",
-        "refreshments",
-        "refreshment",
-        "hold refreshments",
-        "contain refreshments",
         "contain hot beverage and saucer",
         "contain beverage and saucer",
         "contain beverage and saucer set",
@@ -219,10 +206,6 @@ LIVING_OBJECT_ROLE_ALIASES = {
         "individual saucer",
     ),
     "REMOTE": (
-        "provide entertainment",
-        "entertainment device",
-        "entertainment object",
-        "entertainment",
         "control television",
         "handheld television remote control device",
         "handheld television remote control",
@@ -291,17 +274,16 @@ LIVING_INTERACTION_GROUP_ALIASES = {
 }
 
 LIVING_REASONABLE_AFFORDANCE_NOTE_KEYWORDS = (
-    "handle", "spout", "lid", "rim", "grip", "open end", "opening", "base",
+    "handle", "spout", "lid", "rim", "grip", "open end", "opening",
     "flat base", "rigid", "stiff", "solid", "durable", "stable", "stable base",
-    "stable surface", "easy to grip", "wide mouth", "cylindrical", "round",
-    "deep", "enclosed volume", "smooth", "open top", "button interface",
-    "rectangular shape", "rectangular", "upright orientation", "upright",
+    "stable surface", "easy to grip", "wide mouth", "cylindrical", "round shape",
+    "deep volume", "deep shape", "deep cavity", "enclosed volume", "smooth surface", "open top",
+    "button interface", "rectangular shape", "upright orientation",
     "has fastening points", "rigid structure", "slender", "elongated shape",
-    "open cavity", "capable of holding liquid", "cavity", "accessible",
-    "seated position", "accessible to seated position", "central",
+    "open cavity", "capable of holding liquid", "accessible to seated position",
     "upright structure", "holds liquid", "holds solid", "hold liquid", "hold solid",
     "contain liquid", "contain solid", "electronic interface",
-    "button", "buttons", "has buttons", "keypad",
+    "button", "buttons", "has buttons", "keypad", "planar support",
 )
 
 LIVING_BINARY_RELATION_ALIASES = {
@@ -408,16 +390,21 @@ LIVING_BINARY_RELATION_ALIASES = {
 
 
 def map_living_room_role_function(raw: dict[str, Any] | str) -> str | None:
-    """Deterministic concept matching for Living Room functional REGION roles using function and description only.
+    """Deterministic concept matching for Living Room functional REGION roles using function, description, and structural signals.
 
     Candidate categories are strictly excluded from role semantic authority.
+    Does NOT infer personal vs shared purely from payload identity.
     """
     if isinstance(raw, dict):
         if map_living_room_fixed_target_role(raw) is not None:
             return None
         text = f"{raw.get('function', '')} {raw.get('description', '')}"
+        cnt = raw.get("required_count")
+        pol = raw.get("binding_policy")
     else:
         text = str(raw)
+        cnt = None
+        pol = None
     norm = _phrase(text)
     if not norm:
         return None
@@ -429,33 +416,32 @@ def map_living_room_role_function(raw: dict[str, Any] | str) -> str | None:
             if a_norm == norm or _contains_phrase(norm, a_norm):
                 return role_name
 
-    # 2. Semantic analysis on function + description tokens
+    # 2. Semantic analysis on function + description tokens and structural evidence
     words = set(norm.split())
     has_personal = any(
         w in words or _contains_phrase(norm, w)
         for w in (
-            "personal", "individual", "viewer", "occupant",
-            "beside seat", "near seat", "viewer 1", "viewer 2",
+            "personal", "individual", "beside seat", "near seat", "viewer 1", "viewer 2",
+            "for each viewer", "for each person", "each seat", "beside each", "next to each",
+            "side table", "side tables", "each side", "armchair table", "viewer seating position",
         )
     )
     has_shared = any(
         w in words or _contains_phrase(norm, w)
         for w in (
-            "shared", "central", "both", "common", "mutual", "viewers", "accessible to both",
+            "shared", "central", "accessible to both", "between seats", "common", "mutual",
+            "both viewers", "both seats", "coffee table", "center table", "accessible from both",
         )
     )
-    has_drink = any(
-        w in words or _contains_phrase(norm, w)
-        for w in ("cup", "saucer", "drink", "drinkware", "beverage", "tea", "coffee", "refreshment", "refreshments")
-    )
-    has_remote = any(
-        w in words or _contains_phrase(norm, w)
-        for w in ("remote", "controller", "tv", "television", "entertainment")
-    )
 
-    if (has_personal or has_drink) and not (has_shared or has_remote):
+    if cnt == 2 and pol in ("DISTINCT", "SHARED"):
+        has_personal = True
+    elif cnt == 1 and pol == "SHARED":
+        has_shared = True
+
+    if has_personal and not has_shared:
         return "PERSONAL_CUP_SAUCER_REGION"
-    if (has_shared or has_remote) and not (has_personal and has_drink):
+    if has_shared and not has_personal:
         return "SHARED_REMOTE_REGION"
     return None
 
@@ -463,20 +449,26 @@ def map_living_room_role_function(raw: dict[str, Any] | str) -> str | None:
 def map_living_room_object_payload_role(raw: dict[str, Any] | str) -> str | None:
     """Deterministic concept matching for Living Room task-explicit payload OBJECT roles.
 
-    Uses function and description only. Candidate categories are strictly excluded.
+    Uses function, description, and multi-signal candidate categories when generic phrasing is used.
+    Does NOT allow 'refreshment' alone to establish 'CUP_SAUCER_SET'.
+    Does NOT allow 'entertainment' alone to establish 'REMOTE'.
     Returns 'CUP_SAUCER_SET', 'CUP_COMPONENT', 'SAUCER_COMPONENT', 'REMOTE', or None.
     """
     if isinstance(raw, dict):
         if raw.get("entity_kind") not in (None, "OBJECT"):
             return None
         text = f"{raw.get('function', '')} {raw.get('description', '')}"
+        raw_cats = [str(c).lower() for c in raw.get("candidate_categories", [])]
+        raw_hints = [str(c.get("label", "")).lower() for c in raw.get("visible_candidates", [])]
     else:
         text = str(raw)
+        raw_cats = []
+        raw_hints = []
     norm = _phrase(text)
     if not norm:
         return None
 
-    # 1. Forward match against reviewed aliases
+    # 1. Forward match against reviewed explicit aliases
     for role_name, aliases in LIVING_OBJECT_ROLE_ALIASES.items():
         for alias in aliases:
             a_norm = _phrase(alias)
@@ -495,21 +487,45 @@ def map_living_room_object_payload_role(raw: dict[str, Any] | str) -> str | None
     )
     has_drinkware = any(
         w in words or _contains_phrase(norm, w)
-        for w in ("drinkware", "beverage set", "cup and saucer", "refreshment", "refreshments", "hold refreshment", "contain refreshment", "refreshment container")
+        for w in ("drinkware", "drinkware set", "beverage set", "cup and saucer", "cup saucer set")
     )
     has_remote = any(
         w in words or _contains_phrase(norm, w)
-        for w in ("remote", "tv remote", "remote control", "television remote", "control television", "control tv", "entertainment", "entertainment device", "provide entertainment")
+        for w in ("remote", "tv remote", "remote control", "television remote", "control television", "control tv", "television controller", "controller")
+    )
+    has_entertainment = any(
+        w in words or _contains_phrase(norm, w)
+        for w in ("entertainment", "entertainment device", "entertainment object", "provide entertainment", "control entertainment")
+    )
+    has_refreshment = any(
+        w in words or _contains_phrase(norm, w)
+        for w in ("refreshment", "refreshments", "hold refreshment", "contain refreshment", "refreshment container")
     )
 
-    if has_remote and not (has_cup or has_saucer or has_drinkware):
+    if has_remote:
         return "REMOTE"
+    if has_entertainment:
+        cand_text = " ".join(raw_cats + raw_hints)
+        if any(c in cand_text for c in ("remote", "controller")):
+            return "REMOTE"
+        return None
+
     if (has_cup and has_saucer) or has_drinkware:
         return "CUP_SAUCER_SET"
     if has_cup and not has_saucer:
         return "CUP_COMPONENT"
     if has_saucer and not has_cup:
         return "SAUCER_COMPONENT"
+
+    if has_refreshment:
+        # Multi-signal check: candidate categories/hints for cup-like and/or saucer-like
+        cand_text = " ".join(raw_cats + raw_hints)
+        has_cat_cup = any(c in cand_text for c in ("cup", "mug", "glass", "drinkware", "drink"))
+        has_cat_saucer = any(c in cand_text for c in ("saucer", "plate", "dish"))
+        if has_cat_cup or has_cat_saucer:
+            return "CUP_SAUCER_SET"
+        return None
+
     return None
 
 
@@ -1301,7 +1317,7 @@ class EnvironmentVLMRequirementProvider:
                             )
 
                     if mapped_p is None:
-                        if any(k in norm_p for k in LIVING_REASONABLE_AFFORDANCE_NOTE_KEYWORDS):
+                        if any(norm_p == k or _contains_phrase(norm_p, k) for k in LIVING_REASONABLE_AFFORDANCE_NOTE_KEYWORDS):
                             concept_accounting["properties"].append({
                                 "raw_role_id": raw_id,
                                 "raw_phrase": prop,
@@ -1353,17 +1369,33 @@ class EnvironmentVLMRequirementProvider:
                     raw_item = items[0]["raw"]
                     c_count = int(raw_item["required_count"])
                     c_policy = raw_item["binding_policy"]
-                    concept_accounting["roles"][raw_item["id"]] = {
+                    raw_text = _phrase(f"{raw_item.get('function', '')} {raw_item.get('description', '')}")
+                    is_explicit_set = (
+                        any(alias == raw_text or _contains_phrase(raw_text, alias) for alias in LIVING_OBJECT_ROLE_ALIASES["CUP_SAUCER_SET"])
+                        or any(_contains_phrase(raw_text, phrase) for phrase in ("cup and saucer", "cup saucer set", "drinkware set", "beverage set", "drinkware"))
+                        or (
+                            any(_contains_phrase(raw_text, c) for c in ("cup", "drinking cup", "coffee cup", "tea cup", "drink vessel", "liquid vessel"))
+                            and any(_contains_phrase(raw_text, s) for s in ("saucer", "saucer plate", "under cup", "support drink", "support cup", "flat dish"))
+                        )
+                    )
+                    role_entry = {
                         "canonical_role": "CUP_SAUCER_SET",
                         "entity_kind": "OBJECT",
                         "raw_count": c_count,
                         "canonical_count": c_count,
                         "binding_policy": c_policy,
                         "unary_predicates": [],
-                        "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
-                        "candidate_categories_used_for_role_identity": False,
-                        "status": "PRESERVED",
+                        "role_semantic_source": "FUNCTION_AND_DESCRIPTION" if is_explicit_set else "FUNCTION_DESCRIPTION_AND_CANDIDATES",
+                        "candidate_categories_used_for_role_identity": not is_explicit_set,
+                        "status": "PRESERVED" if is_explicit_set else "ENVIRONMENT_CONTRACT_PROJECTION",
+                        "semantic_equivalence": is_explicit_set,
                     }
+                    if not is_explicit_set:
+                        role_entry["reason"] = (
+                            "Runtime environment supports a more specific executable representation "
+                            "(CUP_SAUCER_SET) than the VLM explicitly inferred."
+                        )
+                    concept_accounting["roles"][raw_item["id"]] = role_entry
                 else:
                     cups = [it["raw"] for it in items if it["component"] == "CUP_COMPONENT"]
                     saucers = [it["raw"] for it in items if it["component"] == "SAUCER_COMPONENT"]
@@ -1655,17 +1687,32 @@ class EnvironmentVLMRequirementProvider:
                 r = raw_list[0]
                 cnt = int(r["required_count"])
                 pol = "DISTINCT"
-                concept_accounting["roles"][r["id"]] = {
+                r_text = _phrase(f"{r.get('function', '')} {r.get('description', '')}")
+                is_explicit_remote = (
+                    any(alias == r_text or _contains_phrase(r_text, alias) for alias in LIVING_OBJECT_ROLE_ALIASES["REMOTE"])
+                    or any(_contains_phrase(r_text, phrase) for phrase in (
+                        "remote", "tv remote", "remote control", "television remote",
+                        "control television", "control tv", "television controller", "controller"
+                    ))
+                )
+                role_entry = {
                     "canonical_role": "REMOTE",
                     "entity_kind": "OBJECT",
                     "raw_count": cnt,
                     "canonical_count": cnt,
                     "binding_policy": pol,
                     "unary_predicates": [],
-                    "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
-                    "candidate_categories_used_for_role_identity": False,
-                    "status": "PRESERVED",
+                    "role_semantic_source": "FUNCTION_AND_DESCRIPTION" if is_explicit_remote else "FUNCTION_DESCRIPTION_AND_CANDIDATES",
+                    "candidate_categories_used_for_role_identity": not is_explicit_remote,
+                    "status": "PRESERVED" if is_explicit_remote else "ENVIRONMENT_CONTRACT_PROJECTION",
+                    "semantic_equivalence": is_explicit_remote,
                 }
+                if not is_explicit_remote:
+                    role_entry["reason"] = (
+                        "Runtime environment requires specific REMOTE executable type; "
+                        "inferred from multi-signal candidate evidence."
+                    )
+                concept_accounting["roles"][r["id"]] = role_entry
                 cand_cats = list(dict.fromkeys(
                     cat.strip()
                     for cat in r.get("candidate_categories", [])

@@ -113,7 +113,7 @@ KITCHEN_INTERACTION_GROUP_ALIASES: dict[str, tuple[str, ...]] = {
         "coffee stirring", "coffee_stirring", "stir coffee", "mix coffee",
         "stir beverage", "stir drinks", "stir beverage in cups", "mix beverage",
         "stir", "mix", "agitate coffee", "stirring", "mixing", "beverage stirring",
-        "coffee preparation", "prepare coffee", "serve coffee", "coffee serving",
+        "prepare coffee by stirring",
     ),
     "soup_serving": (
         "soup serving", "soup_serving", "serve soup", "prepare soup", "soup preparation", "provide utensil",
@@ -170,12 +170,13 @@ KITCHEN_OBSERVABLE_REGIONS = {
 }
 
 REASONABLE_AFFORDANCE_NOTE_KEYWORDS: tuple[str, ...] = (
-    "handle", "spout", "lid", "rim", "grip", "open end", "opening", "base", "flat base",
+    "handle", "spout", "lid", "rim", "grip", "open end", "opening", "flat base",
     "rigid", "stiff", "solid", "durable", "stable", "stable base", "stable surface",
-    "easy to grip", "wide mouth", "cylindrical", "cylindrical shape", "round", "round shape",
-    "deep", "deep shape", "enclosed volume", "smooth", "open top", "button interface",
-    "rectangular shape", "upright orientation", "has fastening points", "rigid structure",
-    "planar support", "planar", "flat bottom", "flat surface", "horizontal support", "support surface",
+    "easy to grip", "wide mouth", "cylindrical", "cylindrical shape", "round shape",
+    "deep volume", "deep shape", "deep cavity", "enclosed volume", "smooth surface", "open top",
+    "button interface", "has buttons", "rectangular shape", "upright orientation",
+    "has fastening points", "rigid structure", "planar support", "flat bottom",
+    "flat surface", "horizontal support", "support surface",
 )
 
 
@@ -617,7 +618,7 @@ def compile_vlm_functional_graph(
             mapped = map_unary_property(prop)
             if mapped is None:
                 norm_p = _phrase(prop)
-                if any(k in norm_p for k in REASONABLE_AFFORDANCE_NOTE_KEYWORDS):
+                if any(norm_p == k or _contains_phrase(norm_p, k) for k in REASONABLE_AFFORDANCE_NOTE_KEYWORDS):
                     concept_accounting["properties"].append({
                         "raw_role_id": raw_role_id,
                         "raw_phrase": prop,

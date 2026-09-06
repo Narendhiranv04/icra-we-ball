@@ -339,10 +339,12 @@ def map_workshop_context_region_role(raw: dict[str, Any] | str) -> str | None:
 
 
 WORKSHOP_REASONABLE_AFFORDANCE_NOTE_KEYWORDS = (
-    "elongated", "elongated shape", "slender", "rigid", "rigid structure",
-    "has fastening points", "fastening points", "fastening point",
-    "threaded", "screw head", "shank", "grip", "handle", "tip", "mounting points",
-    "holes", "points", "stable base",
+    "elongated shape", "rigid structure", "rigid", "slender shape",
+    "has fastening points", "fastening points", "fastening point", "mounting points",
+    "threaded shaft", "has threaded shaft", "threaded shank", "threaded",
+    "screw head", "has screw head", "tool engagement", "has head for tool engagement",
+    "driving tip", "has driving tip", "handle for grip", "has handle for grip",
+    "stable base", "stable surface",
 )
 
 
@@ -430,8 +432,11 @@ def map_workshop_role_function(raw: dict[str, Any] | str) -> str | None:
     words = set(norm.split())
 
     if any(p in norm for p in ("provide fastening capability", "fastening capability", "provide fastening")):
-        if any(c in raw_cats for c in ("screwdriver", "driver", "drill", "wrench", "tool")) or not any(c in raw_cats for c in ("screw", "fastener", "bolt")):
+        if any(c in raw_cats for c in ("screwdriver", "driver", "drill", "wrench", "tool", "bit")) or any(w in words for w in ("tool", "driver", "screwdriver", "wrench", "drill", "torque", "tighten", "turn")):
             return "CAN_DRIVE_SCREW"
+        if any(c in raw_cats for c in ("screw", "fastener", "bolt", "threaded", "hardware")) or any(w in words for w in ("fastener", "screw", "bolt", "hardware")):
+            return "CAN_FASTEN"
+        return None
 
     driver_phrases = (
         "drive screw", "tighten screw", "turn threaded fastener", "turn screw",
@@ -442,7 +447,6 @@ def map_workshop_role_function(raw: dict[str, Any] | str) -> str | None:
         "fastener driving tool", "screw driving tool", "tool capable of driving",
         "device that rotates the screw", "rotates the screw", "rotates screw",
         "tool capable of driving a screw", "tool to tighten screws",
-        "provide fastening capability", "fastening capability",
     )
     driver_tokens = (
         "screwdriver", "screwdrivers", "drill", "drills", "driver", "drivers",
@@ -1047,8 +1051,24 @@ class FMRequirementProvider(RequirementProvider):
                 norm_p = _phrase(prop)
                 mapped_u = map_workshop_unary_property(prop)
 
+                if mapped_u is not None:
+                    if raw["entity_kind"] == "REGION" and mapped_u == "PLANAR_SUPPORT":
+                        concept_accounting["properties"].append({
+                            "raw_role_id": raw_id,
+                            "raw_phrase": prop,
+                            "canonical_role": "MAIN_WORKBENCH_ZONE",
+                            "canonical_predicate": "PLANAR_SUPPORT",
+                            "status": "ABSORBED_INTO_PLANNER_CONTEXT",
+                            "destination": "PLANNER_CONTEXT",
+                        })
+                        continue
+                    else:
+                        raise UnsupportedCheckerCapabilityError(
+                            f"Unary predicate {mapped_u!r} on role {raw_id!r} is not supported in canonical Workshop G_F"
+                        )
+
                 # Check reasonable non-executable affordance notes (Category B)
-                if any(k in norm_p for k in WORKSHOP_REASONABLE_AFFORDANCE_NOTE_KEYWORDS):
+                if any(norm_p == k or _contains_phrase(norm_p, k) for k in WORKSHOP_REASONABLE_AFFORDANCE_NOTE_KEYWORDS):
                     concept_accounting["properties"].append({
                         "raw_role_id": raw_id,
                         "raw_phrase": prop,
@@ -1058,23 +1078,9 @@ class FMRequirementProvider(RequirementProvider):
                     })
                     continue
 
-                if mapped_u is None:
-                    raise UnmappedFunctionalConceptError(
-                        f"Required property {prop!r} on role {raw_id!r} cannot be mapped to any Workshop unary property"
-                    )
-                if raw["entity_kind"] == "REGION" and mapped_u == "PLANAR_SUPPORT":
-                    concept_accounting["properties"].append({
-                        "raw_role_id": raw_id,
-                        "raw_phrase": prop,
-                        "canonical_role": "MAIN_WORKBENCH_ZONE",
-                        "canonical_predicate": "PLANAR_SUPPORT",
-                        "status": "ABSORBED_INTO_PLANNER_CONTEXT",
-                        "destination": "PLANNER_CONTEXT",
-                    })
-                else:
-                    raise UnsupportedCheckerCapabilityError(
-                        f"Unary predicate {mapped_u!r} on role {raw_id!r} is not supported in canonical Workshop G_F"
-                    )
+                raise UnmappedFunctionalConceptError(
+                    f"Required property {prop!r} on role {raw_id!r} cannot be mapped to any Workshop unary property"
+                )
 
         # Step 3: Populate canonical roles
         normalized_roles: list[NormalizedWorkshopRole] = []
