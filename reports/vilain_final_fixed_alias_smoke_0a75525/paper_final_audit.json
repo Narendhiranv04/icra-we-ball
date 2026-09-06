@@ -1,5 +1,5 @@
 {
-  "behavior_commit": "0a75525470f878d1f4b6bd7ba535c9de4f860b1f",
+  "behavior_frozen_runtime_commit": "0a75525470f878d1f4b6bd7ba535c9de4f860b1f",
   "canonical_feasible_subgoal_denominator": 126,
   "identity_audit_summary": {
     "classification_counts": {
@@ -8,13 +8,16 @@
       "LOCALIZATION_OUTSIDE_THRESHOLD": 20,
       "NO_STAGE_COMPATIBLE_ENTITY": 20
     },
-    "implementation_defects": 0,
     "primary_attempt_failures": 22,
+    "primary_unresolved_adapter_defects": 0,
     "supplementary_attempt_failures": 25,
+    "supplementary_known_adapter_limitation": "stage-ID association mismatch (visible_stage_ids ('000_initial',) vs opened stage IDs)",
     "total_attempt_failures": 47
   },
   "infrastructure_failures": 0,
   "missing_scene_entity_defects": 0,
+  "previous_reporting_commit": "8730c32d3778589775a88aa7a220ee5b54923a0c",
+  "primary_adapter_status": "no unresolved adapter defect identified in primary qualification smoke",
   "primary_feasible_runs": 20,
   "primary_infeasible_runs": 12,
   "primary_metrics": {
@@ -31,12 +34,17 @@
   "primary_protocol": "initial_observation_only",
   "primary_runs": 32,
   "refinement_parity_summary": {
-    "implementation_defects": 0,
+    "primary_refinement_failures": 2,
+    "primary_unresolved_adapter_defects": 0,
+    "taxonomies": [
+      "GENERATED_TARGET_REJECTED_BY_SHARED_IK_BACKEND",
+      "GENERATED_TRAJECTORY_REJECTED_BY_MUJOCO_COLLISION_CHECK"
+    ],
     "total_refinement_failures": 2
   },
-  "report_commit": "155907f743ec586a11a83c794422d3653a32a6a2",
   "results_root": "/home/naren/ViLaIn-TAMP-results/vilain-final-fixed-alias-smoke-0a75525",
   "supplementary_protocol": "fixed_full_inspection",
   "supplementary_runs": 32,
+  "supplementary_status": "diagnostic qualification only \u2014 contains known stage-ID association limitation and is not used for manuscript baseline performance",
   "total_qualification_runs": 64
 }
