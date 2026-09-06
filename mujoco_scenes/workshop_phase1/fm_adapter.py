@@ -148,7 +148,7 @@ A. FUNCTIONAL REASONING
   - DISTINCT: separate simultaneous physical items or individual regions are required.
   - REUSABLE: one physical item may be reused sequentially across multiple targets.
   - SHARED: one physical region/entity intentionally serves multiple items/users.
-- `candidate_categories`: list open-vocabulary semantic search phrases that could satisfy the role, even if nothing is currently visible.
+- `candidate_categories`: list open-vocabulary semantic search phrases that could actually satisfy the role's stated capability (candidate realizations of the role). Visibility alone does not make a category a valid candidate; do not list broad scene distractors merely because they are visible.
 
 B. OBSERVATION-BASED SEARCH GUIDANCE
 - Use the initial multi-view RGB images to determine visible candidates, inspectable regions, and inspection ranking.
@@ -165,6 +165,25 @@ B. OBSERVATION-BASED SEARCH GUIDANCE
   - `SUPPORTED`: task can be represented with functional roles and relations. `functional_roles` must be non-empty, `unsupported_reason` must be empty ("").
   - `UNSUPPORTED`: use only when the task itself cannot be represented by this abstraction. `functional_roles`, `functional_relations`, `interaction_groups`, `inspectable_regions`, `inspection_order` must be empty ([]), and `unsupported_reason` must be a non-empty explanation.
   - Partial observability, missing visible candidates, unmeasured continuous geometry, or needing inspection/search are NOT reasons for UNSUPPORTED.
+
+C. DOMAIN-AGNOSTIC CAUSAL COVERAGE AUDIT
+Before returning the JSON, silently decompose the user instruction into its atomic physical task requirements and verify that every requirement is represented by the functional graph:
+1. For every required transformation, distinguish physically separate causal participants when applicable, including:
+   - material or object being transferred/manipulated;
+   - source/provider if something must come from somewhere;
+   - receiving container/target/destination;
+   - reusable implement/tool if an external implement causes the transformation;
+   - component that remains in the final assembly;
+   - contextual support or fixed target.
+2. For a physical connection/assembly operation, distinguish the component that remains in the final assembly from any reusable implement used to establish that connection.
+3. For material-transfer/preparation operations, represent the required source or provider for each explicitly required material unless the material is explicitly stated to already be present in its target.
+4. Propagate explicit quantifiers such as 'each', 'both', and numerical counts into role cardinalities, binding policies, or interaction groups.
+5. Do not reuse one functional role across different causal functions unless the task semantics actually permit the same physical object to satisfy both.
+6. Before emitting the JSON, verify:
+   - every task clause is covered by at least one role/relation/group;
+   - every transformation has its necessary participants;
+   - quantities are represented;
+   - any reuse/shared/distinct requirement is represented.
 """
 
 

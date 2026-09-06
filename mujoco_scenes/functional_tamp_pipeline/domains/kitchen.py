@@ -20,8 +20,9 @@ from ..planning import plan_with_common_astar
 
 
 TASK = (
-    "prepare coffee by stirring and serve soup for two people. "
-    "Inspect storages for any missing kitchenware"
+    "Prepare and serve one coffee and one soup for each of two people. "
+    "Make each coffee using coffee and water and stir it before serving. "
+    "Serve each soup bowl with its own suitable eating utensil."
 )
 LOCAL_YOLO_WORLD = (
     Path(__file__).resolve().parents[3]
@@ -50,75 +51,201 @@ class KitchenPlanningCompiler:
     def compile_problem(
         self, assignment: dict[str, Any], context: dict[str, Any]
     ) -> SymbolicProblem:
-        del assignment
-        legacy = KitchenSymbolicProblem(context["compiled_observed_state"])
-        initial: set[tuple[str, ...]] = {("hand_empty",)}
-        initial.update(("at", obj, region) for obj, region in legacy.initial.locations)
-        initial.update(("contains", target, content) for target, content in legacy.initial.contents)
-        initial.update(("stirred", target) for target in legacy.initial.stirred)
+        if "compiled_observed_state" in context:
+            legacy = KitchenSymbolicProblem(context["compiled_observed_state"])
+            initial: set[tuple[str, ...]] = {("hand_empty",)}
+            initial.update(("at", obj, region) for obj, region in legacy.initial.locations)
+            initial.update(("contains", target, content) for target, content in legacy.initial.contents)
+            initial.update(("stirred", target) for target in legacy.initial.stirred)
+
+            actions: list[SymbolicAction] = []
+            for obj in sorted(legacy.manipulable):
+                destinations = set(legacy._allowed_destinations(obj))
+                locations = destinations | {
+                    region for candidate, region in legacy.initial.locations if candidate == obj
+                }
+                for region in sorted(locations):
+                    actions.append(_action(
+                        "PICK", (obj,),
+                        {("hand_empty",), ("at", obj, region)},
+                        {("holding", obj)},
+                        {("hand_empty",), ("at", obj, region)},
+                    ))
+                initial_locations = dict(legacy.initial.locations)
+                for destination in sorted(destinations):
+                    preconditions = {("holding", obj)}
+                    if (obj, destination) in legacy.soup_assignments:
+                        preconditions.add(("contains", destination, "soup"))
+                        if initial_locations.get(destination) == "B1":
+                            preconditions.add(("at", destination, legacy.serving_destination))
+                    if destination == legacy.serving_destination:
+                        if obj in legacy.coffee_targets:
+                            preconditions.add(("contains", obj, "coffee"))
+                            preconditions.add(("contains", obj, "water"))
+                            preconditions.add(("stirred", obj))
+                        elif obj in legacy.soup_targets:
+                            preconditions.add(("contains", obj, "soup"))
+                            if initial_locations.get(obj) != "B1":
+                                for tool, assigned_target in legacy.soup_assignments:
+                                    if assigned_target == obj:
+                                        preconditions.add(("at", tool, obj))
+                    actions.append(_action(
+                        "PLACE", (obj, destination), preconditions,
+                        {("hand_empty",), ("at", obj, destination)},
+                        {("holding", obj)},
+                    ))
+
+            for source, content in sorted(legacy.source_contents.items()):
+                targets = legacy.soup_targets if content == "soup" else legacy.coffee_targets
+                for target in sorted(targets):
+                    actions.append(_action(
+                        "POUR", (source, target),
+                        {("holding", source), ("at", target, legacy.home)},
+                        {("contains", target, content)}, set(),
+                    ))
+            for tool, target in sorted(legacy.can_stir):
+                actions.append(_action(
+                    "STIR", (tool, target),
+                    {
+                        ("holding", tool),
+                        ("at", target, legacy.home),
+                        ("contains", target, "coffee"),
+                        ("contains", target, "water"),
+                    },
+                    {("stirred", target)}, set(),
+                ))
+            actions.sort(key=lambda item: (
+                item.name, item.arguments, tuple(sorted(item.positive_preconditions)),
+            ))
+            return SymbolicProblem(
+                initial_atoms=frozenset(initial),
+                goal_atoms=frozenset(legacy.goal_facts()),
+                actions=tuple(actions),
+            )
+
+        # VLM Candidate Planning Mode:
+        # Build candidate problem from G_F^VLM, G_O, and phi^VLM without injecting hidden GT recipe
+        graph_o = context.get("graph_o")
+
+        def _extract_cands(role_name: str) -> list[str]:
+            items = []
+            for k, v in (assignment or {}).items():
+                if k == role_name or k.startswith(role_name + "_"):
+                    if isinstance(v, str):
+                        items.append(v)
+                    elif isinstance(v, (list, tuple, set)):
+                        items.extend(str(x) for x in v)
+            return sorted(list(dict.fromkeys(items)))
+
+        coffee_targets = _extract_cands("coffee_container")
+        soup_targets = _extract_cands("soup_container")
+        coffee_stirrers = _extract_cands("coffee_stirrer")
+        soup_utensils = _extract_cands("soup_eating_utensil") or _extract_cands("soup_utensil")
+        coffee_sources = _extract_cands("coffee_source")
+        water_sources = _extract_cands("water_source")
+
+        home = "countertop"
+        serving_destination = "dining_table"
+        all_objs = sorted(list(dict.fromkeys(
+            coffee_targets + soup_targets + coffee_stirrers + soup_utensils + coffee_sources + water_sources
+        )))
+        if not all_objs:
+            raise RuntimeError("No grounded candidate objects for Kitchen planning")
+
+        initial = {("hand_empty",)}
+        initial_locations: dict[str, str] = {}
+        for obj in all_objs:
+            node = graph_o.nodes.get(obj) if graph_o else None
+            loc = (node.source_region if node else None) or home
+            initial_locations[obj] = loc
+            initial.add(("at", obj, loc))
+
+        for s in soup_targets:
+            initial.add(("contains", s, "soup"))
 
         actions: list[SymbolicAction] = []
-        for obj in sorted(legacy.manipulable):
-            destinations = set(legacy._allowed_destinations(obj))
-            locations = destinations | {
-                region for candidate, region in legacy.initial.locations if candidate == obj
-            }
-            for region in sorted(locations):
+        for obj in all_objs:
+            init_loc = initial_locations.get(obj, home)
+            destinations = {home}
+            if obj in coffee_targets or obj in soup_targets:
+                destinations.add(serving_destination)
+            elif obj in soup_utensils:
+                destinations.update(soup_targets)
+
+            locations = destinations | {init_loc}
+            for loc in sorted(locations):
                 actions.append(_action(
                     "PICK", (obj,),
-                    {("hand_empty",), ("at", obj, region)},
+                    {("hand_empty",), ("at", obj, loc)},
                     {("holding", obj)},
-                    {("hand_empty",), ("at", obj, region)},
+                    {("hand_empty",), ("at", obj, loc)},
                 ))
-            initial_locations = dict(legacy.initial.locations)
+
             for destination in sorted(destinations):
                 preconditions = {("holding", obj)}
-                if (obj, destination) in legacy.soup_assignments:
-                    preconditions.add(("contains", destination, "soup"))
-                    if initial_locations.get(destination) == "B1":
-                        preconditions.add(("at", destination, legacy.serving_destination))
-                if destination == legacy.serving_destination:
-                    if obj in legacy.coffee_targets:
+                if destination == serving_destination:
+                    if obj in coffee_targets:
                         preconditions.add(("contains", obj, "coffee"))
                         preconditions.add(("contains", obj, "water"))
                         preconditions.add(("stirred", obj))
-                    elif obj in legacy.soup_targets:
+                    elif obj in soup_targets:
                         preconditions.add(("contains", obj, "soup"))
-                        if initial_locations.get(obj) != "B1":
-                            for tool, assigned_target in legacy.soup_assignments:
-                                if assigned_target == obj:
-                                    preconditions.add(("at", tool, obj))
+                        if soup_utensils:
+                            for u in soup_utensils:
+                                actions.append(_action(
+                                    "PLACE", (obj, destination),
+                                    preconditions | {("at", u, obj)},
+                                    {("hand_empty",), ("at", obj, destination)},
+                                    {("holding", obj)},
+                                ))
+                            continue
                 actions.append(_action(
                     "PLACE", (obj, destination), preconditions,
                     {("hand_empty",), ("at", obj, destination)},
                     {("holding", obj)},
                 ))
 
-        for source, content in sorted(legacy.source_contents.items()):
-            targets = legacy.soup_targets if content == "soup" else legacy.coffee_targets
-            for target in sorted(targets):
+        for source in coffee_sources:
+            for target in coffee_targets:
                 actions.append(_action(
                     "POUR", (source, target),
-                    {("holding", source), ("at", target, legacy.home)},
-                    {("contains", target, content)}, set(),
+                    {("holding", source), ("at", target, home)},
+                    {("contains", target, "coffee")}, set(),
                 ))
-        for tool, target in sorted(legacy.can_stir):
-            actions.append(_action(
-                "STIR", (tool, target),
-                {
-                    ("holding", tool),
-                    ("at", target, legacy.home),
-                    ("contains", target, "coffee"),
-                    ("contains", target, "water"),
-                },
-                {("stirred", target)}, set(),
-            ))
+        for source in water_sources:
+            for target in coffee_targets:
+                actions.append(_action(
+                    "POUR", (source, target),
+                    {("holding", source), ("at", target, home)},
+                    {("contains", target, "water")}, set(),
+                ))
+        for tool in coffee_stirrers:
+            for target in coffee_targets:
+                actions.append(_action(
+                    "STIR", (tool, target),
+                    {
+                        ("holding", tool),
+                        ("at", target, home),
+                        ("contains", target, "coffee"),
+                        ("contains", target, "water"),
+                    },
+                    {("stirred", target)}, set(),
+                ))
+
+        goal_atoms = set()
+        for c in coffee_targets:
+            goal_atoms.add(("at", c, serving_destination))
+            goal_atoms.add(("stirred", c))
+        for s in soup_targets:
+            goal_atoms.add(("at", s, serving_destination))
+        goal_atoms.add(("hand_empty",))
+
         actions.sort(key=lambda item: (
             item.name, item.arguments, tuple(sorted(item.positive_preconditions)),
         ))
         return SymbolicProblem(
             initial_atoms=frozenset(initial),
-            goal_atoms=frozenset(legacy.goal_facts()),
+            goal_atoms=frozenset(goal_atoms),
             actions=tuple(actions),
         )
 
@@ -217,36 +344,39 @@ def compile_kitchen_contract_from_graph(graph: FunctionalRequirementGraph) -> di
 
     symbolic_task = graph.metadata.get("symbolic_task")
     if not symbolic_task:
+        source_roles = {}
+        for name, node in graph.nodes.items():
+            if "source" in name or "provider" in name:
+                provides = "coffee" if "coffee" in name else ("water" if "water" in name else "soup")
+                source_roles[name] = {
+                    "accepted_semantic_labels": list(node.semantic_categories),
+                    "provides": provides,
+                    "count": getattr(node, "minimum_count", 1),
+                }
+        target_reqs = {}
+        if "coffee_container" in graph.nodes:
+            target_reqs["coffee"] = {
+                "witness_role": "coffee_container",
+                "required_contents": [p for p in ["coffee", "water"] if f"{p}_source" in source_roles],
+                "requires_operation_group": "coffee_stirring",
+                "final_goal": "served",
+            }
+        if "soup_container" in graph.nodes:
+            target_reqs["soup"] = {
+                "witness_role": "soup_container",
+                "required_contents": ["soup"],
+                "initial_contents": ["soup"],
+                "requires_operation_group": "soup_serving",
+                "final_goal": "served",
+            }
         symbolic_task = {
             "schema_version": 1,
             "home_region": "countertop",
             "initial_observation_region": "countertop",
-            "contents": ["coffee", "water", "soup"],
-            "source_roles": {
-                "coffee_source": {"accepted_semantic_labels": ["coffee_source"], "provides": "coffee", "count": 1},
-                "water_source": {"accepted_semantic_labels": ["kettle"], "provides": "water", "count": 1},
-            },
-            "target_requirements": {
-                "coffee": {
-                    "witness_role": "coffee_container",
-                    "required_contents": ["coffee", "water"],
-                    "requires_operation_group": "coffee_stirring",
-                    "final_goal": "served",
-                },
-                "soup": {
-                    "witness_role": "soup_container",
-                    "required_contents": ["soup"],
-                    "initial_contents": ["soup"],
-                    "requires_operation_group": "soup_serving",
-                    "final_goal": "served",
-                },
-            },
-            "causal_dependencies": [
-                ["coffee_contents_present", "coffee_stirred"],
-                ["coffee_stirred", "coffee_served"],
-                ["soup_content_present", "soup_utensil_placed"],
-                ["soup_utensil_placed", "soup_served"],
-            ],
+            "contents": ["soup"],
+            "source_roles": source_roles,
+            "target_requirements": target_reqs,
+            "causal_dependencies": [],
         }
 
     contract_result = {
@@ -558,14 +688,28 @@ def run_to_plan(
         encoding="utf-8",
     )
     try:
-        compiled = compile_observed_symbolic_state(session.run_dir, contract)
         assignments = ground_result.assignment
-
-        planned = plan_with_common_astar(
-            KitchenPlanningCompiler(), assignments,
-            {"compiled_observed_state": compiled},
-            allow_partial=(mode == "vlm"),
-        )
+        is_vlm_candidate = (mode == "vlm" and (
+            not contract.get("symbolic_task") or not contract["symbolic_task"].get("source_roles")
+        ))
+        if is_vlm_candidate:
+            planned = plan_with_common_astar(
+                KitchenPlanningCompiler(), assignments,
+                {
+                    "specification": specification,
+                    "graph_o": graph_o,
+                    "ground_result": ground_result,
+                    "is_vlm_candidate": True,
+                },
+                allow_partial=True,
+            )
+        else:
+            compiled = compile_observed_symbolic_state(session.run_dir, contract)
+            planned = plan_with_common_astar(
+                KitchenPlanningCompiler(), assignments,
+                {"compiled_observed_state": compiled},
+                allow_partial=(mode == "vlm"),
+            )
         plan_dir = output_dir / "action_sequence"
         plan_dir.mkdir(parents=True, exist_ok=True)
         (plan_dir / "action_plan.json").write_text(
@@ -580,7 +724,7 @@ def run_to_plan(
         from ..audit import audit_plan_grounding
 
         audit = audit_plan_grounding(
-            specification, graph_o, ground_result, planned.actions, home_region=contract["symbolic_task"].get("home_region", "countertop")
+            specification, graph_o, ground_result, planned.actions, home_region=contract.get("symbolic_task", {}).get("home_region", "countertop")
         )
         (output_dir / "plan_grounding_audit.json").write_text(
             json.dumps(audit, indent=2, sort_keys=True) + "\n",

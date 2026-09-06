@@ -21,7 +21,9 @@ from ..scene_graph import ObservedNode, ObservedObject, ObservedRelation, Observ
 
 
 TASK = (
-    "Assign refreshments and entertainment objects to suitable regions near two seating positions."
+    "Prepare the living room for two people to enjoy refreshments while watching television. "
+    "Provide each person with their own refreshment setting nearby, and "
+    "place the entertainment control where it is accessible to both people."
 )
 LOCAL_MODEL = Path(__file__).resolve().parents[3] / "semantic_model_cache/yolov8m-worldv2.pt"
 
@@ -433,6 +435,7 @@ def run_to_plan(
             status=ground_result.status, failure_reason=str(
                 ground_result.unsatisfied_relations or ground_result.missing_roles or "NO_GLOBAL_REGION_ASSIGNMENT"
             ),
+            canonicalization_succeeded=True,
         )
 
     # Sync canonical assignment phi into planner input using exact operation_bindings
@@ -595,7 +598,7 @@ def run_to_plan(
         encoding="utf-8",
     )
     is_partial = planning.get("is_partial", False)
-    is_full_plan = (not is_partial and len(actions) == 10)
+    is_full_plan = (not is_partial and planning.get("goal_status") == "GOAL_SATISFIED")
     if is_full_plan:
         status = "ACTION_SEQUENCE_READY"
         spec_complete = True

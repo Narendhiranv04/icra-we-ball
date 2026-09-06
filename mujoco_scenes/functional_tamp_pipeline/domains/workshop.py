@@ -205,12 +205,17 @@ class WorkshopPlanningCompiler:
         )
 
 
+TASK = (
+    "Identify the compatible components required to complete the fastening at the "
+    "marked workbench location, complete the fastening, and leave any reusable "
+    "equipment used for the task safely on the workbench."
+)
+
+
 class WorkshopDomainAdapter:
     """Run staged Workshop evidence acquisition without variant solution data."""
 
-    task_instruction = (
-        "Fasten the frame joint on the workpiece using a compatible screw and a driver from the workshop storage."
-    )
+    task_instruction = TASK
 
     def __init__(
         self,

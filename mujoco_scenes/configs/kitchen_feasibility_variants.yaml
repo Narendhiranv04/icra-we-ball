@@ -1,5 +1,5 @@
 schema_version: 2
-goal_instruction: "Prepare and serve coffee and soup for two people using the available kitchenware. Stir both coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required."
+goal_instruction: "Prepare and serve one coffee and one soup for each of two people. Make each coffee using coffee and water and stir it before serving. Serve each soup bowl with its own suitable eating utensil."
 inspection_order: [D1, D2, C2, B1, C1]
 task_requirements: s1_integrated_kitchen_object_function.yaml
 required_counts: {coffee_containers: 2, soup_containers: 2, soup_utensils: 2}
