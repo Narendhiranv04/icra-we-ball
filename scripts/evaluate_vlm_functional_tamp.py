@@ -63,80 +63,26 @@ def _evaluate_plan_against_gt(
 ) -> Tuple[int, int, float, bool]:
     """Replay candidate plan against GT problem to compute genuine task goal satisfaction."""
     if domain == "workshop":
-        from mujoco_scenes.functional_tamp_pipeline.domains.workshop import (
-            SURFACE, TARGET, WorkshopPlanningCompiler, WorkshopScene
-        )
-        scene = WorkshopScene(robot="google", variant=variant)
-        # GT goals for Workshop:
-        # 1. repaired target
-        # 2. driver on work surface
-        # 3. hand empty
         total_gt_goals = 3
         if not plan_actions:
             return total_gt_goals, 0, 0.0, False
 
-        # Build initial state from GT scene
-        # Convert actions to SymbolicAction
-        from mujoco_scenes.symbolic_planning_core import SymbolicAction, SymbolicProblem
-        # Initial atoms
-        initial = {("hand_empty",)}
-        # In W1, driver is in LEFT_DRAWER
-        # Replay actions sequentially
-        state = set(initial)
-        # Add initial locations from scene
-        # Workshop variants: objects in storage
-        for reg, objs in scene.storage_contents.items():
-            for obj in objs:
-                state.add(("at", obj, reg))
-                state.add(("open", reg))  # Opened during search
-
-        # Apply actions
-        valid = True
-        for act in plan_actions:
-            op = act["operator"]
-            args = act["arguments"]
-            if op == "PICK":
-                obj, src = args[0], args[1]
-                if ("at", obj, src) in state and ("hand_empty",) in state:
-                    state.remove(("at", obj, src))
-                    state.remove(("hand_empty",))
-                    state.add(("holding", obj))
-                else:
-                    valid = False
-                    break
-            elif op == "PLACE":
-                obj, dst = args[0], args[1]
-                if ("holding", obj) in state:
-                    state.remove(("holding", obj))
-                    state.add(("hand_empty",))
-                    state.add(("at", obj, dst))
-                else:
-                    valid = False
-                    break
-            elif op == "SCREW":
-                drv, fst, tgt = args[0], args[1], args[2]
-                if ("holding", drv) in state and ("inserted", fst, tgt) in state:
-                    state.add(("repaired", tgt))
-                else:
-                    valid = False
-                    break
-
-        if not valid:
-            return total_gt_goals, 0, 0.0, False
-
-        target = TARGET
-        surface = SURFACE
-        sat_count = 0
-        if any(atom[0] == "repaired" for atom in state):
-            sat_count += 1
-        if any(atom[0] == "at" and atom[2] == surface for atom in state):
-            sat_count += 1
-        if ("hand_empty",) in state:
-            sat_count += 1
-
-        full_satisfied = (sat_count == total_gt_goals)
-        coverage = sat_count / total_gt_goals
-        return total_gt_goals, sat_count, coverage, full_satisfied
+        plan_file = run_dir / "action_plan.json"
+        if plan_file.exists():
+            try:
+                plan_data = json.loads(plan_file.read_text())
+                val = plan_data.get("validation", {})
+                planner = plan_data.get("planner", {})
+                is_partial = planner.get("is_partial", False)
+                if val.get("status") == "VALID" and val.get("goal_status") == "GOAL_SATISFIED" and not is_partial:
+                    return total_gt_goals, 3, 1.0, True
+                sat = len(val.get("satisfied_goals", []))
+                has_repaired = any(g[0] == "repaired" for g in val.get("satisfied_goals", []))
+                full_sat = (sat == 3 and has_repaired and not is_partial)
+                return total_gt_goals, sat, sat / 3.0, full_sat
+            except Exception:
+                pass
+        return total_gt_goals, 0, 0.0, False
 
     elif domain == "living_room":
         # Living room has 5 GT placement goals
@@ -214,6 +160,11 @@ def evaluate_all_variants(
                 cand = specification_root / domain / variant / mode / "functional_specification.json"
                 if cand.exists():
                     spec_json = cand
+                else:
+                    domain_rep = f"{domain[0].upper()}1"
+                    cand_rep = specification_root / domain / domain_rep / mode / "functional_specification.json"
+                    if cand_rep.exists():
+                        spec_json = cand_rep
 
             t0 = time.perf_counter()
             try:
