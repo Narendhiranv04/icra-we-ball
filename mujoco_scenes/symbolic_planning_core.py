@@ -89,6 +89,15 @@ def deterministic_astar(
     If allow_partial is True and no full plan exists, returns the best partial plan
     discovered during the search that maximizes candidate goals satisfied with minimum cost.
     """
+    from mujoco_scenes.functional_tamp_pipeline.telemetry import current_run
+    if current_run.get() is not None:
+        current_run.get().astar_invocations += 1
+        current_run.get().write()
+        import json
+        from dataclasses import asdict
+        payload = {'initial_atoms': sorted(problem.initial_atoms), 'goal_atoms': sorted(problem.goal_atoms),
+                   'actions': [{k: sorted(v) if isinstance(v, frozenset) else v for k,v in asdict(a).items()} for a in problem.actions]}
+        (current_run.get().directory / 'symbolic_problem.json').write_text(json.dumps(payload, indent=2) + '\n')
     started = time.perf_counter()
     initial = problem.initial_atoms
     frontier: list[tuple[int, int, int, frozenset[Atom]]] = []

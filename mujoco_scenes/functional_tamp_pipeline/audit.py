@@ -274,7 +274,8 @@ def audit_plan_grounding(
     """Audit that A* plan adheres to phi* grounding and causal accessibility."""
     violations: list[str] = []
     grounding_complete = bool(getattr(ground_result, "complete", False))
-    if not grounding_complete:
+    partial_verified = getattr(ground_result, "status", "") == "PARTIAL_VERIFIED_GROUNDING"
+    if not grounding_complete and not partial_verified:
         violations.append("Grounding result is not complete")
 
     assignment = getattr(ground_result, "assignment", {}) or {}

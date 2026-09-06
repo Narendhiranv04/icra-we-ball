@@ -84,7 +84,11 @@ class OpenAICompletionTransport:
             headers=headers,
         )
         last_error = None
-        for attempt in range(3):
+        for attempt in range(1):
+            from mujoco_scenes.functional_tamp_pipeline.telemetry import current_run
+            if current_run.get() is not None:
+                current_run.get().transport_attempts += 1
+                current_run.get().write()
             try:
                 with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
                     decoded = json.load(response)
@@ -167,6 +171,9 @@ B. OBSERVATION-BASED SEARCH GUIDANCE
   - Partial observability, missing visible candidates, unmeasured continuous geometry, or needing inspection/search are NOT reasons for UNSUPPORTED.
 
 C. DOMAIN-AGNOSTIC CAUSAL COVERAGE AUDIT
+For a physical connection or assembly operation, distinguish a component that
+remains in the resulting assembly from any reusable implement used to establish
+that connection.
 Before returning the JSON, silently decompose the user instruction into its atomic physical task requirements and verify that every requirement is represented by the functional graph:
 1. For every required transformation, distinguish physically separate causal participants when applicable, including:
    - material or object being transferred/manipulated;
@@ -589,7 +596,9 @@ def _save_fm_diagnostic(
     *,
     sanitized_request: dict[str, Any] | None = None,
 ) -> None:
-    diag_dir_env = os.environ.get("TAMP_FM_DIAGNOSTIC_DIR") or os.environ.get("TAMP_FM_DIAGNOSTICS_DIR")
+    from mujoco_scenes.functional_tamp_pipeline.telemetry import current_run
+    run = current_run.get()
+    diag_dir_env = str(run.directory / "fm_diagnostics") if run else (os.environ.get("TAMP_FM_DIAGNOSTIC_DIR") or os.environ.get("TAMP_FM_DIAGNOSTICS_DIR"))
     if not diag_dir_env:
         return
     try:
@@ -1412,8 +1421,8 @@ class FMAdapter:
                     *image_blocks,
                 ]},
             ],
-            "temperature": 0.2,
-            "top_p": 0.8,
+            "temperature": 0.0,
+            "top_p": 1.0,
             "max_tokens": self.max_tokens,
             "stream": False,
             "chat_template_kwargs": {"enable_thinking": False},
@@ -1426,6 +1435,8 @@ class FMAdapter:
                 },
             },
         }
+        from mujoco_scenes.functional_tamp_pipeline.telemetry import record_semantic_request
+        record_semantic_request(payload)
         self.metrics.requirement_calls += 1
         self.metrics.total_calls += 1
         document = _extract_json_content(
@@ -1434,6 +1445,8 @@ class FMAdapter:
             sanitized_request=sanitized_req,
         )
         self.last_raw_kitchen_graph_response = deepcopy(document)
+        if getattr(self, "return_raw_graph", False):
+            return document
         validated = validate_kitchen_functional_specification(document)
         self.last_validated_kitchen_graph_response = deepcopy(validated)
         return validated
@@ -1498,8 +1511,8 @@ class FMAdapter:
                     ],
                 },
             ],
-            "temperature": 0.2,
-            "top_p": 0.8,
+            "temperature": 0.0,
+            "top_p": 1.0,
             "top_k": 20,
             "min_p": 0.0,
             "presence_penalty": 0.0,
@@ -1516,6 +1529,8 @@ class FMAdapter:
                 },
             },
         }
+        from mujoco_scenes.functional_tamp_pipeline.telemetry import record_semantic_request
+        record_semantic_request(payload)
         self.metrics.requirement_calls += 1
         self.metrics.total_calls += 1
         response = transport.complete(payload)
@@ -1523,6 +1538,8 @@ class FMAdapter:
             response, call_kind="task_requirements", sanitized_request=sanitized_req
         )
         self.last_raw_requirement_response = deepcopy(raw_document)
+        if getattr(self, "return_raw_graph", False):
+            return raw_document
         return validate_requirement_response(raw_document)
 
     def generate_inspection_priors(
@@ -1570,8 +1587,8 @@ class FMAdapter:
                     *image_blocks,
                 ]},
             ],
-            "temperature": 0.2,
-            "top_p": 0.8,
+            "temperature": 0.0,
+            "top_p": 1.0,
             "max_tokens": min(self.max_tokens, 2048),
             "stream": False,
             "chat_template_kwargs": {"enable_thinking": False},
@@ -1584,6 +1601,8 @@ class FMAdapter:
                 },
             },
         }
+        from mujoco_scenes.functional_tamp_pipeline.telemetry import record_semantic_request
+        record_semantic_request(payload)
         self.metrics.requirement_calls += 1
         self.metrics.total_calls += 1
         document = _extract_json_content(

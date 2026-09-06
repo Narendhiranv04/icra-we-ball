@@ -357,7 +357,9 @@ def test_provenance_and_metadata():
     assert gf_vlm_w.metadata["role_semantic_ontology_version"] == PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION
     assert gf_vlm_w.metadata["semantic_acceptance_source"] == "SYSTEM_ROLE_SEMANTIC_ONTOLOGY"
     assert gf_vlm_w.metadata["detector_vocabulary_source"] == "VLM_CANDIDATES_PLUS_RELEVANT_SYSTEM_ALIASES"
-    assert gf_vlm_w.metadata["candidate_categories_used_for_role_identity"] is False
+    assert gf_vlm_w.metadata["candidate_categories_used_for_role_identity"] is True
+    # Open compiler may use categories as secondary role evidence; runtime
+    # grounding acceptance still comes only from the system ontology.
     assert gf_vlm_w.metadata["candidate_categories_used_for_grounding_acceptance"] is False
     assert gf_vlm_w.metadata["candidate_categories_used_for_detector_vocabulary"] is True
 

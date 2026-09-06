@@ -412,6 +412,9 @@ def run_to_plan(
         })
 
     ground_result = ground_graph(specification, graph_o, {"search_exhausted": True})
+    if mode == "vlm" and not ground_result.complete:
+        from ..grounding import ground_verified_candidate_subgraph
+        ground_result = ground_verified_candidate_subgraph(specification, graph_o)
     if observer is not None:
         observer("grounding_updated", {
             "grounding": ground_result.to_dict(),
@@ -429,7 +432,7 @@ def run_to_plan(
         encoding="utf-8",
     )
 
-    if not ground_result.complete or not ground_result.assignment:
+    if (not ground_result.complete and mode != "vlm") or not ground_result.assignment:
         return PipelineResult(
             domain="living_room", variant=variant_label, mode=mode,
             status=ground_result.status, failure_reason=str(
@@ -450,7 +453,7 @@ def run_to_plan(
                 break
 
     canonical_assignments = []
-    if personal_bindings:
+    if personal_bindings and "CUP_SAUCER_SET" in ground_result.assignment:
         for binding in personal_bindings:
             reg_id = binding["tool_id"]
             slot_id = binding["target_id"]
@@ -522,7 +525,7 @@ def run_to_plan(
     if isinstance(shared_region, list) and shared_region:
         shared_region = shared_region[0]
 
-    if shared_region:
+    if shared_region and "REMOTE" in ground_result.assignment and "SEATING_PAIR" in ground_result.assignment:
         matching_shared = next((r for r in getattr(run, "shared_rows", []) if r["region_id"] == shared_region), {})
         remote_id = matching_shared.get("payload_ids", ["tv_remote"])[0] if matching_shared.get("payload_ids") else "tv_remote"
 
@@ -548,6 +551,24 @@ def run_to_plan(
                 "semantic_role_status": sem_status,
             },
         })
+
+    if mode == "vlm":
+        triples = {(r.subject_role, r.predicate, r.object_role) for r in specification.relations}
+        for group in specification.operation_groups:
+            triples.update((group.tool_role, p, group.target_role) for p in group.required_relations)
+            triples.update((group.tool_role, p, group.context_role) for p in group.context_relations)
+        personal_semantics = {("PERSONAL_CUP_SAUCER_REGION", "FITS_SET_ON", "CUP_SAUCER_SET"),
+                              ("PERSONAL_CUP_SAUCER_REGION", "NEAR_SEAT", "SEATING_POSITION")} <= triples
+        shared_semantics = {("SHARED_REMOTE_REGION", "FITS_ON", "REMOTE"),
+                            ("SHARED_REMOTE_REGION", "ACCESSIBLE_FROM_BOTH_SEATS", "SEATING_PAIR")} <= triples
+        canonical_assignments = [row for row in canonical_assignments
+            if (personal_semantics if row["function_id"] == "PERSONAL_CUP_SAUCER_REGION" else shared_semantics)
+            and row["selected_compatibility_evidence"]["compatibility_status"] == "TRUE"]
+        if not canonical_assignments:
+            return PipelineResult(domain="living_room", variant=variant_label, mode=mode,
+                status="NO_MEANINGFUL_CANDIDATE_PLAN", assignment=ground_result.assignment,
+                canonicalization_succeeded=True, functional_spec_complete=False,
+                failure_reason="UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement")
 
     # Write deterministic compiler/planner projection artifacts before invoking symbolic planner (note: these are compiler projections, not canonical phi*)
     (phase1 / "region_assignments.json").write_text(

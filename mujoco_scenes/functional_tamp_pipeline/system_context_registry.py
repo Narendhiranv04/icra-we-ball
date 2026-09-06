@@ -41,7 +41,7 @@ _SYSTEM_FIXED_ANCHORS_RAW: dict[str, frozenset[str]] = {
 }
 
 _PLANNER_CONTEXT_CONSTANTS_RAW: dict[str, frozenset[str]] = {
-    "kitchen": frozenset({"countertop", "serving_area"}),
+    "kitchen": frozenset({"countertop", "serving_area", "dining_table"}),
     "living_room": frozenset({"staging_tray"}),
     "workshop": frozenset({"MAIN_WORKBENCH_ZONE", "workshop_frame_joint"}),
 }

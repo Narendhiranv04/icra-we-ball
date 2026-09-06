@@ -144,6 +144,25 @@ class KitchenPlanningCompiler:
         coffee_sources = _extract_cands("coffee_source")
         water_sources = _extract_cands("water_source")
 
+        specification = context.get("specification")
+        grounded = context.get("ground_result")
+        bindings = getattr(grounded, "operation_bindings", {})
+        stir_pairs = set()
+        soup_pairs = set()
+        if specification is not None:
+            for group in specification.operation_groups:
+                for binding in bindings.get(group.id, []):
+                    pair = (binding["tool_id"], binding["target_id"])
+                    if group.tool_role == "coffee_stirrer":
+                        stir_pairs.add(pair)
+                    elif group.tool_role == "soup_eating_utensil":
+                        soup_pairs.add(pair)
+        # Standalone role relations may verify a pair without a group. Dedicated
+        # multi-target binding, when expressed, remains authoritative above.
+        if specification is None:
+            stir_pairs = {(t, c) for t in coffee_stirrers for c in coffee_targets}
+            soup_pairs = set(zip(soup_utensils, soup_targets))
+
         home = "countertop"
         serving_destination = "dining_table"
         all_objs = sorted(list(dict.fromkeys(
@@ -170,7 +189,7 @@ class KitchenPlanningCompiler:
             if obj in coffee_targets or obj in soup_targets:
                 destinations.add(serving_destination)
             elif obj in soup_utensils:
-                destinations.update(soup_targets)
+                destinations.update(t for u, t in soup_pairs if u == obj)
 
             locations = destinations | {init_loc}
             for loc in sorted(locations):
@@ -192,6 +211,8 @@ class KitchenPlanningCompiler:
                         preconditions.add(("contains", obj, "soup"))
                         if soup_utensils:
                             for u in soup_utensils:
+                                if (u, obj) not in soup_pairs:
+                                    continue
                                 actions.append(_action(
                                     "PLACE", (obj, destination),
                                     preconditions | {("at", u, obj)},
@@ -221,6 +242,8 @@ class KitchenPlanningCompiler:
                 ))
         for tool in coffee_stirrers:
             for target in coffee_targets:
+                if (tool, target) not in stir_pairs:
+                    continue
                 actions.append(_action(
                     "STIR", (tool, target),
                     {
@@ -238,6 +261,8 @@ class KitchenPlanningCompiler:
             goal_atoms.add(("stirred", c))
         for s in soup_targets:
             goal_atoms.add(("at", s, serving_destination))
+        for u, s in soup_pairs:
+            goal_atoms.add(("at", u, s))
         goal_atoms.add(("hand_empty",))
 
         actions.sort(key=lambda item: (
@@ -648,6 +673,10 @@ def run_to_plan(
     is_exhausted = len(opened) >= len(order)
     # Canonical graph grounding decides the assignment authority
     ground_result = ground_graph(specification, graph_o, {"search_exhausted": is_exhausted})
+    if mode == "vlm" and is_exhausted and not ground_result.complete:
+        from ..grounding import ground_verified_candidate_subgraph
+        ground_result = ground_verified_candidate_subgraph(specification, graph_o)
+
     if observer is not None:
         observer("grounding_updated", {
             "grounding": ground_result.to_dict(),
@@ -665,7 +694,7 @@ def run_to_plan(
         encoding="utf-8",
     )
 
-    if not ground_result.complete or not ground_result.assignment:
+    if (not ground_result.complete and mode != "vlm") or not ground_result.assignment:
         return PipelineResult(
             domain="kitchen", variant=variant_label, mode=mode,
             status="NO_MEANINGFUL_CANDIDATE_PLAN" if mode == "vlm" else ground_result.status,
@@ -689,9 +718,7 @@ def run_to_plan(
     )
     try:
         assignments = ground_result.assignment
-        is_vlm_candidate = (mode == "vlm" and (
-            not contract.get("symbolic_task") or not contract["symbolic_task"].get("source_roles")
-        ))
+        is_vlm_candidate = mode == "vlm"
         if is_vlm_candidate:
             planned = plan_with_common_astar(
                 KitchenPlanningCompiler(), assignments,

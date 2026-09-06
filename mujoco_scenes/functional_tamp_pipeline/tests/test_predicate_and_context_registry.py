@@ -276,7 +276,7 @@ def test_operation_group_context_relation_direction_enforced():
 def test_system_context_registry_domain_isolation():
     """Verify that planner context constants are strictly domain-isolated and exclude false symbols."""
     kitchen_consts = get_domain_planner_context_constants("kitchen")
-    assert kitchen_consts == frozenset({"countertop", "serving_area"})
+    assert kitchen_consts == frozenset({"countertop", "serving_area", "dining_table"})
 
     living_consts = get_domain_planner_context_constants("living_room")
     assert living_consts == frozenset({"staging_tray"})

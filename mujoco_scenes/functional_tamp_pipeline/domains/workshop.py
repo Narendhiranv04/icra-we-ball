@@ -198,6 +198,25 @@ class WorkshopPlanningCompiler:
                 ("repaired", target), ("inserted", fastener, target), ("hand_empty",),
             })
 
+        specification = context.get("specification")
+        if specification is not None and "VLM" in specification.source:
+            observed = context.get("graph_o")
+            triples = {(r.subject_role, r.predicate, r.object_role) for r in specification.relations}
+            def verified(subject_role, predicate, object_role):
+                if (subject_role, predicate, object_role) not in triples:
+                    return False
+                subject, obj = assignment.get(subject_role), assignment.get(object_role)
+                rel = observed.get_relation(predicate, subject, obj) if observed and subject and obj else None
+                return rel is not None and rel.status == "TRUE"
+            insertion_ok = verified("fastener", "COMPATIBLE_WITH_TARGET", "repair_target")
+            disabled_operations = specification.metadata.get("canonicalization_trace", {}).get("disabled_groups", [])
+            operation_ok = not disabled_operations and insertion_ok and verified("driver", "COMPATIBLE_WITH", "fastener") and verified("driver", "REACHES_TARGET", "repair_target")
+            actions = [a for a in actions if not (a.name == "SCREW" and not operation_ok)
+                       and not (a.name == "PLACE" and a.arguments == (fastener, target) and not insertion_ok)]
+            if driver and not operation_ok:
+                actions.append(_action("PLACE", (driver, surface), {("holding", driver)},
+                    {("hand_empty",), ("at", driver, surface)}, {("holding", driver)}))
+
         return SymbolicProblem(
             initial_atoms=frozenset(initial),
             goal_atoms=frozenset(goals),

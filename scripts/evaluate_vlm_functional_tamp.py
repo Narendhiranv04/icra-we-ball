@@ -61,91 +61,8 @@ def _evaluate_plan_against_gt(
     plan_actions: tuple[dict[str, Any], ...],
     run_dir: Path,
 ) -> Tuple[int, int, float, bool]:
-    """Replay candidate plan against GT problem to compute genuine task goal satisfaction."""
-    if domain == "workshop":
-        total_gt_goals = 3
-        if not plan_actions:
-            return total_gt_goals, 0, 0.0, False
-
-        plan_file = run_dir / "action_plan.json"
-        if plan_file.exists():
-            try:
-                plan_data = json.loads(plan_file.read_text())
-                val = plan_data.get("validation", {})
-                planner = plan_data.get("planner", {})
-                is_partial = planner.get("is_partial", False)
-                if val.get("status") == "VALID" and val.get("goal_status") == "GOAL_SATISFIED" and not is_partial:
-                    return total_gt_goals, 3, 1.0, True
-                sat_goals = val.get("satisfied_goals", [])
-                has_repaired = any(g[0] == "repaired" for g in sat_goals)
-                has_staged = any(g[0] == "at" and len(g) > 2 and "workbench" in str(g[2]).lower() for g in sat_goals)
-                has_hand_empty = any(g[0] == "hand_empty" for g in sat_goals)
-                has_inserted = any(g[0] in ("inserted", "fastened") for g in sat_goals)
-                achieved = 0
-                if has_inserted:
-                    achieved += 1
-                if has_repaired:
-                    achieved += 1
-                if (has_staged and has_hand_empty) or (has_staged and len(plan_actions) > 0 and plan_actions[-1].get("operator") == "PLACE"):
-                    achieved += 1
-                full_sat = (achieved == 3 and not is_partial)
-                return total_gt_goals, achieved, achieved / 3.0, full_sat
-            except Exception:
-                pass
-        return total_gt_goals, 0, 0.0, False
-
-    elif domain == "living_room":
-        total_gt_goals = 5
-        if not plan_actions:
-            return total_gt_goals, 0, 0.0, False
-
-        replay_file = run_dir / "action_sequence" / "replay_validation.json"
-        if not replay_file.exists():
-            replay_file = run_dir / "observed_grounding" / "action_sequence" / "replay_validation.json"
-        if replay_file.exists():
-            try:
-                rep = json.loads(replay_file.read_text())
-                if rep.get("status") == "VALID" and rep.get("goal_status") == "GOAL_SATISFIED":
-                    return total_gt_goals, 5, 1.0, True
-                elif rep.get("status") == "VALID":
-                    sat = len(rep.get("satisfied_goals", []))
-                    return total_gt_goals, sat, sat / 5.0, (sat == 5)
-            except Exception:
-                pass
-
-        plan_file = run_dir / "action_sequence" / "plan.json"
-        if plan_file.exists():
-            try:
-                plan_data = json.loads(plan_file.read_text())
-                val = plan_data.get("validation", {})
-                if val.get("status") == "VALID" and val.get("goal_status") == "GOAL_SATISFIED":
-                    return total_gt_goals, 5, 1.0, True
-            except Exception:
-                pass
-        return total_gt_goals, 0, 0.0, False
-
-    elif domain == "kitchen":
-        total_gt_goals = 5
-        if not plan_actions:
-            return total_gt_goals, 0, 0.0, False
-
-        plan_file = run_dir / "action_sequence" / "action_plan.json"
-        if plan_file.exists():
-            try:
-                plan_data = json.loads(plan_file.read_text())
-                val = plan_data.get("validation", {})
-                planner = plan_data.get("planner", {})
-                is_partial = planner.get("is_partial", False)
-                if val.get("status") == "VALID" and val.get("goal_status") == "GOAL_SATISFIED" and not is_partial:
-                    return total_gt_goals, 5, 1.0, True
-                sat = len(val.get("satisfied_goals", []))
-                scaled_sat = min(5, int(round(5.0 * sat / 14.0))) if sat > 0 else 0
-                return total_gt_goals, scaled_sat, scaled_sat / 5.0, (scaled_sat == 5 and not is_partial)
-            except Exception:
-                pass
-        return total_gt_goals, 0, 0.0, False
-
-    return 1, 0, 0.0, False
+    from mujoco_scenes.functional_tamp_pipeline.evaluation_metrics import full_task_coverage
+    return full_task_coverage(domain, run_dir)
 
 
 def evaluate_all_variants(
@@ -157,6 +74,8 @@ def evaluate_all_variants(
     dry_run: bool = True,
 ) -> Dict[str, Any]:
     output_root = Path(output_root)
+    if spec_source == "live" and output_root.exists() and any(output_root.iterdir()):
+        raise ValueError(f"Refusing to overwrite an existing live matrix: {output_root}")
     output_root.mkdir(parents=True, exist_ok=True)
 
     if spec_source == "live":
@@ -168,6 +87,7 @@ def evaluate_all_variants(
     else:
         raise ValueError(f"Invalid spec_source: {spec_source!r}. Must be 'live' or 'replay'.")
 
+    from mujoco_scenes.functional_tamp_pipeline.evaluation_metrics import candidate_plan_valid, format_rate
     records: List[Dict[str, Any]] = []
 
     # Total variant counts
@@ -232,17 +152,14 @@ def evaluate_all_variants(
                 domain, variant, candidate_plan, run_dir
             )
 
-            # Strict scientific invariants
-            if not is_feasible:
-                full_task_sat = False
-                false_completion = (full_task_cov >= 1.0 or pipeline_res.status == "ACTION_SEQUENCE_READY")
-            else:
-                false_completion = False
+            # ACTION_SEQUENCE_READY describes candidate planning, not a claim
+            # that the full user task was accomplished.
+            false_completion = bool(not is_feasible and full_task_sat)
 
             # Candidate goal satisfaction
             cand_stats = pipeline_res.candidate_search_statistics or pipeline_res.search_statistics or {}
-            cand_total = cand_stats.get("total_goals", len(candidate_plan))
-            cand_sat = cand_stats.get("satisfied_goals", len(candidate_plan))
+            cand_total = cand_stats.get("total_goals", 0)
+            cand_sat = cand_stats.get("satisfied_goals", 0)
             cand_cov = (cand_sat / cand_total) if cand_total > 0 else 0.0
 
             # Correctness determination (Section U)
@@ -320,7 +237,7 @@ def evaluate_all_variants(
                 "uninstantiable_reasons": [pipeline_res.failure_reason] if pipeline_res.failure_reason else [],
                 "candidate_plan_status": pipeline_res.status,
                 "candidate_plan_length": len(candidate_plan),
-                "candidate_plan_valid": True if len(candidate_plan) > 0 else (False if pipeline_res.status == "PIPELINE_EXCEPTION" else None),
+                "candidate_plan_valid": candidate_plan_valid(run_dir),
                 "full_task_goal_count": full_gt_goals,
                 "full_task_goal_satisfied_count": sat_gt_goals,
                 "full_task_goal_coverage": full_task_cov,
@@ -335,8 +252,14 @@ def evaluate_all_variants(
                 "terminal_status": pipeline_res.status,
                 "failure_reason": pipeline_res.failure_reason,
             }
+            from mujoco_scenes.functional_tamp_pipeline.evaluation_metrics import enrich_record
+            row = enrich_record(row, run_dir, CANONICAL_TASK_INSTRUCTIONS[domain])
             records.append(row)
-            print(f"  [{variant}] outcome_correct={outcome_correct} status={pipeline_res.status} full_task_sat={full_task_sat} cand_plan_len={len(candidate_plan)} runtime={runtime_sec:.2f}s")
+            (output_root / "evaluation_records.json").write_text(json.dumps(records, indent=2) + "\n")
+            if spec_source == "live" and (pipeline_res.status == "PIPELINE_EXCEPTION" or row["high_level_replans"] > 0):
+                (output_root / "invariants.json").write_text(json.dumps({"status": "INVALID", "errors": [f"{variant}: implementation failure; matrix stopped"]}, indent=2))
+                raise RuntimeError(f"INVALID MATRIX: {variant}: {pipeline_res.failure_reason}")
+            print(f"  [{variant}] outcome_correct={row['outcome_correct']} status={pipeline_res.status} full_task_sat={full_task_sat} cand_plan_len={len(candidate_plan)} runtime={runtime_sec:.2f}s")
 
     # Save Section 38 records
     rec_json = output_root / "evaluation_records.json"
@@ -416,11 +339,10 @@ def evaluate_all_variants(
 
         # Denominator for candidate grounding success is candidate_grounding_eligible
         eligible_cands = [r for r in d_recs if r["candidate_grounding_eligible"]]
-        cand_ground = (sum(r["candidate_grounding_succeeded"] for r in eligible_cands) / len(eligible_cands)) if eligible_cands else (
-            sum(r["candidate_grounding_succeeded"] for r in d_recs) / d_total if d_total else 0.0
-        )
+        cand_ground = (sum(r["candidate_grounding_succeeded"] for r in eligible_cands) / len(eligible_cands)) if eligible_cands else None
 
-        cand_plan_rate = sum(1.0 if r["candidate_plan_length"] > 0 else 0.0 for r in d_recs) / d_total if d_total else 0.0
+        plan_eligible = [r for r in d_recs if r["astar_invocations"] > 0]
+        cand_plan_rate = sum(r["candidate_plan_valid"] for r in plan_eligible) / len(plan_eligible) if plan_eligible else None
         partial_rate = sum(1.0 if "PARTIAL" in r["candidate_plan_status"] else 0.0 for r in d_recs) / d_total if d_total else 0.0
         cand_cov = sum(r["candidate_goal_coverage"] for r in d_recs) / d_total if d_total else 0.0
         full_succ = (sum(r["full_task_satisfied"] for r in d_feas) / len(d_feas)) if d_feas else 0.0
@@ -430,8 +352,8 @@ def evaluate_all_variants(
             "raw_vlm_role_recall": f"{raw_recall * 100:.1f}%",
             "runtime_contract_coverage": f"{runtime_cov * 100:.1f}%",
             "canonicalization_success": f"{canon_succ * 100:.1f}%",
-            "candidate_grounding_success": f"{cand_ground * 100:.1f}%",
-            "candidate_plan_rate": f"{cand_plan_rate * 100:.1f}%",
+            "candidate_grounding_success": format_rate(cand_ground),
+            "candidate_plan_rate": format_rate(cand_plan_rate),
             "partial_plan_rate": f"{partial_rate * 100:.1f}%",
             "candidate_goal_coverage": f"{cand_cov * 100:.1f}%",
             "full_task_success": f"{full_succ * 100:.1f}%",
@@ -444,11 +366,10 @@ def evaluate_all_variants(
     total_canon = sum(r["canonicalization_succeeded"] for r in records) / n_total
 
     all_eligible = [r for r in records if r["candidate_grounding_eligible"]]
-    total_cand_ground = (sum(r["candidate_grounding_succeeded"] for r in all_eligible) / len(all_eligible)) if all_eligible else (
-        sum(r["candidate_grounding_succeeded"] for r in records) / n_total
-    )
+    total_cand_ground = (sum(r["candidate_grounding_succeeded"] for r in all_eligible) / len(all_eligible)) if all_eligible else None
 
-    total_cand_plan = sum(1.0 if r["candidate_plan_length"] > 0 else 0.0 for r in records) / n_total
+    plan_eligible = [r for r in records if r["astar_invocations"] > 0]
+    total_cand_plan = sum(r["candidate_plan_valid"] for r in plan_eligible) / len(plan_eligible) if plan_eligible else None
     total_partial = sum(1.0 if "PARTIAL" in r["candidate_plan_status"] else 0.0 for r in records) / n_total
     total_cand_cov = sum(r["candidate_goal_coverage"] for r in records) / n_total
     total_mean_reg = sum(len(r["regions_inspected"]) for r in records) / n_total
@@ -457,8 +378,8 @@ def evaluate_all_variants(
         "raw_vlm_role_recall": f"{total_raw_recall * 100:.1f}%",
         "runtime_contract_coverage": f"{total_runtime_cov * 100:.1f}%",
         "canonicalization_success": f"{total_canon * 100:.1f}%",
-        "candidate_grounding_success": f"{total_cand_ground * 100:.1f}%",
-        "candidate_plan_rate": f"{total_cand_plan * 100:.1f}%",
+        "candidate_grounding_success": format_rate(total_cand_ground),
+        "candidate_plan_rate": format_rate(total_cand_plan),
         "partial_plan_rate": f"{total_partial * 100:.1f}%",
         "candidate_goal_coverage": f"{total_cand_cov * 100:.1f}%",
         "full_task_success": f"{feasible_success_pct:.1f}%",
@@ -495,6 +416,10 @@ def evaluate_all_variants(
     print("\n=== EVALUATION COMPLETE ===")
     print(table_md)
     print(diag_md)
+    from mujoco_scenes.functional_tamp_pipeline.evaluation_metrics import write_detailed_report
+    errors = write_detailed_report(output_root, records, live=spec_source == "live")
+    if errors:
+        raise RuntimeError("INVALID BENCHMARK: " + "; ".join(errors))
     return summary
 
 

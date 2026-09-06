@@ -1,0 +1,34 @@
+| Variant | Raw FM response available | Replay status | Evidence present |
+|---|---:|---|---|
+| kitchen/K1 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| kitchen/K2 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| kitchen/K3 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| kitchen/K4 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| kitchen/K5 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| kitchen/K6 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| kitchen/K7 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| kitchen/K8 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| kitchen/K9 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| kitchen/K10 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| kitchen/K11 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| kitchen/K12 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| living_room/L1 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| living_room/L2 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| living_room/L3 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| living_room/L4 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| living_room/L5 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| living_room/L6 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| living_room/L7 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| living_room/L8 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| living_room/L9 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| living_room/L10 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| workshop/W1 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| workshop/W2 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| workshop/W3 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| workshop/W4 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| workshop/W5 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| workshop/W6 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| workshop/W7 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| workshop/W8 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| workshop/W9 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |
+| workshop/W10 | No | Unavailable; not reconstructed | result.json, run_manifest.json, five input PNGs |

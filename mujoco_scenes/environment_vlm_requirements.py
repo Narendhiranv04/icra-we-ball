@@ -2049,8 +2049,13 @@ class EnvironmentVLMRequirementProvider:
                     if map_living_room_operation_group_function(g.get("function", "")) == fn_canon
                 ]
                 total_req_count = sum(int(g.get("required_target_count", 0)) for g in matching_groups)
+                if total_req_count != expected_target_count:
+                    raise MalformedVLMSpecificationError(
+                        f"Interaction group required_target_count {total_req_count} does not match "
+                        f"target role count {expected_target_count}"
+                    )
                 req_count = expected_target_count
-                req_count_status = "PRESERVED" if total_req_count == expected_target_count else "RECONCILED_WITH_TARGET_ROLE_CARDINALITY"
+                req_count_status = "PRESERVED"
 
                 usage_policy = grp["usage_policy"]
                 if usage_policy == "SEQUENTIAL_REUSE_ALLOWED":

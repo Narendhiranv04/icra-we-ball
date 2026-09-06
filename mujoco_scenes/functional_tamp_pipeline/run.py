@@ -83,18 +83,23 @@ def _make_guarded_observer(
     observer: EventCallback | None,
     state: _RunState,
 ) -> EventCallback | None:
-    if observer is None:
-        return None
-
     def _guarded_callback(event_type: str, payload: dict[str, Any]) -> None:
-        enriched_payload = dict(payload)
-        if event_type in {"search_region_selected", "search_region_opened"}:
-            if "search_order_source_effective" not in enriched_payload and state.search_order_source_effective is not None:
-                enriched_payload["search_order_source_effective"] = state.search_order_source_effective
-            if "search_seed_effective" not in enriched_payload and state.search_seed_effective is not None:
-                enriched_payload["search_seed_effective"] = state.search_seed_effective
         try:
-            observer(event_type, enriched_payload)
+            enriched_payload = dict(payload)
+            if event_type == "observation_updated" and payload.get("scene_graph"):
+                stage = "before_search" if payload.get("stage") == "initial" else "after_search"
+                _write_json(state.run_dir / f"observed_graph_{stage}.json", payload["scene_graph"])
+            if event_type in {"search_region_selected", "search_region_opened", "grounding_updated"}:
+                state.run_dir.mkdir(parents=True, exist_ok=True)
+                with (state.run_dir / "trajectory_events.jsonl").open("a") as stream:
+                    stream.write(json.dumps({"event": event_type, "payload": {k:v for k,v in payload.items() if k not in {"frame_rgb", "scene_graph"}}}) + "\n")
+            if event_type in {"search_region_selected", "search_region_opened"}:
+                if "search_order_source_effective" not in enriched_payload and state.search_order_source_effective is not None:
+                    enriched_payload["search_order_source_effective"] = state.search_order_source_effective
+                if "search_seed_effective" not in enriched_payload and state.search_seed_effective is not None:
+                    enriched_payload["search_seed_effective"] = state.search_seed_effective
+            if observer is not None:
+                observer(event_type, enriched_payload)
         except Exception as error:
             print(
                 f"OBSERVER ERROR on {event_type}: {type(error).__name__}: {error}",
@@ -332,6 +337,15 @@ def _write_run_manifest(state: _RunState) -> None:
         "observer_errors": list(state.observer_errors),
         "artifacts": _collect_artifacts(state.run_dir),
     }
+    from .telemetry import current_run
+    telemetry = current_run.get()
+    if telemetry is not None:
+        manifest.update(semantic_vlm_requests=telemetry.semantic_vlm_requests,
+            vlm_request_count=telemetry.semantic_vlm_requests,
+            transport_retries=max(0, telemetry.transport_attempts - telemetry.semantic_vlm_requests),
+            astar_invocations=telemetry.astar_invocations,
+            high_level_replans=max(0, telemetry.astar_invocations - 1),
+            inference_config=telemetry.inference_config)
     _write_json(state.run_dir / "run_manifest.json", manifest)
 
 
@@ -625,7 +639,11 @@ def _run_pipeline_impl(
         "missing_requirements": list(satisfaction.missing_requirements),
         "evidence": satisfaction.evidence,
     })
-    if not satisfaction.satisfied or satisfaction.assignment is None:
+    if state.mode == "vlm" and not satisfaction.satisfied:
+        from .grounding import ground_verified_candidate_subgraph
+        satisfaction = ground_verified_candidate_subgraph(state.specification, adapter.graph)
+        _write_json(state.run_dir / "graph_grounding_result.json", satisfaction.to_dict())
+    if (not satisfaction.satisfied and state.mode != "vlm") or not satisfaction.assignment:
         reason = ", ".join(satisfaction.missing_requirements) or "NO_GLOBAL_ASSIGNMENT"
         print(f"FUNCTIONAL GROUNDING FAILED: {reason}", flush=True)
         state.terminal_status = satisfaction.status
@@ -652,7 +670,7 @@ def _run_pipeline_impl(
         planned = plan_with_common_astar(
             WorkshopPlanningCompiler(),
             satisfaction.assignment,
-            adapter.planning_context(),
+            {**adapter.planning_context(), "specification": state.specification, "graph_o": adapter.graph},
             allow_partial=(state.mode == "vlm"),
         )
         _write_json(state.run_dir / "action_plan.json", {
@@ -772,6 +790,9 @@ def run_pipeline(
         git_dirty=git_dirty,
         started_at_utc=started_at_utc,
     )
+    from .telemetry import current_run, RunTelemetry
+    telemetry = RunTelemetry(run_dir)
+    telemetry_token = current_run.set(telemetry)
     guarded_observer = _make_guarded_observer(observer, state)
 
     _emit_event(guarded_observer, "run_started", {
@@ -824,7 +845,9 @@ def run_pipeline(
                 state.observer_errors.extend(display_errors)
             except Exception:
                 pass
+        telemetry.write()
         _safe_write_run_manifest(state)
+        current_run.reset(telemetry_token)
 
 
 def main() -> int:

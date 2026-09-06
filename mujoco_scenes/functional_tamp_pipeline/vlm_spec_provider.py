@@ -29,21 +29,23 @@ class VLMSpecProvider(FunctionalSpecProvider):
         observation_images: list[Path] | None = None,
         raw_document: dict[str, Any] | None = None,
     ) -> FunctionalRequirementGraph:
-        if domain == "workshop":
-            graph = self._workshop(task_instruction, observation_images or [], raw_document=raw_document)
-        elif domain == "kitchen":
-            graph = self._kitchen(task_instruction, observation_images or [], raw_document=raw_document)
-        elif domain == "living_room":
-            graph = self._living_room(task_instruction, observation_images or [], raw_document=raw_document)
-        else:
+        from .semantic_compiler import compile_candidate_graph
+        from .executability import analyze_executability
+        from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter
+
+        if domain not in {"kitchen", "living_room", "workshop"}:
             raise NotImplementedError(f"VLM specification adapter is not implemented for {domain}")
-        try:
-            graph.validate()
-            from .task_interface_validator import validate_runtime_gf
-            validate_runtime_gf(graph)
-        except Exception as err:
-            from .errors import MalformedVLMSpecificationError
-            raise MalformedVLMSpecificationError(f"MALFORMED_VLM_SPECIFICATION: {err}") from err
+        if raw_document is None:
+            adapter = FMAdapter()
+            adapter.return_raw_graph = True
+            if domain == "kitchen":
+                raw_document = adapter.generate_kitchen_functional_graph(
+                    task_instruction, observation_images=observation_images or [])
+            else:
+                raw_document = adapter.generate_task_requirements(
+                    task_instruction, observation_images=observation_images or [])
+        graph = compile_candidate_graph(domain, task_instruction, raw_document)
+        graph.metadata["candidate_requirement_statuses"] = analyze_executability(graph)
         return graph
 
     @staticmethod

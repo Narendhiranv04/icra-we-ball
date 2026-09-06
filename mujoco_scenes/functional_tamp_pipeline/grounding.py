@@ -497,7 +497,10 @@ def ground_graph(
     for role_name, role in roles.items():
         cands_true: list[str] = []
         cands_unk: list[str] = []
+        blocked_property = any(item['role'] == role_name for item in graph_f.metadata.get('unverified_required_properties', []))
         for instance_id, node in sorted(graph_o.nodes.items()):
+            if blocked_property:
+                continue
             status, details = evaluate_node_for_role(node, role)
             evaluations[(role_name, instance_id)] = details
             if status == "TRUE":
@@ -803,3 +806,34 @@ def ground_graph(
         },
     )
 
+
+
+def ground_verified_candidate_subgraph(graph_f, graph_o, context=None):
+    """Retain the largest verified role subset after observation exhaustion.
+
+    Every trial uses the same semantic/geometric verifier and all relations
+    induced by its retained roles. This is grounding, never an A* replan.
+    The original requested graph/cardinalities remain unchanged.
+    """
+    from dataclasses import replace
+    from itertools import combinations
+    context = dict(context or {}, search_exhausted=True)
+    full = ground_graph(graph_f, graph_o, context)
+    if full.complete:
+        return full
+    names = sorted(graph_f.nodes)
+    for size in range(len(names) - 1, 0, -1):
+        for selected in combinations(names, size):
+            keep = set(selected)
+            groups = tuple(g for g in graph_f.operation_groups if
+                {g.tool_role, g.target_role, *([g.context_role] if g.context_role else [])} <= keep)
+            candidate = replace(graph_f, nodes={r: graph_f.nodes[r] for r in selected},
+                relations=tuple(r for r in graph_f.relations if {r.subject_role, r.object_role} <= keep),
+                operation_groups=groups)
+            verified = ground_graph(candidate, graph_o, context)
+            if verified.complete and verified.assignment:
+                return replace(verified, complete=False, status='PARTIAL_VERIFIED_GROUNDING',
+                    missing_roles=tuple(sorted(set(names) - keep)),
+                    evidence={**verified.evidence, 'candidate_roles': list(selected),
+                              'original_grounding_status': full.status, 'search_exhausted': True})
+    return full
