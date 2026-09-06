@@ -354,6 +354,7 @@ WORKSHOP_REASONABLE_AFFORDANCE_NOTE_KEYWORDS = (
     "threaded shaft", "has threaded shaft", "threaded shank", "threaded",
     "screw head", "has screw head", "tool engagement", "has head for tool engagement",
     "driving tip", "has driving tip", "handle for grip", "has handle for grip",
+    "handheld", "hand held", "hand-held", "portable",
     "stable base", "stable surface",
 )
 
