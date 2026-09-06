@@ -426,6 +426,84 @@ def test_mujoco_terminal_snapshot_is_derived_from_scene_state() -> None:
     assert observer.snapshot("living_room", False).held_objects == ("payload",)
 
 
+def test_observer_snapshot_contained_stably_per_member_alias() -> None:
+    body_names = ("world", "box", "member_stable", "member_unstable", "google_gripper")
+    geom_names = ("box_geom", "stable_geom", "unstable_geom", "gripper_geom")
+
+    class FakeMuJoCo:
+        class mjtObj:
+            mjOBJ_BODY = 1
+            mjOBJ_GEOM = 2
+
+        class mjtJoint:
+            mjJNT_FREE = 0
+
+        @staticmethod
+        def mj_name2id(model, object_type, name):
+            names = body_names if object_type == 1 else geom_names
+            return names.index(name) if name in names else -1
+
+        @staticmethod
+        def mj_id2name(model, object_type, index):
+            names = body_names if object_type == 1 else geom_names
+            return names[index]
+
+        @staticmethod
+        def mj_forward(model, data):
+            return None
+
+        @staticmethod
+        def mj_objectVelocity(model, data, object_type, body_id, velocity, local):
+            velocity[:] = 0.0
+
+    model = SimpleNamespace(
+        nbody=5,
+        ngeom=4,
+        njnt=0,
+        neq=1,
+        body_parentid=np.array([0, 0, 0, 0, 0]),
+        geom_bodyid=np.array([1, 2, 3, 4]),
+        geom_size=np.array(
+            [[0.5, 0.5, 0.5], [0.05, 0.05, 0.05], [0.05, 0.05, 0.05], [0.02, 0.02, 0.02]]
+        ),
+        jnt_bodyid=np.array([], dtype=int),
+        jnt_type=np.array([], dtype=int),
+        jnt_qposadr=np.array([], dtype=int),
+        jnt_range=np.empty((0, 2)),
+        eq_obj1id=np.array([4]),
+        eq_obj2id=np.array([3]),
+    )
+    data = SimpleNamespace(
+        qpos=np.array([]),
+        xpos=np.array([[0, 0, 0], [0, 0, 0.5], [0, 0, 0.5], [0.1, 0, 0.5], [0.1, 0, 0.5]], dtype=float),
+        xquat=np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (5, 1)),
+        geom_xpos=np.array([[0, 0, 0.5], [0, 0, 0.5], [0.1, 0, 0.5], [0.1, 0, 0.5]], dtype=float),
+        geom_xmat=np.tile(np.eye(3).reshape(1, 9), (4, 1)),
+        contact=[],
+        ncon=0,
+        eq_active=np.array([1]),  # gripper grasps member_unstable
+    )
+    observer = MuJoCoPhysicalStateObserver(
+        SimpleNamespace(model=model, data=data),
+        {
+            "sym_stable": binding("sym_stable", "member_stable"),
+            "sym_unstable": binding("sym_unstable", "member_unstable"),
+        },
+        fixed_bindings={
+            "sym_box": binding("sym_box", "box", "container"),
+        },
+        mujoco_module=FakeMuJoCo,
+    )
+    snapshot = observer.snapshot("kitchen", False)
+    assert snapshot.relations["contained_in"]["box"] == ["member_stable", "member_unstable"]
+    assert snapshot.relations["contained_in"]["sym_box"] == ["sym_stable", "sym_unstable"]
+    assert snapshot.objects["member_stable"]["contained_stably"] is True
+    assert snapshot.objects["sym_stable"]["contained_stably"] is True
+    assert snapshot.objects["member_unstable"]["contained_stably"] is False
+    assert snapshot.objects["sym_unstable"]["contained_stably"] is False
+
+
+
 def symbolic_execution_plan(domain: str, actions: tuple[SymbolicAction, ...]) -> BaselineExecutionPlan:
     symbolic = SymbolicPlan(
         attempt_index=0,

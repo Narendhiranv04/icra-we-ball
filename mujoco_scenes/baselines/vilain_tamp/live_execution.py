@@ -673,13 +673,13 @@ class MuJoCoPhysicalStateObserver:
                         and m_state.get("stable") is True
                     )
                     m_state["contained_stably"] = contained_stably
+                    if m_name in entity_to_id:
+                        s_name = entity_to_id[m_name]
+                        if s_name in objects:
+                            objects[s_name]["contained_stably"] = contained_stably
                 if c_name in entity_to_id:
                     c_id = entity_to_id[c_name]
-                    sym_members = sorted(entity_to_id.get(m, m) for m in members)
-                    contained[c_id] = sym_members
-                    for s_m in sym_members:
-                        if s_m in objects:
-                            objects[s_m]["contained_stably"] = contained_stably
+                    contained[c_id] = sorted(entity_to_id.get(m, m) for m in members)
 
         for container_id, container in all_bindings.items():
             if container_id not in contained:
