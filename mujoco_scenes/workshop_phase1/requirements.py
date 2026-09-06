@@ -643,14 +643,14 @@ def canonicalize_workshop_relation(
         "located on", "located on workbench", "located in", "placed on", "placed on workbench",
         "on surface", "on workbench", "supported by workbench", "rests on workbench",
     ))
-    if is_loc_phrase:
+    if is_loc_phrase and raw_object_canon == "MAIN_WORKBENCH_ZONE":
         if raw_subject_canon in ("driver", "fastener"):
-            if allow_contextual_support_absorption and raw_object_canon == "MAIN_WORKBENCH_ZONE":
+            if allow_contextual_support_absorption:
                 return (raw_subject_canon, "LOCATED_ON", "MAIN_WORKBENCH_ZONE", "PRESERVED", "ABSORBED_INTO_PLANNER_CONTEXT")
             raise UnsupportedCheckerCapabilityError(
                 f"Functional relation LOCATED_ON on role {raw_subject_id!r} is not supported in canonical Workshop G_F"
             )
-        if raw_subject_canon == "repair_target" and raw_object_canon == "MAIN_WORKBENCH_ZONE":
+        if raw_subject_canon == "repair_target":
             return ("repair_target", "LOCATED_ON", "MAIN_WORKBENCH_ZONE", "PRESERVED", "ABSORBED_INTO_PLANNER_CONTEXT")
 
     # Explicit reverse support grammar from workbench to repair_target
@@ -672,14 +672,20 @@ def canonicalize_workshop_relation(
             "tighten", "tightens", "turn", "turns", "rotate", "rotates", "fasten", "fastens",
             "fit the screw head and transmit torque", "tip must fit the screw head and transmit torque",
             "fit screw head", "fits screw head", "driver bit matches fastener",
+            "used with", "used on", "used together", "works with", "work with",
+            "fasten with", "fastens with", "operates on", "operate on",
         )):
             return ("driver", "COMPATIBLE_WITH", "fastener", "PRESERVED", "GRAPH_RELATION")
 
     if raw_subject_canon == "fastener" and raw_object_canon == "driver":
         if any(_contains_phrase(norm_rel, k) for k in (
+            "compatible with", "compatible with driver", "compatible with tool",
+            "compatible with the driver", "compatible",
             "is driven by", "driven by", "is engaged by", "engaged by",
             "receives torque from", "driven by tool", "is driven by tool",
             "is turned by", "turned by", "receives drive from",
+            "used with", "used on", "used together", "works with", "work with",
+            "fastened with", "fastened by", "operated by", "turned with",
         )):
             return ("driver", "COMPATIBLE_WITH", "fastener", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
 
@@ -693,7 +699,8 @@ def canonicalize_workshop_relation(
             "reach workpiece hole", "reach workpiece hole recess",
             "long enough to reach workpiece hole recess", "long enough to reach hole",
             "long enough to reach", "compatible with", "compatible", "compatible with target",
-            "compatible with workpiece",
+            "compatible with workpiece", "placed on", "placed at", "applied to", "used at",
+            "fasten at", "operates at",
         )):
             dir_st = "PRESERVED" if ("reach" in norm_rel or "access" in norm_rel) else "NORMALIZED_TO_CANONICAL_SIGNATURE"
             return ("driver", "REACHES_TARGET", "repair_target", dir_st, "GRAPH_RELATION")
@@ -717,6 +724,8 @@ def canonicalize_workshop_relation(
             "threads into target repair hole", "thread into target repair hole",
             "threads into hole", "thread into hole", "fits the hole", "fit the hole",
             "contained in", "placed in", "inserted in", "held in", "secured in", "mounted in",
+            "placed on", "placed at", "fastened to", "fastened on", "fastened at",
+            "installed at", "installed in", "used at",
         )):
             return ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "PRESERVED", "GRAPH_RELATION")
 

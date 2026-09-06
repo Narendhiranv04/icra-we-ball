@@ -207,7 +207,7 @@ class WorkshopPlanningCompiler:
                 rel = observed.get_relation(predicate, subject, obj) if observed and subject and obj else None
                 return rel is not None and rel.status == "TRUE"
             disabled_operations = specification.metadata.get("canonicalization_trace", {}).get("disabled_groups", [])
-            has_group = bool(specification.operation_groups)
+            has_group = bool(specification.operation_groups or specification.metadata.get("canonicalization_trace", {}).get("groups", []))
             insertion_ok = (("fastener", "COMPATIBLE_WITH_TARGET", "repair_target") in triples or has_group) and verified("fastener", "COMPATIBLE_WITH_TARGET", "repair_target")
             compat_ok = (("driver", "COMPATIBLE_WITH", "fastener") in triples or has_group) and verified("driver", "COMPATIBLE_WITH", "fastener")
             reaches_ok = verified("driver", "REACHES_TARGET", "repair_target") and (("driver", "REACHES_TARGET", "repair_target") in triples or has_group or (insertion_ok and compat_ok))

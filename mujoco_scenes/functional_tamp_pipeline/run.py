@@ -143,7 +143,7 @@ def _get_git_provenance() -> tuple[str | None, bool | None]:
 
     try:
         status = subprocess.check_output(
-            ["git", "status", "--porcelain"],
+            ["git", "status", "--porcelain", "--untracked-files=no"],
             cwd=str(ROOT),
             stderr=subprocess.DEVNULL,
             text=True,

@@ -178,7 +178,7 @@ Before returning the JSON, silently decompose the user instruction into its atom
 1. For every required transformation, distinguish physically separate causal participants when applicable, including:
    - material or object being transferred/manipulated;
    - source/provider if something must come from somewhere;
-   - receiving container/target/destination;
+   - receiving container/target/destination (use a single role with count/cardinality >= 1 rather than duplicating roles for identical destinations);
    - reusable implement/tool if an external implement causes the transformation;
    - component that remains in the final assembly;
    - contextual support or fixed target.
@@ -189,7 +189,7 @@ Before returning the JSON, silently decompose the user instruction into its atom
    - For individual references (e.g. each person/seat, each user, joint frame), represent as a distinct contextual reference (entity_kind: FIXED_TARGET, e.g. viewer seating position, mounting frame, binding_policy: DISTINCT) participating in spatial relations (e.g. 'near seat', 'fastened to').
    - For collective/shared references (e.g. both people/seats, shared seating area), represent as a shared contextual reference (entity_kind: FIXED_TARGET, e.g. paired viewer seating area, binding_policy: SHARED) participating in accessibility relations (e.g. 'accessible from both seats').
 6. Propagate explicit quantifiers such as 'each', 'both', and numerical counts into role cardinalities, binding policies, or interaction groups. An individual/dedicated requirement uses binding_policy: DISTINCT and interaction group usage_policy: DEDICATED_PER_TARGET.
-7. Do not reuse one functional role across different causal functions unless the task semantics actually permit the same physical object to satisfy both.
+7. Do not reuse one functional role across different causal functions unless the task semantics actually permit the same physical object to satisfy both. When a task requires distinct operations (such as preparing a beverage and serving soup), represent each operation's distinct utensils or implements (e.g., a stirring implement for the beverage vs an eating utensil for the soup) as separate functional roles. Never merge different task-specific implements into a single role.
 8. Before emitting the JSON, verify:
    - every declared functional role participates in at least one functional relation or interaction group;
    - relations connect each movable item to its declared supporting destination (e.g. refreshments to individual tables, entertainment control to shared table);

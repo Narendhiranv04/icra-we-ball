@@ -293,6 +293,10 @@ def map_kitchen_role_function(raw: dict[str, Any] | str) -> str | None:
             return "coffee_stirrer"
     if (has_soup and (has_utensil or has_spoon)) and not has_bowl and not (has_contain and not has_spoon and not has_utensil):
         return "soup_eating_utensil"
+    if (has_utensil or (has_spoon and not has_coffee and not has_stir)) and not has_bowl and not (has_contain and not has_spoon and not has_utensil):
+        cats_str = " ".join(str(c) for c in cats).lower()
+        if "soup" in cats_str or "soup" in norm or "eat" in norm or "consume" in norm or any(w in cats_str for w in ("soup_spoon", "soup_utensil", "tablespoon", "fork")):
+            return "soup_eating_utensil"
 
     # 4. Containers from function/description
     if (has_coffee or has_cup) and has_contain and not has_stir and not has_source and not has_spoon:

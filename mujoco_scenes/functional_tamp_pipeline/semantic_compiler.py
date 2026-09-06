@@ -316,6 +316,13 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 add_relation(group['tool_role'], phrase, group['target_role'])
             for phrase in group.get('context_relations', []):
                 add_relation(group['tool_role'], phrase, group['context_role'])
+            ctx_id = group.get('context_role')
+            if ctx_id and id_map.get(ctx_id) == 'repair_target':
+                add_relation(group['target_role'], 'compatible with target', ctx_id)
+            elif 'repair_target' in nodes and any(r.object_role == 'repair_target' for r in relations):
+                target_ids = [k for k, v in id_map.items() if v == 'repair_target']
+                if target_ids:
+                    add_relation(group['target_role'], 'compatible with target', target_ids[0])
             trace['groups'].append({'raw_group': group, 'status': 'STATIC_ALREADY_SATISFIED',
                                     'representation': 'SINGLETON_RELATIONS'})
             continue

@@ -67,7 +67,7 @@ def get_git_info(repo_root: Path | str | None = None) -> dict[str, Any]:
 
     try:
         status_output = subprocess.check_output(
-            ["git", "status", "--porcelain", "--", "mujoco_scenes", "scripts", "configs"],
+            ["git", "status", "--porcelain", "--untracked-files=no", "--", "mujoco_scenes", "scripts", "configs"],
             cwd=root,
             stderr=subprocess.DEVNULL,
             text=True,
