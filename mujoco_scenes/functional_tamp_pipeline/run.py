@@ -240,7 +240,7 @@ def _load_or_acquire_specification(
                 raw_doc = data
             provider = provider_for_mode(mode)
             specification = provider.provide(domain, task, images, raw_document=raw_doc)
-            return specification, "replayed_provider_output", str(spec_path.resolve())
+            return specification, "archived_raw_provider_response", str(spec_path.resolve())
 
     provider = provider_for_mode(mode)
     specification = provider.provide(domain, task, images)

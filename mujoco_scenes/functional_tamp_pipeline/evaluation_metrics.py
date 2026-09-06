@@ -54,7 +54,7 @@ def full_task_coverage(domain, run_dir):
     run_dir = Path(run_dir)
     total = {'kitchen': 4, 'living_room': 3, 'workshop': 3}[domain]
     val = replay_saved_plan(run_dir) if (run_dir/'symbolic_problem.json').exists() else validation_artifacts(run_dir)
-    if not candidate_plan_valid(run_dir):
+    if val.get('status') != 'VALID':
         return total, 0, 0.0, False
     atoms = {tuple(a) for a in val.get('final_atoms', [])}
     grounding = read_json(run_dir / 'graph_grounding_result.json')
@@ -110,7 +110,8 @@ def full_task_coverage(domain, run_dir):
             )
         sat += int(any(('on', remote, dest) in atoms and verified('FITS_ON', dest, remote) and verified('ACCESSIBLE_FROM_BOTH_SEATS', dest, 'SEATING_PAIR') for remote in ids('REMOTE') for dest in ids('SHARED_REMOTE_REGION')))
     sat = min(total, sat)
-    return total, sat, sat / total, sat == total
+    is_fully_satisfied = bool(sat == total and candidate_plan_valid(run_dir))
+    return total, sat, sat / total, is_fully_satisfied
 
 
 def enrich_record(row, run_dir, task):
@@ -141,9 +142,18 @@ def enrich_record(row, run_dir, task):
             row[f'raw_{kind}_{metric}'] = value
     grounding = read_json(run_dir / 'graph_grounding_result.json')
     assignments = grounding.get('assignment') or {}
+    grounding_status = grounding.get('status', '')
+    is_complete_grounding = bool(grounding.get('complete', False) or grounding_status == 'COMPLETE')
+    nodes_in_graph = graph_dict.get('nodes', {}) if graph_dict else {}
+    expressed_role_count = len(nodes_in_graph)
+    grounded_expressed_role_cov = (len(assignments) / expressed_role_count) if expressed_role_count > 0 else 0.0
+
     statuses = []
     if graph_dict:
-        statuses = analyze_executability(FunctionalRequirementGraph.from_dict(graph_dict), assignments)
+        try:
+            statuses = analyze_executability(FunctionalRequirementGraph.from_dict(graph_dict), assignments)
+        except Exception:
+            statuses = []
     required_raw_recalls = [raw_metrics[kind]['recall'] for kind in ('role', 'relation', 'group')
                             if raw_metrics[kind]['recall'] is not None]
     row.update(task_instruction=task, git_commit=manifest.get('git_commit'),git_dirty=manifest.get('git_dirty'),
@@ -157,8 +167,12 @@ def enrich_record(row, run_dir, task):
         merged_roles=trace.get('merged_roles', []), disambiguated_roles=trace.get('disambiguated_roles', []),
         grounded_roles=assignments, ungrounded_expressed_roles=grounding.get('missing_roles', []),
         candidate_requirement_statuses=statuses, candidate_grounding_eligible=bool(graph_dict),
-        candidate_grounding_succeeded=bool(assignments),candidate_plan_eligible=row.get('astar_invocations',0)>0,
+        candidate_grounding_succeeded=bool(assignments),
+        complete_candidate_grounding=is_complete_grounding,
+        grounded_expressed_role_coverage=grounded_expressed_role_cov,
+        candidate_plan_eligible=row.get('astar_invocations',0)>0,
         candidate_plan_found=bool(row.get('candidate_plan_length')),
+        nonempty_candidate_plan_generated=bool(row.get('candidate_plan_length', 0) > 0),
         raw_vlm_spec_complete=bool(isinstance(raw, dict) and required_raw_recalls
                                    and all(value == 1.0 for value in required_raw_recalls)),
         full_task_semantic_goal_count=row['full_task_goal_count'],
@@ -172,27 +186,57 @@ def enrich_record(row, run_dir, task):
     # Incomplete semantics cannot prove full-task scene infeasibility.
     if not row['gt_feasible'] and not row['runtime_contract_complete']:
         row['outcome_correct'] = False
+
+    first_cause = None
     category = None
     stage = None
     if not row['vlm_json_valid']:
+        first_cause = 'TASK_SPECIFICATION_FAILURE'
         category, stage = 'FM_STRUCTURAL_ERROR', 'RAW_FM'
     elif not sanitizer['succeeded']:
+        first_cause = 'TASK_SPECIFICATION_FAILURE'
         category, stage = 'SANITIZER_UNRECOVERABLE', 'SANITIZER'
     elif not row['canonicalization_succeeded']:
+        first_cause = 'GRAPH_COMPILATION_FAILURE'
         category, stage = 'CANONICALIZATION_AMBIGUITY', 'CANONICALIZER'
     elif trace.get('unresolved_roles'):
+        first_cause = 'GRAPH_COMPILATION_FAILURE'
         category, stage = 'CANONICALIZATION_AMBIGUITY', 'CANONICALIZER'
     elif metadata.get('unresolved_semantics') or trace.get('disabled_groups'):
+        first_cause = 'GRAPH_COMPILATION_FAILURE'
         category, stage = 'CANONICALIZATION_UNRESOLVED_REQUIRED_SEMANTIC', 'EXECUTABILITY'
-    elif not row['raw_vlm_spec_complete']:
+    elif row.get('raw_role_recall') is not None and row['raw_role_recall'] < 1.0:
+        first_cause = 'TASK_SPECIFICATION_FAILURE'
         category, stage = 'FM_SEMANTIC_OMISSION', 'RAW_FM'
     elif not assignments:
-        category, stage = ('SEARCH_EXHAUSTED' if row['search_exhausted'] else 'NO_VALID_ASSIGNMENT'), 'GROUNDING'
+        if row.get('search_exhausted'):
+            first_cause = 'OBJECT_DISCOVERY_FAILURE'
+            category, stage = 'SEARCH_EXHAUSTED', 'SEARCH'
+        else:
+            first_cause = 'FUNCTIONAL_ASSIGNMENT_FAILURE'
+            category, stage = 'NO_VALID_ASSIGNMENT', 'GROUNDING'
+    elif not is_complete_grounding:
+        if row.get('search_exhausted'):
+            first_cause = 'OBJECT_DISCOVERY_FAILURE'
+            category, stage = 'SEARCH_EXHAUSTED', 'SEARCH'
+        else:
+            first_cause = 'FUNCTIONAL_ASSIGNMENT_FAILURE'
+            category, stage = 'PARTIAL_VERIFIED_GROUNDING', 'GROUNDING'
     elif row['candidate_plan_eligible'] and not row['candidate_plan_valid']:
+        first_cause = 'PLANNING_FAILURE'
         category, stage = 'PLAN_VALIDATION_FAILURE', 'VALIDATION'
     elif not row['full_task_satisfied']:
+        first_cause = 'PLANNING_FAILURE'
         category, stage = 'PLANNING_FAILURE', 'PLANNING'
-    row.update(failure_category=category,failure_stage=stage)
+
+    if not row['gt_feasible']:
+        if row.get('false_completion'):
+            first_cause = 'TASK_SPECIFICATION_FAILURE'
+            category, stage = 'FALSE_COMPLETION', 'EVALUATION'
+        else:
+            first_cause = None
+
+    row.update(first_cause_category=first_cause, failure_category=category, failure_stage=stage)
     (run_dir/'raw_semantic_evaluation.json').write_text(json.dumps(raw_metrics,indent=2)+'\n')
     (run_dir/'structural_sanitization.json').write_text(json.dumps(sanitizer,indent=2)+'\n')
     (run_dir/'executability_analysis.json').write_text(json.dumps(statuses,indent=2)+'\n')
@@ -204,21 +248,28 @@ def write_detailed_report(output_root, records, *, live=False):
     from collections import Counter
     output_root = Path(output_root)
     diagnostics = {
+        'Raw VLM role precision': lambda r: r.get('raw_role_precision'),
+        'Raw VLM role recall': lambda r: r.get('raw_role_recall'),
         'Raw VLM role F1': lambda r: r.get('raw_role_f1'),
         'Raw VLM relation F1': lambda r: r.get('raw_relation_f1'),
         'Raw VLM group F1': lambda r: r.get('raw_group_f1'),
-        'Sanitization success': lambda r:r.get('sanitization_succeeded',False),
-        'Full canonicalization':lambda r:r.get('canonicalization_status')=='FULL',
-        'Partial canonicalization':lambda r:r.get('canonicalization_status')=='PARTIAL',
-        'Any canonicalization success':lambda r:r['canonicalization_succeeded'],
-        'Runtime contract coverage':lambda r:r.get('canonical_role_coverage'),
-        'Search eligible':lambda r:r.get('search_eligible',False),
-        'Search recovery success':lambda r:r.get('search_recovery_succeeded',False) if r.get('search_eligible') else None,
-        'Grounding success / eligible':lambda r:r['candidate_grounding_succeeded'] if r['candidate_grounding_eligible'] else None,
-        'Candidate planning success / eligible':lambda r:r['candidate_plan_valid'] if r.get('candidate_plan_eligible') else None,
-        'Partial-plan rate':lambda r:'PARTIAL' in r['candidate_plan_status'],
-        'Candidate goal coverage':lambda r:r['candidate_goal_coverage'] if r.get('candidate_plan_eligible') else None,
-        'Full-task success':lambda r:r['full_task_satisfied'],
+        'Raw complete spec rate': lambda r: r.get('raw_vlm_spec_complete'),
+        'Sanitization success': lambda r: r.get('sanitization_succeeded', False),
+        'Full canonicalization': lambda r: r.get('canonicalization_status') == 'FULL',
+        'Partial canonicalization': lambda r: r.get('canonicalization_status') == 'PARTIAL',
+        'Any canonicalization success': lambda r: r['canonicalization_succeeded'],
+        'Runtime contract coverage': lambda r: r.get('canonical_role_coverage'),
+        'Search eligible': lambda r: r.get('search_eligible', False),
+        'Search recovery success': lambda r: r.get('search_recovery_succeeded', False) if r.get('search_eligible') else None,
+        'Any verified grounding / eligible': lambda r: r['candidate_grounding_succeeded'] if r['candidate_grounding_eligible'] else None,
+        'Complete candidate grounding / eligible': lambda r: r.get('complete_candidate_grounding', False) if r['candidate_grounding_eligible'] else None,
+        'Grounded expressed role coverage': lambda r: r.get('grounded_expressed_role_coverage') if r['candidate_grounding_eligible'] else None,
+        'A* invoked': lambda r: r.get('candidate_plan_eligible', False),
+        'Non-empty plan generated': lambda r: r.get('candidate_plan_length', 0) > 0,
+        'Candidate planning success / generated': lambda r: r['candidate_plan_valid'] if r.get('candidate_plan_length', 0) > 0 else None,
+        'Partial-plan rate': lambda r: 'PARTIAL' in r['candidate_plan_status'],
+        'Candidate goal coverage': lambda r: r['candidate_goal_coverage'] if r.get('candidate_plan_eligible') else None,
+        'Full-task success': lambda r: r['full_task_satisfied'],
     }
     lines=['| Metric | Kitchen | Living | Workshop | Overall |','|---|---:|---:|---:|---:|']
     for name, fn in diagnostics.items():
@@ -234,9 +285,28 @@ def write_detailed_report(output_root, records, *, live=False):
         cells.append(f'{sum(len(r["regions_inspected"]) for r in rows)/len(rows):.2f}' if rows else 'N/A')
     lines.append('| Mean regions inspected | '+' | '.join(cells)+' |')
     (output_root/'pipeline_diagnostic_table.md').write_text('\n'.join(lines)+'\n')
-    counts=Counter(r.get('failure_category') or 'NONE' for r in records)
-    (output_root/'failure_analysis.json').write_text(json.dumps(dict(counts),indent=2)+'\n')
-    failures=['| Primary cause | Count |','|---|---:|']+[f'| {k} | {v} |' for k,v in sorted(counts.items())]
+
+    feasible_records = [r for r in records if r.get('gt_feasible')]
+    first_cause_counts = Counter(r.get('first_cause_category') or 'NONE' for r in feasible_records)
+    detailed_counts = Counter(r.get('failure_category') or 'NONE' for r in records)
+    failure_payload = {
+        'first_cause_categories_feasible': dict(first_cause_counts),
+        'detailed_failure_categories_all': dict(detailed_counts),
+    }
+    (output_root/'failure_analysis.json').write_text(json.dumps(failure_payload, indent=2)+'\n')
+
+    failures = [
+        '# First-Cause Failure Analysis (Feasible Tasks)',
+        '',
+        '| First-Cause Category | Count |',
+        '|---|---:|',
+    ] + [f'| {k} | {v} |' for k, v in sorted(first_cause_counts.items())] + [
+        '',
+        '# Detailed Pipeline Diagnostics (All Variants)',
+        '',
+        '| Detailed Cause | Count |',
+        '|---|---:|',
+    ] + [f'| {k} | {v} |' for k, v in sorted(detailed_counts.items())]
     (output_root/'failure_analysis.md').write_text('\n'.join(failures)+'\n')
     errors=[]
     if live:
