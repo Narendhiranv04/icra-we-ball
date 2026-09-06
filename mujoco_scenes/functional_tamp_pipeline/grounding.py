@@ -599,7 +599,7 @@ def ground_graph(
                 if any(not item[1] for item in selected_tagged):
                     combo_has_unknown_node = True
 
-                if not role.shared:
+                if role.entity_kind == "OBJECT" and not role.shared:
                     for inst_id in selected_ids:
                         if inst_id in used_instances:
                             conflict = True
