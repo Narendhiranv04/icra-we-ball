@@ -426,7 +426,7 @@ def map_living_room_role_function(raw: dict[str, Any] | str) -> str | None:
         for w in (
             "personal", "individual", "beside seat", "near seat", "viewer 1", "viewer 2",
             "for each viewer", "for each person", "each seat", "beside each", "next to each",
-            "side table", "side tables", "each side", "armchair table", "viewer seating position",
+            "side table", "side tables", "each side", "armchair table", "beside viewer", "near viewer",
         )
     )
     has_shared = any(
@@ -548,7 +548,7 @@ def map_living_room_fixed_target_role(raw: dict[str, Any] | str) -> str | None:
             fn_text = _phrase(str(raw.get("function", "")))
             if not any(_contains_phrase(fn_text, k) for k in ("seat", "seating", "occupant", "armchair", "chair", "support user", "support person", "support viewer")):
                 return None
-            if any(_contains_phrase(fn_text, k) for k in ("cup", "saucer", "drink", "remote", "refreshment", "entertainment", "payload", "item", "items", "hold")):
+            if any(_contains_phrase(fn_text, k) for k in ("cup", "saucer", "drink", "remote", "refreshment", "entertainment", "payload")):
                 return None
         text = f"{raw.get('function', '')} {raw.get('description', '')}"
     else:
