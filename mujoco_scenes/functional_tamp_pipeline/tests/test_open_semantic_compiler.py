@@ -237,3 +237,31 @@ def test_observer_diagnostics_bound_combinatorial_assignment_logs(tmp_path):
     assert joint['assignment_evaluations_total_count'] == 750
     assert joint['assignment_evaluations_truncated'] is True
     assert len(evaluations) == 750
+
+
+def test_joint_grounding_streams_large_rejection_diagnostics():
+    from mujoco_scenes.task_witness import evaluate_joint_task_witness
+    objects = [
+        {'id': f'object:{index}', 'type': 'object', 'attributes': {
+            'object_id': f'object_{index:04d}', 'canonical_label': 'item',
+            'semantic_observations': [],
+        }} for index in range(6)
+    ]
+    graph = {'stage': 0, 'nodes': objects, 'edges': []}
+    requirements = {
+        'task_id': 'bounded-diagnostics', '_task_schema': 'JOINT_ROLE_GROUNDING',
+        'specification_source': 'test',
+        'roles': {
+            f'role_{index}': {
+                'count': 1, 'assignment_order': index,
+                'semantic_preferences': [{'canonical_label': 'item', 'rank': 1}],
+                'unary_geometry': [], 'allow_empty_geometry': True,
+            } for index in range(4)
+        },
+        'constraints': {'distinct_objects': True, 'pairwise': []},
+        'selection': {},
+    }
+    result = evaluate_joint_task_witness(graph, requirements, grounding_mode='semantic-only')
+    assert result['assignment_evaluations_total_count'] == 6 ** 4
+    assert len(result['assignment_evaluations']) == 500
+    assert result['assignment_evaluations_truncated'] is True

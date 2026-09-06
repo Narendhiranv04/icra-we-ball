@@ -1320,10 +1320,33 @@ def evaluate_joint_task_witness(
 
     pairwise_constraints = config["constraints"]["pairwise"]
     assignment_evaluations = []
-    valid_assignments = []
-    indeterminate_assignments = []
+    assignment_evaluation_count = 0
+    valid_assignment_count = 0
+    indeterminate_assignment_count = 0
+    selected_assignment = None
+    selected_assignment_key = None
+    diagnostic_limit = 500
     distinct = bool(config["constraints"]["distinct_objects"])
     object_ids = sorted(objects)
+
+    def selection_key(assignment: dict[str, Any]) -> tuple:
+        ranks = []
+        ids = []
+        for role_name in role_order:
+            for object_id in assignment["selected_objects"][role_name]:
+                evaluation = candidate_index[(role_name, object_id)]
+                semantic = evaluation["semantic"]
+                if grounding_mode != "geometry-only":
+                    ranks.append(int(semantic["semantic_rank"]))
+                ids.append(object_id)
+        return (*ranks, *ids)
+
+    def retain_diagnostic(assignment: dict[str, Any]) -> None:
+        nonlocal assignment_evaluation_count
+        assignment_evaluation_count += 1
+        if len(assignment_evaluations) < diagnostic_limit:
+            assignment_evaluations.append(assignment)
+
     for choices in product(object_ids, repeat=len(slots)):
         mapping_by_slot = dict(zip(slots, choices))
         selected = {
@@ -1334,7 +1357,7 @@ def evaluate_joint_task_witness(
             for role_name in role_order
         }
         if distinct and len(set(choices)) != len(choices):
-            assignment_evaluations.append(
+            retain_diagnostic(
                 {
                     "selected_objects": selected,
                     "status": "FALSE",
@@ -1405,31 +1428,21 @@ def evaluate_joint_task_witness(
             "status": assignment_status,
             "decision": decision,
         }
-        assignment_evaluations.append(assignment)
+        retain_diagnostic(assignment)
         if assignment_status == "TRUE":
-            valid_assignments.append(assignment)
+            valid_assignment_count += 1
+            key = selection_key(assignment)
+            if selected_assignment_key is None or key < selected_assignment_key:
+                selected_assignment = assignment
+                selected_assignment_key = key
         elif assignment_status == "UNKNOWN":
-            indeterminate_assignments.append(assignment)
+            indeterminate_assignment_count += 1
 
-    def selection_key(assignment: dict[str, Any]) -> tuple:
-        ranks = []
-        ids = []
-        for role_name in role_order:
-            for object_id in assignment["selected_objects"][role_name]:
-                evaluation = candidate_index[(role_name, object_id)]
-                semantic = evaluation["semantic"]
-                if grounding_mode != "geometry-only":
-                    ranks.append(int(semantic["semantic_rank"]))
-                ids.append(object_id)
-        return (*ranks, *ids)
-
-    valid_assignments.sort(key=selection_key)
-    selected_assignment = valid_assignments[0] if valid_assignments else None
     status = (
         "COMPLETE"
         if selected_assignment is not None
         else "INDETERMINATE"
-        if indeterminate_assignments
+        if indeterminate_assignment_count
         else "INCOMPLETE"
     )
     selected_witness = (
@@ -1486,10 +1499,10 @@ def evaluate_joint_task_witness(
         },
         "candidate_evaluations": candidate_evaluations,
         "assignment_evaluations": assignment_evaluations,
-        "valid_assignment_count": len(valid_assignments),
-        "indeterminate_assignment_count": len(
-            indeterminate_assignments
-        ),
+        "assignment_evaluations_total_count": assignment_evaluation_count,
+        "assignment_evaluations_truncated": assignment_evaluation_count > len(assignment_evaluations),
+        "valid_assignment_count": valid_assignment_count,
+        "indeterminate_assignment_count": indeterminate_assignment_count,
         "reason_codes": reason_codes,
         "selection_policy": config["selection"],
     }
