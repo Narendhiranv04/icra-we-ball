@@ -1,0 +1,50 @@
+{
+  "kitchen": {
+    "canonical_subgoal_count": 12,
+    "categories": {
+      "coffee_powder_delivery": 2,
+      "coffee_stirred": 2,
+      "coffee_vessel_placement": 2,
+      "coffee_water_delivery": 2,
+      "soup_utensil_contained": 2,
+      "soup_vessel_placement": 2
+    },
+    "description": "12 canonical terminal manipulation outcomes: 8 coffee subgoals (on serving support, water delivered, coffee delivered, stirred for 2 vessels) and 4 soup subgoals (on serving support, soup utensil contained for 2 vessels).",
+    "excluded_passive_structural": [
+      "two distinct coffee vessels exist",
+      "two distinct soup vessels exist",
+      "coffee and soup vessel groups disjoint",
+      "no required object held"
+    ]
+  },
+  "living_room": {
+    "canonical_subgoal_count": 5,
+    "description": "5 canonical terminal manipulation placement subgoals: left cup ON left table, left saucer ON left table, right cup ON right table, right saucer ON right table, remote ON shared coffee table.",
+    "excluded_passive_structural": [
+      "required payloads present",
+      "required supports present",
+      "no payload held"
+    ],
+    "subgoals": [
+      "(cup_left, ON, personal_table_left)",
+      "(saucer_left, ON, personal_table_left)",
+      "(cup_right, ON, personal_table_right)",
+      "(saucer_right, ON, personal_table_right)",
+      "(remote, ON, coffee_table_shared)"
+    ]
+  },
+  "workshop": {
+    "canonical_subgoal_count": 3,
+    "description": "3 canonical terminal manipulation completion subgoals: compatible screw inserted in target, joint fastened / fully driven, selected driver placed safely on main workbench.",
+    "excluded_passive_structural": [
+      "driver/screw compatibility checks",
+      "procedural first-driver constraint",
+      "no object held"
+    ],
+    "subgoals": [
+      "(compatible_screw, INSERTED_IN, repair_joint)",
+      "(repair_joint, FASTENED, true)",
+      "(selected_driver, ON, main_workbench)"
+    ]
+  }
+}

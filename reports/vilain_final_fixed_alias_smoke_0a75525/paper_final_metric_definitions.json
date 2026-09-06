@@ -1,0 +1,23 @@
+{
+  "action_sequence_generation_rate": "Proportion of runs where Fast Downward generated at least one parseable symbolic action sequence.",
+  "benchmark_requirement_coverage_micro": "Fraction of total hidden benchmark requirements satisfied in the physical state across all runs.",
+  "delta_goal_coverage": "Change in goal coverage from initial state to terminal state (TerminalGoalCoverage - InitialGoalCoverage).",
+  "execution_ready_plan_rate": "Proportion of runs producing a plan that succeeded in both entity resolution and geometric refinement.",
+  "false_completion": "Proportion of declared-complete runs where hidden benchmark evaluation failed (denominator: runs where runtime declared completion).",
+  "feasibility_accuracy": "Binary accuracy of predicted infeasibility against ground truth on covered decisions.",
+  "feasibility_decision_coverage": "Proportion of runs with a definitive feasibility evaluation.",
+  "feasible_task_success": "Proportion of GT-feasible runs where the hidden benchmark goal was physically achieved (denominator: scheduled GT-feasible runs).",
+  "generated_goal_atom_coverage_micro": "Fraction of total generated PDDL goal atoms physically satisfied across all evaluated runs.",
+  "generated_goal_evaluation_coverage": "Proportion of runs where generated goal evaluation was executed.",
+  "generated_goal_satisfaction_rate": "Proportion of evaluated generated goals physically satisfied at the terminal state.",
+  "goal_coverage": "Micro-average fraction of canonical GT terminal manipulation subgoals satisfied in the physical state across all scheduled GT-feasible runs (excludes passive structural prerequisites).",
+  "high_level_replans": "Number of corrective planning replans invoked (bounded in [0, 3]).",
+  "initial_goal_coverage": "Micro-average fraction of canonical GT terminal manipulation subgoals satisfied at initial physical state across all scheduled GT-feasible runs.",
+  "nonempty_plan_execution_completed_rate": "Proportion of runs where physical simulation executed a non-empty plan without failure.",
+  "outcome_correct": "Proportion of runs with correct outcome: actual task success for GT-feasible tasks, or clean symbolic rejection under bounded CP without unresolved execution/refinement/identity failures for GT-infeasible tasks.",
+  "physical_execution_unconditional": "Proportion of runs where physical simulation executed the complete plan without failure.",
+  "physical_plan_found": "Proportion of GT-feasible runs yielding at least one non-empty, VAL-valid, identity-resolved, and refinement-passed physical action plan (zero-step plans excluded).",
+  "raw_vlm_requests": "Total foundation model calls made per run across object estimation, initial state, goal state, and corrective planning.",
+  "task_success_rate": "Proportion of runs achieving the hidden benchmark goal in physical simulation.",
+  "val_valid_plan_rate": "Proportion of runs where VAL validated at least one symbolic plan."
+}

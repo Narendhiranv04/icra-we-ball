@@ -1,0 +1,25 @@
+\begin{table}[t]
+\centering
+\small
+\caption{\textbf{ViLaIn-TAMP-Qwen Stage Funnel and Cumulative Conversion Rates.}
+Shows progression across pipeline stages for non-infrastructure runs ($N=64$).
+Conditional conversion denotes transition probability from the preceding stage.}
+\label{tab:vilain_qwen_funnel}
+\begin{tabular}{l|c|c|c|c}
+\hline
+\textbf{Pipeline Stage} & \textbf{Count / Total} & \textbf{Unconditional \%} & \textbf{95\% Wilson CI} & \textbf{Conversion Rate} \\
+\hline
+Observation & 64 / 64 & 100.0\% & [94.3, 100.0] & 100.0\% \\
+Object estimation & 52 / 64 & 81.2\% & [70.0, 88.9] & 81.2\% \\
+Valid PDDL & 52 / 64 & 81.2\% & [70.0, 88.9] & 100.0\% \\
+ANY PLAN@FD & 26 / 64 & 40.6\% & [29.5, 52.9] & 50.0\% \\
+ANY PLAN@VAL & 26 / 64 & 40.6\% & [29.5, 52.9] & 100.0\% \\
+NONEMPTY PLAN@FD & 24 / 64 & 37.5\% & [26.7, 49.7] & 46.2\% \\
+NONEMPTY PLAN@VAL & 24 / 64 & 37.5\% & [26.7, 49.7] & 100.0\% \\
+NONEMPTY PLAN@IDENTITY & 4 / 64 & 6.2\% & [2.5, 15.0] & 16.7\% \\
+NONEMPTY PLAN@REFINE & 0 / 64 & 0.0\% & [0.0, 5.7] & 0.0\% \\
+NONEMPTY PLAN@EXEC & 0 / 64 & 0.0\% & [0.0, 5.7] & 0.0\% \\
+TASK@FINAL & 0 / 64 & 0.0\% & [0.0, 5.7] & 0.0\% \\
+\hline
+\end{tabular}
+\end{table}

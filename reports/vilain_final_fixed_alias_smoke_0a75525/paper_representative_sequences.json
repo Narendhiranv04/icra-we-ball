@@ -1,0 +1,206 @@
+{
+  "kitchen": {
+    "action_sequence_str": "pick-from(white_teapot_1, countertop) -> pour(white_teapot_1, blue_bowl_1, coffee) -> pour(white_teapot_1, red_bowl_1, coffee) -> place-on(white_teapot_1, countertop) -> pick-from(silver_spoon_1, countertop) -> stir(silver_spoon_1, blue_bowl_1)",
+    "actions": [
+      {
+        "action_index": 0,
+        "action_instance_id": "vilain_00_001_pick_from",
+        "arguments": [
+          "white_teapot_1",
+          "countertop"
+        ],
+        "operator": "pick-from"
+      },
+      {
+        "action_index": 1,
+        "action_instance_id": "vilain_00_002_pour",
+        "arguments": [
+          "white_teapot_1",
+          "blue_bowl_1",
+          "coffee"
+        ],
+        "operator": "pour"
+      },
+      {
+        "action_index": 2,
+        "action_instance_id": "vilain_00_003_pour",
+        "arguments": [
+          "white_teapot_1",
+          "red_bowl_1",
+          "coffee"
+        ],
+        "operator": "pour"
+      },
+      {
+        "action_index": 3,
+        "action_instance_id": "vilain_00_004_place_on",
+        "arguments": [
+          "white_teapot_1",
+          "countertop"
+        ],
+        "operator": "place-on"
+      },
+      {
+        "action_index": 4,
+        "action_instance_id": "vilain_00_005_pick_from",
+        "arguments": [
+          "silver_spoon_1",
+          "countertop"
+        ],
+        "operator": "pick-from"
+      },
+      {
+        "action_index": 5,
+        "action_instance_id": "vilain_00_006_stir",
+        "arguments": [
+          "silver_spoon_1",
+          "blue_bowl_1"
+        ],
+        "operator": "stir"
+      }
+    ],
+    "attempt_index": 0,
+    "domain": "kitchen",
+    "plan_length": 6,
+    "run_id": "kitchen__F1_HIDDEN_COFFEE_VESSEL__initial_observation_only__r00",
+    "variant": "F1_HIDDEN_COFFEE_VESSEL"
+  },
+  "living_room": {
+    "action_sequence_str": "pick-from(cup_1, personal_table_left) -> place-on(cup_1, personal_table_right) -> pick-from(cup_1, personal_table_right) -> place-on(cup_1, personal_table_left) -> pick-from(saucer_1, personal_table_left) -> place-on(saucer_1, personal_table_right) -> pick-from(saucer_1, personal_table_right) -> place-on(saucer_1, personal_table_left)",
+    "actions": [
+      {
+        "action_index": 0,
+        "action_instance_id": "vilain_00_001_pick_from",
+        "arguments": [
+          "cup_1",
+          "personal_table_left"
+        ],
+        "operator": "pick-from"
+      },
+      {
+        "action_index": 1,
+        "action_instance_id": "vilain_00_002_place_on",
+        "arguments": [
+          "cup_1",
+          "personal_table_right"
+        ],
+        "operator": "place-on"
+      },
+      {
+        "action_index": 2,
+        "action_instance_id": "vilain_00_003_pick_from",
+        "arguments": [
+          "cup_1",
+          "personal_table_right"
+        ],
+        "operator": "pick-from"
+      },
+      {
+        "action_index": 3,
+        "action_instance_id": "vilain_00_004_place_on",
+        "arguments": [
+          "cup_1",
+          "personal_table_left"
+        ],
+        "operator": "place-on"
+      },
+      {
+        "action_index": 4,
+        "action_instance_id": "vilain_00_005_pick_from",
+        "arguments": [
+          "saucer_1",
+          "personal_table_left"
+        ],
+        "operator": "pick-from"
+      },
+      {
+        "action_index": 5,
+        "action_instance_id": "vilain_00_006_place_on",
+        "arguments": [
+          "saucer_1",
+          "personal_table_right"
+        ],
+        "operator": "place-on"
+      },
+      {
+        "action_index": 6,
+        "action_instance_id": "vilain_00_007_pick_from",
+        "arguments": [
+          "saucer_1",
+          "personal_table_right"
+        ],
+        "operator": "pick-from"
+      },
+      {
+        "action_index": 7,
+        "action_instance_id": "vilain_00_008_place_on",
+        "arguments": [
+          "saucer_1",
+          "personal_table_left"
+        ],
+        "operator": "place-on"
+      }
+    ],
+    "attempt_index": 0,
+    "domain": "living_room",
+    "plan_length": 8,
+    "run_id": "living_room__F3_LEFT_CUP_ON_SHARED__fixed_full_inspection__r00",
+    "variant": "F3_LEFT_CUP_ON_SHARED"
+  },
+  "workshop": {
+    "action_sequence_str": "pick-from(screw_1, left_drawer) -> insert(screw_1, main_workbench_zone) -> pick-from(driver_1, left_drawer) -> drive(driver_1, screw_1, main_workbench_zone) -> place-on(driver_1, main_workbench_zone_surface)",
+    "actions": [
+      {
+        "action_index": 0,
+        "action_instance_id": "vilain_00_001_pick_from",
+        "arguments": [
+          "screw_1",
+          "left_drawer"
+        ],
+        "operator": "pick-from"
+      },
+      {
+        "action_index": 1,
+        "action_instance_id": "vilain_00_002_insert",
+        "arguments": [
+          "screw_1",
+          "main_workbench_zone"
+        ],
+        "operator": "insert"
+      },
+      {
+        "action_index": 2,
+        "action_instance_id": "vilain_00_003_pick_from",
+        "arguments": [
+          "driver_1",
+          "left_drawer"
+        ],
+        "operator": "pick-from"
+      },
+      {
+        "action_index": 3,
+        "action_instance_id": "vilain_00_004_drive",
+        "arguments": [
+          "driver_1",
+          "screw_1",
+          "main_workbench_zone"
+        ],
+        "operator": "drive"
+      },
+      {
+        "action_index": 4,
+        "action_instance_id": "vilain_00_005_place_on",
+        "arguments": [
+          "driver_1",
+          "main_workbench_zone_surface"
+        ],
+        "operator": "place-on"
+      }
+    ],
+    "attempt_index": 0,
+    "domain": "workshop",
+    "plan_length": 5,
+    "run_id": "workshop__F0_MANUAL_FIRST_ONE_REGION__initial_observation_only__r00",
+    "variant": "F0_MANUAL_FIRST_ONE_REGION"
+  }
+}

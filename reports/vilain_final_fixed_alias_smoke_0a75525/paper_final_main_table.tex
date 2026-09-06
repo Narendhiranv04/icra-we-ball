@@ -1,0 +1,25 @@
+\begin{table*}[t]
+\centering
+\small
+\caption{\textbf{ViLaIn-TAMP-Qwen Baseline Performance Across Benchmark Domains.}
+Evaluated over non-infrastructure runs ($N=64$).
+Feasible-task success, Goal coverage, and Physical plan found are evaluated strictly over ground-truth feasible variants ($N_{\text{feasible}}=40$).
+False completion reports rate over declared-complete runs ($N_{\text{declared}}$). Zero-step plans do not count toward Physical plan found.}
+\label{tab:vilain_qwen_main}
+\begin{tabular}{l|c|ccc}
+\hline
+\textbf{Metric} & \textbf{Overall} & \textbf{Kitchen} & \textbf{Living Room} & \textbf{Workshop} \\
+\hline
+Total Non-Infrastructure Runs & 64 & 24 & 20 & 20 \\
+Feasible Variant Runs & 40 & 12 & 12 & 16 \\
+\hline
+Outcome correct (\%) $\uparrow$ & 3.1\% (2/64) & 4.2\% (1/24) & 0.0\% (0/20) & 5.0\% (1/20) \\
+Feasible-task success (\%) $\uparrow$ & 0.0\% (0/40) & 0.0\% (0/12) & 0.0\% (0/12) & 0.0\% (0/16) \\
+Goal coverage (\%) $\uparrow$ & 1.6\% (4/252) & 0.0\% (0/144) & 6.7\% (4/60) & 0.0\% (0/48) \\
+False completion (\%) $\downarrow$ & 100.0\% (1/1) & N/A & 100.0\% (1/1) & N/A \\
+Physical plan found (\%) $\uparrow$ & 0.0\% (0/40) & 0.0\% (0/12) & 0.0\% (0/12) & 0.0\% (0/16) \\
+Raw VLM requests $\downarrow$ & 5.56 $\pm$ 2.83 & 3.58 $\pm$ 3.62 & 6.85 $\pm$ 0.91 & 6.65 $\pm$ 1.24 \\
+High-level replans (\#) $\downarrow$ & 2.34 $\pm$ 1.24 & 1.50 $\pm$ 1.50 & 2.85 $\pm$ 0.65 & 2.85 $\pm$ 0.65 \\
+\hline
+\end{tabular}
+\end{table*}
