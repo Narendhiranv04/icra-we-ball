@@ -224,3 +224,16 @@ def test_serialized_replay_rejects_tampered_actions(tmp_path):
     assert replay_saved_plan(tmp_path)['status']=='INVALID'
     (tmp_path/'action_plan.json').write_text(json.dumps({'actions':[{'operator':'MOVE','arguments':['observed']}]}))
     assert replay_saved_plan(tmp_path)['status']=='VALID'
+
+
+def test_observer_diagnostics_bound_combinatorial_assignment_logs(tmp_path):
+    from mujoco_scenes.observed_state import _atomic_json
+    evaluations = [{'decision': 'REJECTED', 'index': index} for index in range(750)]
+    payload = {'modes': {'joint': {'assignment_evaluations': evaluations}}}
+    _atomic_json(tmp_path / 'witness.json', payload)
+    saved = json.loads((tmp_path / 'witness.json').read_text())
+    joint = saved['modes']['joint']
+    assert len(joint['assignment_evaluations']) == 500
+    assert joint['assignment_evaluations_total_count'] == 750
+    assert joint['assignment_evaluations_truncated'] is True
+    assert len(evaluations) == 750

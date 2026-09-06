@@ -93,10 +93,29 @@ def _evidence_color(object_id: str) -> tuple[int, int, int]:
 
 
 def _atomic_json(path: Path, payload: Any) -> None:
+    # Joint grounding can consider hundreds of thousands of assignments.  The
+    # full in-memory witness remains available to the controller, while saved
+    # diagnostics retain a deterministic sample and exact total count.  This
+    # prevents evidence logging from exhausting disk on ambiguous open graphs.
+    def bounded(value: Any) -> Any:
+        if isinstance(value, dict):
+            result = {}
+            for key, item in value.items():
+                if key in {"assignment_evaluations", "candidate_evaluations"} and isinstance(item, list):
+                    result[key] = item[:500]
+                    result[f"{key}_total_count"] = len(item)
+                    result[f"{key}_truncated"] = len(item) > 500
+                else:
+                    result[key] = bounded(item)
+            return result
+        if isinstance(value, list):
+            return [bounded(item) for item in value]
+        return value
+
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.tmp")
     temporary.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        json.dumps(bounded(payload), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     temporary.replace(path)
