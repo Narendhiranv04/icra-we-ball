@@ -284,6 +284,9 @@ LIVING_REASONABLE_AFFORDANCE_NOTE_KEYWORDS = (
     "upright structure", "holds liquid", "holds solid", "hold liquid", "hold solid",
     "contain liquid", "contain solid", "electronic interface",
     "button", "buttons", "has buttons", "keypad", "planar support",
+    "handheld", "hand held", "hand-held", "small handheld form", "handheld form",
+    "compact", "compact form", "portable",
+    "hold item", "holds item", "hold items", "holds items", "hold object", "holds object",
 )
 
 LIVING_BINARY_RELATION_ALIASES = {
