@@ -19,7 +19,8 @@ def analyze_executability(graph: FunctionalRequirementGraph,
     for item in trace.get('unresolved_roles', []):
         result.append({'id': item['raw_role']['id'], 'status': 'UNINSTANTIABLE_MISSING_ROLE'})
     for item in graph.metadata.get('soft_semantic_evidence', []):
-        result.append({'id': item['raw_role_id'], 'requirement': item['raw_phrase'], 'status': 'SOFT_SEMANTIC_ONLY'})
+        r_id = item.get('raw_role_id') or item.get('raw_subject') or item.get('id', 'unknown')
+        result.append({'id': r_id, 'requirement': item.get('raw_phrase', ''), 'status': 'SOFT_SEMANTIC_ONLY'})
     for item in trace.get('disabled_groups', []):
         result.append({'id': item['raw_group']['id'], 'status': item['status'], 'raw_group': item['raw_group']})
     for group in graph.operation_groups:

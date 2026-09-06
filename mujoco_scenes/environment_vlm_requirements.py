@@ -238,6 +238,14 @@ LIVING_FIXED_TARGET_ROLE_ALIASES = {
         "support user",
         "support viewer",
         "support person",
+        "support seating",
+        "seating",
+        "armchair",
+        "chair",
+        "armchairs",
+        "chairs",
+        "seat",
+        "seats",
     ),
     "SEATING_PAIR": (
         "paired viewer seating area",
@@ -250,6 +258,10 @@ LIVING_FIXED_TARGET_ROLE_ALIASES = {
         "both seating positions",
         "paired seating positions",
         "both seats",
+        "paired armchairs",
+        "both viewer armchairs",
+        "both armchairs",
+        "both chairs",
     ),
 }
 
@@ -270,7 +282,27 @@ LIVING_INTERACTION_GROUP_ALIASES = {
         "support cup and saucer",
         "support personal cup and saucer",
         "support drinkware set near seat",
-    )
+        "refreshment setting",
+        "refreshment setting for person",
+        "provide refreshment setting",
+        "refreshment",
+        "personal refreshment setting",
+        "refreshment support",
+        "set refreshment",
+        "place drinkware",
+    ),
+    "shared_entertainment_group": (
+        "entertainment control placement",
+        "entertainment control",
+        "place entertainment control",
+        "shared remote placement",
+        "remote control placement",
+        "control placement",
+        "place remote",
+        "remote placement",
+        "support entertainment control",
+        "accessible entertainment control",
+    ),
 }
 
 LIVING_REASONABLE_AFFORDANCE_NOTE_KEYWORDS = (
@@ -410,6 +442,8 @@ def map_living_room_role_function(raw: dict[str, Any] | str) -> str | None:
         pol = None
     norm = _phrase(text)
     if not norm:
+        return None
+    if any(_contains_phrase(norm, w) for w in ("television", "screen", "monitor", "display", "wall")):
         return None
 
     # 1. Exact or forward phrase match against reviewed aliases
@@ -557,8 +591,9 @@ def map_living_room_fixed_target_role(raw: dict[str, Any] | str) -> str | None:
     if not norm:
         return None
 
-    # 1. Forward match against reviewed aliases
-    for role_name, aliases in LIVING_FIXED_TARGET_ROLE_ALIASES.items():
+    # 1. Forward match against reviewed aliases (check SEATING_PAIR before SEATING_POSITION)
+    for role_name in ("SEATING_PAIR", "SEATING_POSITION"):
+        aliases = LIVING_FIXED_TARGET_ROLE_ALIASES.get(role_name, ())
         for alias in aliases:
             a_norm = _phrase(alias)
             if a_norm == norm or _contains_phrase(norm, a_norm):
@@ -659,16 +694,31 @@ def canonicalize_living_room_relation(
     if not matched_predicates:
         endpoints = {subject_role, object_role}
         if endpoints == {"PERSONAL_CUP_SAUCER_REGION", "CUP_SAUCER_SET"}:
-            if any(_contains_phrase(norm, p) for p in ("placed on", "placed upon", "rests on", "rest on", "sits on", "set on", "fits on", "fits set on", "hold", "holds", "support", "supports", "can hold")):
+            if any(_contains_phrase(norm, p) for p in (
+                "placed on", "placed upon", "rests on", "rest on", "sits on", "set on", "fits on",
+                "fits set on", "hold", "holds", "support", "supports", "can hold", "support payload",
+                "compatible with", "setting", "holds payload", "payload support", "on", "placed",
+            )):
                 matched_predicates.add("FITS_SET_ON")
         elif endpoints == {"SHARED_REMOTE_REGION", "REMOTE"}:
-            if any(_contains_phrase(norm, p) for p in ("placed on", "placed upon", "rests on", "rest on", "sits on", "set on", "fits on", "hold", "holds", "support", "supports", "can hold")):
+            if any(_contains_phrase(norm, p) for p in (
+                "placed on", "placed upon", "rests on", "rest on", "sits on", "set on", "fits on",
+                "hold", "holds", "support", "supports", "can hold", "support payload", "compatible with",
+                "holds payload", "payload support", "on", "placed",
+            )):
                 matched_predicates.add("FITS_ON")
-        elif endpoints == {"PERSONAL_CUP_SAUCER_REGION", "SEATING_POSITION"}:
-            if any(_contains_phrase(norm, p) for p in ("near", "near seat", "beside", "adjacent to", "accessible from", "accessible to", "reach")):
+        elif endpoints in ({"PERSONAL_CUP_SAUCER_REGION", "SEATING_POSITION"}, {"PERSONAL_CUP_SAUCER_REGION", "SEATING_PAIR"}):
+            if any(_contains_phrase(norm, p) for p in (
+                "near", "near seat", "beside", "adjacent to", "adjacent", "accessible from", "accessible to",
+                "reach", "close to", "nearby", "compatible with",
+            )):
                 matched_predicates.add("NEAR_SEAT")
         elif endpoints in ({"SHARED_REMOTE_REGION", "SEATING_PAIR"}, {"SHARED_REMOTE_REGION", "SEATING_POSITION"}):
-            if any(_contains_phrase(norm, p) for p in ("accessible from", "accessible to", "accessible", "reach", "adjacent to", "beside", "near", "both")):
+            if any(_contains_phrase(norm, p) for p in (
+                "accessible from", "accessible to", "accessible", "reach", "adjacent to", "beside",
+                "near", "both", "accessible to both", "accessible from both", "shared access", "between",
+                "both seats", "compatible with",
+            )):
                 matched_predicates.add("ACCESSIBLE_FROM_BOTH_SEATS")
 
     # Generic fragments that alone cannot establish a relation without contextual endpoints

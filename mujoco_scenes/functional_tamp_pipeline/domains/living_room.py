@@ -558,14 +558,33 @@ def run_to_plan(
         })
 
     if mode == "vlm":
-        triples = {(r.subject_role, r.predicate, r.object_role) for r in specification.relations}
+        pred_pairs: dict[str, set[frozenset[str]]] = {}
+        for r in specification.relations:
+            pred_pairs.setdefault(r.predicate, set()).add(frozenset([r.subject_role, r.object_role]))
         for group in specification.operation_groups:
-            triples.update((group.tool_role, p, group.target_role) for p in group.required_relations)
-            triples.update((group.tool_role, p, group.context_role) for p in group.context_relations)
-        personal_semantics = {("PERSONAL_CUP_SAUCER_REGION", "FITS_SET_ON", "CUP_SAUCER_SET"),
-                              ("PERSONAL_CUP_SAUCER_REGION", "NEAR_SEAT", "SEATING_POSITION")} <= triples
-        shared_semantics = {("SHARED_REMOTE_REGION", "FITS_ON", "REMOTE"),
-                            ("SHARED_REMOTE_REGION", "ACCESSIBLE_FROM_BOTH_SEATS", "SEATING_PAIR")} <= triples
+            for p in group.required_relations:
+                pred_pairs.setdefault(p, set()).add(frozenset([group.tool_role, group.target_role]))
+            if group.context_role:
+                for p in group.context_relations:
+                    pred_pairs.setdefault(p, set()).add(frozenset([group.tool_role, group.context_role]))
+                    pred_pairs.setdefault(p, set()).add(frozenset([group.target_role, group.context_role]))
+
+        has_personal_fit = frozenset(["PERSONAL_CUP_SAUCER_REGION", "CUP_SAUCER_SET"]) in pred_pairs.get("FITS_SET_ON", set())
+        has_personal_near = (
+            frozenset(["PERSONAL_CUP_SAUCER_REGION", "SEATING_POSITION"]) in pred_pairs.get("NEAR_SEAT", set())
+            or frozenset(["CUP_SAUCER_SET", "SEATING_POSITION"]) in pred_pairs.get("NEAR_SEAT", set())
+            or frozenset(["PERSONAL_CUP_SAUCER_REGION", "SEATING_PAIR"]) in pred_pairs.get("NEAR_SEAT", set())
+        )
+        personal_semantics = has_personal_fit and has_personal_near
+
+        has_shared_fit = frozenset(["SHARED_REMOTE_REGION", "REMOTE"]) in pred_pairs.get("FITS_ON", set())
+        has_shared_access = (
+            frozenset(["SHARED_REMOTE_REGION", "SEATING_PAIR"]) in pred_pairs.get("ACCESSIBLE_FROM_BOTH_SEATS", set())
+            or frozenset(["SHARED_REMOTE_REGION", "SEATING_POSITION"]) in pred_pairs.get("ACCESSIBLE_FROM_BOTH_SEATS", set())
+            or frozenset(["REMOTE", "SEATING_PAIR"]) in pred_pairs.get("ACCESSIBLE_FROM_BOTH_SEATS", set())
+            or frozenset(["REMOTE", "SEATING_POSITION"]) in pred_pairs.get("ACCESSIBLE_FROM_BOTH_SEATS", set())
+        )
+        shared_semantics = has_shared_fit and has_shared_access
         canonical_assignments = [row for row in canonical_assignments
             if (personal_semantics if row["function_id"] == "PERSONAL_CUP_SAUCER_REGION" else shared_semantics)
             and row["selected_compatibility_evidence"]["compatibility_status"] == "TRUE"]

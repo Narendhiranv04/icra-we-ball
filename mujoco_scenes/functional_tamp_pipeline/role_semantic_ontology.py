@@ -257,41 +257,62 @@ def build_task_detector_vocabulary(
             alias_to_canon[a_norm] = canon_k
             alias_to_canon[a_norm.replace("_", " ")] = canon_k
 
-    relevant_canon: set[str] = set()
+    system_canon: set[str] = set()
     for cat in system_role_categories:
         norm = cat.strip().lower()
         norm_space = norm.replace("_", " ")
         if norm in base_canon_labels:
-            relevant_canon.add(norm)
+            system_canon.add(norm)
         elif norm_space in base_canon_labels:
-            relevant_canon.add(norm_space)
+            system_canon.add(norm_space)
         elif norm in alias_to_canon:
-            relevant_canon.add(alias_to_canon[norm])
+            system_canon.add(alias_to_canon[norm])
         elif norm_space in alias_to_canon:
-            relevant_canon.add(alias_to_canon[norm_space])
+            system_canon.add(alias_to_canon[norm_space])
+
+    relevant_canon: set[str] = set(system_canon)
 
     # Process raw VLM candidate categories
     unmapped_raw_prompts: list[str] = []
     for cat in raw_vlm_candidate_categories:
         norm = cat.strip().lower()
         norm_space = norm.replace("_", " ")
+        target_canon = None
         if norm in base_canon_labels:
-            relevant_canon.add(norm)
+            target_canon = norm
         elif norm_space in base_canon_labels:
-            relevant_canon.add(norm_space)
+            target_canon = norm_space
         elif norm in alias_to_canon:
-            relevant_canon.add(alias_to_canon[norm])
+            target_canon = alias_to_canon[norm]
         elif norm_space in alias_to_canon:
-            relevant_canon.add(alias_to_canon[norm_space])
+            target_canon = alias_to_canon[norm_space]
         else:
-            if norm and norm not in unmapped_raw_prompts:
+            words = norm_space.split()
+            if len(words) > 1:
+                head = words[-1]
+                if head in base_canon_labels:
+                    target_canon = head
+                elif head in alias_to_canon:
+                    target_canon = alias_to_canon[head]
+
+        if target_canon and target_canon in system_canon:
+            alias_to_canon[norm] = target_canon
+            alias_to_canon[norm_space] = target_canon
+        elif not target_canon:
+            if norm and not any(norm.endswith(h) for h in ("container", "utensil", "item", "object")) and norm not in unmapped_raw_prompts:
                 unmapped_raw_prompts.append(norm)
 
     # Construct task-scoped vocabulary
     task_vocab: dict[str, list[str]] = {}
     for canon in sorted(relevant_canon):
         if canon in base_canon_labels:
-            task_vocab[canon] = list(base_canon_labels[canon])
+            task_vocab[canon] = [
+                lbl for lbl in base_canon_labels[canon]
+                if not any(lbl.strip().lower().replace("_", " ").endswith(h) for h in ("container", "utensil", "item", "object", "source"))
+            ]
+            for k, target in alias_to_canon.items():
+                if target == canon and k not in task_vocab[canon] and not any(k.strip().lower().replace("_", " ").endswith(h) for h in ("container", "utensil", "item", "object", "source")):
+                    task_vocab[canon].append(k)
 
     existing_aliases = {
         alias.strip().lower()

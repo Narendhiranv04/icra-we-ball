@@ -97,6 +97,7 @@ BINARY_RELATION_ALIASES: dict[str, tuple[str, ...]] = {
         "goes inside", "go inside", "placed inside", "place inside",
         "inserted into", "insert into", "fits through opening", "fit through opening",
         "insert into container", "fits in", "fit in", "goes in", "goes into",
+        "compatible with", "compatible", "fits", "fit", "compatible with container",
     ),
     "REACHES_BOTTOM": (
         "reaches bottom", "reaches_bottom", "reaches the bottom", "reach the bottom",
@@ -113,7 +114,8 @@ KITCHEN_INTERACTION_GROUP_ALIASES: dict[str, tuple[str, ...]] = {
         "coffee stirring", "coffee_stirring", "stir coffee", "mix coffee",
         "stir beverage", "stir drinks", "stir beverage in cups", "mix beverage",
         "stir", "mix", "agitate coffee", "stirring", "mixing", "beverage stirring",
-        "prepare coffee by stirring",
+        "prepare coffee by stirring", "prepare coffee", "coffee preparation",
+        "brew coffee", "make coffee", "coffee making",
     ),
     "soup_serving": (
         "soup serving", "soup_serving", "serve soup", "prepare soup", "soup preparation", "provide utensil",
@@ -123,7 +125,7 @@ KITCHEN_INTERACTION_GROUP_ALIASES: dict[str, tuple[str, ...]] = {
         "provide eating utensil for each soup bowl",
         "soup utensil provision", "eating utensil", "soup eating utensil",
         "equip soup", "serve with soup", "soup utensil", "eating utensil provision",
-        "soup consumption",
+        "soup consumption", "serve each soup", "serve each soup bowl", "eat soup",
     ),
 }
 

@@ -564,6 +564,7 @@ def ground_graph(
     unsatisfied_relations_recorded: list[dict[str, Any]] = []
     unresolved_relations_recorded: list[dict[str, Any]] = []
     valid_assignments: list[tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]] = []
+    valid_unknown_assignments: list[tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]] = []
     has_unknown_combination = bool(missing_roles_potential)
 
     for count_config in all_count_configs:
@@ -731,6 +732,7 @@ def ground_graph(
                 break
             elif combo_status == "UNKNOWN":
                 has_unknown_combination = True
+                valid_unknown_assignments.append((assignment_map, combo_op_bindings))
 
         if valid_assignments:
             break

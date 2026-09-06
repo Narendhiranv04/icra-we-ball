@@ -77,27 +77,39 @@ def _map_role(domain: str, role: dict, doc: dict) -> tuple[str | None, str]:
     if domain == 'living_room':
         from mujoco_scenes.environment_vlm_requirements import (map_living_room_role_function,
             map_living_room_object_payload_role, map_living_room_fixed_target_role)
+        seating = map_living_room_fixed_target_role(role)
+        if seating:
+            return seating, 'FIXED_TARGET_SEMANTICS'
         mapper = {'REGION': map_living_room_role_function, 'OBJECT': map_living_room_object_payload_role,
-                  'FIXED_TARGET': map_living_room_fixed_target_role}[role['entity_kind']]
+                  'FIXED_TARGET': map_living_room_fixed_target_role}.get(role['entity_kind'], map_living_room_role_function)
         mapped = mapper(role)
         if mapped is None and role['entity_kind'] == 'REGION':
-            function = (role['function'] + ' ' + role.get('description', '')).lower()
-            edges = [r for r in doc['functional_relations'] if role['id'] in (r['subject_role'], r['object_role'])]
+            function = (role.get('function', '') + ' ' + role.get('description', '')).lower()
+            edges = [r for r in doc.get('functional_relations', []) if role['id'] in (r.get('subject_role'), r.get('object_role'))]
             spatial = ' '.join(str(r.get('relation', r.get('predicate', ''))) for r in edges).lower()
-            endpoints = {r[k] for r in edges for k in ('subject_role', 'object_role')} - {role['id']}
-            anchors = [r for r in doc['functional_roles'] if r['id'] in endpoints and r['entity_kind'] == 'FIXED_TARGET']
-            if re.search(r'\b(support|placement|setting|surface)\b', function) and anchors:
-                if role['binding_policy'] == 'SHARED' and re.search(r'\b(accessible|both|shared)\b', spatial + ' ' + function):
+            bp = role.get('binding_policy')
+            count = role.get('required_count', 1)
+            if re.search(r'\b(television|screen|monitor|display|wall)\b', function):
+                # Television mounting/wall is scene context, not a placement region for remotes
+                return None, 'SCENE_CONTEXT'
+            if re.search(r'\b(support|placement|setting|surface)\b', function):
+                if bp == 'SHARED' or re.search(r'\b(accessible|both|shared|remote|entertainment|control)\b', spatial + ' ' + function):
                     mapped = 'SHARED_REMOTE_REGION'
-                elif role['binding_policy'] == 'DISTINCT' and re.search(r'\b(near|nearby|beside|adjacent)\b', spatial + ' ' + function):
+                elif bp == 'DISTINCT' or re.search(r'\b(near|nearby|beside|adjacent|refreshment|cup|saucer|drink)\b', spatial + ' ' + function):
                     mapped = 'PERSONAL_CUP_SAUCER_REGION'
+            elif bp == 'SHARED' and count == 1:
+                mapped = 'SHARED_REMOTE_REGION'
+            elif bp == 'DISTINCT' and count >= 2:
+                mapped = 'PERSONAL_CUP_SAUCER_REGION'
         return mapped, 'TYPED_DOMAIN_SEMANTICS'
     from mujoco_scenes.workshop_phase1.requirements import (map_workshop_role_function,
         map_workshop_fixed_target_role, map_workshop_context_region_role)
-    if role['entity_kind'] == 'FIXED_TARGET':
-        return map_workshop_fixed_target_role(role), 'FIXED_TARGET_SEMANTICS'
-    if role['entity_kind'] == 'REGION':
-        return map_workshop_context_region_role(role), 'SUPPORT_CONTEXT'
+    if role['entity_kind'] in ('FIXED_TARGET', 'REGION'):
+        target = map_workshop_fixed_target_role(role)
+        if target:
+            return target, 'FIXED_TARGET_SEMANTICS'
+        if role['entity_kind'] == 'REGION':
+            return map_workshop_context_region_role(role), 'SUPPORT_CONTEXT'
     mapped = map_workshop_role_function(role)
     if mapped is None and 'instrument' in position and 'group_tool' in position and 'component' not in position:
         # Operation-instrument position plus explicit implement semantics.
@@ -159,15 +171,16 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 trace['unresolved_roles'].append({'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': role, 'collision_with': owners[name]['id']})
                 continue
         else:
+            canonical_kind = 'FIXED_TARGET' if name in set(get_domain_system_fixed_anchors(domain)) else role['entity_kind']
             id_map[rid] = name
             owners[name] = role
-            nodes[name] = FunctionalRole(name=name, entity_kind=role['entity_kind'], count=role['required_count'],
+            nodes[name] = FunctionalRole(name=name, entity_kind=canonical_kind, count=role['required_count'],
                 binding_policy=role['binding_policy'], semantic_categories=ontology.get_system_role_semantic_categories(domain, name),
                 description=role.get('description', ''), semantic_hints=tuple(role['required_properties']),
                 min_count=role.get('binding_cardinality', {}).get('minimum_distinct_physical_objects', role.get('min_count')),
                 max_count=role.get('binding_cardinality', {}).get('maximum_distinct_physical_objects', role.get('max_count')),
                 preference=role.get('binding_cardinality', {}).get('preferred', role.get('preference')),
-                verification_mode=('GEOMETRIC_ONLY' if domain == 'workshop' and role['entity_kind'] == 'FIXED_TARGET'
+                verification_mode=('GEOMETRIC_ONLY' if domain == 'workshop' and canonical_kind == 'FIXED_TARGET'
                     else 'SEMANTIC_ONLY' if domain != 'workshop' and not role['required_properties'] else 'SEMANTIC_AND_GEOMETRIC'))
         trace['roles'].append({'raw_id': rid, 'canonical_role': name, 'rule': rule, 'status': 'CANONICAL_EXECUTABLE_SEMANTIC'})
         if rule == 'CAUSAL_SOURCE_PROVIDER':
@@ -181,10 +194,10 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 elif domain == 'workshop':
                     from mujoco_scenes.workshop_phase1.requirements import map_workshop_unary_property
                     mapped = map_workshop_unary_property(prop)
-                elif re.search(r'\b(planar|flat|horizontal)\b', prop.lower()) and role['entity_kind'] == 'REGION':
+                elif re.search(r'\b(planar|flat|horizontal)\b', prop.lower()) and nodes[name].entity_kind == 'REGION':
                     mapped = 'PLANAR_SUPPORT'
                 if mapped:
-                    validate_predicate_signature(domain=domain, predicate=mapped, subject_kind=role['entity_kind'], subject_role=name)
+                    validate_predicate_signature(domain=domain, predicate=mapped, subject_kind=nodes[name].entity_kind, subject_role=name)
             except VLMSpecificationError:
                 mapped = None
             evidence = {'raw_role_id': rid, 'raw_phrase': prop, 'canonical_predicate': mapped,
@@ -203,13 +216,37 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     relations = []
 
     def add_relation(raw_subject: str, phrase: str, raw_target: str, *, grouped=False, expected=True) -> str | None:
+        # Extract explicit role IDs if embedded in phrase (e.g. "role_3 manipulates role_2")
+        role_match = re.match(r'^(role_\w+)\s+(.+?)\s+(role_\w+)$', phrase.strip())
+        if role_match:
+            cand_s, cand_phrase, cand_o = role_match.groups()
+            if cand_s in id_map and cand_o in id_map:
+                raw_subject = cand_s
+                raw_target = cand_o
+                phrase = cand_phrase.strip()
+
         evidence = {'raw_subject': raw_subject, 'raw_phrase': phrase, 'raw_object': raw_target}
         try:
             if raw_subject not in id_map or raw_target not in id_map:
+                context_ids = {r['raw_role']['id'] for r in trace['context_only_roles']}
+                if (raw_subject in id_map or raw_subject in context_ids) and (raw_target in id_map or raw_target in context_ids):
+                    evidence.update(status='SOFT_SEMANTIC_EVIDENCE', reason='Context-only support endpoint')
+                    soft.append(evidence)
+                    trace['relations'].append(evidence)
+                    return None
                 raise ValueError('Unresolved or context-only endpoint')
             s, p, o = _relation(domain, id_map[raw_subject], phrase, id_map[raw_target])
             if not p:
                 raise ValueError('No executable relation checker')
+            fixed_anchors = set(get_domain_system_fixed_anchors(domain))
+            if s not in nodes and s in fixed_anchors:
+                nodes[s] = FunctionalRole(name=s, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
+                                          semantic_categories=ontology.get_system_role_semantic_categories(domain, s),
+                                          verification_mode='GEOMETRIC_ONLY')
+            if o not in nodes and o in fixed_anchors:
+                nodes[o] = FunctionalRole(name=o, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
+                                          semantic_categories=ontology.get_system_role_semantic_categories(domain, o),
+                                          verification_mode='GEOMETRIC_ONLY')
             validate_predicate_signature(domain=domain, predicate=p, subject_kind=nodes[s].entity_kind,
                 subject_role=s, object_kind=nodes[o].entity_kind, object_role=o)
         except (VLMSpecificationError, ValueError) as exc:
@@ -234,28 +271,42 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 group['tool_role'], phrase, group['target_role'], grouped=True
             )) is not None
         ]
-        context = [
-            mapped for phrase in group.get('context_relations', [])
-            if (mapped := add_relation(
-                group['tool_role'], phrase, group['context_role'], grouped=True
-            )) is not None
-        ] if group.get('context_role') else []
-        # Compile every relation independently. An unknown phrase remains in
-        # unresolved_semantics, while usable relations still define the
-        # operation. With no usable required relation the group is disabled.
+        context = []
+        if group.get('context_role'):
+            for phrase in group.get('context_relations', []):
+                mapped = add_relation(group['tool_role'], phrase, group['context_role'], grouped=True)
+                if mapped is None and group.get('target_role'):
+                    mapped = add_relation(group['target_role'], phrase, group['context_role'], grouped=True)
+                if mapped is not None:
+                    context.append(mapped)
         if not required or any(group[k] not in id_map for k in ('tool_role', 'target_role')):
             trace['disabled_groups'].append({'raw_group': group, 'status': 'UNINSTANTIABLE_MISSING_RELATION'})
             continue
+        tool_role_id = id_map[group['tool_role']]
+        target_role_id = id_map[group['target_role']]
         if domain == 'kitchen':
             from mujoco_scenes.kitchen_vlm_functional_graph import map_kitchen_interaction_group_function
             function = map_kitchen_interaction_group_function(group.get('function', ''))
+            if not function:
+                if (tool_role_id, target_role_id) == ('coffee_stirrer', 'coffee_container'):
+                    function = 'coffee_stirring'
+                elif (tool_role_id, target_role_id) == ('soup_eating_utensil', 'soup_container'):
+                    function = 'soup_serving'
         elif domain == 'living_room':
             from mujoco_scenes.environment_vlm_requirements import map_living_room_operation_group_function
             function = map_living_room_operation_group_function(group.get('function', ''))
+            if not function:
+                pair = {tool_role_id, target_role_id}
+                if pair == {'CUP_SAUCER_SET', 'PERSONAL_CUP_SAUCER_REGION'}:
+                    function = 'personal_support_group'
+                elif pair == {'REMOTE', 'SHARED_REMOTE_REGION'}:
+                    function = 'shared_entertainment_group'
+            if nodes[tool_role_id].entity_kind == 'OBJECT' and nodes[target_role_id].entity_kind == 'REGION':
+                tool_role_id, target_role_id = target_role_id, tool_role_id
         else:
-            function = 'DRIVE_FASTENER_INTO_TARGET' if (id_map[group['tool_role']], id_map[group['target_role']]) == ('driver', 'fastener') else None
+            function = 'DRIVE_FASTENER_INTO_TARGET' if (tool_role_id, target_role_id) == ('driver', 'fastener') else None
         count = group.get('required_target_count')
-        if not function or type(count) is not int or count < 1 or count > nodes[id_map[group['target_role']]].maximum_count or group.get('usage_policy') not in {'DEDICATED_PER_TARGET', 'SEQUENTIAL_REUSE_ALLOWED'}:
+        if not function or type(count) is not int or count < 1 or count > nodes[target_role_id].maximum_count or group.get('usage_policy') not in {'DEDICATED_PER_TARGET', 'SEQUENTIAL_REUSE_ALLOWED'}:
             trace['disabled_groups'].append({'raw_group': group, 'status': 'UNSUPPORTED_OPERATOR'})
             continue
         # Singleton interaction requirements are equivalent to ordinary graph
@@ -269,10 +320,13 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                                     'representation': 'SINGLETON_RELATIONS'})
             continue
         runtime_function = {'coffee_stirring': 'STIR_COFFEE', 'soup_serving': 'PROVIDE_SOUP_EATING_UTENSIL',
-                            'personal_support_group': 'SUPPORT_DRINKWARE'}.get(function, function)
+                            'personal_support_group': 'SUPPORT_DRINKWARE',
+                            'shared_entertainment_group': 'SUPPORT_ENTERTAINMENT_CONTROL'}.get(function, function)
         executable_context_role = id_map.get(group.get('context_role')) if context else None
-        groups.append(OperationGroup(id=function if not any(g.id == function for g in groups) else group['id'], function=runtime_function, tool_role=id_map[group['tool_role']],
-            target_role=id_map[group['target_role']], required_target_count=count, usage_policy=group['usage_policy'],
+        if domain == 'living_room' and executable_context_role == 'SEATING_POSITION' and 'ACCESSIBLE_FROM_BOTH_SEATS' in context:
+            executable_context_role = 'SEATING_PAIR'
+        groups.append(OperationGroup(id=function if not any(g.id == function for g in groups) else group['id'], function=runtime_function, tool_role=tool_role_id,
+            target_role=target_role_id, required_target_count=count, usage_policy=group['usage_policy'],
             required_relations=tuple(dict.fromkeys(required)), context_role=executable_context_role,
             context_relations=tuple(dict.fromkeys(context)),
             distinct_within_group=group.get('distinct_within_group', group['usage_policy'] == 'DEDICATED_PER_TARGET'),

@@ -126,11 +126,11 @@ symbolic_task:
   contents: [coffee, water, soup]
   source_roles:
     coffee_source:
-      accepted_semantic_labels: [coffee_source]
+      accepted_semantic_labels: [coffee_source, coffee_jar, coffee_container, coffee_tin, jar]
       provides: coffee
       count: 1
     water_source:
-      accepted_semantic_labels: [kettle]
+      accepted_semantic_labels: [kettle, water_source, water_container, teapot]
       provides: water
       count: 1
   target_requirements:

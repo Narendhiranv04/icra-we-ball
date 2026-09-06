@@ -386,12 +386,18 @@ def map_workshop_fixed_target_role(raw: dict[str, Any] | str) -> str | None:
             "accept screw insertion", "accept_screw_insertion", "mounting point",
             "target joint hole", "target joint", "loose frame joint", "repair the frame",
             "receive fastening", "receive fastener", "workpiece", "fastening point",
-            "has fastening points",
+            "has fastening points", "fastening target", "fastener target",
+            "fastening location", "assembly fixture", "marked workbench location",
+            "workbench location", "target location", "repair location",
         )
     )
     if raw_k in ("REGION", "OBJECT"):
         # For REGION/OBJECT, only match if explicitly describing receiving fastening or workpiece
-        if any(k in norm for k in ("receive fastening", "receive fastener", "fastening point", "has fastening points")) or (
+        if any(k in norm for k in (
+            "receive fastening", "receive fastener", "fastening point", "has fastening points",
+            "fastening target", "fastener target", "fastening location", "assembly fixture",
+            "marked workbench location",
+        )) or (
             any(c in ("workpiece", "component", "assembly") for c in raw_cats) and any(k in norm for k in ("receive fastening", "workpiece", "fasten", "hole", "target"))
         ):
             return "repair_target"
@@ -461,7 +467,8 @@ def map_workshop_role_function(raw: dict[str, Any] | str) -> str | None:
     )
     driver_tokens = (
         "screwdriver", "screwdrivers", "drill", "drills", "driver", "drivers",
-        "tool", "tools", "bit", "bits", "wrench", "wrenches",
+        "tool", "tools", "bit", "bits", "wrench", "wrenches", "implement", "implements",
+        "equipment", "device", "apparatus",
     )
 
     fastener_phrases = (
@@ -499,6 +506,17 @@ def map_workshop_role_function(raw: dict[str, Any] | str) -> str | None:
     has_fastener_action = any(
         w in words for w in ("fasten", "fastening", "anchor", "anchoring")
     )
+
+    has_instrument_indicator = any(w in words for w in driver_tokens) or any(
+        c in raw_cats for c in ("screwdriver", "driver", "drill", "wrench", "tool", "bit", "power_driver", "power_drill")
+    )
+    has_component_indicator = any(
+        w in words for w in ("component", "components", "fastener", "fasteners", "screw", "screws", "bolt", "bolts", "hardware")
+    ) or any(c in raw_cats for c in ("screw", "fastener", "bolt", "hardware"))
+
+    # Tool/implement semantics override generic action verb
+    if (has_driver_action or has_fastener_action or has_driver_phrase or has_fastener_phrase) and has_instrument_indicator and not has_component_indicator and not is_fastener_target:
+        return "CAN_DRIVE_SCREW"
 
     if has_driver_action and not is_fastener_target:
         return "CAN_DRIVE_SCREW"
@@ -650,7 +668,8 @@ def canonicalize_workshop_relation(
             "driver engages screw", "driver engages", "fit screw", "fits screw",
             "fit driver", "fits driver", "driver bit", "fit fastener", "fits fastener",
             "match bit", "torque to screw", "drives", "drives screw", "driver engages screw",
-            "transmits torque", "transmit torque",
+            "transmits torque", "transmit torque", "manipulate", "manipulates", "operates", "operate",
+            "tighten", "tightens", "turn", "turns", "rotate", "rotates", "fasten", "fastens",
             "fit the screw head and transmit torque", "tip must fit the screw head and transmit torque",
             "fit screw head", "fits screw head", "driver bit matches fastener",
         )):
