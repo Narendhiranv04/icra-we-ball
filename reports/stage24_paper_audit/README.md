@@ -1,12 +1,13 @@
 # ViLaIn-TAMP-Qwen Stage-24 Final Paper Audit & Evaluation Artifacts
 
-This directory contains the complete, paper-ready audit and evaluation dataset for the **320-run Stage-24 evaluation matrix** of the ViLaIn-TAMP baseline with Qwen2.5-VL-72B-Instruct.
+This directory contains the complete, paper-ready audit and evaluation dataset for the **320-run Stage-24 evaluation matrix** of the ViLaIn-TAMP baseline with Qwen/Qwen3.5-9B (served as `qwen35-9b`).
 
 ## Provenance
 - **Evaluation Matrix Commit**: `4532495142b7a365d8bdba43f1776ab798818a28`
 - **Analysis Tooling**: `mujoco_scenes/run_vilain_tamp_paper_analysis.py` (commit `2b0d313faa5a6a6438af5de7be60b80a7a49c508`)
 - **Metric Definitions & Documentation**: [`mujoco_scenes/baselines/vilain_tamp/PAPER_METRICS.md`](../../mujoco_scenes/baselines/vilain_tamp/PAPER_METRICS.md)
-- **Matrix Scope**: 320 total runs across 4 domains (Kitchen, Living Room, Lab, Workshop), 16 variants, 2 protocols (`all_candidate_regions`, `target_region_only`), 20 random seeds per variant.
+- **Matrix Scope**: 320 total runs across 3 domains (Kitchen: 12 variants, Living Room: 10 variants, Workshop: 10 variants = 32 variants total), 2 observation protocols (`initial_observation_only`, `fixed_full_inspection`), 5 repeats per variant (seeds 240000..240319).
+- **Model Server**: vLLM serving `qwen35-9b` (Qwen/Qwen3.5-9B, served revision: unverified).
 
 ---
 
@@ -31,10 +32,10 @@ This directory contains the complete, paper-ready audit and evaluation dataset f
 ### Aggregate CSV & JSON Tables
 - **`paper_overall.json`**: Global scalar summary of all pipeline stages, continuous metrics (action sequence lengths, solve times, refinement times, memory, token usage), Wilson score confidence intervals, and feasibility classification metrics.
 - **`paper_stage_funnel.csv`**: Pipeline stage progression from Raw Runs $\to$ FD Plans $\to$ VAL Validated $\to$ Identity Grounded $\to$ Refinement Succeeded $\to$ Terminal Executed.
-- **`paper_by_domain.csv`**: Metrics grouped by domain (Kitchen, Living Room, Lab, Workshop).
-- **`paper_by_protocol.csv`**: Metrics grouped by candidate region protocol (`all_candidate_regions` vs `target_region_only`).
+- **`paper_by_domain.csv`**: Metrics grouped by domain (Kitchen: 120 runs, Living Room: 100 runs, Workshop: 100 runs).
+- **`paper_by_protocol.csv`**: Metrics grouped by observation protocol (`initial_observation_only`: 160 runs vs `fixed_full_inspection`: 160 runs).
 - **`paper_by_domain_protocol.csv`**: Cross-tabulation of domain $\times$ protocol.
-- **`paper_by_variant.csv`**: Per-variant breakdown across all 16 evaluation variants (K1..K4, L1..L4, B1..B4, W1..W4).
+- **`paper_by_variant.csv`**: Per-variant breakdown across all 32 authoritative evaluation variants (Kitchen F0..F5, I0..I5; Living Room F0..F5, I0..I3; Workshop F0..F7, I0..I1).
 - **`paper_feasibility_metrics.csv`**: Complete feasibility metrics table.
 - **`paper_feasibility_confusion.json`**: Confusion matrix for feasibility classification.
 - **`paper_failure_breakdown.csv`**: Failure category distribution across all 320 runs.

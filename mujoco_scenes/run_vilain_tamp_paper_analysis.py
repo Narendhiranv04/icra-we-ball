@@ -31,6 +31,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("/home/naren/ViLaIn-TAMP-results/stage24-4532495-paper-audit"),
         help="Output directory for paper metrics, CSVs, JSONs, and LaTeX tables.",
     )
+    parser.add_argument(
+        "--file-prefix",
+        type=str,
+        default="paper_",
+        help="Prefix for output artifact filenames (e.g. 'paper_' or 'smoke_').",
+    )
     return parser
 
 
@@ -38,19 +44,23 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     print(f"Auditing ViLaIn-TAMP results from: {args.results_root}")
     print(f"Outputting paper artifacts to:   {args.output_root}")
+    print(f"Artifact prefix:                 {args.file_prefix}")
     
-    overall = run_full_paper_analysis(args.results_root, args.output_root)
+    overall = run_full_paper_analysis(args.results_root, args.output_root, file_prefix=args.file_prefix)
     
-    print("\n=== ViLaIn-TAMP Paper Audit Complete ===")
+    print("\n=== ViLaIn-TAMP Main Manuscript Metrics ===")
     print(f"Total Non-Infrastructure Runs:     {overall['total_runs']}")
-    print(f"Action Sequence Generation Rate:    {overall['action_sequence_generation_rate']*100:.2f}% ({overall['action_sequence_generation_count']}/{overall['total_runs']})")
-    print(f"Non-Empty Plan Rate:                {overall['nonempty_action_sequence_rate']*100:.2f}% ({overall['nonempty_action_sequence_count']}/{overall['total_runs']})")
-    print(f"VAL-Valid Plan Rate:                {overall['val_valid_plan_rate']*100:.2f}% ({overall['val_valid_plan_count']}/{overall['total_runs']})")
-    print(f"Execution-Ready Plan Rate:          {overall['execution_ready_plan_rate']*100:.2f}% ({overall['execution_ready_plan_count']}/{overall['total_runs']})")
-    print(f"Physical Execution Rate (Uncond):   {overall['physical_execution_rate_unconditional']*100:.2f}% ({overall['execution_success_count']}/{overall['total_runs']})")
-    print(f"Benchmark Requirement Coverage:     {overall['benchmark_requirement_coverage_micro']*100:.2f}%")
-    print(f"Generated Goal Satisfaction Rate:   {overall['generated_goal_satisfaction_rate']*100:.2f}% (N={overall['generated_goal_evaluated_count']})")
-    print(f"Feasibility Accuracy (Raw Rule):    {overall['feasibility_confusion']['accuracy']*100:.2f}% (Coverage: {overall['feasibility_confusion']['decision_coverage']*100:.2f}%)")
+    print(f"Feasible Variant Runs:             {overall['feasible_runs']}")
+    print(f"Outcome Correct Rate:               {overall['outcome_correct_rate']*100:.2f}% ({overall['outcome_correct_count']}/{overall['total_runs']})")
+    print(f"Feasible-Task Success Rate:         {overall['feasible_task_success_rate']*100:.2f}% ({overall['feasible_task_success_count']}/{overall['feasible_runs']})")
+    print(f"Goal Coverage (Micro):              {overall['goal_coverage_micro']*100:.2f}% ({overall['goal_requirements_passed_feasible']}/{overall['goal_requirements_total_feasible']})")
+    fc_rate = f"{overall['false_completion_rate']*100:.2f}%" if overall['false_completion_rate'] is not None else "N/A"
+    print(f"False Completion Rate:              {fc_rate} ({overall['false_completion_count']}/{overall['declared_completion_count']})")
+    print(f"Physical Plan Found Rate:           {overall['physical_plan_found_rate']*100:.2f}% ({overall['physical_plan_found_count']}/{overall['feasible_runs']})")
+    raw_vlm = overall['raw_vlm_requests']
+    print(f"Raw VLM Requests:                   {raw_vlm.get('mean', 0.0):.2f} ± {raw_vlm.get('std', 0.0):.2f}")
+    replans = overall['high_level_replans']
+    print(f"High-Level Replans:                 {replans.get('mean', 0.0):.2f} ± {replans.get('std', 0.0):.2f}")
     print(f"\nArtifacts successfully written to:  {args.output_root}\n")
     return 0
 

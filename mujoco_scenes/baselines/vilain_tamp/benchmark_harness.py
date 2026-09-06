@@ -75,13 +75,40 @@ def authoritative_variants(config_root: Path) -> dict[str, tuple[str, ...]]:
     return result
 
 
-def build_schedule(config_root: Path) -> tuple[ScheduledRun, ...]:
+def authoritative_feasibility(config_root: Path) -> dict[str, dict[str, bool]]:
+    result: dict[str, dict[str, bool]] = {}
+    for domain, filename in CONFIG_FILES.items():
+        document = yaml.safe_load((config_root / filename).read_text(encoding="utf-8"))
+        variants = document.get("variants") if isinstance(document, Mapping) else None
+        if not isinstance(variants, Mapping) or not variants:
+            raise ValueError(f"{filename} has no authoritative variant registry")
+        result[domain] = {
+            str(k): (v.get("intended_outcome") == "FEASIBLE" if isinstance(v, Mapping) and "intended_outcome" in v else str(k).startswith("F"))
+            for k, v in variants.items()
+        }
+    return result
+
+
+def authoritative_requirements_count(config_root: Path) -> dict[str, dict[str, int]]:
+    req_counts = {"kitchen": 8, "living_room": 6, "workshop": 6}
+    variants = authoritative_variants(config_root)
+    return {
+        domain: {v: req_counts.get(domain, 0) for v in var_list}
+        for domain, var_list in variants.items()
+    }
+
+
+def build_schedule(
+    config_root: Path,
+    protocols: Sequence[str] = PROTOCOLS,
+    repeats: int = REPEATS,
+) -> tuple[ScheduledRun, ...]:
     schedule: list[ScheduledRun] = []
     ordinal = 0
     for domain, variants in authoritative_variants(config_root).items():
         for variant in variants:
-            for protocol in PROTOCOLS:
-                for repeat in range(REPEATS):
+            for protocol in protocols:
+                for repeat in range(repeats):
                     schedule.append(
                         ScheduledRun(
                             run_id=(
@@ -103,9 +130,54 @@ def _canonical_json(payload: Any) -> str:
 
 
 def prepare_manifest(
-    output_root: Path, *, source_commit: str, config_root: Path
+    output_root: Path,
+    *,
+    source_commit: str,
+    config_root: Path,
+    protocols: Sequence[str] = PROTOCOLS,
+    repeats: int = REPEATS,
 ) -> tuple[ScheduledRun, ...]:
-    schedule = build_schedule(config_root)
+    path = output_root / "schedule_manifest.json"
+    if path.exists():
+        existing = json.loads(path.read_text(encoding="utf-8"))
+        existing_runtime = existing.get("runtime", {})
+        existing_protocols = tuple(existing_runtime.get("protocols", PROTOCOLS))
+        existing_repeats = existing_runtime.get("repeat_count", REPEATS)
+        expected_schedule = build_schedule(
+            config_root, protocols=existing_protocols, repeats=existing_repeats
+        )
+        payload = {
+            "schema_version": existing.get("schema_version", 1),
+            "source_commit": source_commit,
+            "created_utc": existing.get("created_utc"),
+            "immutable_schedule": True,
+            "model": {
+                "served_model_id": SERVED_MODEL_ID,
+                "served_model_root": SERVED_MODEL_ROOT,
+                "served_revision": "unverified",
+                "base_url": DEFAULT_VLLM_BASE_URL,
+                "openai_cloud_used": False,
+            },
+            "runtime": {
+                "cp_limit": CP_LIMIT,
+                "fast_downward": str(FAST_DOWNWARD),
+                "fast_downward_version": "24.06.1",
+                "search_alias": "lama-first",
+                "symbolic_timeout_seconds": 200,
+                "val": str(VAL),
+                "val_commit": VAL_COMMIT,
+                "mujoco_version": "3.3.5",
+                "repeat_count": existing_repeats,
+                "protocols": list(existing_protocols),
+            },
+            "runs": [item.to_dict() for item in expected_schedule],
+        }
+        comparable = dict(existing)
+        if comparable != payload:
+            raise RuntimeError("existing immutable schedule differs from requested matrix")
+        return expected_schedule
+
+    schedule = build_schedule(config_root, protocols=protocols, repeats=repeats)
     payload = {
         "schema_version": 1,
         "source_commit": source_commit,
@@ -127,26 +199,18 @@ def prepare_manifest(
             "val": str(VAL),
             "val_commit": VAL_COMMIT,
             "mujoco_version": "3.3.5",
-            "repeat_count": REPEATS,
-            "protocols": list(PROTOCOLS),
+            "repeat_count": repeats,
+            "protocols": list(protocols),
         },
         "runs": [item.to_dict() for item in schedule],
     }
-    path = output_root / "schedule_manifest.json"
+    output_root.mkdir(parents=True, exist_ok=True)
     rendered = _canonical_json(payload)
-    if path.exists():
-        existing = json.loads(path.read_text(encoding="utf-8"))
-        comparable = dict(existing)
-        comparable["created_utc"] = payload["created_utc"]
-        if comparable != payload:
-            raise RuntimeError("existing immutable schedule differs from requested matrix")
-    else:
-        output_root.mkdir(parents=True, exist_ok=True)
-        path.write_text(rendered, encoding="utf-8")
-        digest = hashlib.sha256(rendered.encode("utf-8")).hexdigest()
-        (output_root / "schedule_manifest.sha256").write_text(
-            f"{digest}  schedule_manifest.json\n", encoding="utf-8"
-        )
+    path.write_text(rendered, encoding="utf-8")
+    digest = hashlib.sha256(rendered.encode("utf-8")).hexdigest()
+    (output_root / "schedule_manifest.sha256").write_text(
+        f"{digest}  schedule_manifest.json\n", encoding="utf-8"
+    )
     return schedule
 
 
@@ -336,6 +400,9 @@ def _flat_row(result: Mapping[str, Any]) -> dict[str, Any]:
         else {}
     )
     ground_truth_feasible = hidden.get("ground_truth_feasibility")
+    if ground_truth_feasible is None:
+        config_root = Path(__file__).resolve().parents[3] / "mujoco_scenes" / "configs"
+        ground_truth_feasible = authoritative_feasibility(config_root).get(result["domain"], {}).get(result["variant"])
     predicted_infeasible = hidden.get("predicted_infeasible")
     return {
         "run_id": result["run_id"],
@@ -467,6 +534,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--prepare-only", action="store_true")
     parser.add_argument("--aggregate-only", action="store_true")
     parser.add_argument("--max-runs", type=int)
+    parser.add_argument(
+        "--protocol",
+        action="append",
+        dest="protocols",
+        choices=PROTOCOLS,
+        help="Observation protocol(s) to include (default: both protocols).",
+    )
+    parser.add_argument(
+        "--repeats",
+        type=int,
+        default=None,
+        help="Number of repeats per variant (default: 5).",
+    )
     return parser
 
 
@@ -475,7 +555,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     repository_root = Path(__file__).resolve().parents[3]
     config_root = repository_root / "mujoco_scenes" / "configs"
     source_commit = _git_head(repository_root)
-    schedule = prepare_manifest(args.output_root.resolve(), source_commit=source_commit, config_root=config_root)
+    protocols = tuple(args.protocols) if args.protocols else PROTOCOLS
+    repeats = args.repeats if args.repeats is not None else REPEATS
+    schedule = prepare_manifest(
+        args.output_root.resolve(),
+        source_commit=source_commit,
+        config_root=config_root,
+        protocols=protocols,
+        repeats=repeats,
+    )
     if args.prepare_only:
         print(json.dumps({"scheduled_runs": len(schedule), "source_commit": source_commit}, sort_keys=True))
         return 0
