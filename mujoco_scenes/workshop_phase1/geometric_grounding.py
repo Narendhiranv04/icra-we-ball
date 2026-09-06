@@ -311,6 +311,17 @@ class GeometricGrounder:
 
     def evaluate_compatible_with_target(self, properties: dict[str, Any]) -> dict[str, Any]:
         length, shaft = properties.get("total_length_m"), properties.get("shaft_diameter_m")
+        if shaft is None:
+            ends = [e for e in properties.get("head_end_geometry", {}).get("ends", []) if e.get("status") == "MEASURED"]
+            if not ends:
+                ends = [e for e in properties.get("distal_end_geometry", {}).get("ends", []) if e.get("status") == "MEASURED"]
+            if ends:
+                small = min(ends, key=lambda e: e.get("transverse_width_m", float("inf")))
+                shaft = small.get("transverse_width_m")
+            elif properties.get("robust_dimensions_m") and len(properties["robust_dimensions_m"]) > 2:
+                shaft = float(properties["robust_dimensions_m"][2])
+            else:
+                shaft = properties.get("maximum_cross_section_m")
         maximum_cross_section = properties.get("maximum_cross_section_m")
         opening = self.target_evidence.estimated_opening_diameter_m if self.target_evidence.validity == GroundingStatus.PASS else None
         depth = self.target_evidence.estimated_recess_depth_m if self.target_evidence.validity == GroundingStatus.PASS else None

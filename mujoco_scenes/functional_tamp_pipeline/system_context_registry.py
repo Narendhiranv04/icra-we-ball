@@ -102,14 +102,19 @@ def is_valid_planner_argument(
     if argument in domain_constants:
         return True
 
-    # 4. Explicitly allowed context IDs (restricted: for standard domains, must be a known domain constant
-    # or actual observed REGION/FIXED_TARGET node; NEVER an unassigned OBJECT)
+    # 4. Registered domain search region
+    domain_search_regions = get_domain_search_regions(domain)
+    if argument in domain_search_regions:
+        return True
+
+    # 5. Explicitly allowed context IDs (restricted: for standard domains, must be a known domain constant,
+    # registered search region, or actual observed REGION/FIXED_TARGET node; NEVER an unassigned OBJECT)
     if allowed_context_ids is not None:
         allowed_set = set(allowed_context_ids)
         if argument in allowed_set:
             d_norm = domain.strip().lower()
             if d_norm in {"kitchen", "living_room", "workshop"}:
-                if argument in domain_constants:
+                if argument in domain_constants or argument in domain_search_regions:
                     return True
                 if hasattr(graph_o, "nodes") and argument in graph_o.nodes:
                     node = graph_o.nodes[argument]

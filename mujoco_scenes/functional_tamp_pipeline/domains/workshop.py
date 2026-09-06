@@ -203,14 +203,15 @@ class WorkshopPlanningCompiler:
             observed = context.get("graph_o")
             triples = {(r.subject_role, r.predicate, r.object_role) for r in specification.relations}
             def verified(subject_role, predicate, object_role):
-                if (subject_role, predicate, object_role) not in triples:
-                    return False
                 subject, obj = assignment.get(subject_role), assignment.get(object_role)
                 rel = observed.get_relation(predicate, subject, obj) if observed and subject and obj else None
                 return rel is not None and rel.status == "TRUE"
-            insertion_ok = verified("fastener", "COMPATIBLE_WITH_TARGET", "repair_target")
             disabled_operations = specification.metadata.get("canonicalization_trace", {}).get("disabled_groups", [])
-            operation_ok = not disabled_operations and insertion_ok and verified("driver", "COMPATIBLE_WITH", "fastener") and verified("driver", "REACHES_TARGET", "repair_target")
+            has_group = bool(specification.operation_groups)
+            insertion_ok = (("fastener", "COMPATIBLE_WITH_TARGET", "repair_target") in triples or has_group) and verified("fastener", "COMPATIBLE_WITH_TARGET", "repair_target")
+            compat_ok = (("driver", "COMPATIBLE_WITH", "fastener") in triples or has_group) and verified("driver", "COMPATIBLE_WITH", "fastener")
+            reaches_ok = verified("driver", "REACHES_TARGET", "repair_target") and (("driver", "REACHES_TARGET", "repair_target") in triples or has_group or (insertion_ok and compat_ok))
+            operation_ok = not disabled_operations and insertion_ok and compat_ok and reaches_ok
             actions = [a for a in actions if not (a.name == "SCREW" and not operation_ok)
                        and not (a.name == "PLACE" and a.arguments == (fastener, target) and not insertion_ok)]
             if driver and not operation_ok:
@@ -308,8 +309,10 @@ class WorkshopDomainAdapter:
             }
             for prompt in controller.prompts
         ]
+        canonical_object_targets = set(mapping.values()) | set(alias_mapping.values())
         controller.object_categories = {
             entry["canonical_label"] for entry in controller.detector_vocabulary
+            if not canonical_object_targets or entry["canonical_label"] in canonical_object_targets
         } - controller.region_categories
         controller.proposal_backend.set_vocabulary(controller.prompts, mapping)
         if controller._yolo_aux_backend is not None:
@@ -320,9 +323,7 @@ class WorkshopDomainAdapter:
             # decide whether a proposal can fill a role.
             controller._yolo_aux_backend.supplemental_prompts = [
                 prompt for prompt in (
-                    "Phillips screwdriver", "cordless power drill",
                     "Phillips head screw", "Phillips screw", "screw",
-                    "wooden hammer",
                 ) if prompt in controller.prompts
             ]
             controller._yolo_aux_backend.supplemental_confidence_threshold = 0.001
@@ -337,7 +338,11 @@ class WorkshopDomainAdapter:
             canonical_category="repair_target",
             unary_properties={"target": "workbench_hole"},
         ))
-        for region in self.specification.candidate_regions:
+        regions = list(self.specification.candidate_regions)
+        if not regions:
+            from ..system_context_registry import get_domain_search_regions
+            regions = sorted(get_domain_search_regions("workshop"))
+        for region in regions:
             self.controller.graph.register_inspection_region_node(
                 region, f"Search container {region}"
             )

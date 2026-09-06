@@ -716,12 +716,14 @@ def canonicalize_workshop_relation(
             "must fit the workbench target hole and thread into the hole",
             "threads into target repair hole", "thread into target repair hole",
             "threads into hole", "thread into hole", "fits the hole", "fit the hole",
+            "contained in", "placed in", "inserted in", "held in", "secured in", "mounted in",
         )):
             return ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "PRESERVED", "GRAPH_RELATION")
 
     if raw_subject_canon == "repair_target" and raw_object_canon == "fastener":
         if any(_contains_phrase(norm_rel, k) for k in (
             "receives fastener", "receives screw", "is fastened by", "fastened by", "is threaded by", "threaded by", "fastened with",
+            "contains", "holds", "receives", "houses", "retains", "locates", "anchors", "secures", "contains fastener", "contains screw",
         )):
             return ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
 
