@@ -293,6 +293,32 @@ def get_active_predicates(domain: str) -> tuple[PredicateSignature, ...]:
     )
 
 
+def get_endpoint_valid_binary_predicates(
+    domain: str,
+    *,
+    subject_role: str,
+    object_role: str,
+    subject_kind: str,
+    object_kind: str,
+) -> list[PredicateSignature]:
+    """Return all active canonical binary predicates in `domain` compatible with given endpoints."""
+    d_norm = domain.strip().lower()
+    valid: list[PredicateSignature] = []
+    for sig in get_active_predicates(d_norm):
+        if sig.arity != 2:
+            continue
+        if subject_kind not in sig.subject_kinds:
+            continue
+        if sig.object_kinds and object_kind not in sig.object_kinds:
+            continue
+        if sig.allowed_subject_roles and subject_role not in sig.allowed_subject_roles:
+            continue
+        if sig.allowed_object_roles and object_role not in sig.allowed_object_roles:
+            continue
+        valid.append(sig)
+    return valid
+
+
 def validate_predicate_signature(
     domain: str,
     predicate: str,

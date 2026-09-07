@@ -235,9 +235,56 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                     trace['relations'].append(evidence)
                     return None
                 raise ValueError('Unresolved or context-only endpoint')
-            s, p, o = _relation(domain, id_map[raw_subject], phrase, id_map[raw_target])
+
+            canon_s = id_map[raw_subject]
+            canon_o = id_map[raw_target]
+            s_kind = nodes[canon_s].entity_kind
+            o_kind = nodes[canon_o].entity_kind
+
+            from .relation_interpreter import interpret_relation
+            interp = interpret_relation(
+                domain=domain,
+                raw_phrase=phrase,
+                subject_role=canon_s,
+                object_role=canon_o,
+                subject_kind=s_kind,
+                object_kind=o_kind,
+                required=expected,
+            )
+
+            if interp.succeeded:
+                first_pred = None
+                for ip in interp.interpreted_predicates:
+                    s, p, o = ip.subject_role, ip.predicate_name, ip.object_role
+                    fixed_anchors = set(get_domain_system_fixed_anchors(domain))
+                    if s not in nodes and s in fixed_anchors:
+                        nodes[s] = FunctionalRole(name=s, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
+                                                  semantic_categories=ontology.get_system_role_semantic_categories(domain, s),
+                                                  verification_mode='GEOMETRIC_ONLY')
+                    if o not in nodes and o in fixed_anchors:
+                        nodes[o] = FunctionalRole(name=o, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
+                                                  semantic_categories=ontology.get_system_role_semantic_categories(domain, o),
+                                                  verification_mode='GEOMETRIC_ONLY')
+                    validate_predicate_signature(domain=domain, predicate=p, subject_kind=nodes[s].entity_kind,
+                        subject_role=s, object_kind=nodes[o].entity_kind, object_role=o)
+                    rel = FunctionalRelation(s, p, o, expected=expected)
+                    if not grouped and rel not in relations:
+                        relations.append(rel)
+                    if first_pred is None:
+                        first_pred = p
+                evidence.update(
+                    status='CANONICAL_EXECUTABLE_SEMANTIC',
+                    interp_status=interp.status,
+                    canonical=[[ip.subject_role, ip.predicate_name, ip.object_role] for ip in interp.interpreted_predicates],
+                    direction_normalized=interp.direction_normalized,
+                )
+                trace['relations'].append(evidence)
+                return first_pred
+
+            # Secondary fallback via domain-specific canonicalizer
+            s, p, o = _relation(domain, canon_s, phrase, canon_o)
             if not p:
-                raise ValueError('No executable relation checker')
+                raise ValueError(interp.reason or 'No executable relation checker')
             fixed_anchors = set(get_domain_system_fixed_anchors(domain))
             if s not in nodes and s in fixed_anchors:
                 nodes[s] = FunctionalRole(name=s, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
