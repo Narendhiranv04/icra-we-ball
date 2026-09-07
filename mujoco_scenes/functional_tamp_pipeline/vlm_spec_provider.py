@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+from typing import Any
 
 from .models import (
     FunctionalRelation,
@@ -40,10 +42,12 @@ class VLMSpecProvider(FunctionalSpecProvider):
             adapter.return_raw_graph = True
             if domain == "kitchen":
                 raw_document = adapter.generate_kitchen_functional_graph(
-                    task_instruction, observation_images=observation_images or [])
+                    task_instruction, observation_images=observation_images or []
+                )
             else:
                 raw_document = adapter.generate_task_requirements(
-                    task_instruction, observation_images=observation_images or [])
+                    task_instruction, observation_images=observation_images or []
+                )
         graph = compile_candidate_graph(domain, task_instruction, raw_document)
         graph.metadata["candidate_requirement_statuses"] = analyze_executability(graph)
         return graph

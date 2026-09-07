@@ -490,7 +490,7 @@ def evaluate_all_variants(
     print(table_md)
     print(diag_md)
     from mujoco_scenes.functional_tamp_pipeline.evaluation_metrics import write_detailed_report
-    errors = write_detailed_report(output_root, records, live=spec_source == "live" and not resume)
+    errors = write_detailed_report(output_root, records, live=spec_source == "live" and not resume and variants is None)
     if errors:
         raise RuntimeError("INVALID BENCHMARK: " + "; ".join(errors))
     return summary

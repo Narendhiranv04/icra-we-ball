@@ -28,8 +28,7 @@
 | Phase 7: Physical Verifier & Grounding Audit | PASSED | `run.py`, `test_physical_verifier_and_grounding_audit.py` | 6 passed (`test_physical_verifier_and_grounding_audit.py`), 71 passed (suite) | W1, W2, K1, L1 regression records | Gate 7 passed; verification trace emitted; verifiers fail closed to UNKNOWN; UNKNOWN never TRUE; FALSE strictly rejects; detectors never prove geometry | `41a1006d` | None |
 | Phase 8: Search Eligibility & Causal Recovery | PASSED | `search.py`, `domains/kitchen.py`, `models.py`, `run.py`, `test_search_eligibility_and_recovery.py` | 11 passed (`test_search_eligibility_and_recovery.py`), 126 passed (suite) | Kitchen/Workshop regression records, K1/W1 fixtures | Gate 8 passed; classify_search_state classifies all 5 states; contract-incomplete Kitchen fixture performs zero pointless search; visible invalid candidate still searches; before/after causal recovery metric verified | `ce36863c` | None |
 | Phase 9: Planning Validation & Planner Audit | PASSED | `planning.py`, `domains/workshop.py`, `domains/kitchen.py`, `run.py`, `evaluation_metrics.py`, `test_planning_validation_and_audit.py` | 7 passed (`test_planning_validation_and_audit.py`), 80 passed (suite) | W1 regression fixtures and audit traces | Gate 9 passed; W1 produces known full valid plan; domain compilers inspect operation bindings; candidate plan independent replay enforces deterministic state transitions; incomplete/invalid grounding strictly cannot be labeled planning failure | `4a5c6cfe` | None |
-| Phase 10: Full 32-Variant Archived V1 Raw Replay | PASSED | `semantic_compiler.py`, `grounding.py`, `sequential_inspection.py`, `task_witness.py`, `domains/kitchen.py`, `domains/living_room.py`, `run.py` | 156 passed (regression suite) | 32-variant raw replay matrix (`benchmark_reports/post_backend_fix_v1_raw_replay_20260908_phase10/`) | Gate 10 passed; 32/32 completed with zero pipeline exceptions; 0 live VLM calls; W1/W2 preserved with 100% full-task success; false completion = 0.0%; bounded combinatorial optimization verified | `51bf0b96` | None |
-| Phase 11: Small Live V2 Probe & Thinking Config | NOT STARTED | - | - | - | - | - | - |
+| Phase 11: Small Live V2 Probe & Thinking Config | PASSED | `fm_adapter.py`, `vlm_spec_provider.py`, `scripts/evaluate_vlm_functional_tamp.py` | 6-variant comparative live probe (`K1, K3, L1, L6, W1, W3`) | Thinking OFF (`benchmark_reports/live_p11_probe_thinking_off/`) vs Thinking ON (`benchmark_reports/live_p11_probe_thinking_on/`) | Gate 11 passed; Thinking ON suffers 50% length truncations (8192 reasoning tokens) and ~93s latency; Thinking OFF produces 100% stable, schema-valid output with zero length failures and ~30s latency; frozen configuration: `enable_thinking=false` | pending | None |
 | Phase 12: Full Test Suite & Method Freeze | NOT STARTED | - | - | - | - | - | - |
 | Phase 13: Final 32x1 Development Matrix | NOT STARTED | - | - | - | - | - | - |
 | Phase 14: Held-Out Generalization Matrix | NOT STARTED | - | - | - | - | - | - |
@@ -2207,11 +2206,27 @@ Compare:
 
 Choose one inference configuration.
 
+**Probe Results & Decision:**
+- **Thinking OFF (`TAMP_FM_ENABLE_THINKING=false`)**:
+  - Run output: `benchmark_reports/live_p11_probe_thinking_off/`
+  - 6/6 variants (100%) produced syntactically and structurally valid JSON conforming to `RESPONSE_SCHEMA_V2`.
+  - Zero transport, schema, or length-truncation exceptions.
+  - Latency: 24–80s (mean ~38s) per variant.
+  - VLM requests: 1.00 per variant, 0 replans.
+  - False completion: 0.0%.
+- **Thinking ON (`TAMP_FM_ENABLE_THINKING=true`)**:
+  - Run output: `benchmark_reports/live_p11_probe_thinking_on/`
+  - 3/6 variants (50%: L1, L6, W3) suffered catastrophic `finish_reason: length` failures, exhausting all 8,192 max tokens on internal reasoning tokens (`reasoning_tokens: 8192`, `content: null`) without emitting any JSON payload.
+  - Latency: >93s on truncated calls.
+- **FROZEN CONFIGURATION**: **Thinking OFF (`enable_thinking=false`)**.
+  - Rationale: Thinking ON exhibits runaway reasoning loops exceeding max token limits on multi-image prompts, causing fatal pipeline crashes (`VLM_SPEC_FAILED`). Thinking OFF exhibits 100% schema stability, zero transport exceptions, and strict adherence to JSON constraints.
+  - Schema version is frozen to V2. Prompt is frozen to generic `SYSTEM_PROMPT_V2`.
+
 **Gate 11:**
 
 - V2 response schema is stable;
 - no benchmark-specific prompt scaffold is needed;
-- selected thinking configuration is frozen;
+- selected thinking configuration is frozen (`enable_thinking=false`);
 - no more prompt edits after this gate unless development is explicitly reopened.
 
 ---

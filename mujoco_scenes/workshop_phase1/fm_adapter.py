@@ -1404,6 +1404,11 @@ class FMAdapter:
     ) -> dict[str, Any]:
         """Produce the complete Kitchen natural functional requirement specification."""
         del search_region_descriptors
+        schema_version = int(os.environ.get("TAMP_FM_SCHEMA_VERSION", "2"))
+        if schema_version == 2:
+            return self.generate_task_requirements(
+                task_instruction, observation_images=observation_images
+            )
         image_blocks, self.last_observation_images = _encode_observation_images(
             observation_images
         )
@@ -1546,7 +1551,7 @@ class FMAdapter:
             "repetition_penalty": 1.0,
             "max_tokens": self.max_tokens,
             "stream": False,
-            "chat_template_kwargs": {"enable_thinking": False},
+            "chat_template_kwargs": {"enable_thinking": os.environ.get("TAMP_FM_ENABLE_THINKING", "false").strip().lower() in ("true", "1", "yes")},
             "response_format": {
                 "type": "json_schema",
                 "json_schema": {
