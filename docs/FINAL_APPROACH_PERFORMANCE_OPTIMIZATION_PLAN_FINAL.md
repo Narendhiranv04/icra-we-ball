@@ -18,9 +18,9 @@
 
 | Phase | Status | Files changed | Tests | Replay cases | Result | Commit | Remaining issue |
 |---|---|---|---|---|---|---|---|
-| Phase 0: Baseline & Evaluator | PASSED | `scripts/evaluate_vlm_functional_tamp.py`, `evaluation_metrics.py`, `raw_semantic_evaluation.py`, `run.py`, `audit.py` | 10 passed (`test_raw_replay_and_evaluator_metrics.py`) | Baseline replay records (W1, W8, K1, K2) | Gate 0 passed; baseline metrics recompute exact; causal search recovery and evidence-based first cause verified | Pending | None |
-| Phase 1: Runtime Ontology Isolation | NOT STARTED | - | - | - | - | - | - |
-| Phase 2: V2 Schema & Prompt | NOT STARTED | - | - | - | - | - | - |
+| Phase 0: Baseline & Evaluator | PASSED | `scripts/evaluate_vlm_functional_tamp.py`, `evaluation_metrics.py`, `raw_semantic_evaluation.py`, `run.py`, `audit.py` | 10 passed (`test_raw_replay_and_evaluator_metrics.py`) | Baseline replay records (W1, W8, K1, K2) | Gate 0 passed; baseline metrics recompute exact; causal search recovery and evidence-based first cause verified | `4e3c05e0` | None |
+| Phase 1: Runtime Ontology Isolation | PASSED | `configs/runtime_functional_semantic_ontology.yaml`, `role_semantic_ontology.py`, `run.py`, `audit.py`, `test_runtime_ontology_isolation.py` | 375 passed (all tests in suite) | W1, W2 regression fixtures | Gate 1 passed; runtime ontology isolated; GT provider leakage guarded; zero reference task config access | `6093192e` | None |
+| Phase 2: V2 Schema & Prompt | IN PROGRESS | - | - | - | - | - | - |
 | Phase 3: Safe Relation Interpreter | NOT STARTED | - | - | - | - | - | - |
 | Phase 4: Operation Interpreter & Capabilities | NOT STARTED | - | - | - | - | - | - |
 | Phase 5: V2 Compiler Integration | NOT STARTED | - | - | - | - | - | - |
