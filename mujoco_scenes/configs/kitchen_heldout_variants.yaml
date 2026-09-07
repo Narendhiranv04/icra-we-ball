@@ -1,0 +1,117 @@
+schema_version: 2
+goal_instruction: "Prepare and serve one coffee and one soup for each of two people. Make each coffee using coffee and water and stir it before serving. Serve each soup bowl with its own suitable eating utensil."
+inspection_order: [D1, D2, C2, B1, C1]
+task_requirements: s1_integrated_kitchen_object_function.yaml
+required_counts: {coffee_containers: 2, soup_containers: 2, soup_utensils: 2}
+required_sources:
+  water_source: [s1i_compact_kettle]
+  coffee_source: [s1i_compact_coffee_jar]
+role_object_kinds:
+  coffee_stirrer: [s1i_final_long_narrow_spoon]
+  soup_eating_utensil: [s1i_oversized_spoon, ab3_partial_spoon]
+
+variants:
+  HK1_DISPERSED_SEARCH:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_HK1
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: FEASIBLE
+    intended_min_coffee_tools: 1
+    expected_inspections: 2
+    countertop_objects:
+      counter_spot_13: ab3_narrow_deep_cup
+      counter_spot_16: ab3_shallow_bowl
+      counter_spot_18: s1i_oversized_spoon
+      counter_spot_57: s1i_compact_kettle
+      counter_spot_53: s1i_compact_coffee_jar
+    container_contents:
+      D1: [s1i_final_long_narrow_spoon]
+      D2: [ab3_partial_spoon]
+      C1: []
+      C2: [ab3_medium_deep_mug]
+      B1: [ab3_deep_bowl]
+    description: "Held-out layout 1: Dispersed objects; stirrer in D1, 2nd utensil in D2, 2nd cup in C2, 2nd bowl in B1."
+
+  HK2_SINGLE_REGION_SEARCH:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_HK2
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: FEASIBLE
+    intended_min_coffee_tools: 1
+    expected_inspections: 1
+    countertop_objects:
+      counter_spot_14: ab3_medium_deep_mug
+      counter_spot_16: ab3_shallow_bowl
+      counter_spot_25: ab3_deep_bowl
+      counter_spot_17: s1i_final_long_narrow_spoon
+      counter_spot_20: ab3_partial_spoon
+      counter_spot_57: s1i_compact_kettle
+      counter_spot_53: s1i_compact_coffee_jar
+    container_contents:
+      D1: [ab3_narrow_deep_cup, s1i_oversized_spoon]
+      D2: []
+      C1: []
+      C2: []
+      B1: []
+    description: "Held-out layout 2: One cup and one soup utensil in drawer D1, all other required items visible."
+
+  HK3_MULTI_STORAGE_SEARCH:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_HK3
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: FEASIBLE
+    intended_min_coffee_tools: 1
+    expected_inspections: 3
+    countertop_objects:
+      counter_spot_13: ab3_narrow_deep_cup
+      counter_spot_14: ab3_medium_deep_mug
+      counter_spot_57: s1i_compact_kettle
+      counter_spot_53: s1i_compact_coffee_jar
+    container_contents:
+      D1: [ab3_partial_spoon]
+      D2: [s1i_final_long_narrow_spoon]
+      C1: [ab3_shallow_bowl]
+      C2: []
+      B1: [ab3_deep_bowl, s1i_oversized_spoon]
+    description: "Held-out layout 3: Both coffee cups on counter, food bowls and utensils distributed across D1, D2, C1, B1."
+
+  HK4_MISSING_COFFEE_STIRRER:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_HK4
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: INFEASIBLE
+    intended_failure_reason: MISSING_COFFEE_STIRRER
+    countertop_objects:
+      counter_spot_13: ab3_narrow_deep_cup
+      counter_spot_14: ab3_medium_deep_mug
+      counter_spot_16: ab3_shallow_bowl
+      counter_spot_25: ab3_deep_bowl
+      counter_spot_18: s1i_oversized_spoon
+      counter_spot_20: ab3_partial_spoon
+      counter_spot_57: s1i_compact_kettle
+      counter_spot_53: s1i_compact_coffee_jar
+    container_contents:
+      D1: []
+      D2: []
+      C1: []
+      C2: []
+      B1: []
+    description: "Held-out infeasible 1: Reusable coffee stirrer is absent from both countertop and all storage regions."
+
+  HK5_MISSING_SOUP_BOWL:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_HK5
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: INFEASIBLE
+    intended_failure_reason: INSUFFICIENT_SOUP_CONTAINERS
+    countertop_objects:
+      counter_spot_13: ab3_narrow_deep_cup
+      counter_spot_14: ab3_medium_deep_mug
+      counter_spot_16: ab3_shallow_bowl
+      counter_spot_17: s1i_final_long_narrow_spoon
+      counter_spot_18: s1i_oversized_spoon
+      counter_spot_20: ab3_partial_spoon
+      counter_spot_57: s1i_compact_kettle
+      counter_spot_53: s1i_compact_coffee_jar
+    container_contents:
+      D1: []
+      D2: []
+      C1: []
+      C2: []
+      B1: []
+    description: "Held-out infeasible 2: Only one soup bowl exists in the environment; second required bowl is missing."

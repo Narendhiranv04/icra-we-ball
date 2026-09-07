@@ -38,6 +38,7 @@ WORKSHOP_BASE = ROOT / "assets" / "workshop_base.xml"
 WORKSHOP_ASSETS_DIR = ROOT / "assets" / "workshop_realistic"
 WORKSHOP_INSPECTION_RIG_CONFIG = ROOT / "configs" / "workshop_inspection_rigs.yaml"
 WORKSHOP_VARIANTS_CONFIG = ROOT / "configs" / "workshop_variants.yaml"
+WORKSHOP_HELDOUT_CONFIG = ROOT / "configs" / "workshop_heldout_variants.yaml"
 WORKSHOP_ALTERNATIVES_CONFIG = ROOT / "configs" / "workshop_joint_alternatives.yaml"
 
 WORKSHOP_REGIONS = ("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET")
@@ -604,7 +605,14 @@ def _get_storage_slots(
 
 def _load_workshop_variants_config() -> dict[str, Any]:
     with open(WORKSHOP_VARIANTS_CONFIG, "r", encoding="utf-8") as stream:
-        return yaml.safe_load(stream)
+        base_cfg = yaml.safe_load(stream) or {}
+    if WORKSHOP_HELDOUT_CONFIG.exists():
+        with open(WORKSHOP_HELDOUT_CONFIG, "r", encoding="utf-8") as stream:
+            heldout_cfg = yaml.safe_load(stream) or {}
+        merged = copy.deepcopy(base_cfg)
+        merged.setdefault("variants", {}).update(heldout_cfg.get("variants", {}))
+        return merged
+    return base_cfg
 
 
 # ==============================================================================

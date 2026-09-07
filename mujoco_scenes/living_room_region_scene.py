@@ -24,6 +24,7 @@ from mujoco_scenes.scene_loader import (
 from mujoco_scenes.living_room_variants import (
     PREFIX as LIVING_ROOM_VARIANT_PREFIX,
     load_living_room_variants,
+    load_living_room_heldout_variants,
 )
 
 
@@ -51,11 +52,16 @@ L2_INTEGRATED_SCENES = tuple(
     LIVING_ROOM_VARIANT_PREFIX + variant_id
     for variant_id in load_living_room_variants()
 )
+L2_HELDOUT_INTEGRATED_SCENES = tuple(
+    LIVING_ROOM_VARIANT_PREFIX + variant_id
+    for variant_id in load_living_room_heldout_variants()
+)
+ALL_INTEGRATED_SCENES = L2_INTEGRATED_SCENES + L2_HELDOUT_INTEGRATED_SCENES
 L2_SCENES = (
     L2_ABLATION1_SCENES
     + L2_ABLATION2_SCENES
     + L2_ABLATION3_SCENES
-    + L2_INTEGRATED_SCENES
+    + ALL_INTEGRATED_SCENES
 )
 L2_ABLATION2_BASE = (
     ROOT / "assets" / "living_room_region_ablation2_base.xml"
@@ -871,7 +877,11 @@ def _integrated_scene_code(scene_name: str) -> str:
 def _configure_integrated_scene(root: ET.Element, scene_name: str) -> None:
     """Apply only object-location or table-presence changes."""
     code = scene_name.removeprefix(LIVING_ROOM_VARIANT_PREFIX)
-    spec = load_living_room_variants()[code]
+    variants = load_living_room_variants()
+    if code in variants:
+        spec = variants[code]
+    else:
+        spec = load_living_room_heldout_variants()[code]
     # The fixed benchmark has exactly three inspectable destination regions.
     # Remove the decorative rug as well: because the shared coffee table sits
     # above it, large full-frame rug detections can otherwise overlap the
@@ -897,6 +907,8 @@ def _configure_integrated_scene(root: ET.Element, scene_name: str) -> None:
         "SHARED_TABLE": {
             "a2_drink_left": (-0.16, 0.62, 0.464),
             "a2_snack_left": (0.20, 0.40, 0.403),
+            "a2_drink_right": (0.16, 0.62, 0.464),
+            "a2_snack_right": (-0.20, 0.40, 0.403),
         },
     }
     for body_name, region_id in spec.get("object_locations", {}).items():
@@ -960,7 +972,7 @@ def build_l2_region_xml(
         raise ValueError(f"Unknown L2 region scene: {scene_name}")
     if robot not in {ROBOT_GOOGLE, ROBOT_NONE}:
         raise ValueError("L2 region scenes support robot google or none")
-    integrated = scene_name in L2_INTEGRATED_SCENES
+    integrated = scene_name in ALL_INTEGRATED_SCENES
     ablation2 = scene_name in L2_ABLATION2_SCENES or integrated
     ablation3 = scene_name in L2_ABLATION3_SCENES
     root = ET.parse(
@@ -1070,7 +1082,7 @@ class L2LivingRoomRegionScene:
         self.scene_name = scene_name
         self.goal = (
             L2_INTEGRATED_GOAL
-            if scene_name in L2_INTEGRATED_SCENES
+            if scene_name in ALL_INTEGRATED_SCENES
             else L2_ABLATION3_GOAL
             if scene_name in L2_ABLATION3_SCENES
             else (
@@ -1112,7 +1124,7 @@ class L2LivingRoomRegionScene:
         if scene_name in (
             L2_ABLATION2_SCENES
             + L2_ABLATION3_SCENES
-            + L2_INTEGRATED_SCENES
+            + ALL_INTEGRATED_SCENES
         ):
             # Scanned mug/bowl visuals retain compact analytic collision
             # proxies. Cylindrical free payloads can otherwise enter a nearly
@@ -1155,7 +1167,7 @@ class L2LivingRoomRegionScene:
         )
         print(
             "  Candidate supports: "
-            f"{integrated_support_count if scene_name in L2_INTEGRATED_SCENES else 2 if scene_name in L2_ABLATION3_SCENES else 5 if scene_name in L2_ABLATION2_SCENES else 3}"
+            f"{integrated_support_count if scene_name in ALL_INTEGRATED_SCENES else 2 if scene_name in L2_ABLATION3_SCENES else 5 if scene_name in L2_ABLATION2_SCENES else 3}"
         )
         print("  Scene ready.\n")
 
@@ -1184,7 +1196,7 @@ class L2LivingRoomRegionScene:
         if self.scene_name in (
             L2_ABLATION2_SCENES
             + L2_ABLATION3_SCENES
-            + L2_INTEGRATED_SCENES
+            + ALL_INTEGRATED_SCENES
         ):
             # Ablation 2 discovers its four generic payload IDs from visible
             # segmentation instances and RGB semantics in one initial capture.
@@ -1216,10 +1228,10 @@ class L2LivingRoomRegionScene:
         if self.scene_name in (
             L2_ABLATION2_SCENES
             + L2_ABLATION3_SCENES
-            + L2_INTEGRATED_SCENES
+            + ALL_INTEGRATED_SCENES
         ):
             ablation3 = self.scene_name in L2_ABLATION3_SCENES
-            integrated = self.scene_name in L2_INTEGRATED_SCENES
+            integrated = self.scene_name in ALL_INTEGRATED_SCENES
             if integrated:
                 region_count = sum(
                     mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, name) >= 0

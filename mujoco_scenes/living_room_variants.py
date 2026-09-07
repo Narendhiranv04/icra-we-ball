@@ -29,7 +29,20 @@ def load_living_room_variants() -> dict[str, dict[str, Any]]:
     return load_living_room_variant_contract()["variants"]
 
 
+HELDOUT_CONFIG = Path(__file__).resolve().parent / "configs" / "living_room_heldout_variants.yaml"
+
+
+def load_living_room_heldout_variants() -> dict[str, dict[str, Any]]:
+    if not HELDOUT_CONFIG.exists():
+        return {}
+    payload = yaml.safe_load(HELDOUT_CONFIG.read_text(encoding="utf-8")) or {}
+    return deepcopy(payload.get("variants", {}))
+
+
 def scene_name(variant_id: str) -> str:
-    if variant_id not in load_living_room_variants():
-        raise ValueError(f"Unknown Living Room variant: {variant_id}")
-    return PREFIX + variant_id
+    if variant_id in load_living_room_variants():
+        return PREFIX + variant_id
+    heldout = load_living_room_heldout_variants()
+    if variant_id in heldout:
+        return PREFIX + variant_id
+    raise ValueError(f"Unknown Living Room variant: {variant_id}")

@@ -33,6 +33,9 @@ SCENE_CONFIGS = CONFIGS_DIR / "scene_configs.yaml"
 KITCHEN_FEASIBILITY_VARIANTS = (
     CONFIGS_DIR / "kitchen_feasibility_variants.yaml"
 )
+KITCHEN_HELDOUT_VARIANTS = (
+    CONFIGS_DIR / "kitchen_heldout_variants.yaml"
+)
 
 ROBOT_FETCH = "fetch"
 ROBOT_GOOGLE = "google"
@@ -908,6 +911,37 @@ def load_all_configs() -> dict[str, SceneConfig]:
                 + str(variant.get("description", ""))
             )
             configs[scene_name] = derived
+    if KITCHEN_HELDOUT_VARIANTS.exists():
+        h_benchmark = yaml.safe_load(
+            KITCHEN_HELDOUT_VARIANTS.read_text(encoding="utf-8")
+        ) or {}
+        h_expected_goal = h_benchmark.get("goal_instruction")
+        for variant_id, variant in h_benchmark.get("variants", {}).items():
+            scene_name = variant["scene_name"]
+            base_name = variant["base_scene"]
+            if base_name in configs:
+                derived = copy.deepcopy(configs[base_name])
+                derived.name = scene_name
+                if h_expected_goal is not None:
+                    derived.goal = h_expected_goal
+                if "countertop_objects" in variant:
+                    derived.countertop_objects = dict(variant["countertop_objects"])
+                if "container_contents" in variant:
+                    derived.container_contents = {
+                        region: list(items)
+                        for region, items in variant["container_contents"].items()
+                    }
+                derived.optimal_search_order = list(
+                    h_benchmark.get("inspection_order", derived.optimal_search_order)
+                )
+                derived.optimal_inspections = int(
+                    variant.get("expected_inspections", len(derived.optimal_search_order))
+                )
+                derived.notes = (
+                    f"Held-out benchmark variant {variant_id}. "
+                    + str(variant.get("description", ""))
+                )
+                configs[scene_name] = derived
     return configs
 
 

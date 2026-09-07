@@ -1,0 +1,59 @@
+schema_version: 1
+task: >-
+  Place one cup and one saucer on each of two fixed personal side tables and
+  place the TV remote on the fixed shared coffee table.
+
+objects:
+  left_cup: a2_drink_left
+  right_cup: a2_drink_right
+  left_saucer: a2_snack_left
+  right_saucer: a2_snack_right
+  remote: a2_remote_payload
+
+regions:
+  PERSONAL_TABLE_LEFT: a2_personal_left
+  PERSONAL_TABLE_RIGHT: a2_personal_right
+  SHARED_TABLE: a2_control_table
+
+canonical_assignment:
+  PERSONAL_CUP_SAUCER_REGION_LEFT: [a2_drink_left, a2_snack_left]
+  PERSONAL_CUP_SAUCER_REGION_RIGHT: [a2_drink_right, a2_snack_right]
+  SHARED_REMOTE_REGION: [a2_remote_payload]
+
+variants:
+  HL1_RIGHT_SAUCER_PREPLACED:
+    intended_outcome: FEASIBLE
+    description: "Held-out layout 1: Right saucer is preplaced on right personal table; other four objects in staging."
+    object_locations: {a2_snack_right: PERSONAL_TABLE_RIGHT}
+    absent_regions: []
+
+  HL2_RIGHT_PAIR_ON_SHARED:
+    intended_outcome: FEASIBLE
+    description: "Held-out layout 2: Right cup and right saucer both begin on the shared coffee table."
+    object_locations:
+      a2_drink_right: SHARED_TABLE
+      a2_snack_right: SHARED_TABLE
+    absent_regions: []
+
+  HL3_SAUCER_PREPLACED_CUP_ON_SHARED:
+    intended_outcome: FEASIBLE
+    description: "Held-out layout 3: Right saucer is preplaced on right table while left cup begins on shared table."
+    object_locations:
+      a2_snack_right: PERSONAL_TABLE_RIGHT
+      a2_drink_left: SHARED_TABLE
+    absent_regions: []
+
+  HL4_NO_RIGHT_PERSONAL_TABLE:
+    intended_outcome: INFEASIBLE
+    description: "Held-out infeasible 1: The right personal table is absent from the scene."
+    object_locations: {}
+    absent_regions: [PERSONAL_TABLE_RIGHT]
+    rejection_reason: MISSING_RIGHT_PERSONAL_TABLE
+
+  HL5_NO_SHARED_TABLE:
+    intended_outcome: INFEASIBLE
+    description: "Held-out infeasible 2: The required shared coffee table is absent from the scene."
+    object_locations:
+      a2_snack_left: PERSONAL_TABLE_LEFT
+    absent_regions: [SHARED_TABLE]
+    rejection_reason: MISSING_SHARED_TABLE

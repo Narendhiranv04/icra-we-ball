@@ -1,0 +1,76 @@
+schema_version: 2
+benchmark: W2_workshop_fixed_objects_position_presence
+description: >-
+  Held-out workshop variants with unseen component distributions across storage regions.
+
+canonical_task_instruction: "Identify the compatible components required to complete the fastening at the marked workbench location, complete the fastening, and leave any reusable equipment used for the task safely on the workbench."
+
+storage_regions: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
+search_order: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
+fixed_object_vocabulary:
+  manual_driver: workshop_long_phillips_driver
+  power_driver: workshop_power_driver
+  screw: workshop_medium_phillips_screw
+  distractor: workshop_wooden_hammer
+fixed_insertion_target: MAIN_WORKBENCH_ZONE
+
+variants:
+  HW1_SCREW_IN_RIGHT_DRAWER:
+    intended_outcome: FEASIBLE
+    description: "Held-out layout 1: Screw in right drawer; both manual and power drivers in tool cabinet."
+    storage_contents:
+      LEFT_DRAWER: [workshop_wooden_hammer]
+      RIGHT_DRAWER: [workshop_medium_phillips_screw]
+      TOOL_CABINET: [workshop_power_driver, workshop_long_phillips_driver]
+    active_surfaces: [MAIN_WORKBENCH_ZONE]
+    active_containers: []
+    expected_inspection_regions: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
+    expected_solution: {driver: workshop_power_driver, fastener: workshop_medium_phillips_screw, work_surface: MAIN_WORKBENCH_ZONE}
+
+  HW2_POWER_AND_SCREW_RIGHT_DRAWER:
+    intended_outcome: FEASIBLE
+    description: "Held-out layout 2: Power driver and screw both in right drawer; manual driver in tool cabinet."
+    storage_contents:
+      LEFT_DRAWER: [workshop_wooden_hammer]
+      RIGHT_DRAWER: [workshop_power_driver, workshop_medium_phillips_screw]
+      TOOL_CABINET: [workshop_long_phillips_driver]
+    active_surfaces: [MAIN_WORKBENCH_ZONE]
+    active_containers: []
+    expected_inspection_regions: [LEFT_DRAWER, RIGHT_DRAWER]
+    expected_solution: {driver: workshop_power_driver, fastener: workshop_medium_phillips_screw, work_surface: MAIN_WORKBENCH_ZONE}
+
+  HW3_MANUAL_AND_SCREW_CABINET:
+    intended_outcome: FEASIBLE
+    description: "Held-out layout 3: Manual driver and screw in tool cabinet; power driver in left drawer."
+    storage_contents:
+      LEFT_DRAWER: [workshop_power_driver]
+      RIGHT_DRAWER: [workshop_wooden_hammer]
+      TOOL_CABINET: [workshop_long_phillips_driver, workshop_medium_phillips_screw]
+    active_surfaces: [MAIN_WORKBENCH_ZONE]
+    active_containers: []
+    expected_inspection_regions: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
+    expected_solution: {driver: workshop_power_driver, fastener: workshop_medium_phillips_screw, work_surface: MAIN_WORKBENCH_ZONE}
+
+  HW4_NO_SCREW_IN_STORAGE:
+    intended_outcome: INFEASIBLE
+    description: "Held-out infeasible 1: Both drivers present, but compatible screw is completely absent from all storage."
+    storage_contents:
+      LEFT_DRAWER: [workshop_power_driver]
+      RIGHT_DRAWER: [workshop_wooden_hammer]
+      TOOL_CABINET: [workshop_long_phillips_driver]
+    active_surfaces: [MAIN_WORKBENCH_ZONE]
+    active_containers: []
+    expected_inspection_regions: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
+    expected_solution: null
+
+  HW5_NO_DRIVER_IN_STORAGE:
+    intended_outcome: INFEASIBLE
+    description: "Held-out infeasible 2: Screw present in right drawer, but no driver exists in any storage region."
+    storage_contents:
+      LEFT_DRAWER: []
+      RIGHT_DRAWER: [workshop_medium_phillips_screw]
+      TOOL_CABINET: [workshop_wooden_hammer]
+    active_surfaces: [MAIN_WORKBENCH_ZONE]
+    active_containers: []
+    expected_inspection_regions: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
+    expected_solution: null

@@ -27,6 +27,7 @@ from mujoco_scenes.region_ablation2 import (
 )
 from mujoco_scenes.living_room_variants import (
     PREFIX as INTEGRATED_PREFIX,
+    load_living_room_heldout_variants,
     load_living_room_variants,
 )
 
@@ -73,7 +74,7 @@ def variant_code(scene_name: str) -> str:
     if not scene_name.startswith(INTEGRATED_PREFIX):
         raise ValueError(f"Not an integrated living-room scene: {scene_name}")
     code = scene_name.removeprefix(INTEGRATED_PREFIX)
-    if code not in EXPECTED_VARIANTS:
+    if code not in EXPECTED_VARIANTS and code not in load_living_room_heldout_variants():
         raise ValueError(f"Unknown integrated variant: {code}")
     return code
 
@@ -758,7 +759,12 @@ class IntegratedLivingRoomRegionRun(RegionAblation2Run):
         )
 
     def validate_expected(self) -> dict[str, Any]:
-        expected = EXPECTED_VARIANTS[variant_code(self.scene_name)]
+        code = variant_code(self.scene_name)
+        if code in EXPECTED_VARIANTS:
+            expected = EXPECTED_VARIANTS[code]
+        else:
+            h_spec = load_living_room_heldout_variants().get(code, {})
+            expected = "COMPLETE" if h_spec.get("intended_outcome") == "FEASIBLE" else "INFEASIBLE"
         actual = self.production_result["status"]
         result = {"expected": expected, "actual": actual, "passed": expected == actual}
         _atomic_json(self.run_dir / "expectation_validation.json", result)
