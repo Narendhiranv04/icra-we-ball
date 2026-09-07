@@ -209,3 +209,4 @@ def test_w1_w2_regression_fixtures_preserved():
     g1 = compile_candidate_graph("workshop", "Repair loose frame joint", w1_raw)
     assert g1.required_contract_complete is True
     assert set(g1.nodes.keys()) == {"driver", "fastener", "repair_target"}
+

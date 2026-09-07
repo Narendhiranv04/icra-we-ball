@@ -718,7 +718,13 @@ def _run_pipeline_impl(
         planned = plan_with_common_astar(
             WorkshopPlanningCompiler(),
             satisfaction.assignment,
-            {**adapter.planning_context(), "specification": state.specification, "graph_o": adapter.graph},
+            {
+                **adapter.planning_context(),
+                "specification": state.specification,
+                "graph_o": adapter.graph,
+                "ground_result": satisfaction,
+                "operation_bindings": getattr(satisfaction, "operation_bindings", {}),
+            },
             allow_partial=(state.mode == "vlm"),
         )
         _write_json(state.run_dir / "action_plan.json", {

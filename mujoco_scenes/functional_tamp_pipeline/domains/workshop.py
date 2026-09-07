@@ -202,8 +202,15 @@ class WorkshopPlanningCompiler:
         if specification is not None and "VLM" in specification.source:
             observed = context.get("graph_o")
             triples = {(r.subject_role, r.predicate, r.object_role) for r in specification.relations}
+            def _resolve_obj(role_name: str) -> str | None:
+                if role_name in assignment:
+                    return assignment[role_name]
+                if role_name == "repair_target":
+                    return context.get("target_joint", TARGET)
+                return None
+
             def verified(subject_role, predicate, object_role):
-                subject, obj = assignment.get(subject_role), assignment.get(object_role)
+                subject, obj = _resolve_obj(subject_role), _resolve_obj(object_role)
                 rel = observed.get_relation(predicate, subject, obj) if observed and subject and obj else None
                 return rel is not None and rel.status == "TRUE"
             disabled_operations = specification.metadata.get("canonicalization_trace", {}).get("disabled_groups", [])
@@ -212,6 +219,14 @@ class WorkshopPlanningCompiler:
             compat_ok = (("driver", "COMPATIBLE_WITH", "fastener") in triples or has_group) and verified("driver", "COMPATIBLE_WITH", "fastener")
             reaches_ok = verified("driver", "REACHES_TARGET", "repair_target") and (("driver", "REACHES_TARGET", "repair_target") in triples or has_group or (insertion_ok and compat_ok))
             operation_ok = not disabled_operations and insertion_ok and compat_ok and reaches_ok
+            operation_bindings = context.get("operation_bindings")
+            if operation_bindings is None and "ground_result" in context:
+                operation_bindings = getattr(context["ground_result"], "operation_bindings", {})
+            if operation_bindings:
+                for grp_id, b_list in operation_bindings.items():
+                    for b in b_list:
+                        if isinstance(b, dict) and b.get("status") not in (None, "TRUE", True):
+                            operation_ok = False
             actions = [a for a in actions if not (a.name == "SCREW" and not operation_ok)
                        and not (a.name == "PLACE" and a.arguments == (fastener, target) and not insertion_ok)]
             if driver and not operation_ok:

@@ -282,12 +282,26 @@ def enrich_record(row, run_dir, task):
         else:
             first_cause = 'FUNCTIONAL_ASSIGNMENT_FAILURE'
             category, stage = 'PARTIAL_VERIFIED_GROUNDING', 'GROUNDING'
-    elif row['candidate_plan_eligible'] and not row['candidate_plan_valid']:
-        first_cause = 'PLANNING_FAILURE'
-        category, stage = 'PLAN_VALIDATION_FAILURE', 'VALIDATION'
-    elif not row['full_task_satisfied']:
-        first_cause = 'PLANNING_FAILURE'
-        category, stage = 'PLANNING_FAILURE', 'PLANNING'
+    else:
+        audit_data = read_json(Path(run_dir) / 'plan_grounding_audit.json')
+        grounding_invalid = bool(
+            audit_data and (
+                audit_data.get('all_assignment_nodes_observed') is False
+                or audit_data.get('all_required_relations_true') is False
+            )
+        )
+        if grounding_invalid:
+            first_cause = 'FUNCTIONAL_ASSIGNMENT_FAILURE'
+            category, stage = 'INVALID_GROUNDING_EVIDENCE', 'GROUNDING'
+        elif row.get('candidate_plan_eligible') and not row.get('candidate_plan_valid'):
+            first_cause = 'PLANNING_FAILURE'
+            category, stage = 'PLAN_VALIDATION_FAILURE', 'VALIDATION'
+        elif row.get('candidate_plan_eligible') and not row.get('full_task_satisfied'):
+            first_cause = 'PLANNING_FAILURE'
+            category, stage = 'PLANNING_FAILURE', 'PLANNING'
+        else:
+            first_cause = 'FUNCTIONAL_ASSIGNMENT_FAILURE'
+            category, stage = 'PLANNING_NOT_REACHED', 'GROUNDING'
 
     row.update(first_cause_category=first_cause, failure_category=category, failure_stage=stage)
     (run_dir/'raw_semantic_evaluation.json').write_text(json.dumps(raw_metrics,indent=2)+'\n')

@@ -146,7 +146,7 @@ class KitchenPlanningCompiler:
 
         specification = context.get("specification")
         grounded = context.get("ground_result")
-        bindings = getattr(grounded, "operation_bindings", {})
+        bindings = context.get("operation_bindings") or (getattr(grounded, "operation_bindings", {}) if grounded else {})
         stir_pairs = set()
         soup_pairs = set()
         if specification is not None:
@@ -661,10 +661,10 @@ def run_to_plan(
         ]
         res = ground_graph(specification, current_go, {"search_exhausted": False})
         search_state = classify_search_state(specification, res, search_contract, current_opened)
-        stage_label = f"after_{current_opened[-1]}" if current_opened else "initial"
         res_dict = res.to_dict()
         if "evidence" in res_dict and isinstance(res_dict["evidence"], dict):
             res_dict["evidence"] = {k: v for k, v in res_dict["evidence"].items() if k != "grounding_snapshots"}
+        stage_label = f"after_{current_opened[-1]}" if current_opened else "initial"
         grounding_snapshots.append({
             "stage": stage_label,
             "inspected_regions": list(current_opened),
@@ -794,6 +794,7 @@ def run_to_plan(
                     "specification": specification,
                     "graph_o": graph_o,
                     "ground_result": ground_result,
+                    "operation_bindings": getattr(ground_result, "operation_bindings", {}),
                     "is_vlm_candidate": True,
                 },
                 allow_partial=True,

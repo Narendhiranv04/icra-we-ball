@@ -120,6 +120,7 @@ def test_search_controller_updates_observed_graph_and_retains_partial():
     from mujoco_scenes.functional_tamp_pipeline.search_contract import freeze_search_region_contract
     source=role('source');source.update(function='source of water', candidate_categories=['kettle'])
     graph=compile_candidate_graph('kitchen','Prepare a drink',doc(role(),source))
+    graph.metadata['required_contract_complete'] = True
     class Domain:
         def __init__(self):
             self.graph=ObservedSceneGraph();self.opened=[]

@@ -488,3 +488,4 @@ def test_v1_raw_replay_backward_compatibility():
         assert graph.metadata["is_v2_specification"] is False
         assert len(graph.roles) >= 2
         assert graph.required_contract_complete is True
+
