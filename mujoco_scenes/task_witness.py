@@ -1347,96 +1347,257 @@ def evaluate_joint_task_witness(
         if len(assignment_evaluations) < diagnostic_limit:
             assignment_evaluations.append(assignment)
 
-    for choices in product(object_ids, repeat=len(slots)):
-        mapping_by_slot = dict(zip(slots, choices))
-        selected = {
-            role_name: [
-                mapping_by_slot[(role_name, index)]
-                for index in range(config["roles"][role_name]["count"])
+    total_combos = len(object_ids) ** len(slots)
+    if total_combos > 50000:
+        from itertools import islice
+        for choices in islice(product(object_ids, repeat=len(slots)), diagnostic_limit):
+            mapping_by_slot = dict(zip(slots, choices))
+            selected = {
+                role_name: [
+                    mapping_by_slot[(role_name, index)]
+                    for index in range(config["roles"][role_name]["count"])
+                ]
+                for role_name in role_order
+            }
+            if distinct and len(set(choices)) != len(choices):
+                retain_diagnostic(
+                    {
+                        "selected_objects": selected,
+                        "status": "FALSE",
+                        "decision": "REJECTED_DISTINCTNESS",
+                        "relation_checks": [],
+                    }
+                )
+                continue
+            candidate_checks = [
+                candidate_index[(role_name, object_id)]
+                for (role_name, _index), object_id in mapping_by_slot.items()
             ]
-            for role_name in role_order
-        }
-        if distinct and len(set(choices)) != len(choices):
-            retain_diagnostic(
-                {
+            relation_checks = []
+            for constraint in pairwise_constraints:
+                for source_id in selected[constraint["from_role"]]:
+                    for target_id in selected[constraint["to_role"]]:
+                        edge = relation_edges.get(
+                            (constraint["relation"], source_id, target_id), {}
+                        )
+                        measured_status = edge.get("status", "UNKNOWN")
+                        gate_status = (
+                            "TRUE"
+                            if grounding_mode == "semantic-only"
+                            else measured_status
+                        )
+                        relation_checks.append(
+                            {
+                                "relation": constraint["relation"],
+                                "from_role": constraint["from_role"],
+                                "to_role": constraint["to_role"],
+                                "from_object": source_id,
+                                "to_object": target_id,
+                                "measured_status": measured_status,
+                                "status": gate_status,
+                                "required_status": "TRUE",
+                                "evidence": edge.get("evidence", {}),
+                            }
+                        )
+            statuses = [
+                check["status"] for check in candidate_checks
+            ] + [check["status"] for check in relation_checks]
+            assignment_status = _combined_required_status(statuses)
+            failed_semantic = [
+                check
+                for check in candidate_checks
+                if check["semantic_gate_status"] == "FALSE"
+            ]
+            failed_geometry = [
+                check
+                for check in candidate_checks
+                if check["geometry_gate_status"] == "FALSE"
+            ]
+            failed_relations = [
+                check for check in relation_checks if check["status"] == "FALSE"
+            ]
+            if failed_semantic:
+                decision = "REJECTED_SEMANTIC"
+            elif failed_geometry or failed_relations:
+                decision = "REJECTED_GEOMETRY"
+            elif assignment_status == "UNKNOWN":
+                decision = "INDETERMINATE"
+            else:
+                decision = "VALID"
+            assignment = {
+                "selected_objects": selected,
+                "candidate_checks": candidate_checks,
+                "relation_checks": relation_checks,
+                "status": assignment_status,
+                "decision": decision,
+            }
+            retain_diagnostic(assignment)
+            if assignment_status == "TRUE":
+                valid_assignment_count += 1
+                key = selection_key(assignment)
+                if selected_assignment_key is None or key < selected_assignment_key:
+                    selected_assignment = assignment
+                    selected_assignment_key = key
+            elif assignment_status == "UNKNOWN":
+                indeterminate_assignment_count += 1
+
+        slot_candidates = [
+            [obj_id for obj_id in object_ids if candidate_index[(role_name, obj_id)]["status"] != "FALSE"]
+            for (role_name, _index) in slots
+        ]
+        for choices in product(*slot_candidates):
+            if distinct and len(set(choices)) != len(choices):
+                continue
+            mapping_by_slot = dict(zip(slots, choices))
+            selected = {
+                role_name: [
+                    mapping_by_slot[(role_name, index)]
+                    for index in range(config["roles"][role_name]["count"])
+                ]
+                for role_name in role_order
+            }
+            candidate_checks = [
+                candidate_index[(role_name, object_id)]
+                for (role_name, _index), object_id in mapping_by_slot.items()
+            ]
+            relation_checks = []
+            for constraint in pairwise_constraints:
+                for source_id in selected[constraint["from_role"]]:
+                    for target_id in selected[constraint["to_role"]]:
+                        edge = relation_edges.get(
+                            (constraint["relation"], source_id, target_id), {}
+                        )
+                        measured_status = edge.get("status", "UNKNOWN")
+                        gate_status = (
+                            "TRUE"
+                            if grounding_mode == "semantic-only"
+                            else measured_status
+                        )
+                        relation_checks.append(
+                            {
+                                "relation": constraint["relation"],
+                                "from_role": constraint["from_role"],
+                                "to_role": constraint["to_role"],
+                                "from_object": source_id,
+                                "to_object": target_id,
+                                "measured_status": measured_status,
+                                "status": gate_status,
+                                "required_status": "TRUE",
+                                "evidence": edge.get("evidence", {}),
+                            }
+                        )
+            statuses = [
+                check["status"] for check in candidate_checks
+            ] + [check["status"] for check in relation_checks]
+            assignment_status = _combined_required_status(statuses)
+            if assignment_status == "TRUE":
+                valid_assignment_count += 1
+                assignment = {
                     "selected_objects": selected,
-                    "status": "FALSE",
-                    "decision": "REJECTED_DISTINCTNESS",
-                    "relation_checks": [],
+                    "candidate_checks": candidate_checks,
+                    "relation_checks": relation_checks,
+                    "status": assignment_status,
+                    "decision": "VALID",
                 }
-            )
-            continue
-        candidate_checks = [
-            candidate_index[(role_name, object_id)]
-            for (role_name, _index), object_id in mapping_by_slot.items()
-        ]
-        relation_checks = []
-        for constraint in pairwise_constraints:
-            for source_id in selected[constraint["from_role"]]:
-                for target_id in selected[constraint["to_role"]]:
-                    edge = relation_edges.get(
-                        (constraint["relation"], source_id, target_id), {}
-                    )
-                    measured_status = edge.get("status", "UNKNOWN")
-                    gate_status = (
-                        "TRUE"
-                        if grounding_mode == "semantic-only"
-                        else measured_status
-                    )
-                    relation_checks.append(
-                        {
-                            "relation": constraint["relation"],
-                            "from_role": constraint["from_role"],
-                            "to_role": constraint["to_role"],
-                            "from_object": source_id,
-                            "to_object": target_id,
-                            "measured_status": measured_status,
-                            "status": gate_status,
-                            "required_status": "TRUE",
-                            "evidence": edge.get("evidence", {}),
-                        }
-                    )
-        statuses = [
-            check["status"] for check in candidate_checks
-        ] + [check["status"] for check in relation_checks]
-        assignment_status = _combined_required_status(statuses)
-        failed_semantic = [
-            check
-            for check in candidate_checks
-            if check["semantic_gate_status"] == "FALSE"
-        ]
-        failed_geometry = [
-            check
-            for check in candidate_checks
-            if check["geometry_gate_status"] == "FALSE"
-        ]
-        failed_relations = [
-            check for check in relation_checks if check["status"] == "FALSE"
-        ]
-        if failed_semantic:
-            decision = "REJECTED_SEMANTIC"
-        elif failed_geometry or failed_relations:
-            decision = "REJECTED_GEOMETRY"
-        elif assignment_status == "UNKNOWN":
-            decision = "INDETERMINATE"
-        else:
-            decision = "VALID"
-        assignment = {
-            "selected_objects": selected,
-            "candidate_checks": candidate_checks,
-            "relation_checks": relation_checks,
-            "status": assignment_status,
-            "decision": decision,
-        }
-        retain_diagnostic(assignment)
-        if assignment_status == "TRUE":
-            valid_assignment_count += 1
-            key = selection_key(assignment)
-            if selected_assignment_key is None or key < selected_assignment_key:
-                selected_assignment = assignment
-                selected_assignment_key = key
-        elif assignment_status == "UNKNOWN":
-            indeterminate_assignment_count += 1
+                key = selection_key(assignment)
+                if selected_assignment_key is None or key < selected_assignment_key:
+                    selected_assignment = assignment
+                    selected_assignment_key = key
+            elif assignment_status == "UNKNOWN":
+                indeterminate_assignment_count += 1
+
+        assignment_evaluation_count = total_combos
+    else:
+        for choices in product(object_ids, repeat=len(slots)):
+            mapping_by_slot = dict(zip(slots, choices))
+            selected = {
+                role_name: [
+                    mapping_by_slot[(role_name, index)]
+                    for index in range(config["roles"][role_name]["count"])
+                ]
+                for role_name in role_order
+            }
+            if distinct and len(set(choices)) != len(choices):
+                retain_diagnostic(
+                    {
+                        "selected_objects": selected,
+                        "status": "FALSE",
+                        "decision": "REJECTED_DISTINCTNESS",
+                        "relation_checks": [],
+                    }
+                )
+                continue
+            candidate_checks = [
+                candidate_index[(role_name, object_id)]
+                for (role_name, _index), object_id in mapping_by_slot.items()
+            ]
+            relation_checks = []
+            for constraint in pairwise_constraints:
+                for source_id in selected[constraint["from_role"]]:
+                    for target_id in selected[constraint["to_role"]]:
+                        edge = relation_edges.get(
+                            (constraint["relation"], source_id, target_id), {}
+                        )
+                        measured_status = edge.get("status", "UNKNOWN")
+                        gate_status = (
+                            "TRUE"
+                            if grounding_mode == "semantic-only"
+                            else measured_status
+                        )
+                        relation_checks.append(
+                            {
+                                "relation": constraint["relation"],
+                                "from_role": constraint["from_role"],
+                                "to_role": constraint["to_role"],
+                                "from_object": source_id,
+                                "to_object": target_id,
+                                "measured_status": measured_status,
+                                "status": gate_status,
+                                "required_status": "TRUE",
+                                "evidence": edge.get("evidence", {}),
+                            }
+                        )
+            statuses = [
+                check["status"] for check in candidate_checks
+            ] + [check["status"] for check in relation_checks]
+            assignment_status = _combined_required_status(statuses)
+            failed_semantic = [
+                check
+                for check in candidate_checks
+                if check["semantic_gate_status"] == "FALSE"
+            ]
+            failed_geometry = [
+                check
+                for check in candidate_checks
+                if check["geometry_gate_status"] == "FALSE"
+            ]
+            failed_relations = [
+                check for check in relation_checks if check["status"] == "FALSE"
+            ]
+            if failed_semantic:
+                decision = "REJECTED_SEMANTIC"
+            elif failed_geometry or failed_relations:
+                decision = "REJECTED_GEOMETRY"
+            elif assignment_status == "UNKNOWN":
+                decision = "INDETERMINATE"
+            else:
+                decision = "VALID"
+            assignment = {
+                "selected_objects": selected,
+                "candidate_checks": candidate_checks,
+                "relation_checks": relation_checks,
+                "status": assignment_status,
+                "decision": decision,
+            }
+            retain_diagnostic(assignment)
+            if assignment_status == "TRUE":
+                valid_assignment_count += 1
+                key = selection_key(assignment)
+                if selected_assignment_key is None or key < selected_assignment_key:
+                    selected_assignment = assignment
+                    selected_assignment_key = key
+            elif assignment_status == "UNKNOWN":
+                indeterminate_assignment_count += 1
 
     status = (
         "COMPLETE"

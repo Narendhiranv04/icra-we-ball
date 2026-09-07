@@ -280,7 +280,7 @@ def run_sequential_inspection(
     default_sequence = tuple(
         getattr(scene, "default_inspection_order", DEFAULT_INSPECTION_ORDER)
     )
-    sequence = tuple(sequence or default_sequence)
+    sequence = tuple(default_sequence if sequence is None else sequence)
     unknown = [region for region in sequence if region not in available_regions]
     if unknown:
         raise ValueError(

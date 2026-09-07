@@ -536,6 +536,28 @@ def ground_graph(
             evidence={"candidate_evaluations": {f"{k[0]}:{k[1]}": v for k, v in evaluations.items()}},
         )
 
+    # Pigeonhole principle capacity check for distinct objects
+    total_distinct_objs_required = sum(
+        role.minimum_count for role in roles.values()
+        if role.entity_kind == "OBJECT" and not role.shared
+    )
+    available_candidate_objects = set().union(
+        *[role_candidates_true[r] + role_candidates_unknown[r]
+          for r, role in roles.items()
+          if role.entity_kind == "OBJECT" and not role.shared]
+    ) if roles else set()
+    if total_distinct_objs_required > len(available_candidate_objects):
+        return GraphGroundingResult(
+            status="INFEASIBLE" if search_exhausted else "INCOMPLETE",
+            complete=False,
+            assignment=None,
+            operation_bindings={},
+            missing_roles=tuple(missing_roles_definitive),
+            unsatisfied_relations=(),
+            unresolved_constraints=("INSUFFICIENT_SCENE_OBJECTS_FOR_ROLES",),
+            evidence={"candidate_evaluations": {f"{k[0]}:{k[1]}": v for k, v in evaluations.items()}},
+        )
+
     # Collect operation-managed relation signatures to avoid double-enforcing with Cartesian semantics
     operation_managed_edges: set[tuple[str, str, str]] = set()
     for grp in graph_f.operation_groups:
@@ -821,7 +843,7 @@ def ground_verified_candidate_subgraph(graph_f, graph_o, context=None):
     from itertools import combinations
     context = dict(context or {}, search_exhausted=True)
     full = ground_graph(graph_f, graph_o, context)
-    if full.complete:
+    if full.complete or not getattr(graph_f, "required_contract_complete", True):
         return full
     names = sorted(graph_f.nodes)
     for size in range(len(names) - 1, 0, -1):

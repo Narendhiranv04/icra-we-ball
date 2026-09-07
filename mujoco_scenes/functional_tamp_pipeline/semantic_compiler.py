@@ -424,6 +424,11 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 tool_role_id, target_role_id = target_role_id, tool_role_id
                 tool_raw, target_raw = target_raw, tool_raw
 
+        is_v2 = is_v2_document(raw)
+        if not is_v2 and not ctx_role_id:
+            if domain == 'workshop' and 'repair_target' in nodes:
+                ctx_role_id = 'repair_target'
+
         op_interp = interpret_operation(
             domain=domain,
             raw_phrase=raw_op,
@@ -477,6 +482,22 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 add_relation(tool_raw, phrase, target_raw)
             for phrase in group.get('context_relations', []):
                 add_relation(tool_raw, phrase, ctx_raw)
+            if not is_v2:
+                for s_r, p, o_r in op_interp.physical_preconditions:
+                    fixed_anchors = set(get_domain_system_fixed_anchors(domain))
+                    if s_r not in nodes and s_r in fixed_anchors:
+                        nodes[s_r] = FunctionalRole(name=s_r, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
+                                                  semantic_categories=ontology.get_system_role_semantic_categories(domain, s_r),
+                                                  verification_mode='GEOMETRIC_ONLY')
+                    if o_r not in nodes and o_r in fixed_anchors:
+                        nodes[o_r] = FunctionalRole(name=o_r, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
+                                                  semantic_categories=ontology.get_system_role_semantic_categories(domain, o_r),
+                                                  verification_mode='GEOMETRIC_ONLY')
+                    validate_predicate_signature(domain=domain, predicate=p, subject_kind=nodes[s_r].entity_kind,
+                        subject_role=s_r, object_kind=nodes[o_r].entity_kind, object_role=o_r)
+                    rel = FunctionalRelation(s_r, p, o_r, expected=True)
+                    if rel not in relations:
+                        relations.append(rel)
             trace['groups'].append({
                 'raw_group': group,
                 'status': 'STATIC_ALREADY_SATISFIED',

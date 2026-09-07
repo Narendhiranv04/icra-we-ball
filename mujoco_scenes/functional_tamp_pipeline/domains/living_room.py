@@ -423,7 +423,7 @@ def run_to_plan(
         })
 
     ground_result = ground_graph(specification, graph_o, {"search_exhausted": True})
-    if mode == "vlm" and not ground_result.complete:
+    if mode == "vlm" and not ground_result.complete and getattr(specification, "required_contract_complete", True):
         from ..grounding import ground_verified_candidate_subgraph
         ground_result = ground_verified_candidate_subgraph(specification, graph_o)
     if observer is not None:
