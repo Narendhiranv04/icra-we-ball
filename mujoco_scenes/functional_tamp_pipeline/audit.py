@@ -101,10 +101,13 @@ def get_git_info(repo_root: Path | str | None = None) -> dict[str, Any]:
 
 
 def compute_prompt_and_schema_hash() -> str:
+    from .fm_schema_v2 import SYSTEM_PROMPT_V2, RESPONSE_SCHEMA_V2
     schema_blob = json.dumps(
         {
             "system_prompt": SYSTEM_PROMPT,
             "response_schema": RESPONSE_SCHEMA,
+            "system_prompt_v2": SYSTEM_PROMPT_V2,
+            "response_schema_v2": RESPONSE_SCHEMA_V2,
             "inspection_policy_schema": INSPECTION_POLICY_SCHEMA,
             "kitchen_schema": KITCHEN_FUNCTIONAL_GRAPH_SCHEMA,
         },

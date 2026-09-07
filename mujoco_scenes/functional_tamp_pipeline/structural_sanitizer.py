@@ -31,7 +31,11 @@ def normalize_id(value: Any) -> str:
 def sanitize_functional_graph(raw: Mapping[str, Any]) -> SanitizationResult:
     if not isinstance(raw, Mapping):
         return SanitizationResult({}, [{"code": "INVALID_DOCUMENT"}], True, False)
-    doc = deepcopy(dict(raw))
+    from .fm_schema_v2 import is_v2_document, convert_v2_to_canonical_document
+    if is_v2_document(raw):
+        doc = convert_v2_to_canonical_document(raw)
+    else:
+        doc = deepcopy(dict(raw))
     repairs: list[dict[str, Any]] = []
     incomplete = False
 

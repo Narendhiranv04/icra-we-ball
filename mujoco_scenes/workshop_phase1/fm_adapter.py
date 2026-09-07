@@ -28,6 +28,14 @@ try:
         TransportOrStructuredOutputError,
         VLMSpecificationError,
     )
+    from mujoco_scenes.functional_tamp_pipeline.fm_schema_v2 import (
+        SYSTEM_PROMPT_V2,
+        RESPONSE_SCHEMA_V2,
+        is_v2_document,
+        validate_v2_functional_specification,
+        convert_v2_to_canonical_document,
+        compute_v2_prompt_and_schema_hash,
+    )
 except ImportError:
     class VLMSpecificationError(Exception):
         """Fallback base error for VLM specification failures."""
@@ -692,9 +700,12 @@ def _extract_json_content(
 
 
 def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]:
-    """Validate the generic Living Room and Workshop specification schema."""
+    """Validate the generic Living Room and Workshop specification schema (supporting V1 and V2)."""
     if not isinstance(document, Mapping):
         raise FMResponseValidationError("Requirement response must be a JSON object")
+
+    if is_v2_document(document):
+        return validate_v2_functional_specification(document)
 
     allowed_top = {
         "status", "task_summary", "functional_roles",
@@ -1498,17 +1509,27 @@ class FMAdapter:
             user_prompt_data,
             separators=(",", ":"),
         )
+        schema_version = int(os.environ.get("TAMP_FM_SCHEMA_VERSION", "2"))
+        if schema_version == 2:
+            system_prompt = SYSTEM_PROMPT_V2
+            response_schema = RESPONSE_SCHEMA_V2
+            schema_name = "functional_specification"
+        else:
+            system_prompt = SYSTEM_PROMPT
+            response_schema = RESPONSE_SCHEMA
+            schema_name = "functional_specification"
+
         sanitized_req = {
-            "system_prompt": SYSTEM_PROMPT,
+            "system_prompt": system_prompt,
             "user_prompt": user_prompt_data,
-            "schema_name": "functional_specification",
+            "schema_name": schema_name,
             "num_images": len(self.last_observation_images),
             "image_metadata": self.last_observation_images,
         }
         payload = {
             "model": self.model,
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {
                     "role": "user",
                     "content": [
@@ -1529,9 +1550,9 @@ class FMAdapter:
             "response_format": {
                 "type": "json_schema",
                 "json_schema": {
-                    "name": "functional_specification",
+                    "name": schema_name,
                     "strict": True,
-                    "schema": RESPONSE_SCHEMA,
+                    "schema": response_schema,
                 },
             },
         }
