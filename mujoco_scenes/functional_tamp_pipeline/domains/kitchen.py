@@ -681,58 +681,76 @@ def run_to_plan(
             })
         return bool(res.complete)
 
-    session = run_sequential_inspection(
-        scene,
-        order,
-        runs_root=output_dir / "observed_search",
-        run_id="phase1",
-        width=1280,
-        height=960,
-        task_requirements=contract,
-        stop_on_complete=True,
-        semantic_backend="yolo_world",
-        semantic_model=str(LOCAL_YOLO_WORLD),
-        semantic_vocabulary_path=vocabulary_path,
-        semantic_min_supporting_views=2,
-        grounding_mode="joint",
-        completion_predicate=kitchen_completion_predicate,
-        record_oracle_diagnostics=False,
-        observer=observer,
-    )
-    events = [
-        json.loads(line) for line in session.events_path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
-    opened = tuple(
-        event["region_id"] for event in events if event.get("event") == "REGION_OPENED"
-    )
+    if not contract.get("roles"):
+        from ..scene_graph import ObservedSceneGraph
+        graph_o = ObservedSceneGraph()
+        opened = ()
+        is_exhausted = True
+        ground_result = ground_graph(specification, graph_o, {"search_exhausted": is_exhausted})
+        final_search_state = classify_search_state(specification, ground_result, search_contract, opened)
+        gr_dict = ground_result.to_dict()
+        if "evidence" in gr_dict and isinstance(gr_dict["evidence"], dict):
+            gr_dict["evidence"] = {k: v for k, v in gr_dict["evidence"].items() if k != "grounding_snapshots"}
+        grounding_snapshots.append({
+            "stage": "final",
+            "inspected_regions": list(opened),
+            "search_state": final_search_state,
+            "grounding": gr_dict,
+        })
+        causal_search_recovery = False
+    else:
+        session = run_sequential_inspection(
+            scene,
+            order,
+            runs_root=output_dir / "observed_search",
+            run_id="phase1",
+            width=1280,
+            height=960,
+            task_requirements=contract,
+            stop_on_complete=True,
+            semantic_backend="yolo_world",
+            semantic_model=str(LOCAL_YOLO_WORLD),
+            semantic_vocabulary_path=vocabulary_path,
+            semantic_min_supporting_views=2,
+            grounding_mode="joint",
+            completion_predicate=kitchen_completion_predicate,
+            record_oracle_diagnostics=False,
+            observer=observer,
+        )
+        events = [
+            json.loads(line) for line in session.events_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        opened = tuple(
+            event["region_id"] for event in events if event.get("event") == "REGION_OPENED"
+        )
 
-    # Populate canonical ObservedSceneGraph from session evidence
-    graph_o = build_kitchen_observed_scene_graph(session)
-    for r in opened:
-        graph_o.mark_region_inspected(r)
+        # Populate canonical ObservedSceneGraph from session evidence
+        graph_o = build_kitchen_observed_scene_graph(session)
+        for r in opened:
+            graph_o.mark_region_inspected(r)
 
-    is_exhausted = len(opened) >= len(order)
-    # Canonical graph grounding decides the assignment authority
-    ground_result = ground_graph(specification, graph_o, {"search_exhausted": is_exhausted})
-    if mode == "vlm" and is_exhausted and not ground_result.complete and getattr(specification, "required_contract_complete", True):
-        from ..grounding import ground_verified_candidate_subgraph
-        ground_result = ground_verified_candidate_subgraph(specification, graph_o)
+        is_exhausted = len(opened) >= len(order)
+        # Canonical graph grounding decides the assignment authority
+        ground_result = ground_graph(specification, graph_o, {"search_exhausted": is_exhausted})
+        if mode == "vlm" and is_exhausted and not ground_result.complete and getattr(specification, "required_contract_complete", True):
+            from ..grounding import ground_verified_candidate_subgraph
+            ground_result = ground_verified_candidate_subgraph(specification, graph_o)
 
-    final_search_state = classify_search_state(specification, ground_result, search_contract, opened)
-    gr_dict = ground_result.to_dict()
-    if "evidence" in gr_dict and isinstance(gr_dict["evidence"], dict):
-        gr_dict["evidence"] = {k: v for k, v in gr_dict["evidence"].items() if k != "grounding_snapshots"}
-    grounding_snapshots.append({
-        "stage": "final",
-        "inspected_regions": list(opened),
-        "search_state": final_search_state,
-        "grounding": gr_dict,
-    })
-    initial_complete = bool(grounding_snapshots[0]["grounding"].get("complete", False)) if grounding_snapshots else False
-    causal_search_recovery = compute_causal_search_recovery(
-        initial_complete, opened, bool(ground_result.complete)
-    )
+        final_search_state = classify_search_state(specification, ground_result, search_contract, opened)
+        gr_dict = ground_result.to_dict()
+        if "evidence" in gr_dict and isinstance(gr_dict["evidence"], dict):
+            gr_dict["evidence"] = {k: v for k, v in gr_dict["evidence"].items() if k != "grounding_snapshots"}
+        grounding_snapshots.append({
+            "stage": "final",
+            "inspected_regions": list(opened),
+            "search_state": final_search_state,
+            "grounding": gr_dict,
+        })
+        initial_complete = bool(grounding_snapshots[0]["grounding"].get("complete", False)) if grounding_snapshots else False
+        causal_search_recovery = compute_causal_search_recovery(
+            initial_complete, opened, bool(ground_result.complete)
+        )
 
     (output_dir / "grounding_snapshots.json").write_text(
         json.dumps(grounding_snapshots, indent=2, sort_keys=True) + "\n",
