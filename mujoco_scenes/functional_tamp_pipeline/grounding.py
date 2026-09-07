@@ -353,7 +353,7 @@ def _evaluate_operation_group(
     Returns (status, diagnostics, matching) where status in {'TRUE', 'FALSE', 'UNKNOWN'}
     and matching is a list of binding dicts: [{'tool_id': u, 'target_id': t, 'context': {...}}].
     """
-    required_relations = grp.required_relations or ("INSERTABLE_IN", "REACHES_BOTTOM")
+    required_relations = grp.required_relations or ()
     diagnostics = []
 
     # Helper to check if tool u satisfies all required relations with target t and optional context c
@@ -539,7 +539,7 @@ def ground_graph(
     # Collect operation-managed relation signatures to avoid double-enforcing with Cartesian semantics
     operation_managed_edges: set[tuple[str, str, str]] = set()
     for grp in graph_f.operation_groups:
-        req_rels = grp.required_relations or ("INSERTABLE_IN", "REACHES_BOTTOM")
+        req_rels = grp.required_relations or ()
         for pred in req_rels:
             operation_managed_edges.add((grp.tool_role, pred, grp.target_role))
         if grp.context_role:

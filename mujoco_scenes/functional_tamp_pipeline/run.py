@@ -26,6 +26,7 @@ try:
     from .spec_provider import provider_for_mode
     from .role_semantic_ontology import get_runtime_semantic_ontology_hash
     from .audit import compute_prompt_and_schema_hash
+    from .robot_capability_registry import get_robot_capability_registry_hash
 except ImportError:
     from mujoco_scenes.functional_tamp_pipeline.errors import (
         PipelineError, VLMSpecificationError, ReplaySpecificationError, SearchRegionContractError
@@ -39,6 +40,7 @@ except ImportError:
     from mujoco_scenes.functional_tamp_pipeline.spec_provider import provider_for_mode
     from mujoco_scenes.functional_tamp_pipeline.role_semantic_ontology import get_runtime_semantic_ontology_hash
     from mujoco_scenes.functional_tamp_pipeline.audit import compute_prompt_and_schema_hash
+    from mujoco_scenes.functional_tamp_pipeline.robot_capability_registry import get_robot_capability_registry_hash
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -340,6 +342,7 @@ def _write_run_manifest(state: _RunState) -> None:
         "failure_category": state.failure_category,
         "runtime_semantic_ontology_hash": get_runtime_semantic_ontology_hash(),
         "prompt_schema_hash": compute_prompt_and_schema_hash(),
+        "robot_capability_registry_hash": get_robot_capability_registry_hash(),
         "observer_errors": list(state.observer_errors),
         "artifacts": _collect_artifacts(state.run_dir),
     }

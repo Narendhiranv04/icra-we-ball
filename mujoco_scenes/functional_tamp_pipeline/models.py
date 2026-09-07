@@ -179,6 +179,7 @@ class OperationGroup:
     distinct_within_group: bool = True
     same_tool_must_cover_all_targets: bool = False
     selection_preference: str | None = None
+    capability_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -198,6 +199,7 @@ class OperationGroup:
             distinct_within_group=bool(data.get("distinct_within_group", True)),
             same_tool_must_cover_all_targets=bool(data.get("same_tool_must_cover_all_targets", False)),
             selection_preference=str(data["selection_preference"]) if data.get("selection_preference") else None,
+            capability_id=str(data["capability_id"]) if data.get("capability_id") else None,
         )
 
 

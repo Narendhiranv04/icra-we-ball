@@ -310,83 +310,128 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
 
     for rel in doc['functional_relations']:
         add_relation(rel['subject_role'], rel.get('relation', rel.get('predicate')), rel['object_role'], expected=rel.get('expected', True))
+    from .robot_capability_registry import interpret_operation
+    raw_groups = doc.get('interaction_groups') or doc.get('operations') or []
     groups = []
-    for group in doc['interaction_groups']:
+    for group in raw_groups:
+        tool_raw = group.get('tool_role') or group.get('source_role')
+        target_raw = group.get('target_role')
+        ctx_raw = group.get('context_role') or group.get('anchor_role')
+        raw_op = group.get('function') or group.get('operation') or ''
+
+        if not tool_raw or not target_raw or tool_raw not in id_map or target_raw not in id_map:
+            trace['disabled_groups'].append({'raw_group': group, 'status': 'UNINSTANTIABLE_MISSING_ROLE'})
+            continue
+
+        tool_role_id = id_map[tool_raw]
+        target_role_id = id_map[target_raw]
+        ctx_role_id = id_map.get(ctx_raw) if ctx_raw else None
+
+        if domain == 'living_room':
+            if nodes[tool_role_id].entity_kind == 'OBJECT' and nodes[target_role_id].entity_kind == 'REGION':
+                tool_role_id, target_role_id = target_role_id, tool_role_id
+                tool_raw, target_raw = target_raw, tool_raw
+
+        op_interp = interpret_operation(
+            domain=domain,
+            raw_phrase=raw_op,
+            source_role=tool_role_id,
+            target_role=target_role_id,
+            anchor_role=ctx_role_id,
+        )
+
+        if not op_interp.succeeded:
+            trace['disabled_groups'].append({
+                'raw_group': group,
+                'status': 'UNSUPPORTED_OPERATOR',
+                'reason': op_interp.reason,
+                'interp_status': op_interp.status,
+            })
+            continue
+
         required = [
             mapped for phrase in group.get('required_relations', [])
             if (mapped := add_relation(
-                group['tool_role'], phrase, group['target_role'], grouped=True
+                tool_raw, phrase, target_raw, grouped=True
             )) is not None
         ]
         context = []
-        if group.get('context_role'):
+        if ctx_raw:
             for phrase in group.get('context_relations', []):
-                mapped = add_relation(group['tool_role'], phrase, group['context_role'], grouped=True)
-                if mapped is None and group.get('target_role'):
-                    mapped = add_relation(group['target_role'], phrase, group['context_role'], grouped=True)
+                mapped = add_relation(tool_raw, phrase, ctx_raw, grouped=True)
+                if mapped is None and target_raw:
+                    mapped = add_relation(target_raw, phrase, ctx_raw, grouped=True)
                 if mapped is not None:
                     context.append(mapped)
-        if not required or any(group[k] not in id_map for k in ('tool_role', 'target_role')):
-            trace['disabled_groups'].append({'raw_group': group, 'status': 'UNINSTANTIABLE_MISSING_RELATION'})
+
+        # Union explicit relations or fallback to physical preconditions from mapped capability
+        all_required = required if required else list(op_interp.required_relations)
+        all_context = context if context else list(op_interp.context_relations)
+
+        count = group.get('required_target_count') if group.get('required_target_count') is not None else group.get('operation_count', 1)
+        policy = group.get('usage_policy') or group.get('reuse_policy')
+        if policy == 'REUSABLE_ACROSS_TARGETS':
+            policy = 'SEQUENTIAL_REUSE_ALLOWED'
+        elif policy is None:
+            policy = 'DEDICATED_PER_TARGET'
+
+        if not count or type(count) is not int or count < 1 or count > nodes[target_role_id].maximum_count or policy not in {'DEDICATED_PER_TARGET', 'SEQUENTIAL_REUSE_ALLOWED'}:
+            trace['disabled_groups'].append({'raw_group': group, 'status': 'UNSUPPORTED_OPERATOR', 'reason': f'Invalid count or policy: count={count}, policy={policy}'})
             continue
-        tool_role_id = id_map[group['tool_role']]
-        target_role_id = id_map[group['target_role']]
-        if domain == 'kitchen':
-            from mujoco_scenes.kitchen_vlm_functional_graph import map_kitchen_interaction_group_function
-            function = map_kitchen_interaction_group_function(group.get('function', ''))
-            if not function:
-                if (tool_role_id, target_role_id) == ('coffee_stirrer', 'coffee_container'):
-                    function = 'coffee_stirring'
-                elif (tool_role_id, target_role_id) == ('soup_eating_utensil', 'soup_container'):
-                    function = 'soup_serving'
-        elif domain == 'living_room':
-            from mujoco_scenes.environment_vlm_requirements import map_living_room_operation_group_function
-            function = map_living_room_operation_group_function(group.get('function', ''))
-            if not function:
-                pair = {tool_role_id, target_role_id}
-                if pair == {'CUP_SAUCER_SET', 'PERSONAL_CUP_SAUCER_REGION'}:
-                    function = 'personal_support_group'
-                elif pair == {'REMOTE', 'SHARED_REMOTE_REGION'}:
-                    function = 'shared_entertainment_group'
-            if nodes[tool_role_id].entity_kind == 'OBJECT' and nodes[target_role_id].entity_kind == 'REGION':
-                tool_role_id, target_role_id = target_role_id, tool_role_id
-        else:
-            function = 'DRIVE_FASTENER_INTO_TARGET' if (tool_role_id, target_role_id) == ('driver', 'fastener') else None
-        count = group.get('required_target_count')
-        if not function or type(count) is not int or count < 1 or count > nodes[target_role_id].maximum_count or group.get('usage_policy') not in {'DEDICATED_PER_TARGET', 'SEQUENTIAL_REUSE_ALLOWED'}:
-            trace['disabled_groups'].append({'raw_group': group, 'status': 'UNSUPPORTED_OPERATOR'})
-            continue
-        # Singleton interaction requirements are equivalent to ordinary graph
-        # edges. Multi-target bindings must retain their group quantification.
+
+        # Singleton interaction requirements in Workshop:
         if domain == 'workshop' and count == 1:
             for phrase in group.get('required_relations', []):
-                add_relation(group['tool_role'], phrase, group['target_role'])
+                add_relation(tool_raw, phrase, target_raw)
             for phrase in group.get('context_relations', []):
-                add_relation(group['tool_role'], phrase, group['context_role'])
-            ctx_id = group.get('context_role')
-            if ctx_id and id_map.get(ctx_id) == 'repair_target':
-                add_relation(group['target_role'], 'compatible with target', ctx_id)
-            elif 'repair_target' in nodes and any(r.object_role == 'repair_target' for r in relations):
-                target_ids = [k for k, v in id_map.items() if v == 'repair_target']
-                if target_ids:
-                    add_relation(group['target_role'], 'compatible with target', target_ids[0])
-            trace['groups'].append({'raw_group': group, 'status': 'STATIC_ALREADY_SATISFIED',
-                                    'representation': 'SINGLETON_RELATIONS'})
+                add_relation(tool_raw, phrase, ctx_raw)
+            # Physical preconditions from FASTEN_JOINT capability:
+            for s_r, p, o_r in op_interp.physical_preconditions:
+                fixed_anchors = set(get_domain_system_fixed_anchors(domain))
+                if s_r not in nodes and s_r in fixed_anchors:
+                    nodes[s_r] = FunctionalRole(name=s_r, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
+                                              semantic_categories=ontology.get_system_role_semantic_categories(domain, s_r),
+                                              verification_mode='GEOMETRIC_ONLY')
+                if o_r not in nodes and o_r in fixed_anchors:
+                    nodes[o_r] = FunctionalRole(name=o_r, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
+                                              semantic_categories=ontology.get_system_role_semantic_categories(domain, o_r),
+                                              verification_mode='GEOMETRIC_ONLY')
+                validate_predicate_signature(domain=domain, predicate=p, subject_kind=nodes[s_r].entity_kind,
+                    subject_role=s_r, object_kind=nodes[o_r].entity_kind, object_role=o_r)
+                rel = FunctionalRelation(s_r, p, o_r, expected=True)
+                if rel not in relations:
+                    relations.append(rel)
+            trace['groups'].append({
+                'raw_group': group,
+                'status': 'STATIC_ALREADY_SATISFIED',
+                'representation': 'SINGLETON_RELATIONS',
+                'capability_id': op_interp.capability.capability_id if op_interp.capability else None,
+                'planner_operation': op_interp.planner_operation,
+                'physical_preconditions': [list(t) for t in op_interp.physical_preconditions],
+            })
             continue
-        runtime_function = {'coffee_stirring': 'STIR_COFFEE', 'soup_serving': 'PROVIDE_SOUP_EATING_UTENSIL',
-                            'personal_support_group': 'SUPPORT_DRINKWARE',
-                            'shared_entertainment_group': 'SUPPORT_ENTERTAINMENT_CONTROL'}.get(function, function)
-        executable_context_role = id_map.get(group.get('context_role')) if context else None
-        usage_policy = group['usage_policy']
+
+        runtime_function = op_interp.planner_operation
+        canonical_group_id = {
+            'STIR_COFFEE': 'coffee_stirring',
+            'PROVIDE_SOUP_EATING_UTENSIL': 'soup_serving',
+            'SUPPORT_DRINKWARE': 'personal_support_group',
+            'SUPPORT_ENTERTAINMENT_CONTROL': 'shared_entertainment_group',
+            'DRIVE_FASTENER_INTO_TARGET': 'drive_fastener_group',
+        }.get(runtime_function, group.get('id', runtime_function))
+        g_id = canonical_group_id if not any(g.id == canonical_group_id for g in groups) else group.get('id', canonical_group_id)
+
+        executable_context_role = ctx_role_id if (all_context or ctx_role_id) else None
+        usage_policy = policy
         if domain == 'living_room':
-            if executable_context_role == 'SEATING_POSITION' and 'ACCESSIBLE_FROM_BOTH_SEATS' in context:
+            if executable_context_role == 'SEATING_POSITION' and 'ACCESSIBLE_FROM_BOTH_SEATS' in all_context:
                 executable_context_role = 'SEATING_PAIR'
-            if function == 'personal_support_group':
+            if runtime_function == 'SUPPORT_DRINKWARE' or (op_interp.capability and op_interp.capability.capability_id == 'SUPPORT_DRINKWARE'):
                 usage_policy = 'DEDICATED_PER_TARGET'
                 if not executable_context_role and 'SEATING_POSITION' in nodes:
                     executable_context_role = 'SEATING_POSITION'
-                    if 'NEAR_SEAT' not in context:
-                        context.append('NEAR_SEAT')
+                    if 'NEAR_SEAT' not in all_context:
+                        all_context.append('NEAR_SEAT')
         if (
             usage_policy == 'SEQUENTIAL_REUSE_ALLOWED'
             and tool_role_id in nodes
@@ -400,13 +445,30 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 min_count=t_node.min_count or 1,
                 preference=t_node.preference or 'minimize_distinct',
             )
-        groups.append(OperationGroup(id=function if not any(g.id == function for g in groups) else group['id'], function=runtime_function, tool_role=tool_role_id,
-            target_role=target_role_id, required_target_count=count, usage_policy=usage_policy,
-            required_relations=tuple(dict.fromkeys(required)), context_role=executable_context_role,
-            context_relations=tuple(dict.fromkeys(context)),
+        groups.append(OperationGroup(
+            id=g_id,
+            function=runtime_function,
+            tool_role=tool_role_id,
+            target_role=target_role_id,
+            required_target_count=count,
+            usage_policy=usage_policy,
+            required_relations=tuple(dict.fromkeys(all_required)),
+            context_role=executable_context_role,
+            context_relations=tuple(dict.fromkeys(all_context)),
             distinct_within_group=group.get('distinct_within_group', usage_policy == 'DEDICATED_PER_TARGET'),
             same_tool_must_cover_all_targets=group.get('same_tool_must_cover_all_targets', False),
-            selection_preference=group.get('selection_preference', ('minimize_distinct_tools' if usage_policy == 'SEQUENTIAL_REUSE_ALLOWED' else 'deterministic_rank') if domain == 'kitchen' else None)))
+            selection_preference=group.get('selection_preference', ('minimize_distinct_tools' if usage_policy == 'SEQUENTIAL_REUSE_ALLOWED' else 'deterministic_rank') if domain == 'kitchen' else None),
+            capability_id=op_interp.capability.capability_id if op_interp.capability else None,
+        ))
+        trace['groups'].append({
+            'raw_group': group,
+            'status': 'CANONICAL_OPERATION_GROUP',
+            'capability_id': op_interp.capability.capability_id if op_interp.capability else None,
+            'planner_operation': runtime_function,
+            'required_relations': all_required,
+            'context_relations': all_context,
+            'interp_status': op_interp.status,
+        })
     if domain == 'living_room':
         # Group pairing governs these edges, not unconstrained all-to-all checks.
         grouped_triples = {(g.tool_role, p, g.target_role) for g in groups for p in g.required_relations}

@@ -13,6 +13,7 @@ from typing import Any, Sequence
 from .models import FunctionalSpecification
 from .scene_graph import ObservedSceneGraph
 from .role_semantic_ontology import get_runtime_semantic_ontology_hash
+from .robot_capability_registry import get_robot_capability_registry_hash
 from .system_context_registry import is_valid_planner_argument
 from .vlm_spec_provider import VLM_CANONICALIZATION_VERSION
 from ..workshop_phase1.fm_adapter import (
@@ -150,6 +151,7 @@ def compute_provenance_fingerprint(
         "vlm_canonicalization_version": VLM_CANONICALIZATION_VERSION,
         "prompt_schema_hash": schema_hash,
         "runtime_semantic_ontology_hash": get_runtime_semantic_ontology_hash(),
+        "robot_capability_registry_hash": get_robot_capability_registry_hash(),
         "task_instruction_hash": task_hash,
         "search_order_mode": search_order,
     }
