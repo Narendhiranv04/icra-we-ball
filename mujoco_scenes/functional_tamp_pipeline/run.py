@@ -175,6 +175,7 @@ def _collect_artifacts(run_dir: Path) -> dict[str, str]:
         "result": "result.json",
         "detection_diagnostics": "detection_diagnostics.json",
         "target_anchor_provenance": "target_anchor_provenance.json",
+        "physical_relation_verification_trace": "physical_relation_verification_trace.json",
     }
     artifacts: dict[str, str] = {}
     for key, rel_path in candidate_map.items():
@@ -648,6 +649,22 @@ def _run_pipeline_impl(
         observer=guarded_observer,
     )
     _write_json(state.run_dir / "observed_scene_graph.json", adapter.graph.to_dict())
+    verification_trace = []
+    for obs_rel in sorted(adapter.graph.relations.values(), key=lambda r: (r.predicate, r.subject_id, r.object_id)):
+        ev = dict(obs_rel.evidence)
+        verification_trace.append({
+            "predicate": obs_rel.predicate,
+            "subject_instance": obs_rel.subject_id,
+            "object_instance": obs_rel.object_id,
+            "verifier_function": ev.get("method", ev.get("verifier", f"verify_{obs_rel.predicate.lower()}")),
+            "measured_quantities": {k: v for k, v in ev.items() if k not in ("status", "method", "reason")},
+            "thresholds": {k: v for k, v in ev.items() if any(sub in k for sub in ("threshold", "tolerance", "clearance", "maximum", "minimum"))},
+            "signed_margins": {k: v for k, v in ev.items() if "margin" in k},
+            "status": obs_rel.status,
+            "reason": ev.get("reason"),
+            "evidence": ev,
+        })
+    _write_json(state.run_dir / "physical_relation_verification_trace.json", verification_trace)
     _write_json(state.run_dir / "detection_diagnostics.json", {
         "records": adapter.controller.detection_diagnostics,
     })
