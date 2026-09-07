@@ -13,6 +13,7 @@ from .models import FunctionalRequirementGraph, FunctionalRole, FunctionalRelati
 from .structural_sanitizer import sanitize_functional_graph
 from . import role_semantic_ontology as ontology
 from .predicate_registry import validate_predicate_signature
+from .fm_schema_v2 import is_v2_document
 from .errors import VLMSpecificationError
 
 
@@ -132,13 +133,103 @@ def _relation(domain: str, subject: str, phrase: str, target: str) -> tuple[str,
     return canonicalize_workshop_relation(subject, subject, phrase, target, target)[:3]
 
 
+def check_required_contract_complete(
+    domain: str,
+    nodes: dict[str, Any],
+    relations: Sequence[Any],
+    groups: Sequence[Any],
+    trace: dict[str, Any],
+    sanitized: Any,
+    unresolved: list[Any],
+) -> tuple[bool, list[str]]:
+    """Determine whether the compiled G_F represents a complete executable task contract."""
+    missing: list[str] = []
+
+    if sanitized.semantically_incomplete:
+        missing.append("Sanitizer reported semantic incompleteness")
+
+    if trace.get("unresolved_roles"):
+        missing.append(f"Unresolved roles: {trace['unresolved_roles']}")
+
+    if trace.get("disabled_groups"):
+        missing.append(f"Disabled/unsupported operations: {trace['disabled_groups']}")
+
+    if trace.get("unresolved_required_relations") or unresolved:
+        missing.append(f"Unresolved required relations: {trace.get('unresolved_required_relations') or unresolved}")
+
+    d_norm = domain.strip().lower()
+    if d_norm == "kitchen":
+        group_funcs = {g.function for g in groups}
+        group_caps = {g.capability_id for g in groups if g.capability_id}
+        group_ids = {g.id for g in groups}
+        has_stir = "STIR_COFFEE" in group_funcs or "STIR_COFFEE" in group_caps or "coffee_stirring" in group_ids
+        has_soup = "PROVIDE_SOUP_EATING_UTENSIL" in group_funcs or "PROVIDE_SOUP_EATING_UTENSIL" in group_caps or "soup_serving" in group_ids
+        if not has_stir:
+            missing.append("Missing required coffee stirring operation")
+        if not has_soup:
+            missing.append("Missing required soup serving operation")
+        for g in groups:
+            if not g.required_relations:
+                missing.append(f"Operation group {g.id} has no required relations")
+            has_tool_target_rel = any(
+                (r.subject_role == g.tool_role and r.object_role == g.target_role)
+                or (r.subject_role == g.target_role and r.object_role == g.tool_role)
+                for r in relations
+            )
+            if not has_tool_target_rel:
+                missing.append(f"Missing required relation between {g.tool_role} and {g.target_role} for operation {g.id}")
+
+    elif d_norm == "living_room":
+        group_funcs = {g.function for g in groups}
+        group_caps = {g.capability_id for g in groups if g.capability_id}
+        group_ids = {g.id for g in groups}
+        has_drink = "SUPPORT_DRINKWARE" in group_funcs or "SUPPORT_DRINKWARE" in group_caps or "personal_support_group" in group_ids
+        has_remote = "SUPPORT_ENTERTAINMENT_CONTROL" in group_funcs or "SUPPORT_ENTERTAINMENT_CONTROL" in group_caps or "shared_entertainment_group" in group_ids
+        has_remote_rel = any(r.predicate == "FITS_ON" for r in relations) and any(r.predicate == "ACCESSIBLE_FROM_BOTH_SEATS" for r in relations)
+        has_near_rel = any(r.predicate == "NEAR_SEAT" for r in relations) or any("NEAR_SEAT" in g.context_relations for g in groups)
+        if not has_drink:
+            missing.append("Missing required drinkware support operation")
+        if not (has_remote or has_remote_rel):
+            missing.append("Missing required remote control support operation or relations")
+        if not has_near_rel:
+            missing.append("Missing near seat relation for personal support")
+
+    elif d_norm == "workshop":
+        has_comp = any(r.predicate == "COMPATIBLE_WITH" for r in relations)
+        has_reach = any(r.predicate == "REACHES_TARGET" for r in relations)
+        has_tgt_comp = any(r.predicate == "COMPATIBLE_WITH_TARGET" for r in relations)
+        if not (has_comp and has_reach and has_tgt_comp):
+            missing.append("Workshop missing one or more required fastening relations (COMPATIBLE_WITH, REACHES_TARGET, COMPATIBLE_WITH_TARGET)")
+        if "driver" not in nodes:
+            missing.append("Missing driver role")
+        if "fastener" not in nodes:
+            missing.append("Missing fastener role")
+        if "repair_target" not in nodes:
+            missing.append("Missing repair_target role")
+        has_fasten_op = any(
+            getattr(g, "function", None) == "DRIVE_FASTENER_INTO_TARGET"
+            or getattr(g, "capability_id", None) == "DRIVE_FASTENER_INTO_TARGET"
+            for g in groups
+        ) or any(
+            entry.get("capability_id") == "DRIVE_FASTENER_INTO_TARGET"
+            or entry.get("planner_operation") == "DRIVE_FASTENER_INTO_TARGET"
+            for entry in trace.get("groups", [])
+        )
+        if not has_fasten_op:
+            missing.append("Missing required fastening operation (DRIVE_FASTENER_INTO_TARGET)")
+
+    complete = len(missing) == 0
+    return complete, missing
+
+
 def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequirementGraph:
     sanitized = sanitize_functional_graph(raw)
     if not sanitized.succeeded:
         raise VLMSpecificationError('No meaningful functional roles recovered', category='SANITIZER_UNRECOVERABLE')
     doc = sanitized.document
     trace: dict[str, Any] = dict(roles=[], properties=[], relations=[], groups=[], context_only_roles=[],
-                                unresolved_roles=[], merged_roles=[], disambiguated_roles=[], disabled_groups=[])
+                                unresolved_roles=[], merged_roles=[], disambiguated_roles=[], disabled_groups=[],
+                                unresolved_required_relations=[], unresolved_required_operations=[])
     nodes = {}
     id_map = {}
     owners = {}
@@ -299,6 +390,8 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         except (VLMSpecificationError, ValueError) as exc:
             evidence.update(status='UNRESOLVED_SEMANTIC', reason=str(exc))
             unresolved.append(evidence)
+            if expected and not grouped:
+                trace['unresolved_required_relations'].append(evidence)
             trace['relations'].append(evidence)
             return None
         relation = FunctionalRelation(s, p, o, expected=expected)
@@ -385,22 +478,6 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 add_relation(tool_raw, phrase, target_raw)
             for phrase in group.get('context_relations', []):
                 add_relation(tool_raw, phrase, ctx_raw)
-            # Physical preconditions from FASTEN_JOINT capability:
-            for s_r, p, o_r in op_interp.physical_preconditions:
-                fixed_anchors = set(get_domain_system_fixed_anchors(domain))
-                if s_r not in nodes and s_r in fixed_anchors:
-                    nodes[s_r] = FunctionalRole(name=s_r, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
-                                              semantic_categories=ontology.get_system_role_semantic_categories(domain, s_r),
-                                              verification_mode='GEOMETRIC_ONLY')
-                if o_r not in nodes and o_r in fixed_anchors:
-                    nodes[o_r] = FunctionalRole(name=o_r, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
-                                              semantic_categories=ontology.get_system_role_semantic_categories(domain, o_r),
-                                              verification_mode='GEOMETRIC_ONLY')
-                validate_predicate_signature(domain=domain, predicate=p, subject_kind=nodes[s_r].entity_kind,
-                    subject_role=s_r, object_kind=nodes[o_r].entity_kind, object_role=o_r)
-                rel = FunctionalRelation(s_r, p, o_r, expected=True)
-                if rel not in relations:
-                    relations.append(rel)
             trace['groups'].append({
                 'raw_group': group,
                 'status': 'STATIC_ALREADY_SATISFIED',
@@ -428,10 +505,6 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 executable_context_role = 'SEATING_PAIR'
             if runtime_function == 'SUPPORT_DRINKWARE' or (op_interp.capability and op_interp.capability.capability_id == 'SUPPORT_DRINKWARE'):
                 usage_policy = 'DEDICATED_PER_TARGET'
-                if not executable_context_role and 'SEATING_POSITION' in nodes:
-                    executable_context_role = 'SEATING_POSITION'
-                    if 'NEAR_SEAT' not in all_context:
-                        all_context.append('NEAR_SEAT')
         if (
             usage_policy == 'SEQUENTIAL_REUSE_ALLOWED'
             and tool_role_id in nodes
@@ -495,6 +568,9 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         ranking = list(dict.fromkeys(region_ids[r] for r in doc['inspection_order'] if isinstance(r, str) and r in region_ids))
         ranking.extend(r for r in proposed if r not in ranking)
     partial = sanitized.semantically_incomplete or bool(unverified_required or unresolved or trace['unresolved_roles'] or trace['disabled_groups'])
+    contract_complete, contract_missing_reasons = check_required_contract_complete(
+        domain, nodes, relations, groups, trace, sanitized, unresolved
+    )
     graph = FunctionalRequirementGraph(domain=domain, task_instruction=task, nodes=nodes, relations=tuple(relations),
         operation_groups=tuple(groups), source='VLM_CANONICAL_G_F', candidate_regions=tuple(proposed), region_ranking=tuple(ranking),
         detector_vocabulary=tuple(dict.fromkeys([c for r in doc['functional_roles'] for c in r['candidate_categories']] + [c.replace('_', ' ') for n in nodes.values() if n.entity_kind == 'OBJECT' for c in n.semantic_categories])),
@@ -507,6 +583,9 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             'candidate_categories_used_for_detector_vocabulary': True,
             'raw_vlm_response': raw, 'raw_decomposition': raw, 'structural_sanitizer': sanitized.to_dict(),
             'canonicalization_trace': trace, 'canonicalization_status': 'PARTIAL' if partial else 'FULL',
+            'required_contract_complete': contract_complete,
+            'contract_missing_reasons': contract_missing_reasons,
+            'is_v2_specification': is_v2_document(raw),
             'soft_semantic_evidence': soft, 'unresolved_semantics': unresolved, 'unverified_required_properties': unverified_required, 'raw_role_to_canonical': id_map})
     from pathlib import Path
     if domain == 'living_room':

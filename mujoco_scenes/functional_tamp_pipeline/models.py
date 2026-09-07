@@ -230,6 +230,10 @@ class FunctionalRequirementGraph:
     def get_outgoing_relations(self, subject_role: str) -> tuple[FunctionalRelation, ...]:
         return tuple(r for r in self.relations if r.subject_role == subject_role)
 
+    @property
+    def required_contract_complete(self) -> bool:
+        return bool(self.metadata.get("required_contract_complete", False))
+
     def get_incoming_relations(self, object_role: str) -> tuple[FunctionalRelation, ...]:
         return tuple(r for r in self.relations if r.object_role == object_role)
 
