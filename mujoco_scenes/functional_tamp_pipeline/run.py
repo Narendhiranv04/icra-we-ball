@@ -176,6 +176,7 @@ def _collect_artifacts(run_dir: Path) -> dict[str, str]:
         "detection_diagnostics": "detection_diagnostics.json",
         "target_anchor_provenance": "target_anchor_provenance.json",
         "physical_relation_verification_trace": "physical_relation_verification_trace.json",
+        "grounding_snapshots": "grounding_snapshots.json",
     }
     artifacts: dict[str, str] = {}
     for key, rel_path in candidate_map.items():
@@ -676,6 +677,15 @@ def _run_pipeline_impl(
         "missing_requirements": list(satisfaction.missing_requirements),
         "evidence": satisfaction.evidence,
     })
+    snapshots = satisfaction.evidence.get("grounding_snapshots")
+    if not isinstance(snapshots, (list, tuple)):
+        adapter_snaps = getattr(adapter, "grounding_snapshots", None)
+        if isinstance(adapter_snaps, (list, tuple)):
+            snapshots = adapter_snaps
+        else:
+            snapshots = None
+    if snapshots:
+        _write_json(state.run_dir / "grounding_snapshots.json", snapshots)
     if state.mode == "vlm" and not satisfaction.satisfied:
         from .grounding import ground_verified_candidate_subgraph
         satisfaction = ground_verified_candidate_subgraph(state.specification, adapter.graph)

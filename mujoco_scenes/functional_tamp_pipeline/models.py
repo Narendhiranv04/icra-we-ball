@@ -232,7 +232,9 @@ class FunctionalRequirementGraph:
 
     @property
     def required_contract_complete(self) -> bool:
-        return bool(self.metadata.get("required_contract_complete", False))
+        if "required_contract_complete" in self.metadata:
+            return bool(self.metadata["required_contract_complete"])
+        return bool(self.nodes)
 
     def get_incoming_relations(self, object_role: str) -> tuple[FunctionalRelation, ...]:
         return tuple(r for r in self.relations if r.object_role == object_role)

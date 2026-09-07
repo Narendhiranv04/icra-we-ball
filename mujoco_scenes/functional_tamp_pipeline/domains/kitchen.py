@@ -639,17 +639,45 @@ def run_to_plan(
                 variant=variant_label,
             )
 
-    order = tuple(search_contract.canonical_region_ids)
+    from ..search import classify_search_state, compute_causal_search_recovery
+
+    # Gate before search: if required_contract_complete is False, zero pointless search
+    if not getattr(specification, "required_contract_complete", False):
+        order = ()
+    else:
+        order = tuple(search_contract.canonical_region_ids)
+
+    grounding_snapshots: list[dict[str, Any]] = []
 
     def kitchen_completion_predicate(current: Any) -> bool:
         current_go = build_kitchen_observed_scene_graph(current)
+        current_events = [
+            json.loads(line)
+            for line in Path(getattr(current, "events_path", "")).read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ] if getattr(current, "events_path", None) and Path(getattr(current, "events_path", "")).is_file() else []
+        current_opened = [
+            event["region_id"] for event in current_events if event.get("event") == "REGION_OPENED"
+        ]
         res = ground_graph(specification, current_go, {"search_exhausted": False})
+        search_state = classify_search_state(specification, res, search_contract, current_opened)
+        stage_label = f"after_{current_opened[-1]}" if current_opened else "initial"
+        res_dict = res.to_dict()
+        if "evidence" in res_dict and isinstance(res_dict["evidence"], dict):
+            res_dict["evidence"] = {k: v for k, v in res_dict["evidence"].items() if k != "grounding_snapshots"}
+        grounding_snapshots.append({
+            "stage": stage_label,
+            "inspected_regions": list(current_opened),
+            "search_state": search_state,
+            "grounding": res_dict,
+        })
         if observer is not None:
             observer("grounding_updated", {
                 "grounding": res.to_dict(),
                 "satisfied": bool(res.complete),
                 "status": res.status,
                 "scene_graph": current_go.to_dict(),
+                "search_state": search_state,
             })
         return bool(res.complete)
 
@@ -691,12 +719,38 @@ def run_to_plan(
         from ..grounding import ground_verified_candidate_subgraph
         ground_result = ground_verified_candidate_subgraph(specification, graph_o)
 
+    final_search_state = classify_search_state(specification, ground_result, search_contract, opened)
+    gr_dict = ground_result.to_dict()
+    if "evidence" in gr_dict and isinstance(gr_dict["evidence"], dict):
+        gr_dict["evidence"] = {k: v for k, v in gr_dict["evidence"].items() if k != "grounding_snapshots"}
+    grounding_snapshots.append({
+        "stage": "final",
+        "inspected_regions": list(opened),
+        "search_state": final_search_state,
+        "grounding": gr_dict,
+    })
+    initial_complete = bool(grounding_snapshots[0]["grounding"].get("complete", False)) if grounding_snapshots else False
+    causal_search_recovery = compute_causal_search_recovery(
+        initial_complete, opened, bool(ground_result.complete)
+    )
+
+    (output_dir / "grounding_snapshots.json").write_text(
+        json.dumps(grounding_snapshots, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    if isinstance(ground_result.evidence, dict):
+        ground_result.evidence["grounding_snapshots"] = list(grounding_snapshots)
+        ground_result.evidence["search_state"] = final_search_state
+        ground_result.evidence["causal_search_recovery"] = causal_search_recovery
+
     if observer is not None:
         observer("grounding_updated", {
             "grounding": ground_result.to_dict(),
             "satisfied": bool(ground_result.complete),
             "status": ground_result.status,
             "scene_graph": graph_o.to_dict(),
+            "search_state": final_search_state,
         })
 
     (output_dir / "observed_scene_graph.json").write_text(
