@@ -2,12 +2,15 @@
 
 Defines the single authoritative source of semantic category acceptance
 for functional roles across all domains (Kitchen, Workshop, Living Room).
-Derived directly from the reviewed declarative system configurations.
-Consumed by both GT and VLM specification providers.
+Loaded strictly and exclusively from the isolated runtime ontology configuration:
+configs/runtime_functional_semantic_ontology.yaml
+
+Zero GT/reference task knowledge is loaded at runtime.
 """
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from typing import Any
 import yaml
@@ -15,73 +18,111 @@ import yaml
 from .errors import SemanticOntologyConfigurationError
 
 PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION = "phase3_p3i_4_semantic_ontology_v1"
+RUNTIME_FUNCTIONAL_SEMANTIC_ONTOLOGY_VERSION = "runtime_functional_semantic_ontology_v1"
+RUNTIME_ONTOLOGY_FILENAME = "runtime_functional_semantic_ontology.yaml"
 
 _CACHED_ONTOLOGY: dict[str, dict[str, tuple[str, ...]]] | None = None
+_CACHED_DETECTOR_ALIASES: dict[str, list[str]] | None = None
+_CACHED_ONTOLOGY_HASH: str | None = None
 
 
 def clear_cached_ontology() -> None:
     """Clear cached system ontology for test isolation."""
-    global _CACHED_ONTOLOGY
+    global _CACHED_ONTOLOGY, _CACHED_DETECTOR_ALIASES, _CACHED_ONTOLOGY_HASH
     _CACHED_ONTOLOGY = None
+    _CACHED_DETECTOR_ALIASES = None
+    _CACHED_ONTOLOGY_HASH = None
 
 
 reset_cached_ontology = clear_cached_ontology
 
 
-def _load_declarative_system_ontology(
-    configs_dir: Path | None = None,
-) -> dict[str, dict[str, tuple[str, ...]]]:
-    """Parse and build the system role semantic ontology from reviewed declarative YAML configurations.
-
-    Fails closed immediately with SemanticOntologyConfigurationError if any required
-    configuration file or canonical role entry is missing, malformed, or empty.
-    """
+def get_runtime_semantic_ontology_path(configs_dir: Path | None = None) -> Path:
+    """Return the absolute path to the runtime functional semantic ontology."""
     if configs_dir is None:
         root = Path(__file__).resolve().parents[1]
         configs_dir = root / "configs"
+    return configs_dir / RUNTIME_ONTOLOGY_FILENAME
+
+
+def get_runtime_semantic_ontology_hash(configs_dir: Path | None = None) -> str:
+    """Compute and return the SHA-256 hash of the runtime semantic ontology."""
+    global _CACHED_ONTOLOGY_HASH
+    if _CACHED_ONTOLOGY_HASH is not None and configs_dir is None:
+        return _CACHED_ONTOLOGY_HASH
+    cfg_path = get_runtime_semantic_ontology_path(configs_dir)
+    if not cfg_path.is_file():
+        raise SemanticOntologyConfigurationError(
+            f"Missing runtime functional semantic ontology configuration: {cfg_path}"
+        )
+    h = hashlib.sha256(cfg_path.read_bytes()).hexdigest()
+    if configs_dir is None:
+        _CACHED_ONTOLOGY_HASH = h
+    return h
+
+
+def _load_declarative_system_ontology(
+    configs_dir: Path | None = None,
+) -> dict[str, dict[str, tuple[str, ...]]]:
+    """Parse and build the system role semantic ontology from the runtime-only YAML configuration.
+
+    Fails closed immediately with SemanticOntologyConfigurationError if the configuration file
+    or any canonical role entry is missing, malformed, or empty.
+    """
+    global _CACHED_DETECTOR_ALIASES, _CACHED_ONTOLOGY_HASH
+    cfg_path = get_runtime_semantic_ontology_path(configs_dir)
+    if not cfg_path.is_file():
+        raise SemanticOntologyConfigurationError(
+            f"Missing runtime functional semantic ontology: {cfg_path}"
+        )
+
+    try:
+        raw_text = cfg_path.read_text(encoding="utf-8")
+        cfg = yaml.safe_load(raw_text)
+    except Exception as e:
+        raise SemanticOntologyConfigurationError(
+            f"Malformed runtime functional semantic ontology YAML in {cfg_path}: {e}"
+        ) from e
+
+    if not isinstance(cfg, dict):
+        raise SemanticOntologyConfigurationError(
+            f"Malformed runtime functional semantic ontology config in {cfg_path}: expected mapping"
+        )
 
     ontology: dict[str, dict[str, tuple[str, ...]]] = {}
 
-    # 1. KITCHEN: Parse from configs/s1_integrated_kitchen_object_function.yaml
-    kitchen_cfg_path = configs_dir / "s1_integrated_kitchen_object_function.yaml"
-    if not kitchen_cfg_path.is_file():
+    # Extract domains structure: support either `domains: {kitchen: ...}` or `roles: {kitchen: ...}`
+    domains_data = cfg.get("domains")
+    if not isinstance(domains_data, dict):
+        domains_data = cfg.get("roles")
+    if not isinstance(domains_data, dict):
         raise SemanticOntologyConfigurationError(
-            f"Missing reviewed semantic ontology for kitchen: {kitchen_cfg_path}"
+            f"Missing or invalid 'domains' or 'roles' section in {cfg_path}"
         )
-    try:
-        kitchen_cfg = yaml.safe_load(kitchen_cfg_path.read_text(encoding="utf-8"))
-    except Exception as e:
+
+    # 1. KITCHEN
+    k_data = domains_data.get("kitchen")
+    if not isinstance(k_data, dict):
         raise SemanticOntologyConfigurationError(
-            f"Malformed kitchen semantic ontology YAML in {kitchen_cfg_path}: {e}"
-        ) from e
-    if not isinstance(kitchen_cfg, dict):
-        raise SemanticOntologyConfigurationError(
-            f"Malformed kitchen semantic ontology config in {kitchen_cfg_path}"
+            f"Missing 'kitchen' domain in {cfg_path}"
         )
-    try:
-        k_roles: dict[str, tuple[str, ...]] = {}
-        for r_name, r_data in kitchen_cfg.get("roles", {}).items():
-            if not isinstance(r_data, dict):
-                continue
-            cats = tuple(
-                item["canonical_label"]
-                for item in r_data.get("semantic_preferences", [])
-                if isinstance(item, dict) and "canonical_label" in item
-            )
-            if cats:
-                k_roles[r_name] = cats
-        for r_name, r_data in (
-            kitchen_cfg.get("symbolic_task", {}).get("source_roles", {}).items()
-        ):
-            if not isinstance(r_data, dict):
-                continue
-            labels = tuple(r_data.get("accepted_semantic_labels", []))
-            if labels:
-                k_roles[r_name] = labels
-    except Exception as e:
+    k_roles_data = k_data.get("roles", k_data)
+    if not isinstance(k_roles_data, dict):
         raise SemanticOntologyConfigurationError(
-            f"Malformed kitchen roles section in {kitchen_cfg_path}: {e}"
-        ) from e
+            f"Missing 'kitchen.roles' mapping in {cfg_path}"
+        )
+    k_roles: dict[str, tuple[str, ...]] = {}
+    for r_name, r_info in k_roles_data.items():
+        if isinstance(r_info, dict):
+            cats = r_info.get("accepted_categories") or r_info.get("semantic_preferences")
+            if isinstance(cats, (list, tuple)) and cats:
+                # Handle list of dicts or list of strings
+                if isinstance(cats[0], dict) and "canonical_label" in cats[0]:
+                    k_roles[r_name] = tuple(str(item["canonical_label"]) for item in cats if "canonical_label" in item)
+                else:
+                    k_roles[r_name] = tuple(str(c) for c in cats)
+        elif isinstance(r_info, (list, tuple)) and r_info:
+            k_roles[r_name] = tuple(str(c) for c in r_info)
 
     required_k_roles = {
         "coffee_container",
@@ -94,47 +135,29 @@ def _load_declarative_system_ontology(
     missing_k = required_k_roles - set(k_roles)
     if missing_k:
         raise SemanticOntologyConfigurationError(
-            f"Missing semantic acceptance entries for kitchen roles {sorted(missing_k)} in {kitchen_cfg_path}"
+            f"Missing semantic acceptance entries for kitchen roles {sorted(missing_k)} in {cfg_path}"
         )
     ontology["kitchen"] = k_roles
 
-    # 2. LIVING ROOM: Parse from configs/l2_integrated_region_function_task.yaml
-    living_cfg_path = configs_dir / "l2_integrated_region_function_task.yaml"
-    if not living_cfg_path.is_file():
+    # 2. LIVING ROOM
+    l_data = domains_data.get("living_room")
+    if not isinstance(l_data, dict):
         raise SemanticOntologyConfigurationError(
-            f"Missing reviewed semantic ontology for living_room: {living_cfg_path}"
+            f"Missing 'living_room' domain in {cfg_path}"
         )
-    try:
-        living_cfg = yaml.safe_load(living_cfg_path.read_text(encoding="utf-8"))
-    except Exception as e:
+    l_roles_data = l_data.get("roles", l_data)
+    if not isinstance(l_roles_data, dict):
         raise SemanticOntologyConfigurationError(
-            f"Malformed living_room semantic ontology YAML in {living_cfg_path}: {e}"
-        ) from e
-    if not isinstance(living_cfg, dict):
-        raise SemanticOntologyConfigurationError(
-            f"Malformed living_room semantic ontology config in {living_cfg_path}"
+            f"Missing 'living_room.roles' mapping in {cfg_path}"
         )
     l_roles: dict[str, tuple[str, ...]] = {}
-    sem_reqs = living_cfg.get("semantic_requirements")
-    if not isinstance(sem_reqs, dict):
-        raise SemanticOntologyConfigurationError(
-            f"Missing or malformed semantic_requirements section in {living_cfg_path}"
-        )
-
-    # Explicit functional_roles is authoritative
-    explicit_l_roles = sem_reqs.get("functional_roles")
-    if not isinstance(explicit_l_roles, dict) or not explicit_l_roles:
-        raise SemanticOntologyConfigurationError(
-            f"Missing or empty semantic_requirements.functional_roles in {living_cfg_path}"
-        )
-    try:
-        for r_name, r_cats in explicit_l_roles.items():
-            if isinstance(r_cats, (list, tuple)) and r_cats:
-                l_roles[r_name] = tuple(str(c) for c in r_cats)
-    except Exception as e:
-        raise SemanticOntologyConfigurationError(
-            f"Malformed living_room functional_roles in {living_cfg_path}: {e}"
-        ) from e
+    for r_name, r_info in l_roles_data.items():
+        if isinstance(r_info, dict):
+            cats = r_info.get("accepted_categories") or r_info.get("accepted_semantic_labels")
+            if isinstance(cats, (list, tuple)) and cats:
+                l_roles[r_name] = tuple(str(c) for c in cats)
+        elif isinstance(r_info, (list, tuple)) and r_info:
+            l_roles[r_name] = tuple(str(c) for c in r_info)
 
     required_l_roles = {
         "PERSONAL_CUP_SAUCER_REGION",
@@ -147,52 +170,49 @@ def _load_declarative_system_ontology(
     missing_l = required_l_roles - set(l_roles)
     if missing_l:
         raise SemanticOntologyConfigurationError(
-            f"Missing semantic acceptance entries for living_room roles {sorted(missing_l)} in {living_cfg_path}"
+            f"Missing semantic acceptance entries for living_room roles {sorted(missing_l)} in {cfg_path}"
         )
     ontology["living_room"] = l_roles
 
-    # 3. WORKSHOP: Parse from configs/workshop_phase1_fm_contract.yaml
-    workshop_cfg_path = configs_dir / "workshop_phase1_fm_contract.yaml"
-    if not workshop_cfg_path.is_file():
+    # 3. WORKSHOP
+    w_data = domains_data.get("workshop")
+    if not isinstance(w_data, dict):
         raise SemanticOntologyConfigurationError(
-            f"Missing reviewed semantic ontology for workshop: {workshop_cfg_path}"
+            f"Missing 'workshop' domain in {cfg_path}"
         )
-    try:
-        workshop_cfg = yaml.safe_load(workshop_cfg_path.read_text(encoding="utf-8"))
-    except Exception as e:
+    w_roles_data = w_data.get("roles", w_data)
+    if not isinstance(w_roles_data, dict):
         raise SemanticOntologyConfigurationError(
-            f"Malformed workshop semantic ontology YAML in {workshop_cfg_path}: {e}"
-        ) from e
-    if not isinstance(workshop_cfg, dict):
-        raise SemanticOntologyConfigurationError(
-            f"Malformed workshop semantic ontology config in {workshop_cfg_path}"
+            f"Missing 'workshop.roles' mapping in {cfg_path}"
         )
     w_roles: dict[str, tuple[str, ...]] = {}
-
-    # Explicit functional_roles is authoritative
-    explicit_w_roles = workshop_cfg.get("functional_roles") or workshop_cfg.get(
-        "system_role_acceptance"
-    )
-    if not isinstance(explicit_w_roles, dict) or not explicit_w_roles:
-        raise SemanticOntologyConfigurationError(
-            f"Missing or empty functional_roles in {workshop_cfg_path}"
-        )
-    try:
-        for r_name, r_cats in explicit_w_roles.items():
-            if isinstance(r_cats, (list, tuple)) and r_cats:
-                w_roles[r_name] = tuple(str(c) for c in r_cats)
-    except Exception as e:
-        raise SemanticOntologyConfigurationError(
-            f"Malformed workshop functional_roles in {workshop_cfg_path}: {e}"
-        ) from e
+    for r_name, r_info in w_roles_data.items():
+        if isinstance(r_info, dict):
+            cats = r_info.get("accepted_categories") or r_info.get("accepted_semantic_labels")
+            if isinstance(cats, (list, tuple)) and cats:
+                w_roles[r_name] = tuple(str(c) for c in cats)
+        elif isinstance(r_info, (list, tuple)) and r_info:
+            w_roles[r_name] = tuple(str(c) for c in r_info)
 
     required_w_roles = {"driver", "fastener", "repair_target"}
     missing_w = required_w_roles - set(w_roles)
     if missing_w:
         raise SemanticOntologyConfigurationError(
-            f"Missing semantic acceptance entries for workshop roles {sorted(missing_w)} in {workshop_cfg_path}"
+            f"Missing semantic acceptance entries for workshop roles {sorted(missing_w)} in {cfg_path}"
         )
     ontology["workshop"] = w_roles
+
+    # Detector aliases
+    raw_aliases = cfg.get("detector_aliases") or cfg.get("canonical_labels") or {}
+    aliases: dict[str, list[str]] = {}
+    if isinstance(raw_aliases, dict):
+        for k, v in raw_aliases.items():
+            if isinstance(v, (list, tuple)):
+                aliases[str(k)] = [str(x) for x in v]
+            elif isinstance(v, dict) and "aliases" in v:
+                aliases[str(k)] = [str(x) for x in v["aliases"]]
+    _CACHED_DETECTOR_ALIASES = aliases
+    _CACHED_ONTOLOGY_HASH = hashlib.sha256(raw_text.encode("utf-8")).hexdigest()
 
     return ontology
 
@@ -202,6 +222,14 @@ def _get_cached_ontology() -> dict[str, dict[str, tuple[str, ...]]]:
     if _CACHED_ONTOLOGY is None:
         _CACHED_ONTOLOGY = _load_declarative_system_ontology()
     return _CACHED_ONTOLOGY
+
+
+def get_runtime_detector_aliases() -> dict[str, list[str]]:
+    """Retrieve runtime detector aliases for YOLO-World perception."""
+    global _CACHED_DETECTOR_ALIASES
+    if _CACHED_DETECTOR_ALIASES is None:
+        _load_declarative_system_ontology()
+    return dict(_CACHED_DETECTOR_ALIASES or {})
 
 
 def get_system_role_semantic_categories(
@@ -233,19 +261,29 @@ def get_all_system_role_semantic_categories(domain: str) -> dict[str, tuple[str,
 def build_task_detector_vocabulary(
     system_role_categories: set[str] | list[str] | tuple[str, ...],
     raw_vlm_candidate_categories: list[str] | tuple[str, ...],
-    base_semantic_ontology: dict[str, Any],
+    base_semantic_ontology: dict[str, Any] | None = None,
 ) -> dict[str, list[str]]:
     """Build a task-scoped detector vocabulary for YOLO-World.
 
     Includes only:
       1. System canonical categories required by active task roles.
-      2. Reviewed aliases for those relevant canonical categories from the base ontology.
+      2. Reviewed aliases for those relevant canonical categories from the base ontology or runtime ontology.
       3. Raw FM candidate categories mapped to relevant canonical categories via exact
          reviewed alias lookup, or retained as unmapped detector-only prompts.
     Excludes:
       Unrelated global concepts (e.g. remote_control, book, coaster, game_controller, duster).
     """
-    base_canon_labels = dict(base_semantic_ontology.get("canonical_labels", {}))
+    if base_semantic_ontology is None:
+        base_canon_labels = get_runtime_detector_aliases()
+    elif isinstance(base_semantic_ontology, dict):
+        if "canonical_labels" in base_semantic_ontology:
+            base_canon_labels = dict(base_semantic_ontology.get("canonical_labels", {}))
+        elif "detector_aliases" in base_semantic_ontology:
+            base_canon_labels = dict(base_semantic_ontology.get("detector_aliases", {}))
+        else:
+            base_canon_labels = dict(base_semantic_ontology)
+    else:
+        base_canon_labels = get_runtime_detector_aliases()
 
     # Build reverse alias lookup (exact reviewed aliases only)
     alias_to_canon: dict[str, str] = {}

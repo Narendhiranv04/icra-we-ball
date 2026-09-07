@@ -24,6 +24,7 @@ try:
     from .search import search_until_satisfied
     from .search_order import resolve_search_order, validate_search_order_preflight
     from .spec_provider import provider_for_mode
+    from .role_semantic_ontology import get_runtime_semantic_ontology_hash
 except ImportError:
     from mujoco_scenes.functional_tamp_pipeline.errors import (
         PipelineError, VLMSpecificationError, ReplaySpecificationError, SearchRegionContractError
@@ -334,6 +335,7 @@ def _write_run_manifest(state: _RunState) -> None:
         "candidate_search_statistics": state.candidate_search_statistics,
         "failure_reason": state.failure_reason,
         "failure_category": state.failure_category,
+        "runtime_semantic_ontology_hash": get_runtime_semantic_ontology_hash(),
         "observer_errors": list(state.observer_errors),
         "artifacts": _collect_artifacts(state.run_dir),
     }

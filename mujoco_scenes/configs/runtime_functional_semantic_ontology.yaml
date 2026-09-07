@@ -1,0 +1,260 @@
+schema_version: 1
+ontology_version: "runtime_functional_semantic_ontology_v1"
+
+# Canonical runtime functional roles and accepted semantic categories by domain.
+# Authoritative source of semantic category acceptance for online execution.
+
+domains:
+  kitchen:
+    roles:
+      coffee_container:
+        accepted_categories:
+          - cup
+          - mug
+      soup_container:
+        accepted_categories:
+          - bowl
+      coffee_stirrer:
+        accepted_categories:
+          - spoon
+      soup_eating_utensil:
+        accepted_categories:
+          - spoon
+      coffee_source:
+        accepted_categories:
+          - coffee_source
+          - coffee_jar
+          - coffee_container
+          - coffee_tin
+          - jar
+      water_source:
+        accepted_categories:
+          - kettle
+          - water_source
+          - water_container
+          - teapot
+
+  living_room:
+    roles:
+      PERSONAL_CUP_SAUCER_REGION:
+        accepted_categories:
+          - side_table
+          - end_table
+      SHARED_REMOTE_REGION:
+        accepted_categories:
+          - coffee_table
+          - central_table
+          - side_table
+      CUP_SAUCER_SET:
+        accepted_categories:
+          - cup_saucer_set
+          - cup
+          - saucer
+      REMOTE:
+        accepted_categories:
+          - remote_control
+          - tv_remote
+      SEATING_POSITION:
+        accepted_categories:
+          - armchair
+          - chair
+          - sofa
+          - seating_position
+      SEATING_PAIR:
+        accepted_categories:
+          - armchair
+          - chair
+          - sofa
+          - seating_pair
+
+  workshop:
+    roles:
+      driver:
+        accepted_categories:
+          - screwdriver
+          - power_driver
+          - power_drill
+          - Phillips screwdriver
+          - cordless power drill
+      fastener:
+        accepted_categories:
+          - screw
+          - Phillips screw
+          - Phillips head screw
+      repair_target:
+        accepted_categories:
+          - repair_target
+          - workshop_frame_joint
+          - recess
+
+# Canonical detector labels and detector synonyms/aliases for perception (YOLO-World)
+detector_aliases:
+  bowl:
+    - bowl
+    - mixing bowl
+    - soup bowl
+    - serving bowl
+    - deep bowl
+    - food bowl
+    - snack bowl
+    - cereal bowl
+  cup:
+    - cup
+    - coffee cup
+    - mug
+    - coffee mug
+    - soup cup
+    - beverage cup
+    - drinking cup
+  saucer:
+    - saucer
+    - tea saucer
+    - white saucer
+    - small plate
+    - white plate
+    - dessert plate
+  plate:
+    - plate
+    - dinner plate
+  ramekin:
+    - ramekin
+  spoon:
+    - spoon
+    - teaspoon
+    - tablespoon
+    - metal spoon
+    - large spoon
+    - ladle
+    - soup spoon
+    - dessert spoon
+    - serving spoon
+    - silver spoon
+  fork:
+    - fork
+    - dinner fork
+    - table fork
+    - metal fork
+    - red-handled fork
+    - fork utensil
+  stirrer:
+    - stirrer
+    - drink stirrer
+    - coffee stirrer
+    - stirring stick
+    - stirring utensil
+  spatula:
+    - spatula
+    - turner
+  pen:
+    - pen
+    - writing pen
+  marker:
+    - marker
+    - permanent marker
+  knife:
+    - knife
+    - kitchen knife
+  jar:
+    - jar
+    - food jar
+  coffee_source:
+    - coffee jar
+    - coffee can
+    - instant coffee jar
+    - coffee tin
+    - instant coffee tin
+  kettle:
+    - kettle
+    - tea kettle
+    - teapot
+    - electric kettle
+    - silver kettle
+    - water kettle
+    - compact kettle
+    - water jug
+  bottle:
+    - bottle
+    - water bottle
+  remote_control:
+    - remote control
+    - television remote
+    - TV remote
+    - TV remote control
+  book:
+    - book
+    - hardback book
+  coaster:
+    - coaster
+    - drink coaster
+  game_controller:
+    - game controller
+    - video game controller
+    - gamepad
+  duster:
+    - duster
+    - hand duster
+    - cleaning duster
+  side_table:
+    - side table
+    - bedside table
+    - small side table
+  end_table:
+    - end table
+  accent_table:
+    - accent table
+  small_serving_table:
+    - small serving table
+    - C table
+  coffee_table:
+    - coffee table
+    - low coffee table
+    - low table
+  central_table:
+    - central table
+    - living room table
+  staging_table:
+    - staging table
+    - console table
+  rug:
+    - area rug
+    - rug
+    - carpet
+  floor:
+    - floor
+  media_console:
+    - media console
+    - TV console
+  bookshelf:
+    - bookshelf
+    - bookcase
+  armchair:
+    - armchair
+    - lounge chair
+  sofa:
+    - sofa
+    - couch
+  screwdriver:
+    - hand screwdriver
+    - manual screwdriver
+    - Phillips screwdriver
+    - cross-head screwdriver
+  power_driver:
+    - powered screwdriver
+    - electric screwdriver
+    - cordless screwdriver
+    - cordless power drill
+    - cordless drill
+    - power driver
+    - drill driver
+    - power drill
+  screw:
+    - fastener
+    - machine screw
+    - threaded screw
+    - Phillips screw
+    - cross-head screw
+    - Phillips head screw
+  hammer:
+    - hammer
+    - mallet
+    - wood mallet

@@ -452,24 +452,43 @@ def test_semantic_ontology_fails_closed_on_missing_or_malformed_config(tmp_path)
         _load_declarative_system_ontology,
     )
 
-    # Empty directory -> missing kitchen config
+    # 1. Empty directory -> missing runtime ontology file
+    with pytest.raises(SemanticOntologyConfigurationError) as exc_info:
+        _load_declarative_system_ontology(configs_dir=tmp_path)
+    assert "missing runtime functional semantic ontology" in str(exc_info.value).lower()
+
+    # 2. Malformed YAML
+    (tmp_path / "runtime_functional_semantic_ontology.yaml").write_text("invalid: [yaml: broken")
+    with pytest.raises(SemanticOntologyConfigurationError) as exc_info:
+        _load_declarative_system_ontology(configs_dir=tmp_path)
+    assert "malformed" in str(exc_info.value).lower()
+
+    # 3. Missing kitchen domain
+    (tmp_path / "runtime_functional_semantic_ontology.yaml").write_text(
+        yaml.dump({
+            "domains": {
+                "living_room": {},
+                "workshop": {},
+            }
+        })
+    )
     with pytest.raises(SemanticOntologyConfigurationError) as exc_info:
         _load_declarative_system_ontology(configs_dir=tmp_path)
     assert "kitchen" in str(exc_info.value).lower()
 
-    # Create dummy kitchen config, but missing living room
-    (tmp_path / "s1_integrated_kitchen_object_function.yaml").write_text(
+    # 4. Create dummy kitchen config, but missing living room
+    (tmp_path / "runtime_functional_semantic_ontology.yaml").write_text(
         yaml.dump({
-            "roles": {
-                "coffee_container": {"semantic_preferences": [{"canonical_label": "cup"}]},
-                "soup_container": {"semantic_preferences": [{"canonical_label": "bowl"}]},
-                "coffee_stirrer": {"semantic_preferences": [{"canonical_label": "spoon"}]},
-                "soup_eating_utensil": {"semantic_preferences": [{"canonical_label": "spoon"}]},
-            },
-            "symbolic_task": {
-                "source_roles": {
-                    "coffee_source": {"accepted_semantic_labels": ["coffee_source"]},
-                    "water_source": {"accepted_semantic_labels": ["kettle"]},
+            "domains": {
+                "kitchen": {
+                    "roles": {
+                        "coffee_container": ["cup"],
+                        "soup_container": ["bowl"],
+                        "coffee_stirrer": ["spoon"],
+                        "soup_eating_utensil": ["spoon"],
+                        "coffee_source": ["coffee_source"],
+                        "water_source": ["kettle"],
+                    }
                 }
             }
         })
@@ -478,13 +497,24 @@ def test_semantic_ontology_fails_closed_on_missing_or_malformed_config(tmp_path)
         _load_declarative_system_ontology(configs_dir=tmp_path)
     assert "living_room" in str(exc_info.value).lower()
 
-    # Create living room missing required role
-    (tmp_path / "l2_integrated_region_function_task.yaml").write_text(
+    # 5. Create living room missing required role
+    (tmp_path / "runtime_functional_semantic_ontology.yaml").write_text(
         yaml.dump({
-            "semantic_requirements": {
-                "functional_roles": {
-                    "PERSONAL_CUP_SAUCER_REGION": ["side_table"],
-                    # missing others
+            "domains": {
+                "kitchen": {
+                    "roles": {
+                        "coffee_container": ["cup"],
+                        "soup_container": ["bowl"],
+                        "coffee_stirrer": ["spoon"],
+                        "soup_eating_utensil": ["spoon"],
+                        "coffee_source": ["coffee_source"],
+                        "water_source": ["kettle"],
+                    }
+                },
+                "living_room": {
+                    "roles": {
+                        "PERSONAL_CUP_SAUCER_REGION": ["side_table"],
+                    }
                 }
             }
         })
@@ -588,43 +618,32 @@ def test_p3i_4_workshop_declarative_authority_and_fail_closed(tmp_path):
     fastener_cats = get_system_role_semantic_categories("workshop", "fastener")
     assert "screw" in fastener_cats
 
-    # 2. Config missing workshop functional_roles fails closed
-    (tmp_path / "s1_integrated_kitchen_object_function.yaml").write_text(
+    # 2. Config missing workshop domain or functional_roles fails closed
+    (tmp_path / "runtime_functional_semantic_ontology.yaml").write_text(
         yaml.dump({
-            "roles": {
-                "coffee_container": {"semantic_preferences": [{"canonical_label": "cup"}]},
-                "soup_container": {"semantic_preferences": [{"canonical_label": "bowl"}]},
-                "coffee_stirrer": {"semantic_preferences": [{"canonical_label": "spoon"}]},
-                "soup_eating_utensil": {"semantic_preferences": [{"canonical_label": "spoon"}]},
-            },
-            "symbolic_task": {
-                "source_roles": {
-                    "coffee_source": {"accepted_semantic_labels": ["coffee_source"]},
-                    "water_source": {"accepted_semantic_labels": ["kettle"]},
-                }
+            "domains": {
+                "kitchen": {
+                    "roles": {
+                        "coffee_container": ["cup"],
+                        "soup_container": ["bowl"],
+                        "coffee_stirrer": ["spoon"],
+                        "soup_eating_utensil": ["spoon"],
+                        "coffee_source": ["coffee_source"],
+                        "water_source": ["kettle"],
+                    }
+                },
+                "living_room": {
+                    "roles": {
+                        "PERSONAL_CUP_SAUCER_REGION": ["side_table"],
+                        "SHARED_REMOTE_REGION": ["coffee_table"],
+                        "CUP_SAUCER_SET": ["cup_saucer_set"],
+                        "REMOTE": ["remote_control"],
+                        "SEATING_POSITION": ["armchair"],
+                        "SEATING_PAIR": ["armchair"],
+                    }
+                },
+                # Missing workshop domain or functional roles
             }
-        })
-    )
-    (tmp_path / "l2_integrated_region_function_task.yaml").write_text(
-        yaml.dump({
-            "semantic_requirements": {
-                "functional_roles": {
-                    "PERSONAL_CUP_SAUCER_REGION": ["side_table"],
-                    "SHARED_REMOTE_REGION": ["coffee_table"],
-                    "CUP_SAUCER_SET": ["cup_saucer_set"],
-                    "REMOTE": ["remote"],
-                    "SEATING_POSITION": ["armchair", "sofa"],
-                    "SEATING_PAIR": ["armchair_pair"],
-                }
-            }
-        })
-    )
-    # Missing functional_roles in workshop YAML
-    (tmp_path / "workshop_phase1_fm_contract.yaml").write_text(
-        yaml.dump({
-            "functional_requirements": [
-                {"requirement_id": "req_obj_driver", "accepted_categories": ["screwdriver"]}
-            ]
         })
     )
     with pytest.raises(SemanticOntologyConfigurationError) as exc_info:
