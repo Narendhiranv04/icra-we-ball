@@ -368,32 +368,17 @@ def test_domain_planning_compilers_receive_operation_bindings():
     compiler = WorkshopPlanningCompiler()
     spec = FunctionalSpecification(
         domain="workshop",
-        task_instruction="Repair",
+        instruction="Repair",
         nodes={"driver": FunctionalRole(name="driver"), "fastener": FunctionalRole(name="fastener")},
-        relations=(
-            FunctionalRelation(subject_role="driver", predicate="COMPATIBLE_WITH", object_role="fastener"),
-            FunctionalRelation(subject_role="fastener", predicate="COMPATIBLE_WITH_TARGET", object_role="repair_target"),
-            FunctionalRelation(subject_role="driver", predicate="REACHES_TARGET", object_role="repair_target"),
-        ),
-        operation_groups=(
-            OperationGroup(
-                id="fastening",
-                function="Fasten screw",
-                tool_role="driver",
-                target_role="fastener",
-                required_target_count=1,
-                usage_policy="SEQUENTIAL_REUSE_ALLOWED",
-                required_relations=("COMPATIBLE_WITH",),
-            ),
-        ),
+        relations=(FunctionalRelation(subject_role="driver", predicate="COMPATIBLE_WITH", object_role="fastener"),),
         source="VLM",
     )
     graph_o = ObservedSceneGraph()
     graph_o.add_node(ObservedNode(instance_id="driver_1", entity_kind="OBJECT"))
     graph_o.add_node(ObservedNode(instance_id="fastener_1", entity_kind="OBJECT"))
-    graph_o.add_relation(ObservedRelation(predicate="COMPATIBLE_WITH", subject_id="driver_1", object_id="fastener_1", status="TRUE"))
-    graph_o.add_relation(ObservedRelation(predicate="COMPATIBLE_WITH_TARGET", subject_id="fastener_1", object_id=TARGET, status="TRUE"))
-    graph_o.add_relation(ObservedRelation(predicate="REACHES_TARGET", subject_id="driver_1", object_id=TARGET, status="TRUE"))
+    graph_o.add_relation(ObservedRelation(predicate="COMPATIBLE_WITH", subject="driver_1", object="fastener_1", status="TRUE"))
+    graph_o.add_relation(ObservedRelation(predicate="COMPATIBLE_WITH_TARGET", subject="fastener_1", object=TARGET, status="TRUE"))
+    graph_o.add_relation(ObservedRelation(predicate="REACHES_TARGET", subject="driver_1", object=TARGET, status="TRUE"))
 
     assignment = {"driver": "driver_1", "fastener": "fastener_1"}
 
@@ -426,7 +411,7 @@ def test_plan_grounding_audit_covers_all_plan_used_task_objects():
     """Gate 9: Grounding audit catches ungrounded or unassigned objects used in plan."""
     spec = FunctionalSpecification(
         domain="kitchen",
-        task_instruction="Prepare coffee",
+        instruction="Prepare coffee",
         nodes={"coffee_container": FunctionalRole(name="coffee_container")},
         source="VLM",
     )
@@ -456,3 +441,4 @@ def test_plan_grounding_audit_covers_all_plan_used_task_objects():
     assert audit_invalid["plan_uses_only_grounded_task_objects"] is False
     assert audit_invalid["plan_replay_valid"] is False
     assert any("sponge_unassigned" in v for v in audit_invalid["violations"])
+

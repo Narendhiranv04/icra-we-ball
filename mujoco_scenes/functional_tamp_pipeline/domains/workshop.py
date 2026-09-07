@@ -202,15 +202,8 @@ class WorkshopPlanningCompiler:
         if specification is not None and "VLM" in specification.source:
             observed = context.get("graph_o")
             triples = {(r.subject_role, r.predicate, r.object_role) for r in specification.relations}
-            def _resolve_obj(role_name: str) -> str | None:
-                if role_name in assignment:
-                    return assignment[role_name]
-                if role_name == "repair_target":
-                    return context.get("target_joint", TARGET)
-                return None
-
             def verified(subject_role, predicate, object_role):
-                subject, obj = _resolve_obj(subject_role), _resolve_obj(object_role)
+                subject, obj = assignment.get(subject_role), assignment.get(object_role)
                 rel = observed.get_relation(predicate, subject, obj) if observed and subject and obj else None
                 return rel is not None and rel.status == "TRUE"
             disabled_operations = specification.metadata.get("canonicalization_trace", {}).get("disabled_groups", [])
