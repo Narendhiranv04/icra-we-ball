@@ -73,6 +73,7 @@ def evaluate_all_variants(
     specification_root: Optional[Path] = None,
     dry_run: bool = True,
     resume: bool = False,
+    variants: Optional[str] = None,
 ) -> Dict[str, Any]:
     output_root = Path(output_root)
     if spec_source == "live" and not resume and output_root.exists() and any(output_root.iterdir()):
@@ -87,6 +88,8 @@ def evaluate_all_variants(
             raise ValueError(f"specification_root is required in {spec_source} mode (--spec-source {spec_source}).")
     else:
         raise ValueError(f"Invalid spec_source: {spec_source!r}. Must be 'live', 'replay', or 'raw-replay'.")
+
+    variant_filter = set(v.strip() for v in variants.split(",")) if variants else None
 
     from mujoco_scenes.functional_tamp_pipeline.evaluation_metrics import candidate_plan_valid, format_rate
     records: List[Dict[str, Any]] = []
@@ -104,11 +107,17 @@ def evaluate_all_variants(
     total_feasible = sum(len(v) for v in FEASIBLE_VARIANTS.values())
     total_infeasible = total_variants - total_feasible
     assert total_feasible == 20, f"Expected 20 feasible variants, got {total_feasible}"
-    print(f"Evaluating {total_variants} total variants ({total_feasible} feasible, {total_infeasible} infeasible, spec_source={spec_source})...")
+    if variant_filter:
+        print(f"Evaluating filtered subset: {sorted(variant_filter)} (spec_source={spec_source})...")
+    else:
+        print(f"Evaluating {total_variants} total variants ({total_feasible} feasible, {total_infeasible} infeasible, spec_source={spec_source})...")
 
-    for domain, variants in DOMAINS.items():
-        print(f"\n=== Running Domain: {domain.upper()} ({len(variants)} variants) ===")
-        for variant in variants:
+    for domain, all_domain_variants in DOMAINS.items():
+        variants_to_run = [v for v in all_domain_variants if variant_filter is None or v in variant_filter]
+        if not variants_to_run:
+            continue
+        print(f"\n=== Running Domain: {domain.upper()} ({len(variants_to_run)} variants) ===")
+        for variant in variants_to_run:
             if (domain, variant) in completed:
                 print(f"  [{variant}] preserved from prior segment")
                 continue
@@ -296,11 +305,12 @@ def evaluate_all_variants(
     infeasible_rows = [r for r in records if not r["gt_feasible"]]
     recovery_rows = [r for r in records if r["requires_observation_recovery"]]
 
-    # Section AJ Invariants check:
-    assert len(records) == 32, f"Expected 32 total variants, got {len(records)}"
-    assert len(feasible_rows) == 20, f"Expected 20 feasible variants, got {len(feasible_rows)}"
-    assert len(infeasible_rows) == 12, f"Expected 12 infeasible variants, got {len(infeasible_rows)}"
-    assert len(recovery_rows) == 13, f"Expected 13 recovery variants, got {len(recovery_rows)}"
+    # Section AJ Invariants check (only for full matrix):
+    if variant_filter is None:
+        assert len(records) == 32, f"Expected 32 total variants, got {len(records)}"
+        assert len(feasible_rows) == 20, f"Expected 20 feasible variants, got {len(feasible_rows)}"
+        assert len(infeasible_rows) == 12, f"Expected 12 infeasible variants, got {len(infeasible_rows)}"
+        assert len(recovery_rows) == 13, f"Expected 13 recovery variants, got {len(recovery_rows)}"
 
     if spec_source == "live":
         for r in records:
@@ -361,9 +371,11 @@ def evaluate_all_variants(
         raw_role_rec = (sum(raw_recalls) / len(raw_recalls)) if raw_recalls else 0.0
         raw_f1s = [r["raw_role_f1"] for r in d_recs if r.get("raw_role_f1") is not None]
         raw_role_f1 = (sum(raw_f1s) / len(raw_f1s)) if raw_f1s else 0.0
+        raw_rel_f1s = [r.get("interpreter_matched_raw_relation_f1", r.get("raw_relation_f1")) for r in d_recs if r.get("raw_relation_f1") is not None or r.get("interpreter_matched_raw_relation_f1") is not None]
+        raw_relation_f1 = (sum(raw_rel_f1s) / len(raw_rel_f1s)) if raw_rel_f1s else 0.0
         raw_spec_comp = sum(r.get("raw_vlm_spec_complete", False) for r in d_recs) / d_total if d_total else 0.0
 
-        runtime_cov = sum(r["runtime_contract_complete"] for r in d_recs) / d_total if d_total else 0.0
+        runtime_cov = sum(r.get("executable_contract_complete", r.get("runtime_contract_complete", False)) for r in d_recs) / d_total if d_total else 0.0
         canon_succ = sum(r["canonicalization_succeeded"] for r in d_recs) / d_total if d_total else 0.0
 
         eligible_cands = [r for r in d_recs if r["candidate_grounding_eligible"]]
@@ -382,7 +394,9 @@ def evaluate_all_variants(
         diagnostic_rows[d] = {
             "raw_vlm_role_recall": f"{raw_role_rec * 100:.1f}%",
             "raw_vlm_role_f1": f"{raw_role_f1 * 100:.1f}%",
+            "interpreter_matched_raw_relation_f1": f"{raw_relation_f1 * 100:.1f}%",
             "raw_complete_spec_rate": f"{raw_spec_comp * 100:.1f}%",
+            "executable_contract_complete_rate": f"{runtime_cov * 100:.1f}%",
             "runtime_contract_coverage": f"{runtime_cov * 100:.1f}%",
             "canonicalization_success": f"{canon_succ * 100:.1f}%",
             "any_verified_grounding": format_rate(any_ground),
@@ -401,27 +415,31 @@ def evaluate_all_variants(
     total_raw_role_rec = (sum(all_raw_recalls) / len(all_raw_recalls)) if all_raw_recalls else 0.0
     all_raw_f1s = [r["raw_role_f1"] for r in records if r.get("raw_role_f1") is not None]
     total_raw_role_f1 = (sum(all_raw_f1s) / len(all_raw_f1s)) if all_raw_f1s else 0.0
-    total_raw_spec_comp = sum(r.get("raw_vlm_spec_complete", False) for r in records) / n_total
+    all_raw_rel_f1s = [r.get("interpreter_matched_raw_relation_f1", r.get("raw_relation_f1")) for r in records if r.get("raw_relation_f1") is not None or r.get("interpreter_matched_raw_relation_f1") is not None]
+    total_raw_relation_f1 = (sum(all_raw_rel_f1s) / len(all_raw_rel_f1s)) if all_raw_rel_f1s else 0.0
+    total_raw_spec_comp = sum(r.get("raw_vlm_spec_complete", False) for r in records) / n_total if n_total else 0.0
 
-    total_runtime_cov = sum(r["runtime_contract_complete"] for r in records) / n_total
-    total_canon = sum(r["canonicalization_succeeded"] for r in records) / n_total
+    total_runtime_cov = sum(r.get("executable_contract_complete", r.get("runtime_contract_complete", False)) for r in records) / n_total if n_total else 0.0
+    total_canon = sum(r["canonicalization_succeeded"] for r in records) / n_total if n_total else 0.0
 
     all_eligible = [r for r in records if r["candidate_grounding_eligible"]]
     total_any_ground = (sum(r["candidate_grounding_succeeded"] for r in all_eligible) / len(all_eligible)) if all_eligible else None
     total_comp_ground = (sum(r.get("complete_candidate_grounding", False) for r in all_eligible) / len(all_eligible)) if all_eligible else None
     total_role_cov_ground = (sum(r.get("grounded_expressed_role_coverage", 0.0) for r in all_eligible) / len(all_eligible)) if all_eligible else None
 
-    total_nonempty_plans = sum(r.get("candidate_plan_length", 0) > 0 for r in records) / n_total
+    total_nonempty_plans = sum(r.get("candidate_plan_length", 0) > 0 for r in records) / n_total if n_total else 0.0
     all_plan_eligible = [r for r in records if r.get("candidate_plan_length", 0) > 0]
     total_cand_plan = (sum(r["candidate_plan_valid"] for r in all_plan_eligible) / len(all_plan_eligible)) if all_plan_eligible else None
-    total_partial = sum(1.0 if "PARTIAL" in r["candidate_plan_status"] else 0.0 for r in records) / n_total
-    total_cand_cov = sum(r["candidate_goal_coverage"] for r in records) / n_total
-    total_mean_reg = sum(len(r["regions_inspected"]) for r in records) / n_total
+    total_partial = sum(1.0 if "PARTIAL" in r["candidate_plan_status"] else 0.0 for r in records) / n_total if n_total else 0.0
+    total_cand_cov = sum(r["candidate_goal_coverage"] for r in records) / n_total if n_total else 0.0
+    total_mean_reg = sum(len(r["regions_inspected"]) for r in records) / n_total if n_total else 0.0
 
     diagnostic_rows["Overall"] = {
         "raw_vlm_role_recall": f"{total_raw_role_rec * 100:.1f}%",
         "raw_vlm_role_f1": f"{total_raw_role_f1 * 100:.1f}%",
+        "interpreter_matched_raw_relation_f1": f"{total_raw_relation_f1 * 100:.1f}%",
         "raw_complete_spec_rate": f"{total_raw_spec_comp * 100:.1f}%",
+        "executable_contract_complete_rate": f"{total_runtime_cov * 100:.1f}%",
         "runtime_contract_coverage": f"{total_runtime_cov * 100:.1f}%",
         "canonicalization_success": f"{total_canon * 100:.1f}%",
         "any_verified_grounding": format_rate(total_any_ground),
@@ -441,8 +459,9 @@ def evaluate_all_variants(
 | :--- | ---: | ---: | ---: | ---: |
 | Raw VLM role recall | {diagnostic_rows['kitchen']['raw_vlm_role_recall']} | {diagnostic_rows['living_room']['raw_vlm_role_recall']} | {diagnostic_rows['workshop']['raw_vlm_role_recall']} | {diagnostic_rows['Overall']['raw_vlm_role_recall']} |
 | Raw VLM role F1 | {diagnostic_rows['kitchen']['raw_vlm_role_f1']} | {diagnostic_rows['living_room']['raw_vlm_role_f1']} | {diagnostic_rows['workshop']['raw_vlm_role_f1']} | {diagnostic_rows['Overall']['raw_vlm_role_f1']} |
+| Interpreter-matched raw relation F1 | {diagnostic_rows['kitchen']['interpreter_matched_raw_relation_f1']} | {diagnostic_rows['living_room']['interpreter_matched_raw_relation_f1']} | {diagnostic_rows['workshop']['interpreter_matched_raw_relation_f1']} | {diagnostic_rows['Overall']['interpreter_matched_raw_relation_f1']} |
 | Raw complete spec rate | {diagnostic_rows['kitchen']['raw_complete_spec_rate']} | {diagnostic_rows['living_room']['raw_complete_spec_rate']} | {diagnostic_rows['workshop']['raw_complete_spec_rate']} | {diagnostic_rows['Overall']['raw_complete_spec_rate']} |
-| Runtime contract coverage | {diagnostic_rows['kitchen']['runtime_contract_coverage']} | {diagnostic_rows['living_room']['runtime_contract_coverage']} | {diagnostic_rows['workshop']['runtime_contract_coverage']} | {diagnostic_rows['Overall']['runtime_contract_coverage']} |
+| Executable contract complete rate | {diagnostic_rows['kitchen']['executable_contract_complete_rate']} | {diagnostic_rows['living_room']['executable_contract_complete_rate']} | {diagnostic_rows['workshop']['executable_contract_complete_rate']} | {diagnostic_rows['Overall']['executable_contract_complete_rate']} |
 | Canonicalization success | {diagnostic_rows['kitchen']['canonicalization_success']} | {diagnostic_rows['living_room']['canonicalization_success']} | {diagnostic_rows['workshop']['canonicalization_success']} | {diagnostic_rows['Overall']['canonicalization_success']} |
 | Any verified grounding | {diagnostic_rows['kitchen']['any_verified_grounding']} | {diagnostic_rows['living_room']['any_verified_grounding']} | {diagnostic_rows['workshop']['any_verified_grounding']} | {diagnostic_rows['Overall']['any_verified_grounding']} |
 | Complete candidate grounding | {diagnostic_rows['kitchen']['complete_candidate_grounding']} | {diagnostic_rows['living_room']['complete_candidate_grounding']} | {diagnostic_rows['workshop']['complete_candidate_grounding']} | {diagnostic_rows['Overall']['complete_candidate_grounding']} |
@@ -488,6 +507,8 @@ def main():
     parser.add_argument("--dry-run", action="store_true", default=True)
     parser.add_argument("--resume", action="store_true",
                         help="Preserve completed records and run only missing variants in an existing output root")
+    parser.add_argument("--variants", type=str, default=None,
+                        help="Comma-separated list of variant names to evaluate (e.g. 'K1,K3,L1,L6,W1,W3')")
     args = parser.parse_args()
 
     evaluate_all_variants(
@@ -497,6 +518,7 @@ def main():
         specification_root=args.specification_root,
         dry_run=args.dry_run,
         resume=args.resume,
+        variants=args.variants,
     )
 
 
