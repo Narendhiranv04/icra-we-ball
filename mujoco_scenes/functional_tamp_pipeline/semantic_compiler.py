@@ -105,12 +105,11 @@ def _map_role(domain: str, role: dict, doc: dict) -> tuple[str | None, str]:
         return mapped, 'TYPED_DOMAIN_SEMANTICS'
     from mujoco_scenes.workshop_phase1.requirements import (map_workshop_role_function,
         map_workshop_fixed_target_role, map_workshop_context_region_role)
-    if role['entity_kind'] in ('FIXED_TARGET', 'REGION'):
-        target = map_workshop_fixed_target_role(role)
-        if target:
-            return target, 'FIXED_TARGET_SEMANTICS'
-        if role['entity_kind'] == 'REGION':
-            return map_workshop_context_region_role(role), 'SUPPORT_CONTEXT'
+    target = map_workshop_fixed_target_role(role)
+    if target:
+        return target, 'FIXED_TARGET_SEMANTICS'
+    if role['entity_kind'] == 'REGION':
+        return map_workshop_context_region_role(role), 'SUPPORT_CONTEXT'
     mapped = map_workshop_role_function(role)
     if mapped is None and 'instrument' in position and 'group_tool' in position and 'component' not in position:
         # Operation-instrument position plus explicit implement semantics.

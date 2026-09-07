@@ -174,6 +174,7 @@ def _collect_artifacts(run_dir: Path) -> dict[str, str]:
         "plan_grounding_audit": "plan_grounding_audit.json",
         "result": "result.json",
         "detection_diagnostics": "detection_diagnostics.json",
+        "target_anchor_provenance": "target_anchor_provenance.json",
     }
     artifacts: dict[str, str] = {}
     for key, rel_path in candidate_map.items():
@@ -302,6 +303,16 @@ def _acquire_spec_or_fail(
 
 
 def _write_run_manifest(state: _RunState) -> None:
+    if state.domain == "workshop":
+        target_provenance = {
+            "anchor": "repair_target",
+            "source": "SYSTEM_CALIBRATED_MARKED_TARGET",
+            "variant_specific_answer_source": False,
+            "configured_dimensions_used_as_measurements": False,
+            "roi_only": True,
+        }
+        _write_json(state.run_dir / "target_anchor_provenance.json", target_provenance)
+
     manifest = {
         "schema_version": 1,
         "domain": state.domain,
