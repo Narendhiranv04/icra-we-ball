@@ -439,3 +439,52 @@ Directly recomputed from `benchmark_reports/final_corrected_32x1_20260908T192500
 
 **Gate 7 Status: PASSED.**
 
+---
+
+## 10. Stage 8 — Structured Output and Qwen Inference Reliability
+
+### 10.1 Request Path Inspection & Controlled Config Comparison (Section 15.1, 15.2)
+
+1. **Request Path Forensic Inspection:**
+   - **`response_format`:** JSON Schema guided decoding (`{"type": "json_schema", "json_schema": {"name": "functional_specification", "strict": True, "schema": RESPONSE_SCHEMA_V2}}`).
+   - **Backend:** vLLM OpenAI-compatible server on remote RTX 5090 accessed via local tunnel (`http://127.0.0.1:18000/v1`), model `qwen35-9b` (`Qwen/Qwen3.5-9B`, max_model_len: 32768, `--reasoning-parser qwen3`).
+   - **Chat Template:** Standard Qwen chat template via vLLM with `chat_template_kwargs: {"enable_thinking": False}`.
+   - **Output Token Cap:** `max_tokens = 8192` (`TAMP_FM_MAX_TOKENS`), well above the ~1500–2500 completion tokens required for full V2 specifications.
+   - **Sampling Parameters:** `temperature = 0.0`, `top_p = 1.0`, `top_k = 20`, `presence_penalty = 0.0`, `repetition_penalty = 1.0`.
+
+2. **Controlled Configuration Comparison:**
+   - **Config A (`enable_thinking=false`):**
+     - Latency: 26s–55s (mean ~40s).
+     - Output Validity: 100% valid JSON conforming strictly to `RESPONSE_SCHEMA_V2`.
+     - Truncation: 0% (`finish_reason == "stop"` on all variants).
+     - Content Tokens: ~1500 tokens per variant, zero wasted reasoning tokens.
+   - **Config B (`enable_thinking=true`):**
+     - Latency: >60s–93s.
+     - Truncation: Catastrophic length truncations (`finish_reason == "length"` with empty `content: ""` and 0 emitted JSON tokens), exhausting tokens inside reasoning loops.
+   - **Frozen Configuration:** **Config A (`enable_thinking=false`)**.
+
+3. **Compiler and Adapter Hardening:**
+   - In `fm_adapter.py`, explicitly attributed `finish_reason == "length"` in `_extract_json_content` to token-limit truncations in both empty-content and malformed-JSON branches, improving forensic transparency.
+   - In `semantic_compiler.py`, updated `executable_context_role = ctx_role_id if all_context else None` so that an operation pairing declaring an anchor role without context relations (e.g. K1 `anchor_role: "water_source"`) does not instantiate an invalid `OperationGroup` with empty `context_relations`, satisfying the runtime graph interface invariant.
+
+### 10.2 Gate 8 Verification
+
+- **Balanced Six-Case Live Probe (`K1, K2, L1, L2, W1, W2`):**
+  - **100% Parse & Schema Validity:** All 6 variants generated parseable JSON conforming strictly to `RESPONSE_SCHEMA_V2`.
+  - **No Output Truncation:** `finish_reason: "stop"` on 6/6 variants (0% length truncation).
+  - **No Transport Failures:** 0 HTTP errors, 0 URLErrors, 0 disconnects across all requests.
+  - **Reasonable Latency:** 26.55s (K1), 55.52s (K2), 49.99s (L1), 41.38s (L2), 31.15s (W1), 34.18s (W2).
+  - **VLM Invariant:** Exactly 1.00 semantic VLM request per variant, 0.00 replans.
+- **New Unit Test Suite:** `mujoco_scenes/functional_tamp_pipeline/tests/test_stage8_inference_reliability.py` (6 tests passed in 0.11s).
+  - Length-truncation empty content detection.
+  - Length-truncation malformed JSON detection.
+  - V2 clean JSON parsing and markdown fence stripping.
+  - Thinking disabled by default in adapter payload.
+  - Diagnostic telemetry preserves finish_reason, usage, and sanitized request metadata.
+  - V2 response schema structure enforcement.
+- **Regression Suites:**
+  - Stages 1 through 8: 58 passed in 0.63s.
+- **Commit:** `4d82bbf1` (`fix(vlm): freeze reliable structured Qwen inference config`).
+
+**Gate 8 Status: PASSED.**
+
