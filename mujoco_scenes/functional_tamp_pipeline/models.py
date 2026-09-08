@@ -236,6 +236,12 @@ class FunctionalRequirementGraph:
             return bool(self.metadata["required_contract_complete"])
         return bool(self.nodes)
 
+    @property
+    def online_executable_contract_complete(self) -> bool:
+        if "online_executable_contract_complete" in self.metadata:
+            return bool(self.metadata["online_executable_contract_complete"])
+        return self.required_contract_complete
+
     def get_incoming_relations(self, object_role: str) -> tuple[FunctionalRelation, ...]:
         return tuple(r for r in self.relations if r.object_role == object_role)
 

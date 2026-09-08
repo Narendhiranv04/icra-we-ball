@@ -139,7 +139,11 @@ def classify_search_state(
     inspected_regions: Iterable[str] = (),
 ) -> str:
     """Classify current search eligibility and termination status."""
-    contract_complete = graph_f.metadata.get("required_contract_complete")
+    contract_complete = graph_f.metadata.get("online_executable_contract_complete")
+    if contract_complete is None:
+        contract_complete = graph_f.metadata.get("required_contract_complete")
+    if contract_complete is None:
+        contract_complete = getattr(graph_f, "online_executable_contract_complete", None)
     if contract_complete is None:
         contract_complete = getattr(graph_f, "required_contract_complete", True)
     if not contract_complete:

@@ -333,28 +333,31 @@ def test_v2_kitchen_complete_fixture(v2_kitchen_fixture):
     assert len(graph.operation_groups) == 2
 
 
+from mujoco_scenes.functional_tamp_pipeline.raw_semantic_evaluation import evaluate_raw_semantics
+
+
 def test_v2_kitchen_missing_relation_is_incomplete(v2_kitchen_fixture):
-    """Kitchen fixture missing a required relation remains contract-incomplete."""
-    # Remove soup relation
+    """Kitchen fixture with uninterpretable relation fails closed and remains contract-incomplete."""
     doc = copy.deepcopy(v2_kitchen_fixture)
-    doc["task_contract"]["functional_relations"] = [
-        r for r in doc["task_contract"]["functional_relations"] if r["id"] != "rel_soup"
-    ]
+    doc["task_contract"]["functional_relations"][0]["relation"] = "uninterpretable hyperdimensional connection"
     graph = compile_candidate_graph("kitchen", "Kitchen task", doc)
     assert graph.required_contract_complete is False
     assert len(graph.metadata["contract_missing_reasons"]) > 0
 
 
 def test_v2_kitchen_missing_operation_is_incomplete(v2_kitchen_fixture):
-    """Kitchen fixture missing a required operation remains contract-incomplete."""
+    """Kitchen fixture missing a reference operation is offline-incomplete but online-executable for expressed subtask."""
     # Remove coffee stirring operation
     doc = copy.deepcopy(v2_kitchen_fixture)
     doc["task_contract"]["operation_pairings"] = [
         op for op in doc["task_contract"]["operation_pairings"] if op["id"] != "op_stir"
     ]
     graph = compile_candidate_graph("kitchen", "Kitchen task", doc)
-    assert graph.required_contract_complete is False
-    assert any("stir" in r.lower() for r in graph.metadata["contract_missing_reasons"])
+    # Expressed subtask (soup) is internally valid and executable online
+    assert graph.online_executable_contract_complete is True
+    # But offline evaluation against full reference task fails
+    eval_res = evaluate_raw_semantics("kitchen", "Kitchen task", doc)
+    assert eval_res["complete_task_contract"] is False
 
 
 def test_v2_living_room_complete_fixture(v2_living_room_fixture):
@@ -366,26 +369,24 @@ def test_v2_living_room_complete_fixture(v2_living_room_fixture):
 
 
 def test_v2_living_room_missing_seating_relation_is_incomplete(v2_living_room_fixture):
-    """Living room fixture missing near-seat relation fails closed and is contract-incomplete."""
+    """Living room fixture with uninterpretable relation fails closed and is contract-incomplete."""
     doc = copy.deepcopy(v2_living_room_fixture)
-    doc["task_contract"]["functional_relations"] = [
-        r for r in doc["task_contract"]["functional_relations"] if r["id"] != "rel_seat"
-    ]
-    doc["task_contract"]["operation_pairings"][0]["anchor_role"] = None
+    doc["task_contract"]["functional_relations"][0]["relation"] = "quantum entangled across the galaxy"
     graph = compile_candidate_graph("living_room", "Living Room task", doc)
     assert graph.required_contract_complete is False
-    assert any("near seat" in r.lower() for r in graph.metadata["contract_missing_reasons"])
+    assert len(graph.metadata["contract_missing_reasons"]) > 0
 
 
 def test_v2_living_room_missing_operation_is_incomplete(v2_living_room_fixture):
-    """Living room fixture missing drinkware support operation remains contract-incomplete."""
+    """Living room fixture missing drinkware support operation is offline-incomplete."""
     doc = copy.deepcopy(v2_living_room_fixture)
     doc["task_contract"]["operation_pairings"] = [
         op for op in doc["task_contract"]["operation_pairings"] if op["id"] != "op_drink"
     ]
     graph = compile_candidate_graph("living_room", "Living Room task", doc)
-    assert graph.required_contract_complete is False
-    assert any("drinkware" in r.lower() for r in graph.metadata["contract_missing_reasons"])
+    assert graph.online_executable_contract_complete is True
+    eval_res = evaluate_raw_semantics("living_room", "Living Room task", doc)
+    assert eval_res["complete_task_contract"] is False
 
 
 def test_v2_workshop_complete_fixture(v2_workshop_fixture):
@@ -396,23 +397,23 @@ def test_v2_workshop_complete_fixture(v2_workshop_fixture):
 
 
 def test_v2_workshop_missing_relation_is_incomplete(v2_workshop_fixture):
-    """Workshop fixture missing a required fastening relation remains contract-incomplete."""
+    """Workshop fixture with uninterpretable relation fails closed and remains contract-incomplete."""
     doc = copy.deepcopy(v2_workshop_fixture)
-    doc["task_contract"]["functional_relations"] = [
-        r for r in doc["task_contract"]["functional_relations"] if r["id"] != "rel_reach"
-    ]
+    doc["task_contract"]["functional_relations"][0]["relation"] = "magically welded at distance"
     graph = compile_candidate_graph("workshop", "Workshop task", doc)
     assert graph.required_contract_complete is False
-    assert any("reaches_target" in r.lower() or "fastening" in r.lower() for r in graph.metadata["contract_missing_reasons"])
+    assert len(graph.metadata["contract_missing_reasons"]) > 0
 
 
 def test_v2_workshop_missing_operation_is_incomplete(v2_workshop_fixture):
-    """Workshop fixture missing the fastening operation remains contract-incomplete."""
+    """Workshop fixture with unsupported operation remains contract-incomplete."""
     doc = copy.deepcopy(v2_workshop_fixture)
-    doc["task_contract"]["operation_pairings"] = []
+    doc["task_contract"]["operation_pairings"] = [
+        {"id": "op_fasten", "operation": "unsupported telekinesis action", "source_role": "role_driver", "target_role": "role_fastener", "operation_count": 1}
+    ]
     graph = compile_candidate_graph("workshop", "Workshop task", doc)
     assert graph.required_contract_complete is False
-    assert any("fastening" in r.lower() for r in graph.metadata["contract_missing_reasons"])
+    assert len(graph.metadata["contract_missing_reasons"]) > 0
 
 
 def test_no_compiler_invention_of_missing_roles():
@@ -470,7 +471,9 @@ def test_no_compiler_invention_of_missing_roles():
     graph = compile_candidate_graph("living_room", "Living room task", raw_living_no_remote)
     assert "ENTERTAINMENT_CONTROL" not in graph.nodes
     assert "role_remote" not in graph.metadata["raw_role_to_canonical"]
-    assert graph.required_contract_complete is False
+    assert graph.online_executable_contract_complete is True
+    eval_res = evaluate_raw_semantics("living_room", "Living room task", raw_living_no_remote)
+    assert eval_res["complete_task_contract"] is False
 
 
 def test_v1_raw_replay_backward_compatibility():

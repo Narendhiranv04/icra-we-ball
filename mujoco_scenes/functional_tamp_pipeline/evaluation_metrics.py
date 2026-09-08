@@ -215,6 +215,7 @@ def enrich_record(row, run_dir, task):
         candidate_plan_found=bool(row.get('candidate_plan_length')),
         nonempty_candidate_plan_generated=bool(row.get('candidate_plan_length', 0) > 0),
         raw_vlm_spec_complete=bool(raw_metrics['complete_task_contract']),
+        offline_reference_task_complete=bool(raw_metrics['complete_task_contract']),
         fm_count_correct=raw_metrics['count_correct'],
         fm_binding_correct=raw_metrics['binding_correct'],
         full_task_semantic_goal_count=row['full_task_goal_count'],
@@ -225,9 +226,14 @@ def enrich_record(row, run_dir, task):
     row['inspection_order_source'] = 'FM' if graph_dict.get('region_ranking') else 'SYSTEM_FALLBACK'
 
     # Online executable completeness is authored by the compiler and then
-    # independently gated by runtime interface validation.  GT coverage is not
+    # independently gated by runtime interface validation. GT coverage is not
     # consulted here.
-    compiler_contract_complete = bool(metadata.get('required_contract_complete', False))
+    compiler_contract_complete = bool(
+        metadata.get(
+            'online_executable_contract_complete',
+            metadata.get('required_contract_complete', row.get('runtime_contract_complete', False)),
+        )
+    )
     canon_status = metadata.get('canonicalization_status', 'FAILED')
     unresolved_semantics = metadata.get('unresolved_semantics', [])
     unresolved_roles = trace.get('unresolved_roles', [])
@@ -242,6 +248,8 @@ def enrich_record(row, run_dir, task):
         and not unresolved_relations and not unresolved_operations
         and not unverified_props
     )
+    row['online_executable_contract_complete'] = executable_contract_complete
+    row['offline_reference_task_complete'] = bool(raw_metrics.get('complete_task_contract', False))
     row['required_contract_complete'] = executable_contract_complete
     row['executable_contract_complete'] = executable_contract_complete
     row['runtime_contract_complete'] = executable_contract_complete
@@ -324,9 +332,6 @@ def enrich_record(row, run_dir, task):
     elif not row['vlm_json_valid']:
         first_cause = 'TASK_SPECIFICATION_FAILURE'
         category, stage = 'FM_STRUCTURAL_ERROR', 'RAW_FM'
-    elif not row.get('raw_vlm_spec_complete', False):
-        first_cause = 'TASK_SPECIFICATION_FAILURE'
-        category, stage = 'FM_SEMANTIC_OMISSION', 'RAW_FM'
     elif not sanitizer['succeeded']:
         first_cause = 'GRAPH_COMPILATION_FAILURE'
         category, stage = 'SANITIZER_UNRECOVERABLE', 'SANITIZER'
@@ -336,12 +341,15 @@ def enrich_record(row, run_dir, task):
     elif trace.get('unresolved_roles'):
         first_cause = 'GRAPH_COMPILATION_FAILURE'
         category, stage = 'CANONICALIZATION_AMBIGUITY', 'CANONICALIZER'
-    elif metadata.get('unresolved_semantics') or trace.get('disabled_groups'):
+    elif metadata.get('unresolved_semantics') or trace.get('disabled_groups') or trace.get('unresolved_required_operations'):
         first_cause = 'GRAPH_COMPILATION_FAILURE'
         category, stage = 'CANONICALIZATION_UNRESOLVED_REQUIRED_SEMANTIC', 'EXECUTABILITY'
     elif not executable_contract_complete:
         first_cause = 'GRAPH_COMPILATION_FAILURE'
-        category, stage = 'CANONICALIZATION_UNRESOLVED_REQUIRED_SEMANTIC', 'EXECUTABILITY'
+        category, stage = 'CONTRACT_INCOMPLETE', 'EXECUTABILITY'
+    elif not row.get('offline_reference_task_complete', row.get('raw_vlm_spec_complete', False)):
+        first_cause = 'TASK_SPECIFICATION_FAILURE'
+        category, stage = 'FM_SEMANTIC_OMISSION', 'RAW_FM'
     elif not assignments:
         if row.get('search_exhausted'):
             first_cause = 'OBJECT_DISCOVERY_FAILURE'

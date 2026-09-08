@@ -141,11 +141,20 @@ def check_required_contract_complete(
     sanitized: Any,
     unresolved: list[Any],
 ) -> tuple[bool, list[str]]:
-    """Determine whether the compiled G_F represents a complete executable task contract."""
+    """Determine whether the compiled G_F represents a generic complete executable task contract.
+
+    This function validates that everything explicitly expressed by the FM is
+    well-formed, internally coherent, mapped to valid canonical roles, relations,
+    and robot capabilities, and structurally executable. It does NOT check against
+    hidden offline reference task expectations.
+    """
     missing: list[str] = []
 
     if sanitized.semantically_incomplete:
         missing.append("Sanitizer reported semantic incompleteness")
+
+    if not nodes:
+        missing.append("No valid functional roles compiled")
 
     if trace.get("unresolved_roles"):
         missing.append(f"Unresolved roles: {trace['unresolved_roles']}")
@@ -153,69 +162,33 @@ def check_required_contract_complete(
     if trace.get("disabled_groups"):
         missing.append(f"Disabled/unsupported operations: {trace['disabled_groups']}")
 
+    if trace.get("unresolved_required_operations"):
+        missing.append(f"Unresolved required operations: {trace['unresolved_required_operations']}")
+
     if trace.get("unresolved_required_relations") or unresolved:
         missing.append(f"Unresolved required relations: {trace.get('unresolved_required_relations') or unresolved}")
 
-    d_norm = domain.strip().lower()
-    if d_norm == "kitchen":
-        group_funcs = {g.function for g in groups}
-        group_caps = {g.capability_id for g in groups if g.capability_id}
-        group_ids = {g.id for g in groups}
-        has_stir = "STIR_COFFEE" in group_funcs or "STIR_COFFEE" in group_caps or "coffee_stirring" in group_ids
-        has_soup = "PROVIDE_SOUP_EATING_UTENSIL" in group_funcs or "PROVIDE_SOUP_EATING_UTENSIL" in group_caps or "soup_serving" in group_ids
-        if not has_stir:
-            missing.append("Missing required coffee stirring operation")
-        if not has_soup:
-            missing.append("Missing required soup serving operation")
-        for g in groups:
-            if not g.required_relations:
-                missing.append(f"Operation group {g.id} has no required relations")
-            has_tool_target_rel = any(
-                (r.subject_role == g.tool_role and r.object_role == g.target_role)
-                or (r.subject_role == g.target_role and r.object_role == g.tool_role)
-                for r in relations
-            )
-            if not has_tool_target_rel:
-                missing.append(f"Missing required relation between {g.tool_role} and {g.target_role} for operation {g.id}")
+    for name, node in nodes.items():
+        if node.minimum_count < 1:
+            missing.append(f"Role {name!r} minimum count must be >= 1, got {node.minimum_count}")
+        if node.maximum_count < node.minimum_count:
+            missing.append(f"Role {name!r} maximum count ({node.maximum_count}) < minimum count ({node.minimum_count})")
+        if node.binding_policy not in {"DISTINCT", "REUSABLE", "SHARED"}:
+            missing.append(f"Role {name!r} has invalid binding policy {node.binding_policy!r}")
 
-    elif d_norm == "living_room":
-        group_funcs = {g.function for g in groups}
-        group_caps = {g.capability_id for g in groups if g.capability_id}
-        group_ids = {g.id for g in groups}
-        has_drink = "SUPPORT_DRINKWARE" in group_funcs or "SUPPORT_DRINKWARE" in group_caps or "personal_support_group" in group_ids
-        has_remote = "SUPPORT_ENTERTAINMENT_CONTROL" in group_funcs or "SUPPORT_ENTERTAINMENT_CONTROL" in group_caps or "shared_entertainment_group" in group_ids
-        has_remote_rel = any(r.predicate == "FITS_ON" for r in relations) and any(r.predicate == "ACCESSIBLE_FROM_BOTH_SEATS" for r in relations)
-        has_near_rel = any(r.predicate == "NEAR_SEAT" for r in relations) or any("NEAR_SEAT" in g.context_relations for g in groups)
-        if not has_drink:
-            missing.append("Missing required drinkware support operation")
-        if not (has_remote or has_remote_rel):
-            missing.append("Missing required remote control support operation or relations")
-        if not has_near_rel:
-            missing.append("Missing near seat relation for personal support")
+    for g in groups:
+        if getattr(g, "tool_role", None) and g.tool_role not in nodes:
+            missing.append(f"Operation group {getattr(g, 'id', 'unknown')} tool role {g.tool_role!r} not in compiled nodes")
+        if getattr(g, "target_role", None) and g.target_role not in nodes:
+            missing.append(f"Operation group {getattr(g, 'id', 'unknown')} target role {g.target_role!r} not in compiled nodes")
+        if not getattr(g, "capability_id", None) and not getattr(g, "function", None):
+            missing.append(f"Operation group {getattr(g, 'id', 'unknown')} lacks capability or function")
 
-    elif d_norm == "workshop":
-        has_comp = any(r.predicate == "COMPATIBLE_WITH" for r in relations)
-        has_reach = any(r.predicate == "REACHES_TARGET" for r in relations)
-        has_tgt_comp = any(r.predicate == "COMPATIBLE_WITH_TARGET" for r in relations)
-        if not (has_comp and has_reach and has_tgt_comp):
-            missing.append("Workshop missing one or more required fastening relations (COMPATIBLE_WITH, REACHES_TARGET, COMPATIBLE_WITH_TARGET)")
-        if "driver" not in nodes:
-            missing.append("Missing driver role")
-        if "fastener" not in nodes:
-            missing.append("Missing fastener role")
-        if "repair_target" not in nodes:
-            missing.append("Missing repair_target role")
-        has_fasten_op = any(
-            getattr(g, "function", None) == "DRIVE_FASTENER_INTO_TARGET"
-            or getattr(g, "capability_id", None) == "DRIVE_FASTENER_INTO_TARGET"
-            for g in groups
-        ) or any(
-            entry.get("capability_id") == "DRIVE_FASTENER_INTO_TARGET"
-            or entry.get("planner_operation") == "DRIVE_FASTENER_INTO_TARGET"
-            for entry in trace.get("groups", [])
-        )
-        if not has_fasten_op:
-            missing.append("Missing required fastening operation (DRIVE_FASTENER_INTO_TARGET)")
+    for r in relations:
+        if r.subject_role not in nodes:
+            missing.append(f"Relation {r.predicate!r} subject {r.subject_role!r} not in compiled nodes")
+        if r.object_role not in nodes:
+            missing.append(f"Relation {r.predicate!r} object {r.object_role!r} not in compiled nodes")
 
     complete = len(missing) == 0
     return complete, missing
@@ -625,6 +598,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             'raw_vlm_response': raw, 'raw_decomposition': raw, 'structural_sanitizer': sanitized.to_dict(),
             'canonicalization_trace': trace, 'canonicalization_status': 'PARTIAL' if partial else 'FULL',
             'required_contract_complete': contract_complete,
+            'online_executable_contract_complete': contract_complete,
             'contract_missing_reasons': contract_missing_reasons,
             'is_v2_specification': is_v2_document(raw),
             'soft_semantic_evidence': soft, 'unresolved_semantics': unresolved, 'unverified_required_properties': unverified_required, 'raw_role_to_canonical': id_map})

@@ -12,8 +12,8 @@
 
 | Stage | Status | Commit | Files changed | Tests | Raw replays | Live calls | Result | Remaining |
 |---|---|---|---|---|---|---:|---|---|
-| 0: Forensic Baseline & Safety Snapshot | PASSED | *pending* | `docs/corrective_recovery.md`, `scripts/forensics_baseline.py`, `scripts/generate_stage0_forensic_table.py` | 32-record baseline metric recompute | K1, K2, K3, L1, L6, W1, W2, W8 | 0 | Gate 0 passed: immutable forensic baseline verified; exact causal failure points established for all 8 representative cases. | Proceeding to Stage 1 |
-| 1: Separate Online Executability from Offline Completeness | NOT STARTED | | | | | 0 | | |
+| 0: Forensic Baseline & Safety Snapshot | PASSED | `62294f5a` | `docs/corrective_recovery.md`, `scripts/forensics_baseline.py`, `scripts/generate_stage0_forensic_table.py` | 32-record baseline metric recompute | K1, K2, K3, L1, L6, W1, W2, W8 | 0 | Gate 0 passed: immutable forensic baseline verified; exact causal failure points established for all 8 representative cases. | Complete |
+| 1: Separate Online Executability from Offline Completeness | PASSED | *pending* | `semantic_compiler.py`, `models.py`, `search.py`, `evaluation_metrics.py`, `test_v2_compiler_and_completeness.py`, `test_stage1_contract_separation.py` | 25 passed (`test_stage1_contract_separation.py`, `test_v2_compiler_and_completeness.py`, `test_raw_replay_and_evaluator_metrics.py`) | Synthetic & fixture separation verification | 0 | Gate 1 passed: removed domain checklists; online contract validates generic executability; offline checks reference completeness; first-cause attribution assigns GRAPH_COMPILATION_FAILURE to mapper failures. | Proceeding to Stage 2 |
 | 2: Complete Explicit Operation -> Capability Bridge | NOT STARTED | | | | | 0 | | |
 | 3: Robust Role Canonicalization (Qwen Paraphrases) | NOT STARTED | | | | | 0 | | |
 | 4: Refactor Relations (Task Semantics vs Physical Verifiers) | NOT STARTED | | | | | 0 | | |
@@ -80,3 +80,35 @@ Directly recomputed from `benchmark_reports/final_corrected_32x1_20260908T192500
 7. **Raw semantic evaluator undercoverage & overattribution:** Verified. Evaluator reported 0.0 F1 for relations and operations on K2/W1/W8 despite explicit, highly coherent FM semantics, and attributed 100% of failures to `TASK_SPECIFICATION_FAILURE` (FM omission) rather than compiler/interface rejection.
 
 **Gate 0 Status: PASSED.**
+
+---
+
+## 3. Stage 1 — Separate Online Executability from Offline Completeness
+
+### 3.1 Architectural Changes Implemented
+
+1. **Domain Checklist Removal:** Completely removed hardcoded domain checklists (`if d_norm == "kitchen":`, `elif d_norm == "living_room":`, `elif d_norm == "workshop":`) from `check_required_contract_complete` in `semantic_compiler.py`.
+2. **Generic Online Executable Contract Completeness:** Defined generic online validation ensuring:
+   - Structural sanitizer succeeded and document is not semantically incomplete.
+   - At least one role node compiled; zero unresolved roles in trace.
+   - Zero disabled groups and zero unresolved required operations.
+   - Zero unresolved required relations; all relation endpoints exist in compiled nodes.
+   - All role node counts and binding policies are internally valid (`min >= 1`, `max >= min`, valid policy).
+   - All operation groups reference valid compiled nodes and have capability/function mappings.
+3. **Field Separation in Metadata & Evaluation Record:**
+   - Online contract field: `online_executable_contract_complete` (with backward-compatible alias `required_contract_complete`).
+   - Offline benchmark reference field: `offline_reference_task_complete` (with alias `raw_vlm_spec_complete`).
+   - Added `online_executable_contract_complete` property to `FunctionalRequirementGraph` in `models.py`.
+4. **Search Eligibility Restoration:** Updated `classify_search_state` in `search.py` to prioritize `online_executable_contract_complete`. An expressed subtask that is internally coherent and executable is no longer blocked from search by hidden reference omissions.
+5. **First-Cause Attribution Correction:** Reordered failure precedence in `evaluation_metrics.py` so that compiler mapping failures (`unresolved_roles`, `disabled_groups`, sanitizer failures, contract incomplete) produce `GRAPH_COMPILATION_FAILURE`, whereas genuine FM omissions where the online contract compiled successfully produce `TASK_SPECIFICATION_FAILURE` (`FM_SEMANTIC_OMISSION`).
+
+### 3.2 Gate 1 Verification
+
+- **Unit tests:** 25 passed across `test_stage1_contract_separation.py`, `test_v2_compiler_and_completeness.py`, and `test_raw_replay_and_evaluator_metrics.py`.
+- **Proved properties:**
+  - FM omission -> `offline_reference_task_complete == False`.
+  - Self-consistent expressed subtask -> `online_executable_contract_complete == True`, reaching search state `SEARCH_RECOVERABLE`.
+  - Compiler mapper failures -> `GRAPH_COMPILATION_FAILURE`.
+  - True FM omissions -> `TASK_SPECIFICATION_FAILURE`.
+
+**Gate 1 Status: PASSED.**
