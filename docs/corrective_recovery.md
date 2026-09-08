@@ -384,3 +384,58 @@ Directly recomputed from `benchmark_reports/final_corrected_32x1_20260908T192500
 
 **Gate 6 Status: PASSED.**
 
+---
+
+## 9. Stage 7 — Fix Raw Evaluation and First-Cause Attribution
+
+### 9.1 Architectural Changes Implemented
+
+1. **Independent Offline Raw Semantic Evaluation (Section 14.1, 14.3):**
+   - Kept raw semantic evaluation strictly offline: reads reference specifications and raw FM generation texts without importing or invoking the production compiler to decide whether raw semantics exist.
+   - Evaluates semantic meaning via normalized lexical families, causal-role context, and operation groupings rather than requiring exact production predicate strings.
+
+2. **Expanded Domain Operation Coverage and Workshop Resolution (Section 14.2):**
+   - In `raw_semantic_evaluation.py`, expanded `_OPERATION_PATTERNS` to cover all active families:
+     - `FASTEN_JOINT` (`fasten`, `drive`, `tighten`, `secure fastener`, etc.)
+     - `RETURN_REUSABLE_ITEM_TO_SUPPORT` (`return`, `place back`, `dock`, `stow`, etc.)
+     - `TRANSFER_CONTENT_TO_CONTAINER` (`pour`, `transfer contents`, `dispense`, etc.)
+     - `PLACE_SHARED_REMOTE` (`place remote`, `central coffee table`, etc.)
+   - Added automatic reference operation group derivation for Workshop tasks (`FASTEN_JOINT`, `RETURN_REUSABLE_ITEM_TO_SUPPORT`), resolving the issue where Workshop operation recall was previously `None` (now achieves 1.0 precision, 1.0 recall, 1.0 F1).
+   - Fixed regex greediness in `_ROLE_PATTERNS["workshop"]` where wide wildcard matching (`(repair|fastening|marked|joint).*(target|location|hole|joint|recess)`) captured 64 characters across `joint ... hole` and overtook `fastener`. Replaced with explicit phrase boundaries so `role_2` correctly matches `fastener` and `role_3` matches `repair_target`.
+
+3. **Multi-Schema Operation Extraction in Contract Adapter:**
+   - In `evaluation_contract_adapter.py`, unified operation extraction across schemas by supporting `operation_pairings`, `operation_groups`, and `interaction_groups` with fallback precedence.
+
+4. **First-Cause Attribution with Diagnostic Flags (Section 14.4, 14.5):**
+   - Saved 8 diagnostic flags in every evaluation record:
+     - `raw_requirement_present`: whether raw document contains required semantic roles and operations.
+     - `production_mapped`: whether compiler mapped all roles and operations.
+     - `capability_mapped`: whether mapped operations map to robot capability preconditions.
+     - `physical_evidence_available`: whether candidates/evidence exist in scene.
+     - `search_attempted`: whether container inspection search was executed.
+     - `grounding_complete`: whether grounding phi* succeeded.
+     - `astar_attempted`: whether A* planning was attempted.
+     - `plan_valid`: whether generated plan is non-empty and symbolically verified.
+   - Restructured first-cause attribution hierarchy in `evaluation_metrics.py`:
+     - Raw FM omission (`not raw_requirement_present`) takes precedence over compiler contract completeness, evaluating strictly to `TASK_SPECIFICATION_FAILURE` (`FM_SEMANTIC_OMISSION`).
+     - True compiler representation failures where raw semantics are present evaluate to `GRAPH_COMPILATION_FAILURE`.
+     - Valid graph with undiscovered objects evaluates to `OBJECT_DISCOVERY_FAILURE`.
+     - Observed candidates failing joint binding evaluate to `FUNCTIONAL_ASSIGNMENT_FAILURE`.
+     - Complete graph with valid grounding failing plan generation evaluates to `PLANNING_FAILURE`.
+
+### 9.2 Gate 7 Verification
+
+- **New Test Suite:** `mujoco_scenes/functional_tamp_pipeline/tests/test_stage7_raw_eval_and_first_cause.py` (6 tests passed).
+  - Workshop raw semantic evaluation scores 1.0 recall, precision, and F1.
+  - Workshop role extraction correctly distinguishes driver, fastener, and repair target.
+  - True FM omission evaluates to `TASK_SPECIFICATION_FAILURE` (`FM_SEMANTIC_OMISSION`).
+  - Compiler representation failure on complete raw text evaluates to `GRAPH_COMPILATION_FAILURE`.
+  - Representative K2 cases correctly separated into raw vs compiler causes.
+  - Representative W1 cases correctly separated into raw vs compiler causes.
+- **Regression Suites:**
+  - `test_raw_replay_and_evaluator_metrics.py`: 10 passed in 0.44s.
+  - Stages 1 through 7: 52 passed in 0.68s.
+- **Commit:** `f89ef05a` (`fix(eval): correct raw semantic scoring and first-cause attribution`).
+
+**Gate 7 Status: PASSED.**
+
