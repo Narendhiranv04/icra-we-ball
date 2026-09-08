@@ -102,7 +102,7 @@ _SEMANTIC_PREDICATE_CUES: dict[tuple[str, str], tuple[str, ...]] = {
         "reaches joint", "reaches location",
     ),
     ("workshop", "COMPATIBLE_WITH_TARGET"): (
-        "compatible with target", "compatible with repair target", "fits into hole",
+        "compatible with", "compatible with target", "compatible with repair target", "fits into hole",
         "fits target hole", "screws into target", "threaded into target", "thread matches",
         "diameter matches", "inserted into workpiece", "fastens into target",
         "inserted into target", "secured at target", "secures into hole",

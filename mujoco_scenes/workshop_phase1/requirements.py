@@ -391,8 +391,31 @@ def map_workshop_fixed_target_role(raw: dict[str, Any] | str) -> str | None:
             "workbench location", "target location", "repair location",
         )
     )
-    if raw_k in ("REGION", "OBJECT"):
-        # For REGION/OBJECT, only match if explicitly describing receiving fastening or workpiece
+    if raw_k == "OBJECT":
+        # A movable tool/component may mention the target in its own function;
+        # that mention cannot turn the object into the fixed target.
+        movable_component_evidence = any(
+            token in norm
+            for token in (
+                "tool used", "fastening component", "threaded component",
+                "threaded fastener", "fastener capable", "screw", "bolt",
+            )
+        ) or any(
+            any(token in category for token in ("screw", "bolt", "fastener", "driver", "drill", "wrench", "tool"))
+            and not any(token in category for token in ("hole", "joint", "target", "fixture", "location"))
+            for category in raw_cats
+        )
+        if (any(k in norm for k in (
+            "workpiece hole", "target hole", "repair hole", "frame joint",
+            "assembly fixture", "receive fastener", "receive fastening",
+            "requires fastening", "requiring fastening", "requires the fastening operation",
+            "to be fastened", "assembly target",
+        )) or re.search(r"\brequir(?:es|ing)\b.*\bfasten", norm)) and not movable_component_evidence:
+            return "repair_target"
+        return None
+    if raw_k == "REGION":
+        # A region must explicitly describe the receiving/marked target rather
+        # than merely being a generic workbench support.
         if any(k in norm for k in (
             "receive fastening", "receive fastener", "fastening point", "has fastening points",
             "fastening target", "fastener target", "fastening location", "assembly fixture",
@@ -464,6 +487,8 @@ def map_workshop_role_function(raw: dict[str, Any] | str) -> str | None:
         "fastener driving tool", "screw driving tool", "tool capable of driving",
         "device that rotates the screw", "rotates the screw", "rotates screw",
         "tool capable of driving a screw", "tool to tighten screws",
+        "tool used to install", "device used to install", "used to install the component",
+        "implement used to apply", "tool used to apply", "apply the fastener",
     )
     driver_tokens = (
         "screwdriver", "screwdrivers", "drill", "drills", "driver", "drivers",
@@ -510,9 +535,15 @@ def map_workshop_role_function(raw: dict[str, Any] | str) -> str | None:
     has_instrument_indicator = any(w in words for w in driver_tokens) or any(
         c in raw_cats for c in ("screwdriver", "driver", "drill", "wrench", "tool", "bit", "power_driver", "power_drill")
     )
-    has_component_indicator = any(
+    has_component_words = any(
         w in words for w in ("component", "components", "fastener", "fasteners", "screw", "screws", "bolt", "bolts", "hardware")
-    ) or any(c in raw_cats for c in ("screw", "fastener", "bolt", "hardware"))
+    )
+    has_component_indicator = has_component_words or any(c in raw_cats for c in ("screw", "fastener", "bolt", "hardware"))
+
+    # Explicit instrument grammar remains decisive even when it names the
+    # component that receives the tool's effect.
+    if has_driver_phrase and has_instrument_indicator and not is_fastener_target:
+        return "CAN_DRIVE_SCREW"
 
     # Tool/implement semantics override generic action verb
     if (has_driver_action or has_fastener_action or has_driver_phrase or has_fastener_phrase) and has_instrument_indicator and not has_component_indicator and not is_fastener_target:
@@ -530,8 +561,8 @@ def map_workshop_role_function(raw: dict[str, Any] | str) -> str | None:
     if has_fastener_phrase and not any(w in words for w in ("driver", "screwdriver", "drill", "wrench")):
         return "CAN_FASTEN"
 
-    if has_fastener_action or any(w in words for w in fastener_tokens):
-        if not any(w in words for w in driver_tokens) and not has_driver_action:
+    if has_fastener_action or has_component_words or any(w in words for w in fastener_tokens):
+        if not has_instrument_indicator and not has_driver_action:
             return "CAN_FASTEN"
 
     return None
@@ -679,8 +710,6 @@ def canonicalize_workshop_relation(
 
     if raw_subject_canon == "fastener" and raw_object_canon == "driver":
         if any(_contains_phrase(norm_rel, k) for k in (
-            "compatible with", "compatible with driver", "compatible with tool",
-            "compatible with the driver", "compatible",
             "is driven by", "driven by", "is engaged by", "engaged by",
             "receives torque from", "driven by tool", "is driven by tool",
             "is turned by", "turned by", "receives drive from",
@@ -1917,4 +1946,3 @@ class FMRequirementProvider(RequirementProvider):
                     mapping[norm_p] = token
                     mapping[token.lower()] = token
         return mapping
-

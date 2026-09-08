@@ -120,7 +120,7 @@ class OpenAICompletionTransport:
         raise last_error or FMTransportError("Transport failed without explicit error")
 
 
-SYSTEM_PROMPT = """You are a vision-language functional-requirement specification generator.
+LEGACY_SYSTEM_PROMPT_REFERENCE = """You are a vision-language functional-requirement specification generator.
 
 Return only the requested JSON object. Do not produce an action sequence.
 
@@ -207,6 +207,25 @@ Before returning the JSON, silently decompose the user instruction into its atom
    - any reuse/shared/distinct requirement is represented.
 """
 
+
+SYSTEM_PROMPT = """You are a vision-language functional-requirement specification generator.
+
+Return only the requested JSON object. Do not produce an action sequence.
+
+Derive the complete task contract from the instruction before using the images:
+1. Split every clause into atomic required physical transformations.
+2. Declare every independently groundable physical participant, including participants not visible initially.
+3. Express each required physical or causal relation as a short free-form phrase.
+4. Express every required operation separately from its relations.
+5. Preserve explicit counts and distinct, shared, or sequentially reusable bindings.
+6. Audit that every instruction clause is represented by roles, relations, operations, counts, and bindings.
+
+Use OBJECT for selectable physical items, REGION for selectable spatial destinations, and FIXED_TARGET for non-selectable physical anchors. Do not create roles for users, actions, states, events, quantities, abstract outcomes, or unmanipulated contents. Use one counted role for equivalent instances. Do not expose or guess physical instance identifiers.
+
+Use `required_properties` only for task-critical unary characteristics of one role. Use `functional_relations` for required binary dependencies between declared roles. Use `interaction_groups` for required transformations, with explicit source, target, count, reuse policy, and optional anchor context. Keep all semantic phrases open-ended and domain-neutral.
+
+Only after the task contract is complete, use the initial RGB images to populate visible candidates, inspectable regions, and inspection order. Visibility determines observation guidance, never whether a task participant exists. Missing or occluded candidates are not grounds for declaring the task unsupported.
+"""
 
 
 RESPONSE_SCHEMA: dict[str, Any] = {
@@ -554,6 +573,14 @@ def _env_first(*names: str, default: str = "") -> str:
     return default
 
 
+def _sampling_float(name: str, default: float) -> float:
+    return float(os.environ.get(name, str(default)).strip())
+
+
+def _sampling_int(name: str, default: int) -> int:
+    return int(os.environ.get(name, str(default)).strip())
+
+
 def _short_string(value: object, maximum: int) -> bool:
     return isinstance(value, str) and bool(value.strip()) and len(value.strip()) <= maximum
 
@@ -709,7 +736,8 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
 
     allowed_top = {
         "status", "task_summary", "functional_roles",
-        "functional_relations", "interaction_groups", "inspectable_regions", "inspection_order",
+        "functional_relations", "interaction_groups", "cross_group_reuse_allowed",
+        "inspectable_regions", "inspection_order",
         "unsupported_reason",
     }
     if not set(document).issubset(allowed_top):
@@ -718,7 +746,8 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
 
     for req_field in {
         "status", "task_summary", "functional_roles",
-        "functional_relations", "interaction_groups", "inspectable_regions", "inspection_order",
+        "functional_relations", "interaction_groups", "inspectable_regions",
+        "inspection_order",
         "unsupported_reason",
     }:
         if req_field not in document:
@@ -727,6 +756,9 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
     status = document.get("status")
     if status not in {"SUPPORTED", "UNSUPPORTED"}:
         raise FMResponseValidationError("status must be 'SUPPORTED' or 'UNSUPPORTED'")
+    if ("cross_group_reuse_allowed" in document
+            and not isinstance(document["cross_group_reuse_allowed"], bool)):
+        raise FMResponseValidationError("cross_group_reuse_allowed must be a boolean")
 
     summary = document.get("task_summary", "")
     if not isinstance(summary, str) or not summary.strip():
@@ -751,7 +783,7 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
             raise FMResponseValidationError("UNSUPPORTED status must have empty inspectable_regions")
         if document.get("inspection_order") != []:
             raise FMResponseValidationError("UNSUPPORTED status must have empty inspection_order")
-        return {
+        normalized = {
             "status": "UNSUPPORTED",
             "task_summary": summary.strip(),
             "functional_roles": [],
@@ -761,6 +793,9 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
             "inspection_order": [],
             "unsupported_reason": unsupported_reason.strip(),
         }
+        if "cross_group_reuse_allowed" in document:
+            normalized["cross_group_reuse_allowed"] = document["cross_group_reuse_allowed"]
+        return normalized
 
     if unsupported_reason.strip():
         raise FMResponseValidationError("SUPPORTED status requires an empty unsupported_reason")
@@ -1039,7 +1074,7 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
             grp_record["context_relations"] = cleaned_ctx_rels
         cleaned_groups.append(grp_record)
 
-    return {
+    normalized = {
         "status": status,
         "task_summary": summary.strip(),
         "functional_roles": normalized_roles,
@@ -1049,6 +1084,9 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
         "inspection_order": cleaned_order,
         "unsupported_reason": "",
     }
+    if "cross_group_reuse_allowed" in document:
+        normalized["cross_group_reuse_allowed"] = document["cross_group_reuse_allowed"]
+    return normalized
 
 
 def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[str, Any]:
@@ -1504,10 +1542,15 @@ class FMAdapter:
         user_prompt_data = {
             "task_instruction": task_instruction.strip(),
             "request": (
-                "Using the task goal and initial-observation images, infer the "
-                "functional roles, describe the qualitative properties each role "
-                "requires, and rank any visually plausible candidate objects or "
-                "regions for each role. Decide all role and property content yourself."
+                "First derive a complete task contract from the instruction alone: "
+                "atomic transformations, every required physical participant, all "
+                "functional relations, all operations, explicit counts, and "
+                "distinct/shared/reusable bindings. Audit every instruction clause. "
+                "Use one counted role for equivalent physical instances; exclude "
+                "users, actions, states, and unmanipulated contents as standalone roles. "
+                "Use physical dependencies rather than purpose or narrative relations. "
+                "Only then use the initial images for visible candidates and search "
+                "guidance. Do not omit a participant because it is not visible."
             ),
         }
         user_text = json.dumps(
@@ -1543,12 +1586,12 @@ class FMAdapter:
                     ],
                 },
             ],
-            "temperature": 0.0,
-            "top_p": 1.0,
-            "top_k": 20,
+            "temperature": _sampling_float("TAMP_FM_TEMPERATURE", 0.0),
+            "top_p": _sampling_float("TAMP_FM_TOP_P", 1.0),
+            "top_k": _sampling_int("TAMP_FM_TOP_K", 20),
             "min_p": 0.0,
-            "presence_penalty": 0.0,
-            "repetition_penalty": 1.0,
+            "presence_penalty": _sampling_float("TAMP_FM_PRESENCE_PENALTY", 0.0),
+            "repetition_penalty": _sampling_float("TAMP_FM_REPETITION_PENALTY", 1.0),
             "max_tokens": self.max_tokens,
             "stream": False,
             "chat_template_kwargs": {"enable_thinking": os.environ.get("TAMP_FM_ENABLE_THINKING", "false").strip().lower() in ("true", "1", "yes")},

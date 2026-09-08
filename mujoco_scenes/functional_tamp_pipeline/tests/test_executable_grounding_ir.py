@@ -100,13 +100,14 @@ def test_static_runtime_isolation() -> None:
 
 
 def test_robot_verifier_contract_in_prompts() -> None:
-    """Verify generic robot verifier capabilities are present and do not leak internal predicate names."""
-    assert "Robot Verifier Capabilities" in SYSTEM_PROMPT
-    assert "open/deep cavity" in SYSTEM_PROMPT
-    assert "elongated" in SYSTEM_PROMPT
-    assert "planar support" in SYSTEM_PROMPT
-
-    # Internal predicate names must NOT be exposed in system prompts
-    assert "OPEN_CAVITY" not in SYSTEM_PROMPT
-    assert "REACHES_BOTTOM" not in SYSTEM_PROMPT
-    assert "COMPATIBLE_WITH_TARGET" not in SYSTEM_PROMPT
+    """The FM prompt must not expose backend verifier capabilities or predicates."""
+    forbidden = (
+        "Robot Verifier Capabilities",
+        "open/deep cavity",
+        "elongated",
+        "planar support",
+        "OPEN_CAVITY",
+        "REACHES_BOTTOM",
+        "COMPATIBLE_WITH_TARGET",
+    )
+    assert not any(term in SYSTEM_PROMPT for term in forbidden)

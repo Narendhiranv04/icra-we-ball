@@ -443,7 +443,12 @@ def map_living_room_role_function(raw: dict[str, Any] | str) -> str | None:
     norm = _phrase(text)
     if not norm:
         return None
-    if any(_contains_phrase(norm, w) for w in ("television", "screen", "monitor", "display", "wall")):
+    # Exclude roles describing the display itself, while retaining explicit
+    # remote-control support language ("television remote" is not a screen).
+    display_words = ("television", "screen", "monitor", "display", "wall")
+    remote_words = ("remote", "remote control", "control surface")
+    if (any(_contains_phrase(norm, word) for word in display_words)
+            and not any(_contains_phrase(norm, word) for word in remote_words)):
         return None
 
     # 1. Exact or forward phrase match against reviewed aliases
@@ -680,6 +685,10 @@ def canonicalize_living_room_relation(
     norm = _phrase(relation_text)
     if not norm:
         raise UnmappedFunctionalConceptError("Empty relation text cannot be mapped")
+    if norm in {"on", "placed", "holds", "accessible", "near", "support", "fit"}:
+        raise UnmappedFunctionalConceptError(
+            f"Generic relation fragment {relation_text!r} is insufficient to establish a reviewed Living Room relation"
+        )
 
     alias_table = LIVING_BINARY_RELATION_ALIASES if relation_aliases is None else relation_aliases
     matched_predicates = set()
@@ -720,12 +729,6 @@ def canonicalize_living_room_relation(
                 "both seats", "compatible with",
             )):
                 matched_predicates.add("ACCESSIBLE_FROM_BOTH_SEATS")
-
-    # Generic fragments that alone cannot establish a relation without contextual endpoints
-    if not matched_predicates and norm in {"on", "placed", "holds", "accessible", "near", "support", "fit"}:
-        raise UnmappedFunctionalConceptError(
-            f"Generic relation fragment {relation_text!r} is insufficient to establish a reviewed Living Room relation"
-        )
 
     if not matched_predicates:
         raise UnmappedFunctionalConceptError(

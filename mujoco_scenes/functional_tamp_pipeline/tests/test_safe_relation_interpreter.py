@@ -120,6 +120,19 @@ def test_known_semantically_matching_relations_compile():
     assert res_w3.succeeded is True
     assert res_w3.interpreted_predicates[0].predicate_name == "COMPATIBLE_WITH_TARGET"
 
+    # Generic compatibility language denotes compatibility; endpoint
+    # signatures only disambiguate which physical compatibility checker owns it.
+    res_w4 = interpret_relation(
+        domain="workshop",
+        raw_phrase="is compatible with",
+        subject_role="fastener",
+        object_role="repair_target",
+        subject_kind="OBJECT",
+        object_kind="FIXED_TARGET",
+    )
+    assert res_w4.succeeded is True
+    assert res_w4.interpreted_predicates[0].predicate_name == "COMPATIBLE_WITH_TARGET"
+
     # Kitchen INSERTABLE_IN
     res_k1 = interpret_relation(
         domain="kitchen",
@@ -285,4 +298,3 @@ def test_w1_w2_regression_fixtures_compile_cleanly():
         graph = compile_candidate_graph("workshop", "Drive screw", doc)
         assert len(graph.roles) >= 2
         assert len(graph.relations) >= 1
-

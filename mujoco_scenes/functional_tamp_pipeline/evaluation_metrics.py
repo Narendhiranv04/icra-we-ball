@@ -18,6 +18,24 @@ def format_rate(value):
     return 'N/A' if value is None else f'{100 * value:.1f}%'
 
 
+def compute_primary_metrics(records):
+    """Compute the seven paper metrics with one shared denominator policy."""
+    records = list(records)
+    feasible = [record for record in records if record.get('gt_feasible')]
+    infeasible = [record for record in records if not record.get('gt_feasible')]
+    recovery = [record for record in records if record.get('requires_observation_recovery')]
+    return {
+        'outcome_correct': 100.0 * rate(sum(bool(r.get('outcome_correct')) for r in records), len(records)) if records else 0.0,
+        'feasible_success': 100.0 * rate(sum(bool(r.get('full_task_satisfied')) for r in feasible), len(feasible)) if feasible else 0.0,
+        'feasibility_recovery': 100.0 * rate(sum(bool(r.get('full_task_satisfied')) for r in recovery), len(recovery)) if recovery else 0.0,
+        # Infeasible scenes have no achievable user-level goal denominator.
+        'goal_coverage': 100.0 * rate(sum(float(r.get('full_task_goal_coverage', 0.0)) for r in feasible), len(feasible)) if feasible else 0.0,
+        'false_completion': 100.0 * rate(sum(bool(r.get('false_completion')) for r in infeasible), len(infeasible)) if infeasible else 0.0,
+        'vlm_requests': rate(sum(int(r.get('semantic_vlm_requests', 0)) for r in records), len(records)) or 0.0,
+        'high_level_replans': rate(sum(int(r.get('high_level_replans', 0)) for r in records), len(records)) or 0.0,
+    }
+
+
 def validation_artifacts(run_dir):
     run_dir = Path(run_dir)
     for name in ('action_sequence/action_plan.json', 'action_plan.json', 'action_sequence/plan.json',
@@ -90,9 +108,21 @@ def full_task_coverage(domain, run_dir):
             return any(r.get('predicate') == predicate and r.get('subject_id', r.get('subject')) == subject
                        and r.get('object_id', r.get('object')) == target and r.get('status') == 'TRUE'
                        for r in observed_relations)
-        personal_bindings = grounding.get('operation_bindings', {}).get(
-            'personal_support_group', []
-        )
+        # Operation IDs are FM-authored bookkeeping, not task semantics.  Score
+        # any verified binding whose endpoints have the required semantic roles.
+        operation_bindings = grounding.get('operation_bindings', {})
+        personal_bindings = []
+        personal_regions = set(ids('PERSONAL_CUP_SAUCER_REGION'))
+        personal_sets = set(ids('CUP_SAUCER_SET'))
+        seats = set(ids('SEATING_POSITION'))
+        for bindings in operation_bindings.values() if isinstance(operation_bindings, dict) else ():
+            for binding in bindings if isinstance(bindings, list) else ():
+                context = binding.get('context', {}) if isinstance(binding, dict) else {}
+                seat = context.get('SEATING_POSITION')
+                if (binding.get('tool_id') in personal_regions
+                        and binding.get('target_id') in personal_sets
+                        and seat in seats):
+                    personal_bindings.append(binding)
         for binding in personal_bindings[:2]:
             slot = binding.get('target_id')
             support = binding.get('tool_id')
@@ -137,9 +167,12 @@ def enrich_record(row, run_dir, task):
     sanitizer = sanitize_functional_graph(raw).to_dict()
     trace = metadata.get('canonicalization_trace', {})
     raw_metrics = evaluate_raw_semantics(row['domain'], task, raw)
-    for kind in ('role', 'relation', 'group'):
+    for kind in ('role', 'relation', 'operation'):
         for metric, value in raw_metrics[kind].items():
             row[f'raw_{kind}_{metric}'] = value
+    # Historical name retained only as a report compatibility alias.
+    for metric, value in raw_metrics['operation'].items():
+        row[f'raw_group_{metric}'] = value
     grounding = read_json(run_dir / 'graph_grounding_result.json')
     assignments = grounding.get('assignment') or {}
     grounding_status = grounding.get('status', '')
@@ -154,8 +187,16 @@ def enrich_record(row, run_dir, task):
             statuses = analyze_executability(FunctionalRequirementGraph.from_dict(graph_dict), assignments)
         except Exception:
             statuses = []
-    required_raw_recalls = [raw_metrics[kind]['recall'] for kind in ('role', 'relation', 'group')
-                            if raw_metrics[kind]['recall'] is not None]
+    compiled_graph = None
+    runtime_interface_valid = False
+    if graph_dict:
+        try:
+            compiled_graph = FunctionalRequirementGraph.from_dict(graph_dict)
+            from .task_interface_validator import validate_runtime_gf
+            validate_runtime_gf(compiled_graph)
+            runtime_interface_valid = True
+        except Exception:
+            compiled_graph = None
     row.update(task_instruction=task, git_commit=manifest.get('git_commit'),git_dirty=manifest.get('git_dirty'),
         model=diagnostic.get('model') or manifest.get('provider_model'), prompt_hash=compute_prompt_and_schema_hash(),
         inference_config=manifest.get('inference_config', {}), transport_retries=manifest.get('transport_retries', 0),
@@ -166,39 +207,84 @@ def enrich_record(row, run_dir, task):
         dropped_relations=[r for r in sanitizer['repairs'] if r['code'] == 'DANGLING_RELATION_REFERENCE'],
         merged_roles=trace.get('merged_roles', []), disambiguated_roles=trace.get('disambiguated_roles', []),
         grounded_roles=assignments, ungrounded_expressed_roles=grounding.get('missing_roles', []),
-        candidate_requirement_statuses=statuses, candidate_grounding_eligible=bool(graph_dict),
+        candidate_requirement_statuses=statuses,
         candidate_grounding_succeeded=bool(assignments),
         complete_candidate_grounding=is_complete_grounding,
         grounded_expressed_role_coverage=grounded_expressed_role_cov,
         candidate_plan_eligible=row.get('astar_invocations',0)>0,
         candidate_plan_found=bool(row.get('candidate_plan_length')),
         nonempty_candidate_plan_generated=bool(row.get('candidate_plan_length', 0) > 0),
-        raw_vlm_spec_complete=bool(isinstance(raw, dict) and required_raw_recalls
-                                   and all(value == 1.0 for value in required_raw_recalls)),
+        raw_vlm_spec_complete=bool(raw_metrics['complete_task_contract']),
+        fm_count_correct=raw_metrics['count_correct'],
+        fm_binding_correct=raw_metrics['binding_correct'],
         full_task_semantic_goal_count=row['full_task_goal_count'],
         full_task_semantic_goal_satisfied_count=row['full_task_goal_satisfied_count'],
-        search_eligible=bool(graph_dict and row['regions_available']),
         canonical_role_coverage=raw_metrics['role']['recall'],
         execution_state=manifest.get('execution_state'),
         raw_semantic_matching_method=raw_metrics['matching_method'])
     row['inspection_order_source'] = 'FM' if graph_dict.get('region_ranking') else 'SYSTEM_FALLBACK'
 
+    # Online executable completeness is authored by the compiler and then
+    # independently gated by runtime interface validation.  GT coverage is not
+    # consulted here.
+    compiler_contract_complete = bool(metadata.get('required_contract_complete', False))
+    canon_status = metadata.get('canonicalization_status', 'FAILED')
+    unresolved_semantics = metadata.get('unresolved_semantics', [])
+    unresolved_roles = trace.get('unresolved_roles', [])
+    disabled_groups = trace.get('disabled_groups', [])
+    unresolved_relations = trace.get('unresolved_required_relations', [])
+    unresolved_operations = trace.get('unresolved_required_operations', [])
+    unverified_props = metadata.get('unverified_required_properties', [])
+    executable_contract_complete = bool(
+        compiler_contract_complete and runtime_interface_valid
+        and canon_status == 'FULL' and not unresolved_semantics
+        and not unresolved_roles and not disabled_groups
+        and not unresolved_relations and not unresolved_operations
+        and not unverified_props
+    )
+    row['required_contract_complete'] = executable_contract_complete
+    row['executable_contract_complete'] = executable_contract_complete
+    row['runtime_contract_complete'] = executable_contract_complete
+    row['required_compiler_interpretation'] = bool(
+        runtime_interface_valid and canon_status == 'FULL'
+        and not unresolved_semantics and not unresolved_roles
+        and not disabled_groups and not unresolved_relations and not unresolved_operations
+    )
+    row['candidate_grounding_eligible'] = executable_contract_complete
+
     # Causal search recovery: initial grounding before search was incomplete,
     # at least one region was inspected, and final grounding became complete.
     initial_grounding_complete = None
-    events_file = run_dir / 'trajectory_events.jsonl'
-    if events_file.exists():
-        try:
-            for line in events_file.read_text().splitlines():
-                if not line.strip():
-                    continue
-                evt = json.loads(line)
-                if evt.get('event') == 'grounding_updated':
-                    gr_payload = evt.get('payload', {}).get('grounding', {})
-                    initial_grounding_complete = bool(gr_payload.get('complete', False) or gr_payload.get('status') == 'COMPLETE')
-                    break
-        except Exception:
-            pass
+    search_states = []
+    snapshots = read_json(run_dir / 'grounding_snapshots.json', default=[])
+    if isinstance(snapshots, list) and snapshots:
+        initial = snapshots[0]
+        initial_payload = initial.get('grounding', {})
+        initial_grounding_complete = bool(initial_payload.get('complete', False) or initial_payload.get('satisfied', False) or initial_payload.get('status') == 'COMPLETE')
+        search_states = [snap.get('search_state') for snap in snapshots]
+    else:
+        # Historical archives before grounding_snapshots.json recorded the same
+        # pre-search state in their first grounding_updated trajectory event.
+        events_file = run_dir / 'trajectory_events.jsonl'
+        if events_file.exists():
+            try:
+                for line in events_file.read_text().splitlines():
+                    if not line.strip():
+                        continue
+                    event = json.loads(line)
+                    if event.get('event') == 'grounding_updated':
+                        payload = event.get('payload', {})
+                        initial_payload = payload.get('grounding', {})
+                        initial_grounding_complete = bool(
+                            initial_payload.get('complete', False)
+                            or initial_payload.get('satisfied', False)
+                            or initial_payload.get('status') == 'COMPLETE'
+                        )
+                        if payload.get('search_state'):
+                            search_states.append(payload['search_state'])
+                        break
+            except (OSError, ValueError, TypeError):
+                pass
     if initial_grounding_complete is None:
         if not row.get('regions_inspected'):
             initial_grounding_complete = is_complete_grounding
@@ -212,23 +298,8 @@ def enrich_record(row, run_dir, task):
     )
     row['search_recovery_succeeded'] = causal_search_recovery
     row['initial_grounding_complete'] = initial_grounding_complete
-
-    # Online executable contract completeness separate from offline reference coverage
-    canon_status = metadata.get('canonicalization_status', 'FAILED')
-    unresolved_semantics = metadata.get('unresolved_semantics', [])
-    unresolved_roles = trace.get('unresolved_roles', [])
-    disabled_groups = trace.get('disabled_groups', [])
-    unverified_props = metadata.get('unverified_required_properties', [])
-    executable_contract_complete = bool(
-        row.get('canonicalization_succeeded')
-        and canon_status == 'FULL'
-        and not unresolved_semantics
-        and not unresolved_roles
-        and not disabled_groups
-        and not unverified_props
-    )
-    row['executable_contract_complete'] = executable_contract_complete
-    row['runtime_contract_complete'] = executable_contract_complete
+    row['search_state_trace'] = search_states
+    row['search_eligible'] = bool(executable_contract_complete and 'SEARCH_RECOVERABLE' in search_states)
 
     # Incomplete semantics cannot prove full-task scene infeasibility.
     if not row['gt_feasible'] and not row['runtime_contract_complete']:
@@ -238,7 +309,10 @@ def enrich_record(row, run_dir, task):
     first_cause = None
     category = None
     stage = None
-    if not row['gt_feasible']:
+    if row.get('terminal_status') == 'PIPELINE_EXCEPTION' or row.get('failure_category') == 'EVAL_INFRA_ERROR':
+        first_cause = 'EVAL_INFRA_ERROR'
+        category, stage = 'EVAL_INFRA_ERROR', 'INFRASTRUCTURE'
+    elif not row['gt_feasible']:
         if row.get('false_completion'):
             first_cause = 'TASK_SPECIFICATION_FAILURE'
             category, stage = 'FALSE_COMPLETION', 'EVALUATION'
@@ -250,12 +324,12 @@ def enrich_record(row, run_dir, task):
     elif not row['vlm_json_valid']:
         first_cause = 'TASK_SPECIFICATION_FAILURE'
         category, stage = 'FM_STRUCTURAL_ERROR', 'RAW_FM'
-    elif not sanitizer['succeeded']:
-        first_cause = 'TASK_SPECIFICATION_FAILURE'
-        category, stage = 'SANITIZER_UNRECOVERABLE', 'SANITIZER'
     elif not row.get('raw_vlm_spec_complete', False):
         first_cause = 'TASK_SPECIFICATION_FAILURE'
         category, stage = 'FM_SEMANTIC_OMISSION', 'RAW_FM'
+    elif not sanitizer['succeeded']:
+        first_cause = 'GRAPH_COMPILATION_FAILURE'
+        category, stage = 'SANITIZER_UNRECOVERABLE', 'SANITIZER'
     elif not row['canonicalization_succeeded']:
         first_cause = 'GRAPH_COMPILATION_FAILURE'
         category, stage = 'CANONICALIZATION_AMBIGUITY', 'CANONICALIZER'

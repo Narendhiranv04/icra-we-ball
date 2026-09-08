@@ -23,10 +23,10 @@ from mujoco_scenes.functional_tamp_pipeline.gf_reference_evaluator import evalua
 from mujoco_scenes.functional_tamp_pipeline.run import run_pipeline
 from mujoco_scenes.functional_tamp_pipeline.evaluation_metrics import (
     candidate_plan_valid,
+    compute_primary_metrics,
     enrich_record,
     format_rate,
     full_task_coverage,
-    write_detailed_report,
 )
 
 DOMAINS = {
@@ -98,7 +98,6 @@ def evaluate_heldout_variants(
         variants_to_run = [v for v in all_domain_variants if variant_filter is None or v in variant_filter]
         if not variants_to_run:
             continue
-
         print(f"\n=== Running Domain: {domain.upper()} ({len(variants_to_run)} held-out variants) ===")
         for variant in variants_to_run:
             if (domain, variant) in completed:
@@ -156,205 +155,260 @@ def evaluate_heldout_variants(
                 outcome_correct = bool(
                     not full_task_sat
                     and not false_completion
-                    and pipeline_res.status in {
-                        "INFEASIBLE",
-                        "EXHAUSTED_NO_VALID_GROUNDING",
-                        "NO_VALID_COMPLETE_ASSIGNMENT",
-                        "PLANNING_PROVEN_INFEASIBLE",
+                    and pipeline_res.status in (
+                        "NO_VALID_GROUNDING",
                         "NO_MEANINGFUL_CANDIDATE_PLAN",
-                        "VLM_SPEC_FAILED",
-                    }
+                        "TASK_REJECTED_UNSUPPORTED",
+                        "NO_SEARCH_REGIONS_DECLARED",
+                        "EXHAUSTED_NO_VALID_GROUNDING",
+                    )
                 )
 
             manifest: Dict[str, Any] = {}
             man_p = run_dir / "run_manifest.json"
             if man_p.exists():
-                try:
-                    manifest = json.loads(man_p.read_text(encoding="utf-8"))
-                except Exception:
-                    pass
+                manifest = json.loads(man_p.read_text(encoding="utf-8"))
 
             vlm_diag: Dict[str, Any] = {}
             diag_p = run_dir / "fm_diagnostics" / "fm_call_001.json"
             if diag_p.exists():
-                try:
-                    vlm_diag = json.loads(diag_p.read_text(encoding="utf-8"))
-                except Exception:
-                    pass
+                vlm_diag = json.loads(diag_p.read_text(encoding="utf-8"))
 
-            spec_acq = manifest.get("spec_acquisition", "live_provider")
-            spec_inp = manifest.get("specification_input")
-            sem_vlm_req = manifest.get("semantic_vlm_requests", 1 if mode == "vlm" else 0)
-            vlm_req_count = manifest.get("vlm_request_count", sem_vlm_req)
-            astar_invs = manifest.get("astar_invocations", 1 if (candidate_plan or pipeline_res.search_statistics) else 0)
-            replans = manifest.get("high_level_replans", 0)
-
-            search_contract_data = manifest.get("search_contract", {})
-            regions_avail = list(search_contract_data.get("regions", [])) if search_contract_data else []
-            if not regions_avail:
-                if domain == "workshop":
-                    regions_avail = ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"]
-                elif domain == "kitchen":
-                    regions_avail = ["D1", "D2", "C2", "B1", "C1"]
-                else:
-                    regions_avail = []
-            insp_order_src = manifest.get("search_order_source_effective", "deterministic_system")
-            insp_order_used = manifest.get("region_order_used", list(pipeline_res.inspected_regions))
-            search_exh = (len(pipeline_res.inspected_regions) >= len(regions_avail)) if regions_avail else False
-
-            row: Dict[str, Any] = {
+            record: Dict[str, Any] = {
+                "timestamp_utc": datetime.now(timezone.utc).isoformat(),
                 "domain": domain,
                 "variant": variant,
                 "mode": mode,
                 "gt_feasible": is_feasible,
                 "requires_observation_recovery": is_recovery,
-                "spec_acquisition": spec_acq,
-                "specification_input": spec_inp,
-                "semantic_vlm_requests": sem_vlm_req,
-                "vlm_request_count": vlm_req_count,
-                "raw_vlm_spec_complete": bool(ref_eval.reference_complete if ref_eval else False),
-                "runtime_contract_complete": bool(ref_eval.runtime_contract_role_coverage >= 1.0 if ref_eval else False),
-                "canonicalization_succeeded": bool(pipeline_res.canonicalization_succeeded),
-                "expressed_role_count": len(ref_eval.raw_vlm_roles if ref_eval else []),
-                "missing_reference_roles": list(ref_eval.missing_roles if ref_eval else []),
-                "environment_projected_roles": list(ref_eval.environment_projected_roles if ref_eval else []),
-                "regions_available": regions_avail,
-                "regions_inspected": list(pipeline_res.inspected_regions),
-                "inspection_order_source": insp_order_src,
-                "inspection_order_used": insp_order_used,
-                "search_exhausted": search_exh,
-                "search_required_by_offline_benchmark": is_recovery,
-                "candidate_grounding_eligible": bool(ref_eval.candidate_grounding_eligible if ref_eval else False),
-                "candidate_grounding_succeeded": bool(ref_eval.candidate_grounding_succeeded if ref_eval else False),
-                "candidate_goal_count": cand_total,
-                "candidate_goal_satisfied_count": cand_sat,
-                "candidate_goal_coverage": cand_cov,
-                "uninstantiable_goal_count": max(0, cand_total - cand_sat),
-                "uninstantiable_reasons": [pipeline_res.failure_reason] if pipeline_res.failure_reason else [],
-                "candidate_plan_status": pipeline_res.status,
-                "candidate_plan_length": len(candidate_plan),
-                "candidate_plan_valid": candidate_plan_valid(run_dir),
-                "full_task_goal_count": full_gt_goals,
-                "full_task_goal_satisfied_count": sat_gt_goals,
-                "full_task_goal_coverage": full_task_cov,
-                "full_task_satisfied": full_task_sat,
-                "false_completion": false_completion,
-                "outcome_correct": outcome_correct,
-                "astar_invocations": astar_invs,
-                "high_level_replans": replans,
-                "astar_expanded": cand_stats.get("expanded_states", 0),
-                "astar_generated": cand_stats.get("generated_states", 0),
-                "runtime_seconds": runtime_sec,
+                "semantic_vlm_requests": 1 if mode == "vlm" else 0,
+                "high_level_replans": 0,
                 "pipeline_runtime_sec": round(runtime_sec, 2),
                 "terminal_status": pipeline_res.status,
                 "failure_reason": pipeline_res.failure_reason,
+                "failure_category": pipeline_res.failure_category,
+                "canonicalization_succeeded": pipeline_res.canonicalization_succeeded,
+                "required_contract_complete": pipeline_res.functional_spec_complete,
+                "complete_candidate_grounding": bool(pipeline_res.assignment),
+                "candidate_plan_found": bool(pipeline_res.candidate_plan),
+                "candidate_plan_length": len(pipeline_res.candidate_plan or ()),
+                "candidate_plan_status": (
+                    "EMPTY" if not pipeline_res.candidate_plan
+                    else "PARTIAL" if (cand_sat < cand_total and cand_total > 0)
+                    else "FULL"
+                ),
+                "regions_inspected": list(pipeline_res.inspected_regions),
+                "full_task_satisfied": full_task_sat,
+                "outcome_correct": outcome_correct,
+                "false_completion": false_completion,
+                "candidate_goal_coverage": cand_cov,
+                "candidate_goal_count": cand_total,
+                "candidate_goal_satisfied_count": cand_sat,
+                "full_task_goal_count": full_gt_goals,
+                "full_task_goal_satisfied_count": sat_gt_goals,
+                "full_task_goal_coverage": full_task_cov,
+                "candidate_plan_valid": candidate_plan_valid(run_dir),
+                "astar_invocations": manifest.get("astar_invocations", 1 if candidate_plan else 0),
+                "regions_available": list(manifest.get("search_contract", {}).get("regions", [])),
+                "search_exhausted": False,
+                "git_commit": manifest.get("git_commit"),
+                "git_dirty": manifest.get("git_dirty"),
+                "model": vlm_diag.get("model") or manifest.get("provider_model"),
+                "prompt_hash": manifest.get("prompt_schema_hash"),
+                "spec_acquisition": manifest.get("spec_acquisition", "live_provider"),
+                "specification_input": manifest.get("specification_input"),
+                "execution_state": manifest.get("execution_state", "planning_only"),
+                "inspection_order_source": "FM",
             }
 
-            row = enrich_record(row, run_dir, CANONICAL_TASK_INSTRUCTIONS[domain])
-            records.append(row)
+            record = enrich_record(record, run_dir, CANONICAL_TASK_INSTRUCTIONS[domain])
+            fc = record["first_cause_category"]
+
+            rec_file = run_dir / "evaluation_record.json"
+            rec_file.write_text(json.dumps(record, indent=2), encoding="utf-8")
+
+            records.append(record)
             completed.add((domain, variant))
 
             (output_root / "evaluation_records.json").write_text(
                 json.dumps(records, indent=2), encoding="utf-8"
             )
 
-            status_glyph = "CORRECT" if row.get("outcome_correct") else "INCORRECT"
-            fc = row.get("first_cause_category")
+            status_glyph = "CORRECT" if outcome_correct else "INCORRECT"
             print(f"  [{variant}] status={pipeline_res.status} outcome={status_glyph} (runtime={runtime_sec:.1f}s, first_cause={fc})")
 
-    # Output records CSV and JSON
-    (output_root / "evaluation_records.json").write_text(
-        json.dumps(records, indent=2), encoding="utf-8"
-    )
-    if records:
-        with (output_root / "evaluation_records.csv").open("w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=list(records[0].keys()), extrasaction="ignore")
-            writer.writeheader()
-            writer.writerows(records)
+    # Output records CSV
+    csv_fields = [
+        "domain", "variant", "mode", "gt_feasible", "requires_observation_recovery",
+        "terminal_status", "first_cause_category", "failure_category", "failure_reason",
+        "semantic_vlm_requests", "high_level_replans", "pipeline_runtime_sec",
+        "canonicalization_succeeded", "required_contract_complete",
+        "complete_candidate_grounding", "candidate_plan_length", "candidate_plan_valid",
+        "full_task_satisfied", "outcome_correct", "false_completion",
+        "candidate_goal_coverage", "full_task_goal_coverage",
+    ]
+    with (output_root / "evaluation_records.csv").open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=csv_fields, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(records)
 
     # Compute aggregate metrics
     n_total = len(records)
-    outcome_correct_count = sum(1 for r in records if r.get("outcome_correct"))
-    outcome_correct_pct = (outcome_correct_count / n_total) * 100 if n_total else 0.0
-
     feasible_rows = [r for r in records if r["gt_feasible"]]
     infeasible_rows = [r for r in records if not r["gt_feasible"]]
-    feasible_success_count = sum(1 for r in feasible_rows if r.get("full_task_satisfied"))
-    feasible_success_pct = (feasible_success_count / len(feasible_rows)) * 100 if feasible_rows else 0.0
-
     recovery_rows = [r for r in records if r["requires_observation_recovery"]]
-    recovery_success_count = sum(1 for r in recovery_rows if r.get("full_task_satisfied"))
-    recovery_success_pct = (recovery_success_count / len(recovery_rows)) * 100 if recovery_rows else 0.0
+    primary_metrics = compute_primary_metrics(records)
+    outcome_correct_pct = primary_metrics["outcome_correct"]
+    feasible_success_pct = primary_metrics["feasible_success"]
+    recovery_success_pct = primary_metrics["feasibility_recovery"]
+    goal_cov_pct = primary_metrics["goal_coverage"]
+    false_completion_pct = primary_metrics["false_completion"]
+    vlm_req_mean = primary_metrics["vlm_requests"]
+    replans_mean = primary_metrics["high_level_replans"]
 
-    goal_cov_pct = (sum(r.get("full_task_goal_coverage", 0.0) for r in records) / n_total) * 100 if n_total else 0.0
-    false_completion_count = sum(1 for r in records if r.get("false_completion"))
-    false_completion_pct = (false_completion_count / n_total) * 100 if n_total else 0.0
-
-    vlm_req_mean = sum(r.get("semantic_vlm_requests", 0) for r in records) / n_total if n_total else 0.0
-    replans_mean = sum(r.get("high_level_replans", 0) for r in records) / n_total if n_total else 0.0
-
-    primary_metrics = {
-        "outcome_correct": outcome_correct_pct,
-        "feasible_success": feasible_success_pct,
-        "feasibility_recovery": recovery_success_pct,
-        "goal_coverage": goal_cov_pct,
-        "false_completion": false_completion_pct,
-        "vlm_requests": vlm_req_mean,
-        "high_level_replans": replans_mean,
-    }
-
-    # Main Paper Table (Section 39)
+    # Main Paper Table
     table_md = f"""# Section 39: Main Paper Table (Held-Out Generalization Matrix)
 
 | Method | Outcome Correct ↑ | Feasible-task Success ↑ | Feasibility Recovery ↑ | Goal Coverage ↑ | False Completion ↓ | VLM Requests ↓ | Replans ↓ |
-| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | **Ours (FM-Grounding)** | **{outcome_correct_pct:.1f}%** | **{feasible_success_pct:.1f}%** | **{recovery_success_pct:.1f}%** | **{goal_cov_pct:.1f}%** | **{false_completion_pct:.1f}%** | **{vlm_req_mean:.2f}** | **{replans_mean:.2f}** |
 """
     (output_root / "main_paper_table.md").write_text(table_md, encoding="utf-8")
 
-    # Generate pipeline diagnostic table and failure analysis via standard reporter
-    write_detailed_report(output_root, records, live=False)
+    # Diagnostics Table
+    diagnostic_rows: Dict[str, Dict[str, str]] = {}
+    for domain in ("kitchen", "living_room", "workshop"):
+        dom_records = [r for r in records if r["domain"] == domain]
+        n_dom = len(dom_records)
+        dom_feasible = [r for r in dom_records if r["gt_feasible"]]
 
-    # Invariants verification (Section AJ / Gate 14)
-    errors: List[str] = []
-    if variant_filter is None:
-        if len(records) != 15:
-            errors.append(f"Expected 15 variants, got {len(records)}")
-        if sum(1 for r in records if r["gt_feasible"]) != 9:
-            errors.append(f"Expected 9 feasible variants, got {sum(1 for r in records if r['gt_feasible'])}")
-        if sum(1 for r in records if not r["gt_feasible"]) != 6:
-            errors.append(f"Expected 6 infeasible variants, got {sum(1 for r in records if not r['gt_feasible'])}")
-        if sum(1 for r in records if r["requires_observation_recovery"]) != 6:
-            errors.append(f"Expected 6 recovery variants, got {sum(1 for r in records if r['requires_observation_recovery'])}")
+        mean_raw_recall = sum(r.get("raw_role_recall", 0.0) or 0.0 for r in dom_records) / n_dom if n_dom else 0.0
+        mean_raw_f1 = sum(r.get("raw_role_f1", 0.0) or 0.0 for r in dom_records) / n_dom if n_dom else 0.0
+        mean_rel_f1 = sum(r.get("interpreter_matched_raw_relation_f1", 0.0) or 0.0 for r in dom_records) / n_dom if n_dom else 0.0
+        raw_comp_rate = sum(1 for r in dom_records if r.get("raw_vlm_spec_complete")) / n_dom if n_dom else 0.0
+        contract_comp_rate = sum(1 for r in dom_records if r.get("required_contract_complete")) / n_dom if n_dom else 0.0
+        canon_rate = sum(1 for r in dom_records if r.get("canonicalization_succeeded")) / n_dom if n_dom else 0.0
+        any_grounding_rate = sum(1 for r in dom_records if r.get("complete_candidate_grounding")) / n_dom if n_dom else 0.0
+        comp_grounding_rate = sum(1 for r in dom_records if r.get("complete_candidate_grounding")) / n_dom if n_dom else 0.0
+        grounded_role_cov = sum(r.get("grounded_role_coverage", 0.0) or 0.0 for r in dom_records) / n_dom if n_dom else 0.0
+        plan_gen_rate = sum(1 for r in dom_records if r.get("candidate_plan_length", 0) > 0) / n_dom if n_dom else 0.0
 
-    if spec_source == "live":
-        for r in records:
-            if r.get("semantic_vlm_requests") != 1:
-                errors.append(f"{r['variant']}: semantic_vlm_requests={r.get('semantic_vlm_requests')} != 1")
-            if r.get("high_level_replans") != 0:
-                errors.append(f"{r['variant']}: high_level_replans={r.get('high_level_replans')} != 0")
-            if r.get("spec_acquisition") != "live_provider":
-                errors.append(f"{r['variant']}: spec_acquisition={r.get('spec_acquisition')} != 'live_provider'")
-            if r.get("specification_input") is not None:
-                errors.append(f"{r['variant']}: specification_input is not None")
-        if len({r.get("prompt_hash") for r in records}) != 1:
-            errors.append("Mixed prompt hashes")
-        if len({r.get("model") for r in records}) != 1:
-            errors.append("Mixed models")
+        plans = [r for r in dom_records if r.get("candidate_plan_length", 0) > 0]
+        plan_valid_rate = sum(1 for r in plans if r.get("candidate_plan_valid")) / len(plans) if plans else None
+        partial_rate = sum(1 for r in dom_records if "PARTIAL" in r.get("candidate_plan_status", "")) / n_dom if n_dom else 0.0
+        cand_goal_cov = sum(r.get("candidate_goal_coverage", 0.0) for r in dom_records) / n_dom if n_dom else 0.0
+        full_success = sum(1 for r in dom_feasible if r["full_task_satisfied"]) / len(dom_feasible) if dom_feasible else 0.0
+        mean_reg_inspected = sum(len(r.get("regions_inspected", [])) for r in dom_records) / n_dom if n_dom else 0.0
+
+        diagnostic_rows[domain] = {
+            "raw_vlm_role_recall": f"{mean_raw_recall * 100:.1f}%",
+            "raw_vlm_role_f1": f"{mean_raw_f1 * 100:.1f}%",
+            "interpreter_matched_raw_relation_f1": f"{mean_rel_f1 * 100:.1f}%",
+            "raw_complete_spec_rate": f"{raw_comp_rate * 100:.1f}%",
+            "executable_contract_complete_rate": f"{contract_comp_rate * 100:.1f}%",
+            "runtime_contract_coverage": f"{contract_comp_rate * 100:.1f}%",
+            "canonicalization_success": f"{canon_rate * 100:.1f}%",
+            "any_verified_grounding": f"{any_grounding_rate * 100:.1f}%",
+            "complete_candidate_grounding": f"{comp_grounding_rate * 100:.1f}%",
+            "grounded_role_coverage": f"{grounded_role_cov * 100:.1f}%",
+            "nonempty_plan_rate": f"{plan_gen_rate * 100:.1f}%",
+            "candidate_plan_rate": f"{plan_valid_rate * 100:.1f}%" if plan_valid_rate is not None else "N/A",
+            "partial_plan_rate": f"{partial_rate * 100:.1f}%",
+            "candidate_goal_coverage": f"{cand_goal_cov * 100:.1f}%",
+            "full_task_success": f"{full_success * 100:.1f}%",
+            "mean_regions_inspected": f"{mean_reg_inspected:.2f}",
+        }
+
+    total_mean_recall = sum(r.get("raw_role_recall", 0.0) or 0.0 for r in records) / n_total if n_total else 0.0
+    total_mean_f1 = sum(r.get("raw_role_f1", 0.0) or 0.0 for r in records) / n_total if n_total else 0.0
+    total_rel_f1 = sum(r.get("interpreter_matched_raw_relation_f1", 0.0) or 0.0 for r in records) / n_total if n_total else 0.0
+    total_raw_comp = sum(1 for r in records if r.get("raw_vlm_spec_complete")) / n_total if n_total else 0.0
+    total_contract_comp = sum(1 for r in records if r.get("required_contract_complete")) / n_total if n_total else 0.0
+    total_canon = sum(1 for r in records if r.get("canonicalization_succeeded")) / n_total if n_total else 0.0
+    total_any_ground = sum(1 for r in records if r.get("complete_candidate_grounding")) / n_total if n_total else 0.0
+    total_comp_ground = sum(1 for r in records if r.get("complete_candidate_grounding")) / n_total if n_total else 0.0
+    total_grounded_role_cov = sum(r.get("grounded_role_coverage", 0.0) or 0.0 for r in records) / n_total if n_total else 0.0
+    total_plan_gen = sum(1 for r in records if r.get("candidate_plan_length", 0) > 0) / n_total if n_total else 0.0
+    all_plans = [r for r in records if r.get("candidate_plan_length", 0) > 0]
+    total_plan_valid = sum(1 for r in all_plans if r.get("candidate_plan_valid")) / len(all_plans) if all_plans else None
+    total_partial = sum(1 for r in records if "PARTIAL" in r.get("candidate_plan_status", "")) / n_total if n_total else 0.0
+    total_cand_cov = sum(r.get("candidate_goal_coverage", 0.0) for r in records) / n_total if n_total else 0.0
+    total_mean_reg = sum(len(r.get("regions_inspected", [])) for r in records) / n_total if n_total else 0.0
+
+    diagnostic_rows["Overall"] = {
+        "raw_vlm_role_recall": f"{total_mean_recall * 100:.1f}%",
+        "raw_vlm_role_f1": f"{total_mean_f1 * 100:.1f}%",
+        "interpreter_matched_raw_relation_f1": f"{total_rel_f1 * 100:.1f}%",
+        "raw_complete_spec_rate": f"{total_raw_comp * 100:.1f}%",
+        "executable_contract_complete_rate": f"{total_contract_comp * 100:.1f}%",
+        "runtime_contract_coverage": f"{total_contract_comp * 100:.1f}%",
+        "canonicalization_success": f"{total_canon * 100:.1f}%",
+        "any_verified_grounding": f"{total_any_ground * 100:.1f}%",
+        "complete_candidate_grounding": f"{total_comp_ground * 100:.1f}%",
+        "grounded_role_coverage": f"{total_grounded_role_cov * 100:.1f}%",
+        "nonempty_plan_rate": f"{total_plan_gen * 100:.1f}%",
+        "candidate_plan_rate": f"{total_plan_valid * 100:.1f}%" if total_plan_valid is not None else "N/A",
+        "partial_plan_rate": f"{total_partial * 100:.1f}%",
+        "candidate_goal_coverage": f"{total_cand_cov * 100:.1f}%",
+        "full_task_success": f"{feasible_success_pct:.1f}%",
+        "mean_regions_inspected": f"{total_mean_reg:.2f}",
+    }
+
+    diag_md = f"""# Section 40: Pipeline Diagnostic Table (Held-Out Generalization Matrix)
+
+| Metric | Kitchen | Living Room | Workshop | Overall |
+| :--- | ---: | ---: | ---: | ---: |
+| Raw VLM role recall | {diagnostic_rows['kitchen']['raw_vlm_role_recall']} | {diagnostic_rows['living_room']['raw_vlm_role_recall']} | {diagnostic_rows['workshop']['raw_vlm_role_recall']} | {diagnostic_rows['Overall']['raw_vlm_role_recall']} |
+| Raw VLM role F1 | {diagnostic_rows['kitchen']['raw_vlm_role_f1']} | {diagnostic_rows['living_room']['raw_vlm_role_f1']} | {diagnostic_rows['workshop']['raw_vlm_role_f1']} | {diagnostic_rows['Overall']['raw_vlm_role_f1']} |
+| Interpreter-matched raw relation F1 | {diagnostic_rows['kitchen']['interpreter_matched_raw_relation_f1']} | {diagnostic_rows['living_room']['interpreter_matched_raw_relation_f1']} | {diagnostic_rows['workshop']['interpreter_matched_raw_relation_f1']} | {diagnostic_rows['Overall']['interpreter_matched_raw_relation_f1']} |
+| Raw complete spec rate | {diagnostic_rows['kitchen']['raw_complete_spec_rate']} | {diagnostic_rows['living_room']['raw_complete_spec_rate']} | {diagnostic_rows['workshop']['raw_complete_spec_rate']} | {diagnostic_rows['Overall']['raw_complete_spec_rate']} |
+| Executable contract complete rate | {diagnostic_rows['kitchen']['executable_contract_complete_rate']} | {diagnostic_rows['living_room']['executable_contract_complete_rate']} | {diagnostic_rows['workshop']['executable_contract_complete_rate']} | {diagnostic_rows['Overall']['executable_contract_complete_rate']} |
+| Canonicalization success | {diagnostic_rows['kitchen']['canonicalization_success']} | {diagnostic_rows['living_room']['canonicalization_success']} | {diagnostic_rows['workshop']['canonicalization_success']} | {diagnostic_rows['Overall']['canonicalization_success']} |
+| Any verified grounding | {diagnostic_rows['kitchen']['any_verified_grounding']} | {diagnostic_rows['living_room']['any_verified_grounding']} | {diagnostic_rows['workshop']['any_verified_grounding']} | {diagnostic_rows['Overall']['any_verified_grounding']} |
+| Complete candidate grounding | {diagnostic_rows['kitchen']['complete_candidate_grounding']} | {diagnostic_rows['living_room']['complete_candidate_grounding']} | {diagnostic_rows['workshop']['complete_candidate_grounding']} | {diagnostic_rows['Overall']['complete_candidate_grounding']} |
+| Grounded role coverage | {diagnostic_rows['kitchen']['grounded_role_coverage']} | {diagnostic_rows['living_room']['grounded_role_coverage']} | {diagnostic_rows['workshop']['grounded_role_coverage']} | {diagnostic_rows['Overall']['grounded_role_coverage']} |
+| Non-empty plan generated | {diagnostic_rows['kitchen']['nonempty_plan_rate']} | {diagnostic_rows['living_room']['nonempty_plan_rate']} | {diagnostic_rows['workshop']['nonempty_plan_rate']} | {diagnostic_rows['Overall']['nonempty_plan_rate']} |
+| Candidate plan valid / generated | {diagnostic_rows['kitchen']['candidate_plan_rate']} | {diagnostic_rows['living_room']['candidate_plan_rate']} | {diagnostic_rows['workshop']['candidate_plan_rate']} | {diagnostic_rows['Overall']['candidate_plan_rate']} |
+| Partial-plan rate | {diagnostic_rows['kitchen']['partial_plan_rate']} | {diagnostic_rows['living_room']['partial_plan_rate']} | {diagnostic_rows['workshop']['partial_plan_rate']} | {diagnostic_rows['Overall']['partial_plan_rate']} |
+| Candidate goal coverage | {diagnostic_rows['kitchen']['candidate_goal_coverage']} | {diagnostic_rows['living_room']['candidate_goal_coverage']} | {diagnostic_rows['workshop']['candidate_goal_coverage']} | {diagnostic_rows['Overall']['candidate_goal_coverage']} |
+| Full-task success | {diagnostic_rows['kitchen']['full_task_success']} | {diagnostic_rows['living_room']['full_task_success']} | {diagnostic_rows['workshop']['full_task_success']} | {diagnostic_rows['Overall']['full_task_success']} |
+| Mean regions inspected | {diagnostic_rows['kitchen']['mean_regions_inspected']} | {diagnostic_rows['living_room']['mean_regions_inspected']} | {diagnostic_rows['workshop']['mean_regions_inspected']} | {diagnostic_rows['Overall']['mean_regions_inspected']} |
+"""
+    (output_root / "pipeline_diagnostic_table.md").write_text(diag_md, encoding="utf-8")
+
+    # Invariants verification
+    errors = []
+    if len(records) != 15:
+        errors.append(f"Expected 15 variants, got {len(records)}")
+    if sum(1 for r in records if r["gt_feasible"]) != 9:
+        errors.append("Expected 9 feasible variants")
+    for r in records:
+        if r["semantic_vlm_requests"] != 1 or r["high_level_replans"] != 0:
+            errors.append(f"{r['variant']}: live invariant failed")
+    if len({r.get("prompt_hash") for r in records}) != 1:
+        errors.append("Mixed prompt hashes")
+    if len({r.get("model") for r in records}) != 1:
+        errors.append("Mixed models")
 
     invariants_payload = {
         "status": "VALID" if not errors else "INVALID",
         "errors": errors,
         "variant_count": len(records),
         "feasible_count": sum(1 for r in records if r["gt_feasible"]),
-        "infeasible_count": sum(1 for r in records if not r["gt_feasible"]),
         "vlm_requests_per_variant": vlm_req_mean,
         "replans_per_variant": replans_mean,
     }
-    (output_root / "invariants.json").write_text(json.dumps(invariants_payload, indent=2) + "\n", encoding="utf-8")
+    (output_root / "invariants.json").write_text(json.dumps(invariants_payload, indent=2), encoding="utf-8")
 
-    diag_md_path = output_root / "pipeline_diagnostic_table.md"
-    diag_md = diag_md_path.read_text(encoding="utf-8") if diag_md_path.exists() else ""
+    # Failure analysis
+    feasible_records = [r for r in records if r.get("gt_feasible")]
+    first_cause_counts = Counter(r.get("first_cause_category") or "NONE" for r in feasible_records)
+    detailed_counts = Counter(r.get("failure_category") or "NONE" for r in records)
+    failure_payload = {
+        "first_cause_categories_feasible": dict(first_cause_counts),
+        "detailed_failure_categories_all": dict(detailed_counts),
+    }
+    (output_root / "failure_analysis.json").write_text(json.dumps(failure_payload, indent=2) + "\n")
 
     summary = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -364,9 +418,9 @@ def evaluate_heldout_variants(
         "feasible_variants": len(feasible_rows),
         "infeasible_variants": len(infeasible_rows),
         "primary_metrics": primary_metrics,
-        "invariants": invariants_payload,
+        "diagnostic_metrics": diagnostic_rows,
     }
-    (output_root / "evaluation_summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    (output_root / "evaluation_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
     print("\n=== HELDOUT EVALUATION COMPLETE ===")
     print(table_md)

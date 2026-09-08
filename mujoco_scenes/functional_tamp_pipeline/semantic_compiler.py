@@ -231,12 +231,18 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                                 unresolved_required_relations=[], unresolved_required_operations=[])
     nodes = {}
     id_map = {}
+    planner_context_id_map = {}
     owners = {}
     soft = []
     unresolved = []
     unverified_required = []
-    from .system_context_registry import get_domain_selectable_roles, get_domain_system_fixed_anchors
+    from .system_context_registry import (
+        get_domain_planner_context_constants,
+        get_domain_selectable_roles,
+        get_domain_system_fixed_anchors,
+    )
     allowed = set(get_domain_selectable_roles(domain)) | set(get_domain_system_fixed_anchors(domain))
+    planner_constants = set(get_domain_planner_context_constants(domain))
     for role in doc['functional_roles']:
         rid = role['id']
         try:
@@ -244,6 +250,14 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         except VLMSpecificationError as exc:
             name, rule = None, str(exc)
         if name not in allowed:
+            if name in planner_constants:
+                planner_context_id_map[rid] = name
+                trace['context_only_roles'].append({
+                    'raw_role': role,
+                    'canonical_role': name,
+                    'status': 'PLANNER_CONTEXT_CONSTANT',
+                })
+                continue
             # Only non-manipulated anchors/support context can be context-only.
             is_operation_participant = any(rid in (g.get('tool_role'), g.get('target_role')) for g in doc['interaction_groups'])
             context = role['entity_kind'] in {'FIXED_TARGET', 'REGION'} and not is_operation_participant
@@ -371,21 +385,10 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 trace['relations'].append(evidence)
                 return first_pred
 
-            # Secondary fallback via domain-specific canonicalizer
-            s, p, o = _relation(domain, canon_s, phrase, canon_o)
-            if not p:
-                raise ValueError(interp.reason or 'No executable relation checker')
-            fixed_anchors = set(get_domain_system_fixed_anchors(domain))
-            if s not in nodes and s in fixed_anchors:
-                nodes[s] = FunctionalRole(name=s, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
-                                          semantic_categories=ontology.get_system_role_semantic_categories(domain, s),
-                                          verification_mode='GEOMETRIC_ONLY')
-            if o not in nodes and o in fixed_anchors:
-                nodes[o] = FunctionalRole(name=o, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
-                                          semantic_categories=ontology.get_system_role_semantic_categories(domain, o),
-                                          verification_mode='GEOMETRIC_ONLY')
-            validate_predicate_signature(domain=domain, predicate=p, subject_kind=nodes[s].entity_kind,
-                subject_role=s, object_kind=nodes[o].entity_kind, object_role=o)
+            # Fail closed.  A signature-aware domain canonicalizer must not get
+            # a second chance to manufacture meaning from endpoint identities
+            # after the semantic-candidate intersection found no support.
+            raise ValueError(interp.reason or 'No explicit semantic evidence for a required relation')
         except (VLMSpecificationError, ValueError) as exc:
             evidence.update(status='UNRESOLVED_SEMANTIC', reason=str(exc))
             unresolved.append(evidence)
@@ -410,6 +413,24 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         target_raw = group.get('target_role')
         ctx_raw = group.get('context_role') or group.get('anchor_role')
         raw_op = group.get('function') or group.get('operation') or ''
+
+        # Explicit final placement/restoration to a registered planner constant
+        # is audited but is not a selectable G_F operation.  The domain planner
+        # owns that context transition.  Other operations with unresolved
+        # context endpoints still fail closed below.
+        context_endpoint = planner_context_id_map.get(tool_raw) or planner_context_id_map.get(target_raw)
+        non_context_endpoint = target_raw if tool_raw in planner_context_id_map else tool_raw
+        if (
+            context_endpoint
+            and non_context_endpoint in id_map
+            and re.search(r'\b(place|return|leave|restore|set down|put)\b', raw_op.lower())
+        ):
+            trace['groups'].append({
+                'raw_group': group,
+                'status': 'ABSORBED_INTO_PLANNER_CONTEXT',
+                'planner_context': context_endpoint,
+            })
+            continue
 
         if not tool_raw or not target_raw or tool_raw not in id_map or target_raw not in id_map:
             trace['disabled_groups'].append({'raw_group': group, 'status': 'UNINSTANTIABLE_MISSING_ROLE'})

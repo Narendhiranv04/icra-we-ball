@@ -164,7 +164,12 @@ def test_incomplete_grounding_cannot_be_labeled_planning_failure(tmp_path: Path)
     (run_dir / "graph_grounding_result.json").write_text(json.dumps(grounding))
     (run_dir / "functional_specification.json").write_text(json.dumps({
         "domain": "workshop",
-        "nodes": {"driver": {"name": "driver"}, "fastener": {"name": "fastener"}},
+        "task_instruction": TASK_WORKSHOP,
+        "nodes": {
+            "driver": {"name": "driver"},
+            "fastener": {"name": "fastener"},
+            "repair_target": {"name": "repair_target", "entity_kind": "FIXED_TARGET"},
+        },
         "relations": [],
         "operation_groups": [],
         "metadata": {
@@ -235,7 +240,12 @@ def test_invalid_grounding_cannot_be_labeled_planning_failure(tmp_path: Path):
     (run_dir / "graph_grounding_result.json").write_text(json.dumps(grounding))
     (run_dir / "functional_specification.json").write_text(json.dumps({
         "domain": "workshop",
-        "nodes": {"driver": {"name": "driver"}, "fastener": {"name": "fastener"}},
+        "task_instruction": TASK_WORKSHOP,
+        "nodes": {
+            "driver": {"name": "driver"},
+            "fastener": {"name": "fastener"},
+            "repair_target": {"name": "repair_target", "entity_kind": "FIXED_TARGET"},
+        },
         "relations": [],
         "operation_groups": [],
         "metadata": {
@@ -309,7 +319,12 @@ def test_true_planning_failure_attribution(tmp_path: Path):
     (run_dir / "graph_grounding_result.json").write_text(json.dumps(grounding))
     (run_dir / "functional_specification.json").write_text(json.dumps({
         "domain": "workshop",
-        "nodes": {"driver": {"name": "driver"}, "fastener": {"name": "fastener"}},
+        "task_instruction": TASK_WORKSHOP,
+        "nodes": {
+            "driver": {"name": "driver"},
+            "fastener": {"name": "fastener"},
+            "repair_target": {"name": "repair_target", "entity_kind": "FIXED_TARGET"},
+        },
         "relations": [],
         "operation_groups": [],
         "metadata": {

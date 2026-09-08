@@ -69,14 +69,14 @@ def test_kitchen_compositional_role_mapping():
 
 def test_living_room_compositional_concept_matching():
     # Personal cup/saucer
-    assert map_living_room_role_function("surface to hold personal cup and saucer for seated viewer") == "personal_cup_saucer"
-    assert map_living_room_role_function("side table for individual drink") == "personal_cup_saucer"
-    assert map_living_room_role_function("support personal beverage near armchair") == "personal_cup_saucer"
+    assert map_living_room_role_function("surface to hold personal cup and saucer for seated viewer") == "PERSONAL_CUP_SAUCER_REGION"
+    assert map_living_room_role_function("side table for individual drink") == "PERSONAL_CUP_SAUCER_REGION"
+    assert map_living_room_role_function("support personal beverage near armchair") == "PERSONAL_CUP_SAUCER_REGION"
 
     # Shared remote
-    assert map_living_room_role_function("central coffee table to hold shared tv remote for both viewers") == "shared_remote"
-    assert map_living_room_role_function("common surface holding media controller") == "shared_remote"
-    assert map_living_room_role_function("shared table for remote control") == "shared_remote"
+    assert map_living_room_role_function("central coffee table to hold shared tv remote for both viewers") == "SHARED_REMOTE_REGION"
+    assert map_living_room_role_function("common surface holding media controller") == "SHARED_REMOTE_REGION"
+    assert map_living_room_role_function("shared table for remote control") == "SHARED_REMOTE_REGION"
 
     # Unrelated
     assert map_living_room_role_function("clean the window curtains") is None

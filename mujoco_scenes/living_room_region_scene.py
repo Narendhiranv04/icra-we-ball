@@ -90,9 +90,10 @@ L2_ABLATION3_GOAL = (
     "person’s seating position."
 )
 L2_INTEGRATED_GOAL = (
-    "Prepare the living room for two people watching television. Place one "
-    "cup and one saucer on each person's fixed individual side table, and "
-    "place the TV remote on the fixed shared coffee table."
+    "Prepare the living room for two people to enjoy refreshments while "
+    "watching television. Provide each person with their own refreshment "
+    "setting nearby, and place the entertainment control where it is "
+    "accessible to both people."
 )
 
 # Canonical integrated-room construction coordinates.  They are used only to

@@ -23,6 +23,7 @@ from mujoco_scenes.workshop_phase1.fm_adapter import (
     FMAdapter,
     FMResponseValidationError,
     validate_kitchen_functional_specification,
+    validate_requirement_response,
 )
 from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
 
@@ -272,7 +273,7 @@ def test_adapter_outgoing_payload_has_zero_checker_and_region_leaks(tmp_path):
         "Prepare two coffees and two soups.", observation_images=[image]
     )
 
-    assert result == natural_kitchen_spec()
+    assert result == validate_requirement_response(natural_kitchen_spec())
     assert adapter.metrics.total_calls == 1
     assert len(transport.payloads) == 1
 
@@ -824,6 +825,5 @@ def test_ideal_k1_exact_concept_accounting_counts():
     # 2/2 raw operation groups
     assert len(acc["operation_groups"]) == 2
     assert all(g["status"] == "PRESERVED" for g in acc["operation_groups"])
-
 
 

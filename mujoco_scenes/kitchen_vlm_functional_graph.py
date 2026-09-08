@@ -97,7 +97,7 @@ BINARY_RELATION_ALIASES: dict[str, tuple[str, ...]] = {
         "goes inside", "go inside", "placed inside", "place inside",
         "inserted into", "insert into", "fits through opening", "fit through opening",
         "insert into container", "fits in", "fit in", "goes in", "goes into",
-        "compatible with", "compatible", "fits", "fit", "compatible with container",
+        "compatible with", "compatible", "compatible with container",
     ),
     "REACHES_BOTTOM": (
         "reaches bottom", "reaches_bottom", "reaches the bottom", "reach the bottom",
@@ -1332,4 +1332,3 @@ def compile_vlm_functional_graph(
         "detector_vocabulary": detector_vocabulary,
     }
     return contract, {"object": detector_vocabulary}, trace
-

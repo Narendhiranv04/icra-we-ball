@@ -182,8 +182,8 @@ def test_failure_taxonomy_first_cause_categorization(tmp_path):
         "task_summary": "fastening task",
         "functional_roles": [
             {"id": "role_1", "function": "fastening component", "entity_kind": "OBJECT", "required_count": 1, "binding_policy": "DISTINCT", "candidate_categories": ["screw"], "visible_candidates": [], "required_properties": []},
-            {"id": "role_2", "function": "driving tool", "entity_kind": "OBJECT", "required_count": 1, "binding_policy": "REUSABLE", "candidate_categories": ["screwdriver"], "visible_candidates": [], "required_properties": []},
-            {"id": "role_3", "function": "receive fastening component", "entity_kind": "FIXED_TARGET", "required_count": 1, "binding_policy": "SHARED", "candidate_categories": ["workshop_frame_joint"], "visible_candidates": [], "required_properties": []},
+            {"id": "role_2", "function": "driving tool", "entity_kind": "OBJECT", "required_count": 1, "binding_policy": "DISTINCT", "candidate_categories": ["screwdriver"], "visible_candidates": [], "required_properties": []},
+            {"id": "role_3", "function": "marked repair target joint", "entity_kind": "FIXED_TARGET", "required_count": 1, "binding_policy": "DISTINCT", "candidate_categories": ["workshop frame joint"], "visible_candidates": [], "required_properties": []},
         ],
         "functional_relations": [
             {"subject_role": "role_2", "relation": "compatible with", "object_role": "role_1"},

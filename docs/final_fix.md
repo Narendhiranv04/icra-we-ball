@@ -3151,3 +3151,37 @@ offline GT-based evaluation only after generation is complete
 ```
 
 That is the final end-to-end implementation target. No phase may trade away this boundary merely to improve the benchmark score.
+
+## Post-Phase-15 Corrective Performance Pass
+
+The Phase 13 development matrix and Phase 14 additional matrix are **SUPERSEDED FOR FINAL PERFORMANCE CLAIMS**. They remain unchanged as diagnostic historical artifacts. The former Phase 14 “held-out” variants were visible during this corrective work and are therefore relabeled the **post-hoc additional stress-test matrix**, not an untouched held-out result.
+
+| Stage | Status | Files | Tests | Offline replays | Live calls | Result | Commit | Remaining |
+|---|---|---|---|---|---|---|---|---|
+| C0 forensic audit | Complete | repository/history and preserved report roots | Git state verified | — | 0 | local history preserved and origin synchronized at the pre-corrective SHA | pre-freeze history `3d389ec1` | none |
+| C1 V1/V2 evaluation | Complete | `evaluation_contract_adapter.py`, `raw_semantic_evaluation.py`, `fm_schema_v2.py` | corrective V1/V2 suite | archived V1 and V2 | 0 | nested V2 roles, relations, and operation pairings are scored explicitly | corrective freeze commit | none |
+| C2 executable contract and first cause | Complete | `evaluation_metrics.py`, evaluator scripts, compiler metadata | evaluator and attribution regressions | included in 79-record rescore | 0 | runtime completeness no longer derives from GT role coverage | corrective freeze commit | none |
+| C3 metric and goal scoring | Complete | `evaluation_metrics.py`, evaluator scripts | goal denominator, replay, grounding-evidence tests | included in 79-record rescore | 0 | shared definitions for primary metrics and feasible-only goal coverage | corrective freeze commit | none |
+| C4 semantic boundary | Complete | `semantic_compiler.py`, `relation_interpreter.py`, domain adapters | anti-synthesis and interface tests | raw replay | 0 | endpoint signatures filter but do not create semantics | corrective freeze commit | none |
+| C5 grounding/search/pruning | Complete | grounding/search evidence paths and pruning tests | exhaustive-vs-pruned randomized equivalence | archived replay | 0 | UNKNOWN remains non-satisfying; pruning preserves valid assignments | corrective freeze commit | none |
+| C6 offline rescore | Complete | `scripts/corrective_offline_rescore.py` | record validation | 79 records: 32 V2 development, 15 post-hoc stress, 32 V1 baseline | 0 | new funnel JSON/CSV/Markdown under `corrective_pass_offline_rescore_20260908T072500Z` | corrective freeze commit | none |
+| C7 controlled live probe | Complete | new immutable probe roots | six-case comparisons | — | multiple controlled six-case configurations | Prompt 4 plus Config C selected by the prescribed semantic-first ordering | corrective freeze commit | none |
+| C8 generic prompt/schema | Complete | `fm_schema_v2.py`, `fm_adapter.py` | prompt/schema and leakage tests | — | six-case probes only | one-call generic decomposition retained; benchmark nouns and verifier descriptions absent from active prompts | corrective freeze commit | none |
+| C9 downstream repair | Complete | workshop role mapping, relation interpretation, compiler | focused compiler/grounding/planning regressions | W1/W2 capability retained | 0 additional tuning calls | explicit patient/tool/fastener roles no longer collide; no semantic synthesis | corrective freeze commit | none |
+| C10 method freeze | Complete | all corrective implementation and tests | **472 passed, 1 safety-preserving detector skip** in `functional_tamp_pipeline/tests`; 56/56 focused | complete | 0 | method frozen for final evaluation | corrective freeze commit | final matrices and generated reports |
+
+### Frozen inference and runtime identity
+
+- Model weights: `Qwen/Qwen3.5-9B`
+- Served alias: `qwen35-9b`
+- vLLM: `0.27.2rc1.dev122+g8efa13b70`
+- Server context length: 32,768 tokens
+- Selected inference configuration: thinking enabled; maximum output 24,576; temperature 0.7; top-p 0.8; top-k 20; presence penalty 1.5; repetition penalty 1.0
+- V2 prompt SHA-256: `c2453625a0636c75cdcf56b50979af0c6f57e6ce160a5ccdf0ed3240a82a2bdf`
+- V2 schema SHA-256: `27f3dff978bb0d344fd4ed24e54ed49bb6b79f8304aadfe49670f4e7f83e5f73`
+- Combined V2 prompt/schema hash: `381770ded79ef1c189fb81ee7b04632b876c02ead68aa6c4b4841e0c6216cdd2`
+- Runtime semantic ontology SHA-256: `31d8f5f5be7e35909a19330dc2d0809819d441c276fe1dc3a9ef76d6e9dd5266`
+- Predicate registry SHA-256: `f8afb189d77138e58994ec525ba7d72b4be26254a2af2d5a9c8b2042c599e639`
+- Robot capability registry SHA-256: `5f981a616390757a1b240843bc39a33bf05fc8bd072546b36a17503cc5406dfe`
+
+No method, prompt, schema, ontology, predicate, capability, grounding, search, planning, or evaluation-definition change is permitted after the corrective freeze. Post-freeze additions may define the new deterministic evaluation dataset and generate reports, but cannot modify the frozen method.

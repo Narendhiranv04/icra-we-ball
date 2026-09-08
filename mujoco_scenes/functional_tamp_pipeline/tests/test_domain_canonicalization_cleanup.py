@@ -103,6 +103,35 @@ def test_workshop_repair_target_maps_from_object_entity_kind():
     assert graph.required_contract_complete is True
 
 
+def test_workshop_explicit_patient_tool_and_fastener_roles_do_not_collide():
+    """Open-vocabulary patient grammar must stay distinct from tool/component grammar."""
+    from mujoco_scenes.workshop_phase1.requirements import (
+        map_workshop_fixed_target_role,
+        map_workshop_role_function,
+    )
+
+    target = {
+        "entity_kind": "OBJECT",
+        "function": "Physical item requiring the fastening operation.",
+        "candidate_categories": ["mechanical assembly", "base plate"],
+    }
+    fastener = {
+        "entity_kind": "OBJECT",
+        "function": "A component compatible with the assembly target used to secure it.",
+        "candidate_categories": ["screw", "bolt", "clip"],
+    }
+    driver = {
+        "entity_kind": "OBJECT",
+        "function": "Device used to install the component.",
+        "candidate_categories": ["screwdriver", "driver bit", "wrench"],
+    }
+
+    assert map_workshop_fixed_target_role(target) == "repair_target"
+    assert map_workshop_fixed_target_role(fastener) is None
+    assert map_workshop_role_function(fastener) == "CAN_FASTEN"
+    assert map_workshop_role_function(driver) == "CAN_DRIVE_SCREW"
+
+
 def test_missing_fm_roles_remain_missing():
     """Missing roles in Kitchen, Living Room, and Workshop are never synthesized by compiler."""
     # 1. Kitchen missing soup eating utensil
@@ -209,4 +238,3 @@ def test_w1_w2_regression_fixtures_preserved():
     g1 = compile_candidate_graph("workshop", "Repair loose frame joint", w1_raw)
     assert g1.required_contract_complete is True
     assert set(g1.nodes.keys()) == {"driver", "fastener", "repair_target"}
-

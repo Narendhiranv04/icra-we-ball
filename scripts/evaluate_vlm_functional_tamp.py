@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from mujoco_scenes.functional_tamp_pipeline.models import FunctionalRequirementGraph, PipelineResult
 from mujoco_scenes.functional_tamp_pipeline.gf_reference_evaluator import evaluate_gf_against_reference
 from mujoco_scenes.functional_tamp_pipeline.run import run_pipeline
+from mujoco_scenes.functional_tamp_pipeline.evaluation_metrics import compute_primary_metrics
 from mujoco_scenes.symbolic_planning_core import independent_replay
 
 # Authoritative catalogue definitions
@@ -324,32 +325,14 @@ def evaluate_all_variants(
             assert r["semantic_vlm_requests"] == 0, f"Variant {r['domain']}/{r['variant']} semantic_vlm_requests={r['semantic_vlm_requests']} != 0"
             assert r["high_level_replans"] == 0, f"Variant {r['domain']}/{r['variant']} high_level_replans={r['high_level_replans']} != 0"
 
-    n_correct = sum(1 for r in records if r["outcome_correct"])
-    outcome_correct_pct = (100.0 * n_correct / n_total) if n_total > 0 else 0.0
-
-    n_feasible_success = sum(1 for r in feasible_rows if r["full_task_satisfied"])
-    feasible_success_pct = (100.0 * n_feasible_success / len(feasible_rows)) if feasible_rows else 0.0
-
-    n_recovery_success = sum(1 for r in recovery_rows if r["full_task_satisfied"])
-    feasibility_recovery_pct = (100.0 * n_recovery_success / len(recovery_rows)) if recovery_rows else 0.0
-
-    mean_goal_cov = (100.0 * sum(r["full_task_goal_coverage"] for r in feasible_rows) / len(feasible_rows)) if feasible_rows else 0.0
-
-    n_false_comp = sum(1 for r in infeasible_rows if r["false_completion"])
-    false_comp_pct = (100.0 * n_false_comp / len(infeasible_rows)) if infeasible_rows else 0.0
-
-    mean_vlm_req = sum(r["semantic_vlm_requests"] for r in records) / n_total if n_total > 0 else 0.0
-    mean_replans = sum(r["high_level_replans"] for r in records) / n_total if n_total > 0 else 0.0
-
-    primary_metrics = {
-        "outcome_correct": outcome_correct_pct,
-        "feasible_success": feasible_success_pct,
-        "feasibility_recovery": feasibility_recovery_pct,
-        "goal_coverage": mean_goal_cov,
-        "false_completion": false_comp_pct,
-        "vlm_requests": mean_vlm_req,
-        "high_level_replans": mean_replans,
-    }
+    primary_metrics = compute_primary_metrics(records)
+    outcome_correct_pct = primary_metrics["outcome_correct"]
+    feasible_success_pct = primary_metrics["feasible_success"]
+    feasibility_recovery_pct = primary_metrics["feasibility_recovery"]
+    mean_goal_cov = primary_metrics["goal_coverage"]
+    false_comp_pct = primary_metrics["false_completion"]
+    mean_vlm_req = primary_metrics["vlm_requests"]
+    mean_replans = primary_metrics["high_level_replans"]
 
     # Generate Section 39 Main Paper Table
     table_md = f"""# Section 39: Main Paper Table

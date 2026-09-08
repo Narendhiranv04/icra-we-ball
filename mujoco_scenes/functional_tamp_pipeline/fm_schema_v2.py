@@ -26,6 +26,25 @@ Structure your response into two complementary sections:
 1. task_contract: Complete physical and functional requirements derived from the task instruction.
 2. observation_guidance: Visually apparent candidates and inspectable storage regions derived from the initial multi-view RGB images.
 
+Before writing JSON, perform this generic completeness audit internally:
+1. Split every task clause into atomic required physical transformations.
+2. Identify every distinct physical participant needed by each transformation.
+3. Declare those task participants independently of whether they are visible.
+4. Express every required functional or causal relation between participants.
+5. Express every required physical operation; an operation is not interchangeable with a relation.
+6. Propagate all explicit quantities to role and operation counts.
+7. Preserve distinct, shared, and sequentially reusable binding meaning.
+8. Check that every task clause is represented by roles, relations, operations, counts, and bindings.
+9. Only after the task_contract is complete, use RGB evidence to populate observation_guidance.
+10. Never omit a participant merely because it is absent or occluded in the initial images.
+
+Contract granularity rules:
+- A role must denote an independently groundable physical object, support region, or fixed physical anchor that participates in a required transformation or physical constraint.
+- Do not create roles for people/users, actions, goal states, events, quantities, abstract outcomes, or material contents that are not independently manipulated. Represent those meanings through counts, relations, and operations on their physical carriers.
+- Do not create a separate role for each numbered instance when one functional role plus `required_count` represents equivalent participants.
+- Relations must state physical functional, geometric, or causal dependencies needed to execute a transformation. Do not use mere purpose, ownership, narrative, visibility, or current-location facts as substitutes.
+- Consolidate repeated equivalent transformations into one operation pairing with `operation_count`. Source and target must be different roles with meaningful physical interaction; avoid self-pairings.
+
 A. FUNCTIONAL TASK CONTRACT (Derive from task semantics before considering visibility)
 - Infer the complete set of physical participants and spatial functional roles required to achieve the task from task semantics, including participants that may currently be absent, occluded, or located inside closed storage.
 - Visibility is evidence about current availability, not about whether a functional role is required. A role remains required even if no candidate is currently visible.
@@ -50,6 +69,11 @@ A. FUNCTIONAL TASK CONTRACT (Derive from task semantics before considering visib
 - `operation_pairings`: express each task-required physical transformation or intervention between declared roles.
   - Specify `id`, `operation` (short free-form atomic phrase describing the transformation), `source_role`, `target_role`, `operation_count`, and `reuse_policy` ('DEDICATED_PER_TARGET' or 'REUSABLE_ACROSS_TARGETS').
   - Include optional `anchor_role` if the operation is anchored to a specific reference or fixed target.
+  - `source_role` is the physical participant that performs, carries, or provides the intervention; `target_role` is the distinct physical participant directly acted on or supported; `anchor_role` is the contextual destination or fixed reference when needed. Do not substitute the anchor for the acted-on target.
+  - When an implement acts on a manipulated item at a fixed location, the implement is the source, the manipulated item is the target, and the fixed location is the anchor. Identification, search, and selection are not physical operations.
+  - For each operation, express the physical compatibility, fit, reach, support, or access dependencies that determine whether the declared source can perform it on the target and at any anchor. Use only dependencies implied by the task semantics.
+  - For an anchored operation, separately consider the required source-to-target, source-to-anchor, and target-to-anchor dependencies; do not collapse all three participants into one vague relation.
+  - Do not create operations for passive storage, visibility, or descriptive scene facts. Include the transformations the task actually requires, including final placement or restoration transformations stated by the user.
 
 B. OBSERVATION GUIDANCE (Derive from multi-view RGB images after the task contract is complete)
 - `visible_candidates_per_role`: map declared role IDs to arrays of visually apparent candidate items or regions in the initial images, with `label` and `visual_description`. May be empty for roles not currently visible.
