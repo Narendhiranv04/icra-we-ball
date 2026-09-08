@@ -207,7 +207,8 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     doc = sanitized.document
     trace: dict[str, Any] = dict(roles=[], properties=[], relations=[], groups=[], context_only_roles=[],
                                 unresolved_roles=[], merged_roles=[], disambiguated_roles=[], disabled_groups=[],
-                                unresolved_required_relations=[], unresolved_required_operations=[])
+                                unresolved_required_relations=[], unresolved_required_operations=[],
+                                task_causal_relations=[])
     nodes = {}
     id_map = {}
     planner_context_id_map = {}
@@ -297,6 +298,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     if not nodes:
         raise VLMSpecificationError('No executable role could be typed', category='CANONICALIZATION_AMBIGUITY')
     relations = []
+    task_causal_relations = []
 
     def add_relation(raw_subject: str, phrase: str, raw_target: str, *, grouped=False, expected=True) -> str | None:
         # Extract explicit role IDs if embedded in phrase (e.g. "role_3 manipulates role_2")
@@ -339,48 +341,68 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 first_pred = None
                 for ip in interp.interpreted_predicates:
                     s, p, o = ip.subject_role, ip.predicate_name, ip.object_role
-                    fixed_anchors = set(get_domain_system_fixed_anchors(domain))
-                    if s not in nodes and s in fixed_anchors:
-                        nodes[s] = FunctionalRole(name=s, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
-                                                  semantic_categories=ontology.get_system_role_semantic_categories(domain, s),
-                                                  verification_mode='GEOMETRIC_ONLY')
-                    if o not in nodes and o in fixed_anchors:
-                        nodes[o] = FunctionalRole(name=o, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
-                                                  semantic_categories=ontology.get_system_role_semantic_categories(domain, o),
-                                                  verification_mode='GEOMETRIC_ONLY')
-                    validate_predicate_signature(domain=domain, predicate=p, subject_kind=nodes[s].entity_kind,
-                        subject_role=s, object_kind=nodes[o].entity_kind, object_role=o)
-                    rel = FunctionalRelation(s, p, o, expected=expected)
-                    if not grouped and rel not in relations:
-                        relations.append(rel)
-                    if first_pred is None:
-                        first_pred = p
+                    if interp.category == "TASK_CAUSAL_SEMANTICS":
+                        # Preserved semantic edge for task narrative/causal dependency
+                        rel = FunctionalRelation(
+                            subject_role=s,
+                            predicate=p,
+                            object_role=o,
+                            expected=expected,
+                            provenance="TASK_CAUSAL_SEMANTICS",
+                            category="TASK_CAUSAL_SEMANTICS",
+                        )
+                        if rel not in task_causal_relations:
+                            task_causal_relations.append(rel)
+                        if first_pred is None:
+                            first_pred = p
+                    else:
+                        fixed_anchors = set(get_domain_system_fixed_anchors(domain))
+                        if s not in nodes and s in fixed_anchors:
+                            nodes[s] = FunctionalRole(name=s, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
+                                                      semantic_categories=ontology.get_system_role_semantic_categories(domain, s),
+                                                      verification_mode='GEOMETRIC_ONLY')
+                        if o not in nodes and o in fixed_anchors:
+                            nodes[o] = FunctionalRole(name=o, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
+                                                      semantic_categories=ontology.get_system_role_semantic_categories(domain, o),
+                                                      verification_mode='GEOMETRIC_ONLY')
+                        validate_predicate_signature(domain=domain, predicate=p, subject_kind=nodes[s].entity_kind,
+                            subject_role=s, object_kind=nodes[o].entity_kind, object_role=o)
+                        rel = FunctionalRelation(
+                            subject_role=s,
+                            predicate=p,
+                            object_role=o,
+                            expected=expected,
+                            provenance="EXPLICIT_REQUIREMENT",
+                            category="PHYSICAL_VERIFIER",
+                        )
+                        if not grouped and rel not in relations:
+                            relations.append(rel)
+                        if first_pred is None:
+                            first_pred = p
                 evidence.update(
-                    status='CANONICAL_EXECUTABLE_SEMANTIC',
+                    status='CANONICAL_EXECUTABLE_SEMANTIC' if interp.category == "PHYSICAL_VERIFIER" else 'TASK_CAUSAL_SEMANTICS',
+                    category=interp.category,
                     interp_status=interp.status,
                     canonical=[[ip.subject_role, ip.predicate_name, ip.object_role] for ip in interp.interpreted_predicates],
                     direction_normalized=interp.direction_normalized,
                 )
+                if interp.category == "TASK_CAUSAL_SEMANTICS":
+                    trace['task_causal_relations'].append(evidence)
                 trace['relations'].append(evidence)
-                return first_pred
+                return first_pred if interp.category == "PHYSICAL_VERIFIER" else None
 
-            # Fail closed.  A signature-aware domain canonicalizer must not get
-            # a second chance to manufacture meaning from endpoint identities
-            # after the semantic-candidate intersection found no support.
+            # Fail closed: uninterpretable required relation
             raise ValueError(interp.reason or 'No explicit semantic evidence for a required relation')
         except (VLMSpecificationError, ValueError) as exc:
-            evidence.update(status='UNRESOLVED_SEMANTIC', reason=str(exc))
+            evidence.update(
+                status='UNINTERPRETABLE_REQUIRED_RELATION' if expected else 'UNRESOLVED_SEMANTIC',
+                reason=str(exc),
+            )
             unresolved.append(evidence)
             if expected and not grouped:
                 trace['unresolved_required_relations'].append(evidence)
             trace['relations'].append(evidence)
             return None
-        relation = FunctionalRelation(s, p, o, expected=expected)
-        if not grouped and relation not in relations:
-            relations.append(relation)
-        evidence.update(status='CANONICAL_EXECUTABLE_SEMANTIC', canonical=[s, p, o])
-        trace['relations'].append(evidence)
-        return p
 
     for rel in doc['functional_relations']:
         add_relation(rel['subject_role'], rel.get('relation', rel.get('predicate')), rel['object_role'], expected=rel.get('expected', True))
@@ -505,6 +527,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                     provenance="ROBOT_CAPABILITY_PRECONDITION",
                     source_operation_id=source_op_id,
                     capability_id=cap_id,
+                    category="PHYSICAL_VERIFIER",
                 )
                 if not any(r.subject_role == s_r and r.predicate == p and r.object_role == o_r for r in relations):
                     relations.append(rel)
@@ -631,6 +654,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     ]
     trace['precondition_provenance'] = all_precond_prov
     graph = FunctionalRequirementGraph(domain=domain, task_instruction=task, nodes=nodes, relations=tuple(relations),
+        task_causal_relations=tuple(task_causal_relations),
         operation_groups=tuple(groups), source='VLM_CANONICAL_G_F', candidate_regions=tuple(proposed), region_ranking=tuple(ranking),
         detector_vocabulary=tuple(dict.fromkeys([c for r in doc['functional_roles'] for c in r['candidate_categories']] + [c.replace('_', ' ') for n in nodes.values() if n.entity_kind == 'OBJECT' for c in n.semantic_categories])),
         cross_group_reuse_allowed=doc.get('cross_group_reuse_allowed', domain == 'workshop' and not groups) is True,
@@ -647,6 +671,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             'contract_missing_reasons': contract_missing_reasons,
             'is_v2_specification': is_v2_document(raw),
             'precondition_provenance': all_precond_prov,
+            'task_causal_relations': [r.to_dict() for r in task_causal_relations],
             'soft_semantic_evidence': soft, 'unresolved_semantics': unresolved, 'unverified_required_properties': unverified_required, 'raw_role_to_canonical': id_map})
     from pathlib import Path
     if domain == 'living_room':

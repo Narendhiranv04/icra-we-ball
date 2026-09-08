@@ -38,6 +38,7 @@ class RelationInterpretationResult:
     interpreted_predicates: tuple[InterpretedPredicate, ...]
     direction_normalized: bool = False
     reason: str = ""
+    category: str = "PHYSICAL_VERIFIER"  # "PHYSICAL_VERIFIER" or "TASK_CAUSAL_SEMANTICS"
     evidence: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -197,8 +198,71 @@ def _extract_inverse_semantic_candidates(
             if cue_norm == norm_phrase or re.search(r"\b" + re.escape(cue_norm) + r"\b", norm_phrase):
                 candidates.add(pred_name)
                 break
-
     return candidates
+
+
+# Deterministic linguistic cues for task/causal semantic relations
+_TASK_CAUSAL_RELATION_CUES: dict[str, tuple[str, ...]] = {
+    "PROVIDES_MATERIAL_TO": (
+        "provides material to", "provides material into", "supplies material to", "supplies to",
+        "transfers material to", "transfers content to", "transfers contents to", "pours into", "poured into",
+        "dispenses into", "fills", "provides contents to", "provides ingredients to", "source for",
+        "provides coffee to", "provides water to", "provides soup to", "poured in", "pours in",
+        "supplies", "feeds into", "supplies material into",
+    ),
+    "ACTS_ON": (
+        "acts on", "operates on", "manipulates", "manipulates interior of", "stirs contents of",
+        "stirs contents", "works on", "applies to", "interacts with", "stirs", "mixes",
+        "mixes contents of", "stirs interior of", "manipulates fastener", "manipulates component",
+        "manipulate or install", "drives", "fastens",
+    ),
+    "PAIRED_WITH": (
+        "paired with", "is paired with", "accompanied by", "alongside", "served with",
+        "served alongside", "associated with", "complements", "set with", "provided alongside",
+        "arranged with", "provided for", "arranged for", "placed with",
+    ),
+    "INSTALLED_AT": (
+        "installed at", "installed in", "secured at", "secured in", "fastened at", "fastened in",
+        "anchored at", "anchored in", "attached to", "mounted at", "placed at target",
+        "installed on", "secured on",
+    ),
+    "CONNECTED_TO": (
+        "connects to", "connected to", "joins with", "joined with", "fastened together",
+    ),
+}
+
+_TASK_CAUSAL_INVERSE_CUES: dict[str, tuple[str, ...]] = {
+    "PROVIDES_MATERIAL_TO": (
+        "receives material from", "receives contents from", "receives coffee from",
+        "receives water from", "receives ingredients from", "receives from", "filled by",
+        "supplied by", "receives liquid from",
+    ),
+    "ACTS_ON": (
+        "manipulated by", "operated by", "acted on by", "stirred by", "mixed by",
+    ),
+    "INSTALLED_AT": (
+        "receives component", "holds component", "receives fastener", "anchors component",
+    ),
+}
+
+
+def _extract_task_causal_candidates(norm_phrase: str) -> tuple[str, bool] | None:
+    """Deterministically check if phrase matches a task/causal semantic relation."""
+    # Check forward cues
+    for pred, cues in _TASK_CAUSAL_RELATION_CUES.items():
+        for cue in cues:
+            cue_norm = _normalize_text(cue)
+            if cue_norm == norm_phrase or re.search(r"\b" + re.escape(cue_norm) + r"\b", norm_phrase):
+                return (pred, False)
+
+    # Check inverse cues
+    for pred, cues in _TASK_CAUSAL_INVERSE_CUES.items():
+        for cue in cues:
+            cue_norm = _normalize_text(cue)
+            if cue_norm == norm_phrase or re.search(r"\b" + re.escape(cue_norm) + r"\b", norm_phrase):
+                return (pred, True)
+
+    return None
 
 
 def interpret_relation(
@@ -229,9 +293,10 @@ def interpret_relation(
     }
 
     if not norm_phrase:
-        status = "UNMAPPABLE_REQUIRED_RELATION" if required else "SOFT_OPTIONAL_RELATION"
+        status = "UNINTERPRETABLE_REQUIRED_RELATION" if required else "SOFT_OPTIONAL_RELATION"
         return RelationInterpretationResult(
             status=status,
+            category="UNKNOWN",
             interpreted_predicates=(),
             reason="Empty relation phrase",
             evidence=evidence,
@@ -266,6 +331,7 @@ def interpret_relation(
             exact = _normalize_text(pred_name) in norm_phrase or norm_phrase == _normalize_text(pred_name)
             return RelationInterpretationResult(
                 status="EXACT_CANONICAL_MATCH" if exact else "LEXICAL_SEMANTIC_MATCH",
+                category="PHYSICAL_VERIFIER",
                 interpreted_predicates=(
                     InterpretedPredicate(subject_role, pred_name, object_role),
                 ),
@@ -281,6 +347,7 @@ def interpret_relation(
             ]
             return RelationInterpretationResult(
                 status="MULTI_PREDICATE_MATCH",
+                category="PHYSICAL_VERIFIER",
                 interpreted_predicates=tuple(ordered_preds),
                 direction_normalized=False,
                 reason=f"Multi-predicate match {sorted(matched_forward)} explicitly evidenced in phrase",
@@ -314,6 +381,7 @@ def interpret_relation(
             # Direction normalized: subject is object_role, object is subject_role
             return RelationInterpretationResult(
                 status="DIRECTION_NORMALIZED",
+                category="PHYSICAL_VERIFIER",
                 interpreted_predicates=(
                     InterpretedPredicate(object_role, pred_name, subject_role),
                 ),
@@ -324,29 +392,61 @@ def interpret_relation(
         else:
             return RelationInterpretationResult(
                 status="AMBIGUOUS_RELATION",
+                category="PHYSICAL_VERIFIER",
                 interpreted_predicates=(),
                 reason=f"Ambiguous reverse relation matches multiple predicates: {sorted(matched_reverse)}",
                 evidence=evidence,
             )
 
-    # 6. If semantic candidates exist but none match valid endpoints
+    # 6. Check task/causal semantic relations if no physical verifier matched
+    causal_match = _extract_task_causal_candidates(norm_phrase)
+    if causal_match is not None:
+        pred_name, is_inverse = causal_match
+        evidence["task_causal_predicate"] = pred_name
+        evidence["is_inverse"] = is_inverse
+        if is_inverse:
+            return RelationInterpretationResult(
+                status="TASK_CAUSAL_SEMANTIC_MATCH",
+                category="TASK_CAUSAL_SEMANTICS",
+                interpreted_predicates=(
+                    InterpretedPredicate(object_role, pred_name, subject_role),
+                ),
+                direction_normalized=True,
+                reason=f"Task/causal semantic match {pred_name} (direction normalized) for ({object_role}, {subject_role})",
+                evidence=evidence,
+            )
+        else:
+            return RelationInterpretationResult(
+                status="TASK_CAUSAL_SEMANTIC_MATCH",
+                category="TASK_CAUSAL_SEMANTICS",
+                interpreted_predicates=(
+                    InterpretedPredicate(subject_role, pred_name, object_role),
+                ),
+                direction_normalized=False,
+                reason=f"Task/causal semantic match {pred_name} for ({subject_role}, {object_role})",
+                evidence=evidence,
+            )
+
+    # 7. If semantic candidates exist for physical predicates but none match valid endpoints
     if semantic_candidates:
         evidence["reason"] = "Semantic candidates not compatible with declared endpoint roles/kinds"
-        status = "UNMAPPABLE_REQUIRED_RELATION" if required else "SOFT_OPTIONAL_RELATION"
+        status = "UNINTERPRETABLE_REQUIRED_RELATION" if required else "SOFT_OPTIONAL_RELATION"
         return RelationInterpretationResult(
             status=status,
+            category="UNKNOWN",
             interpreted_predicates=(),
             reason=f"Semantic candidates {sorted(semantic_candidates)} incompatible with endpoints ({subject_role}, {object_role})",
             evidence=evidence,
         )
 
-    # 7. Zero semantic evidence found: MUST FAIL CLOSED!
+    # 8. Zero semantic evidence found: MUST FAIL CLOSED!
     # Even if len(forward_valid_names) == 1, we NEVER guess without semantic evidence.
-    evidence["reason"] = "No semantic evidence in relation phrase matching active domain predicates"
-    status = "UNMAPPABLE_REQUIRED_RELATION" if required else "SOFT_OPTIONAL_RELATION"
+    evidence["reason"] = "No semantic evidence in relation phrase matching active domain predicates or task causal semantics"
+    status = "UNINTERPRETABLE_REQUIRED_RELATION" if required else "SOFT_OPTIONAL_RELATION"
     return RelationInterpretationResult(
         status=status,
+        category="UNKNOWN",
         interpreted_predicates=(),
-        reason=f"Relation text {raw_phrase!r} provides no semantic evidence for valid predicates {sorted(forward_valid_names)}",
+        reason=f"Relation text {raw_phrase!r} provides no semantic evidence for valid predicates {sorted(forward_valid_names)} or task causal semantics",
         evidence=evidence,
     )

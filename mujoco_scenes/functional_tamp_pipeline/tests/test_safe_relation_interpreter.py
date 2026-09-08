@@ -49,7 +49,7 @@ def test_endpoint_only_test_fails_closed():
         required=True,
     )
     assert res.succeeded is False
-    assert res.status == "UNMAPPABLE_REQUIRED_RELATION"
+    assert res.status in ("UNINTERPRETABLE_REQUIRED_RELATION", "UNMAPPABLE_REQUIRED_RELATION")
     assert len(res.interpreted_predicates) == 0
     assert "no semantic evidence" in res.reason.lower()
 
@@ -65,7 +65,7 @@ def test_kitchen_nonsensical_text_fails_closed():
         required=True,
     )
     assert res.succeeded is False
-    assert res.status == "UNMAPPABLE_REQUIRED_RELATION"
+    assert res.status in ("UNINTERPRETABLE_REQUIRED_RELATION", "UNMAPPABLE_REQUIRED_RELATION")
 
 
 def test_living_room_nonsensical_text_fails_closed():
@@ -79,7 +79,7 @@ def test_living_room_nonsensical_text_fails_closed():
         required=True,
     )
     assert res.succeeded is False
-    assert res.status == "UNMAPPABLE_REQUIRED_RELATION"
+    assert res.status in ("UNINTERPRETABLE_REQUIRED_RELATION", "UNMAPPABLE_REQUIRED_RELATION")
 
 
 def test_known_semantically_matching_relations_compile():

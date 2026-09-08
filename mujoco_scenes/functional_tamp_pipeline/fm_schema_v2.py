@@ -359,17 +359,18 @@ def convert_v2_to_canonical_document(v2_doc: Mapping[str, Any]) -> dict[str, Any
         canonical_relations.append(r_copy)
 
     canonical_groups = []
-    for op in contract.get("operation_pairings", []):
+    ops = contract.get("operation_pairings") or contract.get("interaction_groups") or []
+    for op in ops:
         group_item = {
             "id": op.get("id", f"group_{len(canonical_groups)}"),
-            "function": op.get("operation", ""),
-            "tool_role": op.get("source_role", ""),
+            "function": op.get("operation", op.get("function", "")),
+            "tool_role": op.get("source_role", op.get("tool_role", "")),
             "target_role": op.get("target_role", ""),
-            "required_target_count": op.get("operation_count", 1),
-            "usage_policy": op.get("reuse_policy", "DEDICATED_PER_TARGET"),
-            "required_relations": [],
-            "context_role": op.get("anchor_role"),
-            "context_relations": [],
+            "required_target_count": op.get("operation_count", op.get("required_target_count", 1)),
+            "usage_policy": op.get("reuse_policy", op.get("usage_policy", "DEDICATED_PER_TARGET")),
+            "required_relations": op.get("required_relations", []),
+            "context_role": op.get("anchor_role", op.get("context_role")),
+            "context_relations": op.get("context_relations", []),
         }
         canonical_groups.append(group_item)
 

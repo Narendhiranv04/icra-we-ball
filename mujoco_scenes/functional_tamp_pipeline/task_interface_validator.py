@@ -124,6 +124,20 @@ def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
             object_role=rel.object_role,
         )
 
+    for rel in graph.task_causal_relations:
+        if rel.subject_role not in graph.nodes:
+            raise MalformedVLMSpecificationError(
+                f"Task causal relation subject {rel.subject_role!r} not in graph nodes"
+            )
+        if rel.object_role not in graph.nodes:
+            raise MalformedVLMSpecificationError(
+                f"Task causal relation object {rel.object_role!r} not in graph nodes"
+            )
+        if not isinstance(rel.predicate, str) or not rel.predicate.strip():
+            raise MalformedVLMSpecificationError(
+                f"Task causal relation between {rel.subject_role!r} and {rel.object_role!r} has empty predicate"
+            )
+
     seen_op_ids: set[str] = set()
     for grp in graph.operation_groups:
         if not isinstance(grp.id, str) or not grp.id.strip():
