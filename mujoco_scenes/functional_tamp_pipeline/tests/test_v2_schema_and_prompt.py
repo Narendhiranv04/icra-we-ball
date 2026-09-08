@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import re
+from copy import deepcopy
 from pathlib import Path
 import pytest
 
@@ -288,6 +289,83 @@ def test_prompt_v2_zero_benchmark_task_leakage():
         )
 
 
+def test_prompt_v2_distinguishes_physical_counts_operation_counts_and_reuse():
+    prompt = SYSTEM_PROMPT_V2.lower()
+
+    assert "minimum number of distinct physical instances" in prompt
+    assert "do not set `required_count` equal to an operation count" in prompt
+    assert "number of required applications" in prompt
+    assert "does not assert that only one source exists" in prompt
+    assert "visibility is evidence only" in prompt
+    assert "multiple uses of one reusable source" in prompt
+
+
+def test_v2_validates_reusable_source_with_multiple_operation_applications(valid_v2_document):
+    doc = deepcopy(valid_v2_document)
+    source, target = doc["task_contract"]["functional_roles"][:2]
+    source.update(required_count=1, binding_policy="REUSABLE")
+    target.update(required_count=2, binding_policy="DISTINCT")
+    operation = doc["task_contract"]["operation_pairings"][0]
+    operation.update(operation_count=2, reuse_policy="REUSABLE_ACROSS_TARGETS")
+
+    validated = validate_v2_functional_specification(doc)
+    assert validated["task_contract"]["functional_roles"][0]["required_count"] == 1
+    assert validated["task_contract"]["operation_pairings"][0]["operation_count"] == 2
+
+
+def test_v2_validates_distinct_source_structure(valid_v2_document):
+    doc = deepcopy(valid_v2_document)
+    source, target = doc["task_contract"]["functional_roles"][:2]
+    source.update(required_count=2, binding_policy="DISTINCT")
+    target.update(required_count=2, binding_policy="DISTINCT")
+    doc["task_contract"]["operation_pairings"][0].update(
+        operation_count=2, reuse_policy="DEDICATED_PER_TARGET"
+    )
+
+    validated = validate_v2_functional_specification(doc)
+    assert validated["task_contract"]["functional_roles"][0]["binding_policy"] == "DISTINCT"
+
+
+@pytest.mark.parametrize("required_count,visible_count", [(2, 1), (1, 2)])
+def test_v2_visibility_never_rewrites_role_count(
+    valid_v2_document, required_count, visible_count
+):
+    doc = deepcopy(valid_v2_document)
+    role = doc["task_contract"]["functional_roles"][0]
+    role["required_count"] = required_count
+    doc["observation_guidance"]["visible_candidates_per_role"][role["id"]] = [
+        {"label": f"candidate_{index}", "visual_description": "visible item"}
+        for index in range(visible_count)
+    ]
+
+    validated = validate_v2_functional_specification(doc)
+    assert validated["task_contract"]["functional_roles"][0]["required_count"] == required_count
+
+
+def test_live_v2_provider_validates_cross_references_before_compilation(
+    valid_v2_document, monkeypatch
+):
+    from mujoco_scenes.functional_tamp_pipeline import semantic_compiler
+    from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
+    from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter
+
+    malformed = deepcopy(valid_v2_document)
+    malformed["task_contract"]["operation_pairings"][0]["source_role"] = "undeclared"
+    monkeypatch.setattr(
+        FMAdapter, "generate_kitchen_functional_graph",
+        lambda *args, **kwargs: malformed,
+    )
+    monkeypatch.setattr(
+        semantic_compiler, "compile_candidate_graph",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("compiler must not receive invalid live V2")
+        ),
+    )
+
+    with pytest.raises(MalformedVLMSpecificationError, match="not in declared roles"):
+        VLMSpecProvider().provide("kitchen", "generic task", observation_images=[])
+
+
 def test_prompt_v2_no_verifier_capability_block():
     """Verify that SYSTEM_PROMPT_V2 does not describe robot verifier capabilities."""
     assert "verifier capabilities" not in SYSTEM_PROMPT_V2.lower()
@@ -302,4 +380,3 @@ def test_v2_prompt_and_schema_hash_deterministic():
     assert h1 == h2
     assert len(h1) == 64
     int(h1, 16)  # must be valid hex
-

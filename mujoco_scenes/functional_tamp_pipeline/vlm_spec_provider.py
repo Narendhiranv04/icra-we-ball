@@ -33,11 +33,16 @@ class VLMSpecProvider(FunctionalSpecProvider):
     ) -> FunctionalRequirementGraph:
         from .semantic_compiler import compile_candidate_graph
         from .executability import analyze_executability
-        from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter
+        from mujoco_scenes.workshop_phase1.fm_adapter import (
+            FMAdapter,
+            is_v2_document,
+            validate_requirement_response,
+        )
 
         if domain not in {"kitchen", "living_room", "workshop"}:
             raise NotImplementedError(f"VLM specification adapter is not implemented for {domain}")
-        if raw_document is None:
+        generated_live = raw_document is None
+        if generated_live:
             adapter = FMAdapter()
             adapter.return_raw_graph = True
             if domain == "kitchen":
@@ -48,6 +53,11 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 raw_document = adapter.generate_task_requirements(
                     task_instruction, observation_images=observation_images or []
                 )
+            # The adapter returns raw output for compiler provenance. Ensure the
+            # live V2 path still performs schema and semantic cross-field checks.
+            # Legacy adapter fixtures remain compiler inputs, not V2 wire data.
+            if is_v2_document(raw_document):
+                raw_document = validate_requirement_response(raw_document)
         graph = compile_candidate_graph(domain, task_instruction, raw_document)
         graph.metadata["candidate_requirement_statuses"] = analyze_executability(graph)
         return graph
@@ -422,5 +432,3 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 "normalization_audit": result["reviewed_ontology_audit"],
             },
         )
-
-

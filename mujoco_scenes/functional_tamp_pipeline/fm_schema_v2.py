@@ -32,11 +32,13 @@ Before writing JSON, perform this generic completeness audit internally:
 3. Declare those task participants independently of whether they are visible.
 4. Express every required functional or causal relation between participants.
 5. Express every required physical operation; an operation is not interchangeable with a relation.
-6. Propagate all explicit quantities to role and operation counts.
-7. Preserve distinct, shared, and sequentially reusable binding meaning.
-8. Check that every task clause is represented by roles, relations, operations, counts, and bindings.
-9. Only after the task_contract is complete, use RGB evidence to populate observation_guidance.
-10. Never omit a participant merely because it is absent or occluded in the initial images.
+6. Separate physical role instance counts from operation application counts; never copy a target, user, or output quantity onto every participating source or tool.
+7. For every operation, audit the source physical count, target physical count, operation count, source binding policy, and operation reuse policy. Ask whether the task requires multiple source objects or merely multiple uses of one reusable source.
+8. Preserve distinct, shared, and sequentially reusable binding meaning. If a role is DISTINCT with count N, verify that the instruction actually requires N separate physical objects.
+9. If one source or tool can be reused across several targets, do not multiply its physical role count by the number of targets.
+10. Check that every task clause is represented by roles, relations, operations, counts, and bindings.
+11. Only after the task_contract is complete, use RGB evidence to populate observation_guidance.
+12. Never omit a participant merely because it is absent or occluded in the initial images.
 
 Contract granularity rules:
 - A role must denote an independently groundable physical object, support region, or fixed physical anchor that participates in a required transformation or physical constraint.
@@ -55,11 +57,14 @@ A. FUNCTIONAL TASK CONTRACT (Derive from task semantics before considering visib
   - REGION: a selectable support surface, placement area, or spatial destination.
   - FIXED_TARGET: a non-selectable contextual reference or fixed target feature that participates in relations.
 - Set `binding_policy` to:
-  - DISTINCT: separate simultaneous physical items or individual entities are required.
-  - REUSABLE: one physical item may be reused sequentially across multiple targets.
-  - SHARED: one physical region or entity intentionally serves multiple items or users.
+  - DISTINCT: the task requires `required_count` separate physical instances; they may not collapse to one object.
+  - REUSABLE: one physical instance may be used sequentially in multiple operation applications. Usually use `required_count = 1` unless the task explicitly requires multiple reusable copies.
+  - SHARED: one physical region, context, or entity intentionally serves several task participants simultaneously or as common context.
 - Role counts:
-  - Explicitly specify `required_count` (positive integer) for each role. Propagate explicit quantifiers ('each', 'both', numerical counts) from the user instruction.
+  - `required_count` is the minimum number of distinct physical instances of this role that must exist simultaneously or independently for task completion.
+  - Do not set `required_count` equal to an operation count merely because the role participates in that operation.
+  - Do not copy the number of target items, users, or outputs onto a reusable source or tool. Task semantics alone determine physical role count.
+  - Use `required_count > 1` only when multiple independent physical instances are actually required by the instruction.
 - `candidate_categories`: list open-vocabulary semantic search phrases describing valid physical realizations capable of satisfying the role's stated function.
 - `required_properties`: list only task-critical unary physical or geometric characteristics of this single role (leave empty [] if no special unary property is needed). Never place binary relations or part names here.
 - `functional_relations`: express task-critical binary dependencies between declared roles using `subject_role`, `relation`, and `object_role`.
@@ -71,12 +76,17 @@ A. FUNCTIONAL TASK CONTRACT (Derive from task semantics before considering visib
   - Include optional `anchor_role` if the operation is anchored to a specific reference or fixed target.
   - `source_role` is the physical participant that performs, carries, or provides the intervention; `target_role` is the distinct physical participant directly acted on or supported; `anchor_role` is the contextual destination or fixed reference when needed. Do not substitute the anchor for the acted-on target.
   - When an implement acts on a manipulated item at a fixed location, the implement is the source, the manipulated item is the target, and the fixed location is the anchor. Identification, search, and selection are not physical operations.
+  - `operation_count` is the number of required applications of the physical transformation. It is not the source or tool object count, although it may equal target count when one application is required per target.
+  - `REUSABLE_ACROSS_TARGETS` means the same physical source or tool may be used across multiple applications. It does not assert that only one source exists and never overrides the role's physical cardinality.
+  - `DEDICATED_PER_TARGET` means distinct source instances are required for the target applications represented by the operation.
+  - Abstract example: one reusable source acting on two distinct targets uses source `required_count = 1` with REUSABLE, target `required_count = 2` with DISTINCT, and `operation_count = 2` with REUSABLE_ACROSS_TARGETS.
   - For each operation, express the physical compatibility, fit, reach, support, or access dependencies that determine whether the declared source can perform it on the target and at any anchor. Use only dependencies implied by the task semantics.
   - For an anchored operation, separately consider the required source-to-target, source-to-anchor, and target-to-anchor dependencies; do not collapse all three participants into one vague relation.
   - Do not create operations for passive storage, visibility, or descriptive scene facts. Include the transformations the task actually requires, including final placement or restoration transformations stated by the user.
 
 B. OBSERVATION GUIDANCE (Derive from multi-view RGB images after the task contract is complete)
 - `visible_candidates_per_role`: map declared role IDs to arrays of visually apparent candidate items or regions in the initial images, with `label` and `visual_description`. May be empty for roles not currently visible.
+- Candidate visibility is evidence only and never determines `required_count`: seeing one or several candidates must not rewrite the task-derived physical role count.
 - `inspectable_regions`: propose visible closed or storage regions that could be inspected if required participants are missing. Each physical unit must be proposed at most once.
 - `inspection_order`: rank the proposed inspectable region IDs. If no closed storage search is required, leave inspectable_regions and inspection_order empty ([]).
 
@@ -118,10 +128,12 @@ RESPONSE_SCHEMA_V2: dict[str, Any] = {
                                 "type": "integer",
                                 "minimum": 1,
                                 "maximum": 20,
+                                "description": "Minimum number of distinct physical instances of this role required simultaneously or independently for task completion; not the number of operation applications.",
                             },
                             "binding_policy": {
                                 "type": "string",
                                 "enum": ["DISTINCT", "REUSABLE", "SHARED"],
+                                "description": "Physical-role binding: DISTINCT requires separate instances, REUSABLE permits sequential use of an instance, and SHARED denotes common context or an entity intentionally shared by participants.",
                             },
                             "candidate_categories": {
                                 "type": "array",
@@ -178,6 +190,7 @@ RESPONSE_SCHEMA_V2: dict[str, Any] = {
                                 "type": "integer",
                                 "minimum": 1,
                                 "maximum": 20,
+                                "description": "Number of required applications of this transformation; it does not determine source/tool physical instance count.",
                             },
                             "reuse_policy": {
                                 "type": "string",
@@ -185,6 +198,7 @@ RESPONSE_SCHEMA_V2: dict[str, Any] = {
                                     "DEDICATED_PER_TARGET",
                                     "REUSABLE_ACROSS_TARGETS",
                                 ],
+                                "description": "Operation-level source participation: reuse may use the same source across applications, while dedicated requires distinct sources for represented targets; this never overrides role cardinality.",
                             },
                             "anchor_role": {"type": "string"},
                         },
