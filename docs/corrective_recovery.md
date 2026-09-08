@@ -271,3 +271,77 @@ Directly recomputed from `benchmark_reports/final_corrected_32x1_20260908T192500
   - Safe relation interpreter: 8 passed in 0.14s.
 
 **Gate 4 Status: PASSED (Commit: `3420ab1d`).**
+
+---
+
+## 7. Stage 5 — Fix Search Eligibility and Causal Recovery
+
+### 7.1 Architectural Changes Implemented
+
+1. **Evidence-Driven Search State Machine (Section 12.1):**
+   - Implemented generic and fine-grained search state constants in `search.py`:
+     - `CONTRACT_UNEXECUTABLE`: online executable contract is incomplete or invalid.
+     - `CONTRACT_INCOMPLETE_NOT_SEARCHABLE`: backward-compatibility alias for unexecutable contract.
+     - `GROUNDING_COMPLETE`: grounding is fully satisfied.
+     - `SATISFIED`: backward-compatibility alias for complete grounding.
+     - `NO_CANDIDATE_SEARCHABLE`: zero observed candidates for an implicated searchable role.
+     - `ONLY_FALSE_CANDIDATES_SEARCHABLE`: all observed candidates evaluated to FALSE for required unary properties or relations.
+     - `ONLY_UNKNOWN_CANDIDATES_SEARCHABLE`: observed candidates evaluated to UNKNOWN (e.g. occluded, insufficient camera views) and none evaluated to TRUE.
+     - `NO_VALID_JOINT_ASSIGNMENT_SEARCHABLE`: individual candidates exist, but no joint binding satisfies all mutual constraints or binding policies.
+     - `SEARCH_EXHAUSTED`: all candidate regions in search contract have been opened/inspected and grounding remains incomplete.
+     - `GROUNDING_FAILURE_NOT_SEARCH_RECOVERABLE`: ungrounded roles are not searchable in storage regions (e.g. robot arm or fixed environment entity).
+     - `SEARCH_RECOVERABLE`: generic searchable state.
+   - Defined sets `SEARCHABLE_STATES`, `COMPLETE_STATES`, and `UNEXECUTABLE_STATES`.
+   - Defined predicate helpers: `is_searchable_state(state)`, `is_complete_state(state)`, and `is_unexecutable_state(state)`.
+
+2. **Fine-Grained Classification and Backward Compatibility:**
+   - Implemented `classify_fine_search_state(graph_f, grounding, search_contract, inspected_regions)` to inspect candidate evaluations, relation statuses, and constraints.
+   - Preserved backward compatibility: `classify_search_state(..., detailed=False)` maps all searchable states to `"SEARCH_RECOVERABLE"`, `CONTRACT_UNEXECUTABLE` to `"CONTRACT_INCOMPLETE_NOT_SEARCHABLE"`, and `GROUNDING_COMPLETE` to `"SATISFIED"`.
+   - Passing `detailed=True` returns the specific fine-grained state.
+
+3. **Search Loop Continuation and Telemetry Hardening:**
+   - Updated `search_until_satisfied` in `search.py` to use `is_searchable_state(search_state)` rather than strict string equality to `"SEARCH_RECOVERABLE"`.
+   - Recorded both `search_state` (coarse) and `fine_search_state` (detailed) in every snapshot and in the terminal grounding result's evidence.
+   - Ensured search terminates properly when `is_complete_state(search_state)` is reached.
+
+4. **Decoupled Search Gating from Offline Reference Completeness (Section 12.4):**
+   - Replaced hidden benchmark reference checks (`required_contract_complete`) with `online_executable_contract_complete` across:
+     - `domains/kitchen.py`: pre-search order gating and VLM exhausted fallback.
+     - `domains/living_room.py`: VLM exhausted fallback.
+     - `run.py`: VLM candidate subgraph grounding fallback.
+     - `grounding.py`: verified candidate subgraph grounding.
+     - `evaluation_metrics.py`: updated `search_eligible` to check membership in `SEARCHABLE_STATES`.
+     - `scripts/corrective_offline_rescore.py`: updated `search_eligible` to check membership in `SEARCHABLE_STATES`.
+   - An expressed executable subtask is no longer starved of search merely because of hidden reference-task omissions.
+
+5. **Strict Causal Recovery Metric (Section 12.5):**
+   - Strictly enforced in `compute_causal_search_recovery`:
+     ```python
+     initial_grounding_complete is False
+     and bool(inspected_regions)
+     and final_grounding_complete is True
+     ```
+
+### 7.2 Gate 5 Verification
+
+- **New Test Suite:** `mujoco_scenes/functional_tamp_pipeline/tests/test_stage5_search_eligibility.py` (12 tests passed).
+- **Proved Properties:**
+  - `CONTRACT_UNEXECUTABLE` returned when online contract is incomplete.
+  - `GROUNDING_COMPLETE` returned when grounding is complete.
+  - `NO_CANDIDATE_SEARCHABLE` returned when zero candidates observed for an implicated role.
+  - `ONLY_FALSE_CANDIDATES_SEARCHABLE` returned when all candidates evaluate to FALSE.
+  - `ONLY_UNKNOWN_CANDIDATES_SEARCHABLE` returned on UNKNOWN candidate/relation evidence.
+  - `NO_VALID_JOINT_ASSIGNMENT_SEARCHABLE` returned on joint binding failure despite individual candidates.
+  - `SEARCH_EXHAUSTED` returned when all candidate regions are inspected.
+  - `GROUNDING_FAILURE_NOT_SEARCH_RECOVERABLE` returned for non-searchable roles.
+  - `online_executable_contract_complete == True` with `required_contract_complete == False` does NOT block search.
+  - Causal search recovery metric truth table verified.
+  - `search_until_satisfied` telemetry verifies both coarse and fine search states recorded in snapshots.
+- **Regression Suites:**
+  - Stages 1 through 5: 41 passed in 0.20s.
+  - Search eligibility and recovery: 11 passed in 0.32s.
+  - Full functional TAMP pipeline test suite: 513 passed in 6m18s (0 failures).
+- **Commit:** `64d3e975` (`fix(search): restore evidence-driven inspection eligibility`).
+
+**Gate 5 Status: PASSED.**
+
