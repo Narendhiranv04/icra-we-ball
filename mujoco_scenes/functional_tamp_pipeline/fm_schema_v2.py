@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from typing import Any, Mapping
 import jsonschema
 
@@ -42,6 +43,10 @@ Before writing JSON, perform this generic completeness audit internally:
 
 Contract granularity rules:
 - A role must denote an independently groundable physical object, support region, or fixed physical anchor that participates in a required transformation or physical constraint.
+- Write each role `function` as one short functional noun phrase, preferably no more than 8 words, with no task narrative.
+- Write each `required_properties` entry as one short unary physical or functional property of that role, preferably no more than 8 words. Do not put a binary relation, endpoint reference, explanation, or action sequence in a required property.
+- Write each `relation` as one atomic binary relation, preferably 2-8 words. Do not join constraints, explain them, or encode an action sequence.
+- Write each `operation` as one atomic physical transformation, preferably 1-8 words. Do not encode a multi-step sequence or explanation.
 - Do not create roles for people/users, actions, goal states, events, quantities, abstract outcomes, or material contents that are not independently manipulated. Represent those meanings through counts, relations, and operations on their physical carriers.
 - Do not create a separate role for each numbered instance when one functional role plus `required_count` represents equivalent participants.
 - Relations must state physical functional, geometric, or causal dependencies needed to execute a transformation. Do not use mere purpose, ownership, narrative, visibility, or current-location facts as substitutes.
@@ -52,6 +57,7 @@ A. FUNCTIONAL TASK CONTRACT (Derive from task semantics before considering visib
 - Visibility is evidence about current availability, not about whether a functional role is required. A role remains required even if no candidate is currently visible.
 - Represent physically distinct participants separately whenever they perform different causal functions (such as a source, payload, manipulated component, tool, receiving target, support, or contextual anchor).
 - Never assign physical object or region instance identifiers to roles; describe required functional capabilities.
+- Every role must explicitly provide `id`, `entity_kind`, `function`, `required_count`, `binding_policy`, `candidate_categories`, and `required_properties`; do not rely on omitted-field defaults.
 - Set `entity_kind` to:
   - OBJECT: a selectable or manipulable physical item.
   - REGION: a selectable support surface, placement area, or spatial destination.
@@ -69,11 +75,13 @@ A. FUNCTIONAL TASK CONTRACT (Derive from task semantics before considering visib
 - `required_properties`: list only task-critical unary physical or geometric characteristics of this single role (leave empty [] if no special unary property is needed). Never place binary relations or part names here.
 - `functional_relations`: express task-critical binary dependencies between declared roles using `subject_role`, `relation`, and `object_role`.
   - Use short atomic free-form phrases for `relation` in your own words.
+  - Each relation entry must explicitly provide `id`, `subject_role`, `relation`, `object_role`, and `required`. Do not rely on defaults.
   - Set `required: true` for relations necessary for task completion.
   - Both `subject_role` and `object_role` must reference declared role IDs in `functional_roles`.
 - `operation_pairings`: express each task-required physical transformation or intervention between declared roles.
   - Specify `id`, `operation` (short free-form atomic phrase describing the transformation), `source_role`, `target_role`, `operation_count`, and `reuse_policy` ('DEDICATED_PER_TARGET' or 'REUSABLE_ACROSS_TARGETS').
   - Include optional `anchor_role` if the operation is anchored to a specific reference or fixed target.
+  - Do not omit any required operation field or rely on a default count, reuse policy, or source.
   - `source_role` is the physical participant that performs, carries, or provides the intervention; `target_role` is the distinct physical participant directly acted on or supported; `anchor_role` is the contextual destination or fixed reference when needed. Do not substitute the anchor for the acted-on target.
   - When an implement acts on a manipulated item at a fixed location, the implement is the source, the manipulated item is the target, and the fixed location is the anchor. Identification, search, and selection are not physical operations.
   - `operation_count` is the number of required applications of the physical transformation. It is not the source or tool object count, although it may equal target count when one application is required per target.
@@ -122,7 +130,10 @@ RESPONSE_SCHEMA_V2: dict[str, Any] = {
                                 "type": "string",
                                 "enum": ["OBJECT", "REGION", "FIXED_TARGET"],
                             },
-                            "function": {"type": "string"},
+                            "function": {
+                                "type": "string",
+                                "description": "One short functional noun phrase with no task narrative.",
+                            },
                             "description": {"type": "string"},
                             "required_count": {
                                 "type": "integer",
@@ -145,7 +156,10 @@ RESPONSE_SCHEMA_V2: dict[str, Any] = {
                                 "type": "array",
                                 "minItems": 0,
                                 "maxItems": 16,
-                                "items": {"type": "string"},
+                                "items": {
+                                    "type": "string",
+                                    "description": "One short unary physical or functional property of this role; not a relation or operation.",
+                                },
                             },
                         },
                         "required": [
@@ -167,7 +181,10 @@ RESPONSE_SCHEMA_V2: dict[str, Any] = {
                         "properties": {
                             "id": {"type": "string"},
                             "subject_role": {"type": "string"},
-                            "relation": {"type": "string"},
+                            "relation": {
+                                "type": "string",
+                                "description": "One short atomic free-form binary relation, without explanation or action sequence.",
+                            },
                             "object_role": {"type": "string"},
                             "required": {"type": "boolean"},
                         },
@@ -183,7 +200,10 @@ RESPONSE_SCHEMA_V2: dict[str, Any] = {
                         "type": "object",
                         "properties": {
                             "id": {"type": "string"},
-                            "operation": {"type": "string"},
+                            "operation": {
+                                "type": "string",
+                                "description": "One short atomic free-form physical transformation, without explanation or multi-step sequence.",
+                            },
                             "source_role": {"type": "string"},
                             "target_role": {"type": "string"},
                             "operation_count": {
@@ -346,6 +366,135 @@ def validate_v2_functional_specification(doc: Mapping[str, Any]) -> dict[str, An
             )
 
     return dict(doc)
+
+
+_LIVE_ROLE_FIELDS = frozenset({
+    "id",
+    "entity_kind",
+    "function",
+    "required_count",
+    "binding_policy",
+    "candidate_categories",
+    "required_properties",
+})
+_LIVE_RELATION_FIELDS = frozenset({
+    "id",
+    "subject_role",
+    "relation",
+    "object_role",
+    "required",
+})
+_LIVE_OPERATION_FIELDS = frozenset({
+    "id",
+    "operation",
+    "source_role",
+    "target_role",
+    "operation_count",
+    "reuse_policy",
+})
+_BINARY_PROPERTY_MARKERS = frozenset({
+    "at", "from", "inside", "into", "near", "on", "onto", "to", "under", "with",
+})
+
+
+def _require_live_fields(
+    item: Mapping[str, Any], required_fields: frozenset[str], code: str, location: str
+) -> None:
+    missing = sorted(required_fields - set(item))
+    if missing:
+        raise MalformedVLMSpecificationError(
+            f"{code}: {location} missing explicit fields {missing}"
+        )
+
+
+def _validate_atomic_phrase(value: Any, code: str, location: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise MalformedVLMSpecificationError(f"{code}: {location} must be non-empty")
+    phrase = value.strip()
+    words = re.findall(r"\b[\w'-]+\b", phrase)
+    has_multiple_sentences = bool(re.search(r"[.!?]\s+\S", phrase))
+    if "\n" in phrase or "\r" in phrase or ";" in phrase or has_multiple_sentences or len(words) > 10:
+        raise MalformedVLMSpecificationError(
+            f"{code}: {location} must be one phrase of at most 10 words"
+        )
+    return phrase
+
+
+def validate_v2_live_contract(doc: Mapping[str, Any]) -> dict[str, Any]:
+    """Enforce invariants required of newly generated live V2 documents.
+
+    The base validator intentionally remains backward compatible for archived
+    V2 replay. This stricter layer is called only at a live generation boundary.
+    It rejects omissions and non-atomic prose without rewriting model output.
+    """
+    validated = validate_v2_functional_specification(doc)
+    if validated.get("status") != "SUPPORTED":
+        return validated
+
+    contract = validated["task_contract"]
+    roles = contract["functional_roles"]
+    relations = contract["functional_relations"]
+    operations = contract["operation_pairings"]
+    role_ids = {role["id"] for role in roles}
+
+    for index, role in enumerate(roles):
+        location = f"functional_roles[{index}]"
+        _require_live_fields(role, _LIVE_ROLE_FIELDS, "MISSING_LIVE_ROLE_FIELDS", location)
+        _validate_atomic_phrase(role["function"], "NON_ATOMIC_ROLE_FUNCTION", f"{location}.function")
+        for prop_index, prop in enumerate(role["required_properties"]):
+            property_location = f"{location}.required_properties[{prop_index}]"
+            phrase = _validate_atomic_phrase(prop, "NON_ATOMIC_REQUIRED_PROPERTY", property_location)
+            phrase_words = {word.casefold() for word in re.findall(r"\b[\w'-]+\b", phrase)}
+            references_endpoint = any(
+                referenced_id != role["id"]
+                and re.search(rf"(?<!\w){re.escape(referenced_id)}(?!\w)", phrase, re.IGNORECASE)
+                for referenced_id in role_ids
+            )
+            if references_endpoint and phrase_words.intersection(_BINARY_PROPERTY_MARKERS):
+                raise MalformedVLMSpecificationError(
+                    f"BINARY_REQUIRED_PROPERTY: {property_location} references another role endpoint"
+                )
+
+    for index, relation in enumerate(relations):
+        location = f"functional_relations[{index}]"
+        _require_live_fields(
+            relation, _LIVE_RELATION_FIELDS, "MISSING_LIVE_RELATION_FIELDS", location
+        )
+        if not isinstance(relation["id"], str) or not relation["id"].strip():
+            raise MalformedVLMSpecificationError(
+                f"INVALID_LIVE_RELATION_ID: {location}.id must be non-empty"
+            )
+        _validate_atomic_phrase(
+            relation["relation"], "NON_ATOMIC_RELATION_PHRASE", f"{location}.relation"
+        )
+
+    for index, operation in enumerate(operations):
+        location = f"operation_pairings[{index}]"
+        _require_live_fields(
+            operation, _LIVE_OPERATION_FIELDS, "MISSING_LIVE_OPERATION_FIELDS", location
+        )
+        if not isinstance(operation["id"], str) or not operation["id"].strip():
+            raise MalformedVLMSpecificationError(
+                f"INVALID_LIVE_OPERATION_ID: {location}.id must be non-empty"
+            )
+        _validate_atomic_phrase(
+            operation["operation"], "NON_ATOMIC_OPERATION_PHRASE", f"{location}.operation"
+        )
+        for endpoint in ("source_role", "target_role"):
+            if operation[endpoint] not in role_ids:
+                raise MalformedVLMSpecificationError(
+                    f"INVALID_OPERATION_REFERENCE: {location}.{endpoint} must reference a declared role"
+                )
+        if "anchor_role" in operation and operation["anchor_role"] not in role_ids:
+            raise MalformedVLMSpecificationError(
+                f"INVALID_OPERATION_REFERENCE: {location}.anchor_role must reference a declared role"
+            )
+        if operation["source_role"] == operation["target_role"]:
+            raise MalformedVLMSpecificationError(
+                f"INVALID_OPERATION_SELF_PAIRING: {location} source_role equals target_role"
+            )
+
+    return validated
 
 
 def convert_v2_to_canonical_document(v2_doc: Mapping[str, Any]) -> dict[str, Any]:

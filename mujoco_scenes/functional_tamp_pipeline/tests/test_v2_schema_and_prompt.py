@@ -366,6 +366,30 @@ def test_live_v2_provider_validates_cross_references_before_compilation(
         VLMSpecProvider().provide("kitchen", "generic task", observation_images=[])
 
 
+def test_live_v2_provider_enforces_strict_atomic_contract_before_compilation(
+    valid_v2_document, monkeypatch
+):
+    from mujoco_scenes.functional_tamp_pipeline import semantic_compiler
+    from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
+    from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter
+
+    malformed = deepcopy(valid_v2_document)
+    del malformed["task_contract"]["operation_pairings"][0]["reuse_policy"]
+    monkeypatch.setattr(
+        FMAdapter, "generate_kitchen_functional_graph",
+        lambda *args, **kwargs: malformed,
+    )
+    monkeypatch.setattr(
+        semantic_compiler, "compile_candidate_graph",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("compiler must not receive incomplete live V2")
+        ),
+    )
+
+    with pytest.raises(MalformedVLMSpecificationError, match="MISSING_LIVE_OPERATION_FIELDS"):
+        VLMSpecProvider().provide("kitchen", "generic task", observation_images=[])
+
+
 def test_prompt_v2_no_verifier_capability_block():
     """Verify that SYSTEM_PROMPT_V2 does not describe robot verifier capabilities."""
     assert "verifier capabilities" not in SYSTEM_PROMPT_V2.lower()

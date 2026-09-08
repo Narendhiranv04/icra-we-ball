@@ -36,7 +36,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
         from mujoco_scenes.workshop_phase1.fm_adapter import (
             FMAdapter,
             is_v2_document,
-            validate_requirement_response,
+            validate_v2_live_contract,
         )
 
         if domain not in {"kitchen", "living_room", "workshop"}:
@@ -57,7 +57,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
             # live V2 path still performs schema and semantic cross-field checks.
             # Legacy adapter fixtures remain compiler inputs, not V2 wire data.
             if is_v2_document(raw_document):
-                raw_document = validate_requirement_response(raw_document)
+                raw_document = validate_v2_live_contract(raw_document)
         graph = compile_candidate_graph(domain, task_instruction, raw_document)
         graph.metadata["candidate_requirement_statuses"] = analyze_executability(graph)
         return graph
