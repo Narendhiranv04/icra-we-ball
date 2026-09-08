@@ -220,8 +220,8 @@ def enrich_record(row, run_dir, task):
         offline_reference_task_complete=bool(raw_metrics['complete_task_contract']),
         fm_count_correct=raw_metrics['count_correct'],
         fm_binding_correct=raw_metrics['binding_correct'],
-        full_task_semantic_goal_count=row['full_task_goal_count'],
-        full_task_semantic_goal_satisfied_count=row['full_task_goal_satisfied_count'],
+        full_task_semantic_goal_count=row.get('full_task_goal_count', 0),
+        full_task_semantic_goal_satisfied_count=row.get('full_task_goal_satisfied_count', 0),
         canonical_role_coverage=raw_metrics['role']['recall'],
         execution_state=manifest.get('execution_state'),
         raw_semantic_matching_method=raw_metrics['matching_method'])
@@ -319,7 +319,48 @@ def enrich_record(row, run_dir, task):
     if not row['gt_feasible'] and not row['runtime_contract_complete']:
         row['outcome_correct'] = False
 
-    # Corrected first-cause failure precedence (Section 17.3)
+    audit_data = read_json(Path(run_dir) / 'plan_grounding_audit.json')
+    grounding_invalid = bool(
+        audit_data and (
+            audit_data.get('all_assignment_nodes_observed') is False
+            or audit_data.get('all_required_relations_true') is False
+        )
+    )
+
+    raw_requirement_present = bool(
+        row.get('vlm_json_valid', True)
+        and raw_metrics.get('complete_task_contract', False)
+    )
+    production_mapped = bool(
+        executable_contract_complete
+        and sanitizer.get('succeeded', True)
+        and row.get('canonicalization_succeeded', True)
+        and not trace.get('unresolved_roles')
+        and not metadata.get('unresolved_semantics')
+        and not trace.get('disabled_groups')
+        and not trace.get('unresolved_required_operations')
+    )
+    capability_mapped = bool(
+        executable_contract_complete
+        and not trace.get('disabled_groups')
+        and not trace.get('unresolved_required_operations')
+    )
+    physical_evidence_available = bool(assignments or is_complete_grounding)
+    search_attempted = bool(row.get('regions_inspected') or len(search_states) > 1)
+    grounding_complete = bool(is_complete_grounding and not grounding_invalid)
+    astar_attempted = bool(row.get('candidate_plan_eligible'))
+    plan_valid = bool(row.get('candidate_plan_valid'))
+
+    row['raw_requirement_present'] = raw_requirement_present
+    row['production_mapped'] = production_mapped
+    row['capability_mapped'] = capability_mapped
+    row['physical_evidence_available'] = physical_evidence_available
+    row['search_attempted'] = search_attempted
+    row['grounding_complete'] = grounding_complete
+    row['astar_attempted'] = astar_attempted
+    row['plan_valid'] = plan_valid
+
+    # Corrected first-cause failure precedence (Section 14.4, 14.5)
     first_cause = None
     category = None
     stage = None
@@ -335,56 +376,42 @@ def enrich_record(row, run_dir, task):
     elif row.get('full_task_satisfied'):
         first_cause = None
         category, stage = 'NONE', 'SUCCESS'
-    elif not row['vlm_json_valid']:
+    elif not row.get('vlm_json_valid'):
         first_cause = 'TASK_SPECIFICATION_FAILURE'
         category, stage = 'FM_STRUCTURAL_ERROR', 'RAW_FM'
     elif not sanitizer['succeeded']:
         first_cause = 'GRAPH_COMPILATION_FAILURE'
         category, stage = 'SANITIZER_UNRECOVERABLE', 'SANITIZER'
-    elif not row['canonicalization_succeeded']:
-        first_cause = 'GRAPH_COMPILATION_FAILURE'
-        category, stage = 'CANONICALIZATION_AMBIGUITY', 'CANONICALIZER'
-    elif trace.get('unresolved_roles'):
+    elif not row['canonicalization_succeeded'] or trace.get('unresolved_roles'):
         first_cause = 'GRAPH_COMPILATION_FAILURE'
         category, stage = 'CANONICALIZATION_AMBIGUITY', 'CANONICALIZER'
     elif metadata.get('unresolved_semantics') or trace.get('disabled_groups') or trace.get('unresolved_required_operations'):
         first_cause = 'GRAPH_COMPILATION_FAILURE'
         category, stage = 'CANONICALIZATION_UNRESOLVED_REQUIRED_SEMANTIC', 'EXECUTABILITY'
+    elif not raw_requirement_present:
+        first_cause = 'TASK_SPECIFICATION_FAILURE'
+        category, stage = 'FM_SEMANTIC_OMISSION', 'RAW_FM'
     elif not executable_contract_complete:
         first_cause = 'GRAPH_COMPILATION_FAILURE'
         category, stage = 'CONTRACT_INCOMPLETE', 'EXECUTABILITY'
-    elif not row.get('offline_reference_task_complete', row.get('raw_vlm_spec_complete', False)):
-        first_cause = 'TASK_SPECIFICATION_FAILURE'
-        category, stage = 'FM_SEMANTIC_OMISSION', 'RAW_FM'
-    elif not assignments:
+    elif not grounding_complete:
         if row.get('search_exhausted'):
             first_cause = 'OBJECT_DISCOVERY_FAILURE'
             category, stage = 'SEARCH_EXHAUSTED', 'SEARCH'
-        else:
+        elif not physical_evidence_available:
             first_cause = 'FUNCTIONAL_ASSIGNMENT_FAILURE'
             category, stage = 'NO_VALID_ASSIGNMENT', 'GROUNDING'
-    elif not is_complete_grounding:
-        if row.get('search_exhausted'):
-            first_cause = 'OBJECT_DISCOVERY_FAILURE'
-            category, stage = 'SEARCH_EXHAUSTED', 'SEARCH'
+        elif grounding_invalid:
+            first_cause = 'FUNCTIONAL_ASSIGNMENT_FAILURE'
+            category, stage = 'INVALID_GROUNDING_EVIDENCE', 'GROUNDING'
         else:
             first_cause = 'FUNCTIONAL_ASSIGNMENT_FAILURE'
             category, stage = 'PARTIAL_VERIFIED_GROUNDING', 'GROUNDING'
     else:
-        audit_data = read_json(Path(run_dir) / 'plan_grounding_audit.json')
-        grounding_invalid = bool(
-            audit_data and (
-                audit_data.get('all_assignment_nodes_observed') is False
-                or audit_data.get('all_required_relations_true') is False
-            )
-        )
-        if grounding_invalid:
-            first_cause = 'FUNCTIONAL_ASSIGNMENT_FAILURE'
-            category, stage = 'INVALID_GROUNDING_EVIDENCE', 'GROUNDING'
-        elif row.get('candidate_plan_eligible') and not row.get('candidate_plan_valid'):
+        if not plan_valid:
             first_cause = 'PLANNING_FAILURE'
             category, stage = 'PLAN_VALIDATION_FAILURE', 'VALIDATION'
-        elif row.get('candidate_plan_eligible') and not row.get('full_task_satisfied'):
+        elif not row.get('full_task_satisfied'):
             first_cause = 'PLANNING_FAILURE'
             category, stage = 'PLANNING_FAILURE', 'PLANNING'
         else:

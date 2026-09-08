@@ -40,12 +40,12 @@ def _mapping_items(value: Any) -> tuple[Mapping[str, Any], ...]:
 def _v1_operation(raw: Mapping[str, Any], index: int) -> EvaluationOperation:
     return EvaluationOperation(
         id=str(raw.get("id", f"v1_operation_{index}")),
-        phrase=str(raw.get("function", "")),
-        source_role=raw.get("tool_role"),
+        phrase=str(raw.get("function", raw.get("operation", ""))),
+        source_role=raw.get("tool_role", raw.get("source_role")),
         target_role=raw.get("target_role"),
-        count=raw.get("required_target_count"),
-        reuse_policy=raw.get("usage_policy"),
-        anchor_role=raw.get("context_role"),
+        count=raw.get("required_target_count", raw.get("operation_count")),
+        reuse_policy=raw.get("usage_policy", raw.get("reuse_policy")),
+        anchor_role=raw.get("context_role", raw.get("anchor_role")),
         schema="V1_INTERACTION_GROUP",
     )
 
@@ -53,12 +53,12 @@ def _v1_operation(raw: Mapping[str, Any], index: int) -> EvaluationOperation:
 def _v2_operation(raw: Mapping[str, Any], index: int) -> EvaluationOperation:
     return EvaluationOperation(
         id=str(raw.get("id", f"v2_operation_{index}")),
-        phrase=str(raw.get("operation", "")),
-        source_role=raw.get("source_role"),
+        phrase=str(raw.get("operation", raw.get("function", ""))),
+        source_role=raw.get("source_role", raw.get("tool_role")),
         target_role=raw.get("target_role"),
-        count=raw.get("operation_count"),
-        reuse_policy=raw.get("reuse_policy"),
-        anchor_role=raw.get("anchor_role"),
+        count=raw.get("operation_count", raw.get("required_target_count")),
+        reuse_policy=raw.get("reuse_policy", raw.get("usage_policy")),
+        anchor_role=raw.get("anchor_role", raw.get("context_role")),
         schema="V2_OPERATION_PAIRING",
     )
 
@@ -69,9 +69,15 @@ def extract_evaluation_contract(raw: Any) -> EvaluationContract:
     if "task_contract" in document:
         contract = document.get("task_contract")
         contract = contract if isinstance(contract, Mapping) else {}
+        pairings = (
+            contract.get("operation_pairings")
+            or contract.get("operation_groups")
+            or contract.get("interaction_groups")
+            or ()
+        )
         operations = tuple(
             _v2_operation(item, index)
-            for index, item in enumerate(_mapping_items(contract.get("operation_pairings")))
+            for index, item in enumerate(_mapping_items(pairings))
         )
         return EvaluationContract(
             schema="V2",
@@ -80,9 +86,15 @@ def extract_evaluation_contract(raw: Any) -> EvaluationContract:
             operations=operations,
         )
 
+    groups = (
+        document.get("interaction_groups")
+        or document.get("operation_groups")
+        or document.get("operation_pairings")
+        or ()
+    )
     operations = tuple(
         _v1_operation(item, index)
-        for index, item in enumerate(_mapping_items(document.get("interaction_groups")))
+        for index, item in enumerate(_mapping_items(groups))
     )
     return EvaluationContract(
         schema="V1",

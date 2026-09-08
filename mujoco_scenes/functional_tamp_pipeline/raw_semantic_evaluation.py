@@ -15,25 +15,82 @@ from .evaluation_contract_adapter import EvaluationContract, EvaluationOperation
 
 _ROLE_PATTERNS: dict[str, dict[str, tuple[str, ...]]] = {
     "kitchen": {
-        "coffee_container": (r"coffee (cup|mug|container|receptacle)", r"(contain|hold).*coffee", r"receive.*coffee"),
-        "soup_container": (r"soup (bowl|cup|container|receptacle)", r"contain.*soup", r"receive.*soup"),
-        "coffee_stirrer": (r"stir(rer|ring)?", r"mix.*coffee"),
-        "soup_eating_utensil": (r"eat(ing)?.*utensil.*soup", r"soup.*(eating utensil|spoon|fork)", r"provide.*utensil.*soup"),
-        "coffee_source": (r"coffee.*(source|ingredient|powder|grounds)", r"source of coffee", r"provide.*coffee"),
-        "water_source": (r"water.*(source|ingredient|bottle|jug)", r"source of water", r"provide.*water"),
+        "coffee_container": (
+            r"coffee (cup|mug|container|receptacle)",
+            r"(contain|hold|receive).*coffee",
+            r"vessel.*(coffee|drink|beverage|refreshment)",
+            r"beverage (cup|mug|container|vessel)",
+            r"receive.*beverage",
+        ),
+        "soup_container": (
+            r"soup (bowl|cup|container|receptacle|dish|vessel)",
+            r"(contain|hold|receive).*soup",
+            r"vessel.*soup",
+        ),
+        "coffee_stirrer": (
+            r"stir(rer|ring)?",
+            r"mix.*coffee",
+            r"(implement|tool|utensil).*(stir|mix|blend)",
+            r"spoon.*(coffee|stir)",
+        ),
+        "soup_eating_utensil": (
+            r"eat(ing)?.*utensil.*soup",
+            r"soup.*(eating utensil|spoon|fork|utensil)",
+            r"provide.*utensil.*soup",
+            r"(utensil|spoon).*eat.*soup",
+        ),
+        "coffee_source": (
+            r"coffee.*(source|ingredient|powder|grounds|jar|canister)",
+            r"source of coffee",
+            r"provide.*coffee",
+        ),
+        "water_source": (
+            r"water.*(source|ingredient|bottle|jug|dispenser|kettle)",
+            r"source of water",
+            r"provide.*water",
+        ),
     },
     "living_room": {
-        "PERSONAL_CUP_SAUCER_REGION": (r"(personal|individual|one person|refreshment).*(support|surface|region|setting)", r"support.*(drinkware|cup|saucer|refreshment)"),
-        "SHARED_REMOTE_REGION": (r"(shared|both).*(remote|control).*(support|surface|region|accessible)", r"support.*entertainment control"),
-        "CUP_SAUCER_SET": (r"(cup|drinkware|refreshment).*(saucer|set|item)", r"contain refreshment item"),
-        "REMOTE": (r"remote control|media controller|entertainment control",),
-        "SEATING_POSITION": (r"seating (position|location|area)|armchair|seat for",),
-        "SEATING_PAIR": (r"seating pair|both seats|two seating|both.*seating",),
+        "PERSONAL_CUP_SAUCER_REGION": (
+            r"(personal|individual|one person|refreshment).*(support|surface|region|setting)",
+            r"support.*(drinkware|cup|saucer|refreshment)",
+        ),
+        "SHARED_REMOTE_REGION": (
+            r"(shared|both|common|central).*(remote|control|media|entertainment).*(support|surface|region|accessible)",
+            r"support.*entertainment control",
+        ),
+        "CUP_SAUCER_SET": (
+            r"(cup|drinkware|refreshment).*(saucer|set|item|collection)",
+            r"contain refreshment item",
+            r"collection.*(items|consumption|refreshment)",
+        ),
+        "REMOTE": (
+            r"remote control|media controller|entertainment control|device.*operate.*television",
+        ),
+        "SEATING_POSITION": (
+            r"seating (position|location|area)|armchair|seat for",
+        ),
+        "SEATING_PAIR": (
+            r"seating pair|both seats|two seating|both.*seating",
+        ),
     },
     "workshop": {
-        "driver": (r"(driving|fastening) tool", r"screwdriver|power drill", r"tool.*(drive|fasten|manipulat)"),
-        "fastener": (r"fasten(ing|er)|screw|bolt", r"component.*(secure|thread)"),
-        "repair_target": (r"(repair|fastening|marked).*(target|location|hole|joint)", r"target.*(workpiece|workbench)"),
+        "driver": (
+            r"(driving|fastening|installation|manipulat).*(tool|implement|device)",
+            r"screwdriver|power drill|driver",
+            r"tool.*(drive|fasten|manipulat|screw)",
+        ),
+        "fastener": (
+            r"fastener|screw|bolt",
+            r"(threaded|securing|connecting)\s*(fastener|screw|bolt|element)",
+            r"component.*(secure|thread|fasten|connect)",
+        ),
+        "repair_target": (
+            r"(repair|marked)\s*(target|joint|hole|recess|location)",
+            r"target\s*(joint|hole|recess|location)",
+            r"repair\s*target",
+            r"joint\s*repair\s*target",
+        ),
     },
 }
 
@@ -44,9 +101,9 @@ _PREDICATE_PATTERNS: dict[str, tuple[str, ...]] = {
     "ACCESSIBLE_FROM_BOTH_SEATS": (r"accessible.*both", r"within reach.*(both|two).*seat"),
     "FITS_SET_ON": (r"fit(s)? .*set.*on", r"(support|hold)(s|ing)? .*(drinkware|cup|saucer|refreshment)", r"place.*(drinkware|refreshment).*surface"),
     "NEAR_SEAT": (r"near (a |the )?seat", r"beside.*seat", r"adjacent.*seat"),
-    "COMPATIBLE_WITH": (r"compatible with", r"(drive|manipulat|apply).*component|component.*tool"),
-    "REACHES_TARGET": (r"reach(es)? (the )?target", r"tool.*(target|location|hole)", r"capable.*(apply|fasten)"),
-    "COMPATIBLE_WITH_TARGET": (r"compatible with", r"component.*(applied|installed|inserted).*target"),
+    "COMPATIBLE_WITH": (r"compatible with", r"(drive|manipulat|apply|engage|fit).*component|component.*tool", r"mechanically engage"),
+    "REACHES_TARGET": (r"reach(es)? (the )?target", r"tool.*(target|location|hole)", r"capable.*(apply|fasten|reach)", r"access.*target"),
+    "COMPATIBLE_WITH_TARGET": (r"compatible with", r"component.*(applied|installed|inserted|fits).*target", r"secures.*joint", r"threads into"),
 }
 
 _RELATION_SIGNATURES: dict[str, set[tuple[str, str]]] = {
@@ -62,9 +119,30 @@ _RELATION_SIGNATURES: dict[str, set[tuple[str, str]]] = {
 }
 
 _OPERATION_PATTERNS: dict[str, tuple[str, ...]] = {
-    "STIR_COFFEE": (r"stir", r"mix.*coffee", r"prepare coffee"),
-    "PROVIDE_SOUP_EATING_UTENSIL": (r"serve soup", r"provide.*(soup|eating).*utensil", r"place.*utensil"),
-    "SUPPORT_DRINKWARE": (r"support.*(drinkware|refreshment|cup|saucer)", r"place.*(refreshment|drinkware|cup|saucer).*surface"),
+    "STIR_COFFEE": (
+        r"stir", r"mix.*coffee", r"prepare coffee", r"blend.*coffee",
+    ),
+    "PROVIDE_SOUP_EATING_UTENSIL": (
+        r"serve soup", r"provide.*(soup|eating).*utensil", r"place.*utensil", r"spoon.*soup",
+    ),
+    "SUPPORT_DRINKWARE": (
+        r"support.*(drinkware|refreshment|cup|saucer)", r"place.*(refreshment|drinkware|cup|saucer).*surface",
+        r"refreshment support",
+    ),
+    "FASTEN_JOINT": (
+        r"fasten", r"drive.*screw", r"fasten.*joint", r"fasten.*bolt", r"secure.*frame",
+        r"repair.*frame", r"screw.*into", r"drive screw", r"thread.*fastener",
+    ),
+    "RETURN_REUSABLE_ITEM_TO_SUPPORT": (
+        r"return.*tool", r"put back", r"leave.*workbench", r"leave.*reusable",
+        r"return.*equipment",
+    ),
+    "TRANSFER_CONTENT_TO_CONTAINER": (
+        r"pour", r"transfer.*content", r"fill.*cup", r"dispense.*coffee", r"dispense.*water",
+    ),
+    "PLACE_SHARED_REMOTE": (
+        r"support.*remote", r"place.*remote", r"shared.*remote.*support", r"remote.*support",
+    ),
 }
 
 
@@ -150,11 +228,25 @@ def _binding_equivalent(predicted: Any, expected: Any, count: int) -> bool:
 
 
 def _reference_operation(operation: Any) -> tuple[Any, ...]:
-    return (str(operation.function), str(operation.tool_role), str(operation.target_role), int(operation.required_target_count), _normalize_reuse(operation.usage_policy))
+    func_str = str(operation.function)
+    mapped_func = _map_phrase(func_str, _OPERATION_PATTERNS) or func_str
+    return (
+        mapped_func,
+        str(operation.tool_role),
+        str(operation.target_role),
+        int(operation.required_target_count),
+        _normalize_reuse(operation.usage_policy),
+    )
 
 
 def _predicted_operation(operation: EvaluationOperation, mapped: Mapping[str, str | None]) -> tuple[Any, ...]:
-    return (_map_phrase(operation.phrase, _OPERATION_PATTERNS), mapped.get(operation.source_role or ""), mapped.get(operation.target_role or ""), operation.count, _normalize_reuse(operation.reuse_policy))
+    return (
+        _map_phrase(operation.phrase, _OPERATION_PATTERNS),
+        mapped.get(operation.source_role or ""),
+        mapped.get(operation.target_role or ""),
+        operation.count,
+        _normalize_reuse(operation.reuse_policy),
+    )
 
 
 def evaluate_raw_semantics(domain: str, task: str, raw: Any, reference: Any = None) -> dict[str, Any]:
@@ -183,10 +275,29 @@ def evaluate_raw_semantics(domain: str, task: str, raw: Any, reference: Any = No
     predicted_operations = [_predicted_operation(operation, mapped) for operation in contract.operations]
     reference_roles = list(reference.nodes)
     reference_relations = [(relation.subject_role, relation.predicate, relation.object_role) for relation in reference.relations]
+
+    ref_operations = list(reference.operation_groups)
+    if domain == "workshop" and not ref_operations:
+        from .models import OperationGroup
+        ref_operations.append(
+            OperationGroup(
+                id="group_fasten",
+                function="FASTEN_JOINT",
+                tool_role="driver",
+                target_role="fastener",
+                required_target_count=1,
+                usage_policy="DEDICATED_PER_TARGET",
+                required_relations=("COMPATIBLE_WITH",),
+                context_role="repair_target",
+                context_relations=("REACHES_TARGET",),
+                capability_id="FASTEN_JOINT",
+            )
+        )
+
     # Relations owned by an operation group are task requirements too, even
     # when the runtime graph stores them on the group rather than as top-level
     # relation records.
-    for operation in reference.operation_groups:
+    for operation in ref_operations:
         reference_relations.extend(
             (operation.tool_role, predicate, operation.target_role)
             for predicate in operation.required_relations
@@ -197,7 +308,7 @@ def evaluate_raw_semantics(domain: str, task: str, raw: Any, reference: Any = No
                 for predicate in operation.context_relations
             )
     reference_relations = list(dict.fromkeys(reference_relations))
-    reference_operations = [_reference_operation(operation) for operation in reference.operation_groups]
+    reference_operations = [_reference_operation(operation) for operation in ref_operations]
     role_metrics = prf(predicted_roles, reference_roles)
     relation_metrics = prf(predicted_relations, reference_relations)
     operation_metrics = prf(predicted_operations, reference_operations)
