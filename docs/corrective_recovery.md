@@ -205,3 +205,69 @@ Directly recomputed from `benchmark_reports/final_corrected_32x1_20260908T192500
 
 **Gate 3 Status: PASSED.**
 
+---
+
+## 6. Stage 4 — Refactor Relation Handling: Task/Causal Semantics vs Physical Verifiers
+
+### 6.1 Architectural Changes Implemented
+
+1. **Conceptual Separation of Relations:**
+   - **Physical Verifier Constraints (`category="PHYSICAL_VERIFIER"`):**
+     - Predicates requiring geometric/physical ground-truth verification (`INSERTABLE_IN`, `REACHES_BOTTOM`, `FITS_ON`, `FITS_SET_ON`, `NEAR_SEAT`, `ACCESSIBLE_FROM_BOTH_SEATS`, `COMPATIBLE_WITH`, `REACHES_TARGET`, `COMPATIBLE_WITH_TARGET`).
+     - Stored in `graph.relations`. Validated against frozen `predicate_registry` signatures in `validate_runtime_gf`.
+   - **Task/Causal Semantic Relations (`category="TASK_CAUSAL_SEMANTICS"`):**
+     - Predicates expressing narrative/causal dependency (`PROVIDES_MATERIAL_TO`, `ACTS_ON`, `PAIRED_WITH`, `INSTALLED_AT`, `CONNECTED_TO`, and reverse mappings like `RECEIVES_CONTENTS_FROM`).
+     - Stored in `graph.task_causal_relations` (and `graph.metadata['task_causal_relations']`).
+     - Preserved as task semantic provenance; never burdened with physical geometric verification checkers.
+     - Validated in `validate_runtime_gf` for node endpoint existence without requiring geometric checker signatures.
+   - **Capability-Derived Physical Preconditions:**
+     - Instantiated when explicit operations map to robot capabilities (`provenance="ROBOT_CAPABILITY_PRECONDITION"`, `category="PHYSICAL_VERIFIER"`).
+     - Does not require FM to redundantly declare checker predicates (e.g. `stir contents` automatically attaches `INSERTABLE_IN` and `REACHES_BOTTOM`).
+
+2. **Deterministic Linguistic Cues for Task Causal Relations:**
+   - Added `_TASK_CAUSAL_RELATION_CUES` and `_TASK_CAUSAL_INVERSE_CUES` to `relation_interpreter.py`.
+   - Cues safely recognize natural language phrases:
+     - `"provides material to"`, `"provides material into"`, `"supplies material to"`, `"pours into"` -> `PROVIDES_MATERIAL_TO`
+     - `"acts on"`, `"operates on"`, `"manipulates"`, `"manipulates interior of"`, `"stirs contents of"` -> `ACTS_ON`
+     - `"paired with"`, `"accompanied by"`, `"alongside"`, `"served with"`, `"provided for"` -> `PAIRED_WITH`
+     - `"installed at"`, `"secured at"`, `"fastened at"`, `"anchored at"` -> `INSTALLED_AT`
+     - `"receives contents from"`, `"receives material from"` -> direction normalized to `PROVIDES_MATERIAL_TO`
+   - Physical verifiers take precedence over task/causal cues when both endpoints and lexical cues match a physical constraint.
+
+3. **Fail-Closed Uninterpretable Required Relations:**
+   - If an FM declares an explicit required relation that matches neither a physical verifier nor a task/causal relation (e.g. `"must maintain 45 degree tilt during operation"` or `"bananas on the moon"`):
+     - Evaluates to `UNINTERPRETABLE_REQUIRED_RELATION`.
+     - Recorded in `trace['unresolved_required_relations']`.
+     - `online_executable_contract_complete` evaluates to `False`.
+     - Fails closed safely.
+
+4. **Endpoint Signature Isolation Invariant:**
+   - Verified that endpoint signatures alone never manufacture relations when semantic cues are absent.
+   - For example, between `driver` and `fastener`, nonsensical text fails closed as `UNINTERPRETABLE_REQUIRED_RELATION` and never guesses `COMPATIBLE_WITH`.
+   - Missing relations between roles are never synthesized from candidate identities alone.
+
+5. **Data Model and Interface Updates:**
+   - Extended `FunctionalRelation` with `category: str = "PHYSICAL_VERIFIER"`.
+   - Extended `FunctionalRequirementGraph` with `task_causal_relations: tuple[FunctionalRelation, ...] = ()`.
+   - Updated `validate()` in `models.py` and `validate_runtime_gf()` in `task_interface_validator.py` to validate `task_causal_relations`.
+   - Updated `to_dict()` and `from_dict()` across models for complete serialization round-trip.
+   - Updated `convert_v2_to_canonical_document` in `fm_schema_v2.py` to seamlessly accept `interaction_groups` alongside `operation_pairings`.
+
+### 6.2 Gate 4 Verification
+
+- **New Test Suite:** `mujoco_scenes/functional_tamp_pipeline/tests/test_stage4_relation_handling.py` (8 tests passed).
+- **Proved Properties:**
+  - Explicit physical relation -> physical verifier in `graph.relations` with `category="PHYSICAL_VERIFIER"`.
+  - Explicit causal relation -> preserved semantic edge in `graph.task_causal_relations` with `category="TASK_CAUSAL_SEMANTICS"`, contract remains complete.
+  - Direction normalization for causal relations -> `"coffee container receives contents from coffee source"` correctly normalized to `PROVIDES_MATERIAL_TO(coffee_source, coffee_container)`.
+  - Workshop separation -> `"tool acts on component"` (causal `ACTS_ON`) vs `"mechanically engages screw head"` (physical `COMPATIBLE_WITH`).
+  - Explicit operation -> capability-derived physical preconditions (`INSERTABLE_IN + REACHES_BOTTOM`), no missing relations error.
+  - Unknown required relation -> `UNINTERPRETABLE_REQUIRED_RELATION`, `online_executable_contract_complete == False`.
+  - Endpoint signature alone -> never creates relation without semantic evidence.
+  - Serialization round-trip -> `to_dict()` and `from_dict()` preserve all fields and categories.
+- **Regression Suites:**
+  - Stages 1, 2, 3, and 4: 37 passed in 0.16s.
+  - Domain canonicalization: 86 passed in 0.74s across Kitchen, Living Room, and Workshop.
+  - Safe relation interpreter: 8 passed in 0.14s.
+
+**Gate 4 Status: PASSED (Commit: `3420ab1d`).**
