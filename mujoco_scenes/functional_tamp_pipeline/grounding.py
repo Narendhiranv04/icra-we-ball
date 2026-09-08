@@ -391,6 +391,7 @@ def _evaluate_operation_group(
     selected_targets: list[str],
     graph_o: ObservedSceneGraph,
     selected_contexts: list[str] | None = None,
+    required_distinct_tools: int = 1,
 ) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]]]:
     """Evaluate an operation group pairing between selected tools and targets (and optional context).
     Returns (status, diagnostics, matching) where status in {'TRUE', 'FALSE', 'UNKNOWN'}
@@ -467,7 +468,15 @@ def _evaluate_operation_group(
 
     else:  # SEQUENTIAL_REUSE_ALLOWED
         sorted_tools = sorted(selected_tools)
+        required_distinct_tools = min(required_distinct_tools, len(selected_targets))
         if grp.same_tool_must_cover_all_targets:
+            if required_distinct_tools > 1:
+                return "FALSE", [{
+                    "group": grp.id,
+                    "status": "ROLE_OPERATION_BINDING_CONFLICT",
+                    "required_distinct_tools": required_distinct_tools,
+                    "same_tool_must_cover_all_targets": True,
+                }], []
             # Must find a single tool that satisfies all targets
             has_unknown_single = False
             for u in sorted_tools:
@@ -485,39 +494,38 @@ def _evaluate_operation_group(
                 return "UNKNOWN", diagnostics, []
             return "FALSE", diagnostics, []
         else:
-            # Each target must be satisfied by at least one selected tool
-            target_matching: list[dict[str, Any]] = []
-            target_statuses: list[str] = []
+            # Reuse is optional: first satisfy explicit DISTINCT source-role
+            # participation, then reuse any selected source for extra targets.
+            per_target_checks: list[list[tuple[str, dict[str, Any]]]] = []
             for i, t in enumerate(selected_targets):
                 c = selected_contexts[i] if (selected_contexts and i < len(selected_contexts)) else None
-                found_true_tool = False
-                has_unknown_tool = False
-                chosen_binding: dict[str, Any] | None = None
+                checks = []
                 for u in sorted_tools:
-                    st, b = check_pair(u, t, c)
-                    if st == "TRUE":
-                        found_true_tool = True
-                        chosen_binding = b
-                        break
-                    elif st == "UNKNOWN":
-                        has_unknown_tool = True
-                        if chosen_binding is None:
-                            chosen_binding = b
+                    checks.append(check_pair(u, t, c))
+                per_target_checks.append(checks)
 
-                if found_true_tool and chosen_binding is not None:
-                    target_statuses.append("TRUE")
-                    target_matching.append(chosen_binding)
-                elif has_unknown_tool:
-                    target_statuses.append("UNKNOWN")
-                    if chosen_binding is not None:
-                        target_matching.append(chosen_binding)
-                else:
-                    target_statuses.append("FALSE")
+            def covers_distinct_minimum(
+                matching: tuple[tuple[str, dict[str, Any]], ...]
+            ) -> bool:
+                return len({item[1]["tool_id"] for item in matching}) >= required_distinct_tools
 
-            if all(s == "TRUE" for s in target_statuses):
-                return "TRUE", [], target_matching
-            if all(s in {"TRUE", "UNKNOWN"} for s in target_statuses) and "UNKNOWN" in target_statuses:
-                return "UNKNOWN", diagnostics, []
+            true_options = [
+                [item for item in checks if item[0] == "TRUE"]
+                for checks in per_target_checks
+            ]
+            if all(true_options):
+                for matching in product(*true_options):
+                    if covers_distinct_minimum(matching):
+                        return "TRUE", [], [item[1] for item in matching]
+
+            viable_options = [
+                [item for item in checks if item[0] in {"TRUE", "UNKNOWN"}]
+                for checks in per_target_checks
+            ]
+            if all(viable_options):
+                for matching in product(*viable_options):
+                    if covers_distinct_minimum(matching):
+                        return "UNKNOWN", diagnostics, []
             return "FALSE", diagnostics, []
 
 
@@ -707,9 +715,16 @@ def ground_graph(
                 tool_list = [tools] if isinstance(tools, str) else list(tools)
                 target_list = [targets] if isinstance(targets, str) else list(targets)
                 context_list = ([contexts] if isinstance(contexts, str) else list(contexts)) if contexts is not None else None
+                source_role = roles[grp.tool_role]
+                required_distinct_tools = (
+                    min(source_role.minimum_count, len(target_list))
+                    if source_role.binding_policy == "DISTINCT"
+                    else 1
+                )
 
                 grp_stat, grp_diags, grp_matching = _evaluate_operation_group(
-                    grp, tool_list, target_list, graph_o, context_list
+                    grp, tool_list, target_list, graph_o, context_list,
+                    required_distinct_tools=required_distinct_tools,
                 )
                 if grp_stat == "FALSE":
                     combo_status = "FALSE"

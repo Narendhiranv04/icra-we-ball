@@ -220,7 +220,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     trace: dict[str, Any] = dict(roles=[], properties=[], relations=[], groups=[], context_only_roles=[],
                                 unresolved_roles=[], merged_roles=[], disambiguated_roles=[], disabled_groups=[],
                                 unresolved_required_relations=[], unresolved_required_operations=[],
-                                task_causal_relations=[])
+                                task_causal_relations=[], role_operation_reconciliations=[])
     nodes = {}
     id_map = {}
     planner_context_id_map = {}
@@ -641,19 +641,25 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 executable_context_role = 'SEATING_PAIR'
             if runtime_function == 'SUPPORT_DRINKWARE' or (op_interp.capability and op_interp.capability.capability_id == 'SUPPORT_DRINKWARE'):
                 usage_policy = 'DEDICATED_PER_TARGET'
+        source_node = nodes[tool_role_id]
         if (
             usage_policy == 'SEQUENTIAL_REUSE_ALLOWED'
-            and tool_role_id in nodes
-            and nodes[tool_role_id].entity_kind == 'OBJECT'
-            and not nodes[tool_role_id].shared
+            and source_node.binding_policy == 'DISTINCT'
+            and source_node.minimum_count > 1
         ):
-            t_node = nodes[tool_role_id]
-            nodes[tool_role_id] = replace(
-                t_node,
-                binding_policy='REUSABLE',
-                min_count=t_node.min_count or 1,
-                preference=t_node.preference or 'minimize_distinct',
-            )
+            trace['role_operation_reconciliations'].append({
+                'code': 'ROLE_OPERATION_REUSE_RECONCILED',
+                'raw_role_id': tool_raw,
+                'canonical_role': tool_role_id,
+                'role_count': source_node.count,
+                'role_minimum_count': source_node.minimum_count,
+                'role_maximum_count': source_node.maximum_count,
+                'role_binding_policy': source_node.binding_policy,
+                'operation_id': group.get('id', runtime_function),
+                'operation_target_count': count,
+                'operation_usage_policy': usage_policy,
+                'resolution': 'PRESERVE_ROLE_DISTINCTNESS_REUSE_REMAINS_OPTIONAL',
+            })
         group_op_id = group.get('id', runtime_function)
         cap_id = op_interp.capability.capability_id if op_interp.capability else None
         grp_precond_provenance = [
