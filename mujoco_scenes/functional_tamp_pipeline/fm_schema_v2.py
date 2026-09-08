@@ -96,8 +96,8 @@ A. FUNCTIONAL TASK CONTRACT (Derive from task semantics before considering visib
 B. OBSERVATION GUIDANCE (Derive from multi-view RGB images after the task contract is complete)
 - `visible_candidates_per_role`: map declared role IDs to arrays of visually apparent candidate items or regions in the initial images, with `label` and `visual_description`. May be empty for roles not currently visible.
 - Candidate visibility is evidence only and never determines `required_count`: seeing one or several candidates must not rewrite the task-derived physical role count.
-- `inspectable_regions`: propose visible closed or storage regions that could be inspected if required participants are missing. Each physical unit must be proposed at most once.
-- `inspection_order`: rank the proposed inspectable region IDs. If no closed storage search is required, leave inspectable_regions and inspection_order empty ([]).
+- `inspectable_regions`: propose visible closed or storage regions that could be inspected if required participants are missing. For each region explicitly provide a unique identifier-safe `id`, `label`, `visual_description`, and `reason`. Each physical unit must be proposed at most once. Do not predict or invent what is inside a closed region.
+- `inspection_order`: provide every proposed inspectable-region ID exactly once, ranked in inspection order. If no closed storage search is required, leave inspectable_regions and inspection_order empty ([]).
 
 C. STATUS SEMANTICS
 - `SUPPORTED`: task can be represented with functional roles and relations. `functional_roles` in `task_contract` must be non-empty, `unsupported_reason` must be empty ("").
@@ -322,6 +322,21 @@ _live_contract_schema["properties"]["operation_pairings"]["items"]["required"] =
     "operation_count",
     "reuse_policy",
 ]
+_live_guidance_schema = LIVE_RESPONSE_SCHEMA_V2["properties"]["observation_guidance"]
+_live_region_schema = _live_guidance_schema["properties"]["inspectable_regions"]["items"]
+_live_region_schema["properties"] = {
+    "id": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-zA-Z0-9_]+$",
+    },
+    "label": {"type": "string", "minLength": 1},
+    "visual_description": {"type": "string", "minLength": 1},
+    "reason": {"type": "string", "minLength": 1},
+    "description": {"type": "string"},
+}
+_live_region_schema["required"] = ["id", "label", "visual_description", "reason"]
+_live_region_schema["additionalProperties"] = False
 
 
 def is_v2_document(doc: Mapping[str, Any]) -> bool:
@@ -502,6 +517,29 @@ def validate_v2_live_contract(doc: Mapping[str, Any]) -> dict[str, Any]:
             f"operation_pairings[{index}]",
         )
     _validate_live_response_schema(validated)
+
+    guidance = validated["observation_guidance"]
+    regions = guidance["inspectable_regions"]
+    inspection_order = guidance["inspection_order"]
+    region_ids = [region["id"] for region in regions]
+    if len(region_ids) != len(set(region_ids)):
+        raise MalformedVLMSpecificationError(
+            "DUPLICATE_INSPECTABLE_REGION_ID: inspectable region IDs must be unique"
+        )
+    if len(inspection_order) != len(set(inspection_order)):
+        raise MalformedVLMSpecificationError(
+            "DUPLICATE_INSPECTION_ORDER_ID: inspection_order IDs must be unique"
+        )
+    unknown_order_ids = sorted(set(inspection_order) - set(region_ids))
+    if unknown_order_ids:
+        raise MalformedVLMSpecificationError(
+            f"UNKNOWN_INSPECTION_ORDER_REGION: undeclared IDs {unknown_order_ids}"
+        )
+    if set(inspection_order) != set(region_ids):
+        missing_order_ids = sorted(set(region_ids) - set(inspection_order))
+        raise MalformedVLMSpecificationError(
+            f"INCOMPLETE_INSPECTION_ORDER: missing declared IDs {missing_order_ids}"
+        )
 
     for index, role in enumerate(roles):
         location = f"functional_roles[{index}]"

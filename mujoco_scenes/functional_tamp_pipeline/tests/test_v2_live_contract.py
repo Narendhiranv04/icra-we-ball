@@ -99,6 +99,15 @@ def _operation(
     return operation
 
 
+def _region(region_id: str) -> dict:
+    return {
+        "id": region_id,
+        "label": "visible storage region",
+        "visual_description": "closed region visible in the observation",
+        "reason": "could be inspected for missing requirements",
+    }
+
+
 def _expressiveness_documents() -> dict[str, dict]:
     return {
         "reusable_source_multiple_targets": _document(
@@ -158,7 +167,7 @@ def _expressiveness_documents() -> dict[str, dict]:
         "partially_observed_role": _document(
             [_role("tool", "required manipulation tool", binding="REUSABLE")],
             visible={"tool": []},
-            regions=[{"id": "storage", "description": "possible enclosed storage"}],
+            regions=[_region("storage")],
         ),
     }
 
@@ -316,6 +325,125 @@ def test_live_schema_allows_semantically_valid_unsupported_response():
     assert validate_v2_live_contract(document)["status"] == "UNSUPPORTED"
 
 
+def test_live_observation_guidance_accepts_empty_regions_and_order():
+    document = _expressiveness_documents()["desired_task_effect"]
+    assert validate_v2_live_contract(document) == document
+
+
+def test_live_observation_guidance_accepts_complete_ranked_regions():
+    document = _expressiveness_documents()["desired_task_effect"]
+    guidance = document["observation_guidance"]
+    guidance["inspectable_regions"] = [_region("region_1"), _region("region_2")]
+    guidance["inspection_order"] = ["region_2", "region_1"]
+    assert validate_v2_live_contract(document) == document
+
+
+@pytest.mark.parametrize("field", ["id", "label", "visual_description", "reason"])
+def test_live_region_schema_requires_each_observation_field_but_legacy_allows_omission(field):
+    document = _expressiveness_documents()["desired_task_effect"]
+    guidance = document["observation_guidance"]
+    guidance["inspectable_regions"] = [_region("region_1")]
+    guidance["inspection_order"] = ["region_1"]
+    del guidance["inspectable_regions"][0][field]
+
+    jsonschema.validate(document, RESPONSE_SCHEMA_V2)
+    validate_v2_functional_specification(document)
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(document, LIVE_RESPONSE_SCHEMA_V2)
+    with pytest.raises(MalformedVLMSpecificationError, match="Live V2 schema validation failed"):
+        validate_v2_live_contract(document)
+
+
+def test_live_region_schema_rejects_additional_properties():
+    document = _expressiveness_documents()["desired_task_effect"]
+    region = _region("region_1")
+    region["unexpected"] = "metadata"
+    document["observation_guidance"]["inspectable_regions"] = [region]
+    document["observation_guidance"]["inspection_order"] = ["region_1"]
+    with pytest.raises(MalformedVLMSpecificationError, match="Live V2 schema validation failed"):
+        validate_v2_live_contract(document)
+
+
+@pytest.mark.parametrize("region_id", ["", "region one", "region-1", "region/1"])
+def test_live_region_schema_requires_identifier_safe_nonempty_id(region_id):
+    document = _expressiveness_documents()["desired_task_effect"]
+    document["observation_guidance"]["inspectable_regions"] = [_region(region_id)]
+    document["observation_guidance"]["inspection_order"] = [region_id]
+    with pytest.raises(MalformedVLMSpecificationError, match="Live V2 schema validation failed"):
+        validate_v2_live_contract(document)
+
+
+@pytest.mark.parametrize("field", ["label", "visual_description", "reason"])
+def test_live_region_schema_requires_nonempty_descriptive_fields(field):
+    document = _expressiveness_documents()["desired_task_effect"]
+    region = _region("region_1")
+    region[field] = ""
+    document["observation_guidance"]["inspectable_regions"] = [region]
+    document["observation_guidance"]["inspection_order"] = ["region_1"]
+    with pytest.raises(MalformedVLMSpecificationError, match="Live V2 schema validation failed"):
+        validate_v2_live_contract(document)
+
+
+def test_live_observation_guidance_rejects_duplicate_region_id():
+    document = _expressiveness_documents()["desired_task_effect"]
+    document["observation_guidance"]["inspectable_regions"] = [
+        _region("region_1"), _region("region_1")
+    ]
+    document["observation_guidance"]["inspection_order"] = ["region_1"]
+    with pytest.raises(MalformedVLMSpecificationError, match="DUPLICATE_INSPECTABLE_REGION_ID"):
+        validate_v2_live_contract(document)
+
+
+def test_live_observation_guidance_rejects_unknown_order_region():
+    document = _expressiveness_documents()["desired_task_effect"]
+    document["observation_guidance"]["inspectable_regions"] = [_region("region_1")]
+    document["observation_guidance"]["inspection_order"] = ["region_2"]
+    with pytest.raises(MalformedVLMSpecificationError, match="UNKNOWN_INSPECTION_ORDER_REGION"):
+        validate_v2_live_contract(document)
+
+
+def test_live_observation_guidance_rejects_duplicate_order_id():
+    document = _expressiveness_documents()["desired_task_effect"]
+    document["observation_guidance"]["inspectable_regions"] = [_region("region_1")]
+    document["observation_guidance"]["inspection_order"] = ["region_1", "region_1"]
+    with pytest.raises(MalformedVLMSpecificationError, match="DUPLICATE_INSPECTION_ORDER_ID"):
+        validate_v2_live_contract(document)
+
+
+def test_live_observation_guidance_rejects_incomplete_order():
+    document = _expressiveness_documents()["desired_task_effect"]
+    document["observation_guidance"]["inspectable_regions"] = [
+        _region("region_1"), _region("region_2")
+    ]
+    document["observation_guidance"]["inspection_order"] = ["region_1"]
+    with pytest.raises(MalformedVLMSpecificationError, match="INCOMPLETE_INSPECTION_ORDER"):
+        validate_v2_live_contract(document)
+
+
+def test_live_observation_guidance_rejects_order_without_regions():
+    document = _expressiveness_documents()["desired_task_effect"]
+    document["observation_guidance"]["inspection_order"] = ["region_1"]
+    with pytest.raises(MalformedVLMSpecificationError, match="UNKNOWN_INSPECTION_ORDER_REGION"):
+        validate_v2_live_contract(document)
+
+
+def test_omitted_visible_role_key_means_empty_evidence_without_role_deletion():
+    document = _expressiveness_documents()["desired_task_effect"]
+    document["observation_guidance"]["visible_candidates_per_role"] = {"payload": []}
+    validated = validate_v2_live_contract(document)
+    canonical = convert_v2_to_canonical_document(validated)
+    support = next(role for role in canonical["functional_roles"] if role["id"] == "support")
+    assert support["visible_candidates"] == []
+    assert {role["id"] for role in canonical["functional_roles"]} == {"payload", "support"}
+
+
+def test_live_observation_guidance_rejects_visible_candidate_for_undeclared_role():
+    document = _expressiveness_documents()["desired_task_effect"]
+    document["observation_guidance"]["visible_candidates_per_role"]["undeclared"] = []
+    with pytest.raises(MalformedVLMSpecificationError, match="references undeclared role"):
+        validate_v2_live_contract(document)
+
+
 class _RecordingTransport:
     def __init__(self, document):
         self.document = document
@@ -378,6 +506,13 @@ def test_all_domain_requests_send_the_same_strict_live_schema(monkeypatch, tmp_p
     assert {"id", "source_role", "operation_count", "reuse_policy"} <= set(
         contract_schema["operation_pairings"]["items"]["required"]
     )
+    region_schema = schemas[0]["properties"]["observation_guidance"]["properties"][
+        "inspectable_regions"
+    ]["items"]
+    assert set(region_schema["required"]) == {
+        "id", "label", "visual_description", "reason"
+    }
+    assert region_schema["additionalProperties"] is False
 
 
 def test_fake_transport_cannot_bypass_post_validation(monkeypatch, tmp_path):
