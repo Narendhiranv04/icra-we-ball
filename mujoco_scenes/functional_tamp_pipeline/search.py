@@ -14,6 +14,50 @@ from .models import (
     freeze_search_region_contract,
 )
 
+CONTRACT_UNEXECUTABLE = "CONTRACT_UNEXECUTABLE"
+CONTRACT_INCOMPLETE_NOT_SEARCHABLE = "CONTRACT_INCOMPLETE_NOT_SEARCHABLE"
+GROUNDING_COMPLETE = "GROUNDING_COMPLETE"
+SATISFIED = "SATISFIED"
+SEARCH_EXHAUSTED = "SEARCH_EXHAUSTED"
+GROUNDING_FAILURE_NOT_SEARCH_RECOVERABLE = "GROUNDING_FAILURE_NOT_SEARCH_RECOVERABLE"
+
+NO_CANDIDATE_SEARCHABLE = "NO_CANDIDATE_SEARCHABLE"
+ONLY_FALSE_CANDIDATES_SEARCHABLE = "ONLY_FALSE_CANDIDATES_SEARCHABLE"
+ONLY_UNKNOWN_CANDIDATES_SEARCHABLE = "ONLY_UNKNOWN_CANDIDATES_SEARCHABLE"
+NO_VALID_JOINT_ASSIGNMENT_SEARCHABLE = "NO_VALID_JOINT_ASSIGNMENT_SEARCHABLE"
+SEARCH_RECOVERABLE = "SEARCH_RECOVERABLE"
+
+SEARCHABLE_STATES: frozenset[str] = frozenset({
+    SEARCH_RECOVERABLE,
+    NO_CANDIDATE_SEARCHABLE,
+    ONLY_FALSE_CANDIDATES_SEARCHABLE,
+    ONLY_UNKNOWN_CANDIDATES_SEARCHABLE,
+    NO_VALID_JOINT_ASSIGNMENT_SEARCHABLE,
+})
+
+COMPLETE_STATES: frozenset[str] = frozenset({
+    SATISFIED,
+    GROUNDING_COMPLETE,
+})
+
+UNEXECUTABLE_STATES: frozenset[str] = frozenset({
+    CONTRACT_UNEXECUTABLE,
+    CONTRACT_INCOMPLETE_NOT_SEARCHABLE,
+})
+
+
+def is_searchable_state(state: str | None) -> bool:
+    return bool(state and state in SEARCHABLE_STATES)
+
+
+def is_complete_state(state: str | None) -> bool:
+    return bool(state and state in COMPLETE_STATES)
+
+
+def is_unexecutable_state(state: str | None) -> bool:
+    return bool(state and state in UNEXECUTABLE_STATES)
+
+
 
 class SearchDomain(Protocol):
     def observe_initial(self) -> None: ...
@@ -132,13 +176,13 @@ def roles_in_missing_or_failed_bindings(
     return implicated
 
 
-def classify_search_state(
+def classify_fine_search_state(
     graph_f: FunctionalRequirementGraph,
     grounding: GraphGroundingResult | None,
     search_contract: SearchRegionContract | None,
     inspected_regions: Iterable[str] = (),
 ) -> str:
-    """Classify current search eligibility and termination status."""
+    """Classify current search eligibility with fine-grained evidence state."""
     contract_complete = graph_f.metadata.get("online_executable_contract_complete")
     if contract_complete is None:
         contract_complete = graph_f.metadata.get("required_contract_complete")
@@ -147,10 +191,10 @@ def classify_search_state(
     if contract_complete is None:
         contract_complete = getattr(graph_f, "required_contract_complete", True)
     if not contract_complete:
-        return "CONTRACT_INCOMPLETE_NOT_SEARCHABLE"
+        return CONTRACT_UNEXECUTABLE
 
     if grounding is not None and (grounding.complete or getattr(grounding, "satisfied", False)):
-        return "SATISFIED"
+        return GROUNDING_COMPLETE
 
     canonical_regions = (
         getattr(search_contract, "canonical_region_ids", ())
@@ -160,22 +204,104 @@ def classify_search_state(
     inspected_set = set(inspected_regions)
     remaining_regions = [r for r in canonical_regions if r not in inspected_set]
     if not remaining_regions:
-        return "SEARCH_EXHAUSTED"
+        return SEARCH_EXHAUSTED
 
     implicated = roles_in_missing_or_failed_bindings(graph_f, grounding)
 
-    searchable = [
-        graph_f.nodes[r]
+    searchable_roles = [
+        r
         for r in implicated
         if r in graph_f.nodes
         and graph_f.nodes[r].entity_kind in {"OBJECT", "REGION"}
         and graph_f.nodes[r].semantic_categories
     ]
 
-    if searchable:
-        return "SEARCH_RECOVERABLE"
+    if not searchable_roles:
+        return GROUNDING_FAILURE_NOT_SEARCH_RECOVERABLE
 
-    return "GROUNDING_FAILURE_NOT_SEARCH_RECOVERABLE"
+    if grounding is None:
+        return NO_CANDIDATE_SEARCHABLE
+
+    evidence = grounding.evidence if isinstance(grounding.evidence, dict) else {}
+    evals = evidence.get("candidate_evaluations", {})
+
+    # Check for zero candidates observed for an implicated role
+    for r in searchable_roles:
+        r_evals = [v for k, v in evals.items() if k == r or k.startswith(f"{r}:")]
+        if not r_evals and (r in grounding.missing_roles or not evals):
+            return NO_CANDIDATE_SEARCHABLE
+
+    # Collect candidate evaluation statuses and relation statuses for implicated roles
+    statuses: list[str] = []
+    for k, v in evals.items():
+        role_prefix = k.split(":")[0]
+        if role_prefix in searchable_roles:
+            st = None
+            if isinstance(v, dict):
+                st = v.get("status") or v.get("category_status")
+                if st is None and "passed" in v:
+                    st = "TRUE" if v["passed"] else "FALSE"
+            elif isinstance(v, str):
+                st = v
+            if st:
+                statuses.append(str(st).upper())
+
+    for rel in grounding.unsatisfied_relations:
+        if isinstance(rel, dict):
+            s_role = rel.get("subject_role")
+            o_role = rel.get("object_role")
+            if s_role in searchable_roles or o_role in searchable_roles:
+                st = rel.get("status", "FALSE")
+                if st:
+                    statuses.append(str(st).upper())
+
+    for rel in evidence.get("unresolved_relations", []):
+        if isinstance(rel, dict):
+            s_role = rel.get("subject_role")
+            o_role = rel.get("object_role")
+            if s_role in searchable_roles or o_role in searchable_roles:
+                st = rel.get("status", "UNKNOWN")
+                if st:
+                    statuses.append(str(st).upper())
+
+    if statuses:
+        if all(s == "FALSE" for s in statuses):
+            return ONLY_FALSE_CANDIDATES_SEARCHABLE
+        if any(s == "UNKNOWN" for s in statuses) and not any(s == "TRUE" for s in statuses):
+            return ONLY_UNKNOWN_CANDIDATES_SEARCHABLE
+        if any(s == "TRUE" for s in statuses):
+            return NO_VALID_JOINT_ASSIGNMENT_SEARCHABLE
+
+    if grounding.missing_roles:
+        return NO_CANDIDATE_SEARCHABLE
+    if grounding.unresolved_constraints:
+        return NO_VALID_JOINT_ASSIGNMENT_SEARCHABLE
+
+    return SEARCH_RECOVERABLE
+
+
+def classify_search_state(
+    graph_f: FunctionalRequirementGraph,
+    grounding: GraphGroundingResult | None,
+    search_contract: SearchRegionContract | None,
+    inspected_regions: Iterable[str] = (),
+    *,
+    detailed: bool = False,
+) -> str:
+    """Classify current search eligibility and termination status."""
+    fine_state = classify_fine_search_state(
+        graph_f, grounding, search_contract, inspected_regions
+    )
+    if detailed:
+        return fine_state
+
+    if fine_state == CONTRACT_UNEXECUTABLE:
+        return CONTRACT_INCOMPLETE_NOT_SEARCHABLE
+    if fine_state == GROUNDING_COMPLETE:
+        return SATISFIED
+    if fine_state in SEARCHABLE_STATES:
+        return SEARCH_RECOVERABLE
+    return fine_state
 
 
 def compute_causal_search_recovery(
@@ -225,11 +351,13 @@ def search_until_satisfied(
     inspected: list[str] = []
 
     search_state = classify_search_state(specification, result, search_contract, inspected)
-    emit(f"[SEARCH] Initial search state: {search_state}")
+    fine_state = classify_fine_search_state(specification, result, search_contract, inspected)
+    emit(f"[SEARCH] Initial search state: {search_state} ({fine_state})")
     grounding_snapshots.append({
         "stage": "initial",
         "inspected_regions": [],
         "search_state": search_state,
+        "fine_search_state": fine_state,
         "grounding": _clean_grounding_dict(result),
     })
     if observer is not None:
@@ -240,12 +368,14 @@ def search_until_satisfied(
             "status": result.status,
             "scene_graph": sg_dict,
             "search_state": search_state,
+            "fine_search_state": fine_state,
         })
 
-    if search_state != "SEARCH_RECOVERABLE":
+    if not is_searchable_state(search_state):
         evidence = dict(result.evidence) if isinstance(result.evidence, dict) else {}
         evidence["grounding_snapshots"] = list(grounding_snapshots)
         evidence["search_state"] = search_state
+        evidence["fine_search_state"] = fine_state
         evidence["causal_search_recovery"] = compute_causal_search_recovery(
             initial_grounding_complete, inspected, bool(result.satisfied)
         )
@@ -294,12 +424,14 @@ def search_until_satisfied(
         result = domain.evaluate_satisfaction()
         emit(f"[SEARCH] Functional satisfaction: {result.status}")
         search_state = classify_search_state(specification, result, search_contract, inspected)
-        emit(f"[SEARCH] Search state after {region}: {search_state}")
+        fine_state = classify_fine_search_state(specification, result, search_contract, inspected)
+        emit(f"[SEARCH] Search state after {region}: {search_state} ({fine_state})")
         grounding_snapshots.append({
             "stage": f"after_{region}",
             "inspected_regions": list(inspected),
             "region": region,
             "search_state": search_state,
+            "fine_search_state": fine_state,
             "grounding": _clean_grounding_dict(result),
         })
         if observer is not None:
@@ -310,12 +442,14 @@ def search_until_satisfied(
                 "status": result.status,
                 "scene_graph": sg_dict,
                 "search_state": search_state,
+                "fine_search_state": fine_state,
             })
-        if search_state != "SEARCH_RECOVERABLE":
-            if search_state == "SATISFIED":
+        if not is_searchable_state(search_state):
+            if is_complete_state(search_state):
                 evidence = dict(result.evidence) if isinstance(result.evidence, dict) else {}
                 evidence["grounding_snapshots"] = list(grounding_snapshots)
                 evidence["search_state"] = search_state
+                evidence["fine_search_state"] = fine_state
                 evidence["causal_search_recovery"] = compute_causal_search_recovery(
                     initial_grounding_complete, inspected, bool(result.satisfied)
                 )
@@ -340,10 +474,12 @@ def search_until_satisfied(
         final_result = domain.evaluate_satisfaction()
 
     final_search_state = classify_search_state(specification, final_result, search_contract, inspected)
+    final_fine_state = classify_fine_search_state(specification, final_result, search_contract, inspected)
     grounding_snapshots.append({
         "stage": "final",
         "inspected_regions": list(inspected),
         "search_state": final_search_state,
+        "fine_search_state": final_fine_state,
         "grounding": _clean_grounding_dict(final_result),
     })
     if observer is not None:
@@ -354,11 +490,13 @@ def search_until_satisfied(
             "status": final_result.status,
             "scene_graph": sg_dict,
             "search_state": final_search_state,
+            "fine_search_state": final_fine_state,
         })
 
     evidence = dict(final_result.evidence) if isinstance(final_result.evidence, dict) else {}
     evidence["grounding_snapshots"] = list(grounding_snapshots)
     evidence["search_state"] = final_search_state
+    evidence["fine_search_state"] = final_fine_state
     evidence["causal_search_recovery"] = compute_causal_search_recovery(
         initial_grounding_complete, inspected, bool(final_result.complete)
     )

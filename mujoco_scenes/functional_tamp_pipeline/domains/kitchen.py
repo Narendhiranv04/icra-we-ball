@@ -641,11 +641,17 @@ def run_to_plan(
 
     from ..search import classify_search_state, compute_causal_search_recovery
 
-    # Gate before search: if required_contract_complete is False, zero pointless search
-    if not getattr(specification, "required_contract_complete", False):
+    # Gate before search: if online_executable_contract_complete is False, zero pointless search
+    contract_ok = getattr(
+        specification,
+        "online_executable_contract_complete",
+        getattr(specification, "required_contract_complete", False),
+    )
+    if not contract_ok:
         order = ()
     else:
         order = tuple(search_contract.canonical_region_ids)
+
 
     grounding_snapshots: list[dict[str, Any]] = []
 
@@ -731,11 +737,13 @@ def run_to_plan(
             graph_o.mark_region_inspected(r)
 
         is_exhausted = len(opened) >= len(order)
-        # Canonical graph grounding decides the assignment authority
         ground_result = ground_graph(specification, graph_o, {"search_exhausted": is_exhausted})
-        if mode == "vlm" and is_exhausted and not ground_result.complete and getattr(specification, "required_contract_complete", True):
+        if mode == "vlm" and is_exhausted and not ground_result.complete and getattr(
+            specification, "online_executable_contract_complete", getattr(specification, "required_contract_complete", True)
+        ):
             from ..grounding import ground_verified_candidate_subgraph
             ground_result = ground_verified_candidate_subgraph(specification, graph_o)
+
 
         final_search_state = classify_search_state(specification, ground_result, search_contract, opened)
         gr_dict = ground_result.to_dict()

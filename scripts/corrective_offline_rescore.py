@@ -11,7 +11,9 @@ from typing import Any
 
 from mujoco_scenes.functional_tamp_pipeline.evaluation_metrics import candidate_plan_valid, full_task_coverage, read_json
 from mujoco_scenes.functional_tamp_pipeline.raw_semantic_evaluation import evaluate_raw_semantics
+from mujoco_scenes.functional_tamp_pipeline.search import SEARCHABLE_STATES
 from scripts.evaluate_vlm_functional_tamp import CANONICAL_TASK_INSTRUCTIONS
+
 
 
 DATASETS = {
@@ -103,7 +105,7 @@ def score_run(dataset: str, source_root: Path, old: dict[str, Any]) -> dict[str,
         "compiler_operations_interpreted": sum(row.get("status") in {"CANONICAL_OPERATION_GROUP", "STATIC_ALREADY_SATISFIED"} for row in trace.get("groups", [])),
         "unresolved_required_semantics": unresolved, "required_contract_complete": required_complete,
         "initial_grounding_complete": initial_complete, "search_state_trace": search_states,
-        "search_eligible": required_complete and "SEARCH_RECOVERABLE" in search_states,
+        "search_eligible": required_complete and any(s in SEARCHABLE_STATES or s == "SEARCH_RECOVERABLE" for s in search_states),
         "regions_inspected": regions, "search_exhausted": "SEARCH_EXHAUSTED" in search_states or bool(old.get("search_exhausted")),
         "final_grounding_complete": final_complete,
         "causal_search_recovery": initial_complete is False and bool(regions) and final_complete,

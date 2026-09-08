@@ -686,8 +686,11 @@ def _run_pipeline_impl(
             snapshots = None
     if snapshots:
         _write_json(state.run_dir / "grounding_snapshots.json", snapshots)
-    if state.mode == "vlm" and not satisfaction.satisfied and getattr(state.specification, "required_contract_complete", True):
+    if state.mode == "vlm" and not satisfaction.satisfied and getattr(
+        state.specification, "online_executable_contract_complete", getattr(state.specification, "required_contract_complete", True)
+    ):
         from .grounding import ground_verified_candidate_subgraph
+
         satisfaction = ground_verified_candidate_subgraph(state.specification, adapter.graph)
         _write_json(state.run_dir / "graph_grounding_result.json", satisfaction.to_dict())
     if (not satisfaction.satisfied and state.mode != "vlm") or not satisfaction.assignment:

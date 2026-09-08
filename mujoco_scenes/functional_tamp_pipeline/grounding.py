@@ -843,7 +843,9 @@ def ground_verified_candidate_subgraph(graph_f, graph_o, context=None):
     from itertools import combinations
     context = dict(context or {}, search_exhausted=True)
     full = ground_graph(graph_f, graph_o, context)
-    if full.complete or not getattr(graph_f, "required_contract_complete", True):
+    if full.complete or not getattr(
+        graph_f, "online_executable_contract_complete", getattr(graph_f, "required_contract_complete", True)
+    ):
         return full
     names = sorted(graph_f.nodes)
     for size in range(len(names) - 1, 0, -1):

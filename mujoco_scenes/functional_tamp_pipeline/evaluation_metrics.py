@@ -1,6 +1,8 @@
-"""Offline metrics derived from saved evidence and independently replayed atoms."""
 import json
 from pathlib import Path
+
+from .search import SEARCHABLE_STATES
+
 
 
 def read_json(path, default=None):
@@ -307,7 +309,11 @@ def enrich_record(row, run_dir, task):
     row['search_recovery_succeeded'] = causal_search_recovery
     row['initial_grounding_complete'] = initial_grounding_complete
     row['search_state_trace'] = search_states
-    row['search_eligible'] = bool(executable_contract_complete and 'SEARCH_RECOVERABLE' in search_states)
+    row['search_eligible'] = bool(
+        executable_contract_complete
+        and any(s in SEARCHABLE_STATES or s == 'SEARCH_RECOVERABLE' for s in search_states)
+    )
+
 
     # Incomplete semantics cannot prove full-task scene infeasibility.
     if not row['gt_feasible'] and not row['runtime_contract_complete']:
