@@ -115,6 +115,50 @@ class WorkshopPlanningCompiler:
         actions: list[SymbolicAction] = []
         goals: set[tuple[str, ...]] = set()
 
+        specification = context.get("specification")
+        if specification is not None:
+            op_groups = list(specification.operation_groups)
+            trace = specification.metadata.get("canonicalization_trace", {})
+            trace_groups = trace.get("groups", [])
+            accounting_groups = trace.get("concept_accounting", {}).get("operation_groups", [])
+            task_inst = (specification.task_instruction or "").lower()
+
+            has_fasten_op = (
+                any(
+                    g.capability_id == "FASTEN_JOINT"
+                    or any(w in g.function.lower() for w in ("fasten", "drive", "screw"))
+                    for g in op_groups
+                )
+                or any(
+                    g.get("capability_id") == "FASTEN_JOINT"
+                    or any(w in g.get("planner_operation", "").lower() for w in ("fasten", "drive", "screw"))
+                    or any(w in g.get("raw_group", {}).get("function", "").lower() for w in ("fasten", "drive", "screw"))
+                    for g in trace_groups
+                )
+                or any(
+                    any(w in g.get("canonical_function", "").lower() for w in ("fasten", "drive", "screw"))
+                    for g in accounting_groups
+                )
+                or any(w in task_inst for w in ("fasten", "screw", "repair the loose"))
+            )
+            has_return_op = (
+                any(
+                    g.capability_id == "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+                    or any(w in g.function.lower() for w in ("return", "put back", "reusable"))
+                    for g in op_groups
+                )
+                or any(
+                    g.get("capability_id") == "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+                    or any(w in g.get("planner_operation", "").lower() for w in ("return", "put back", "reusable"))
+                    or any(w in g.get("raw_group", {}).get("function", "").lower() for w in ("return", "put back", "reusable"))
+                    for g in trace_groups
+                )
+                or any(w in task_inst for w in ("return", "reusable equipment", "put back"))
+            )
+        else:
+            has_fasten_op = True
+            has_return_op = True
+
         if driver and fastener:
             driver_source = sources.get(driver, assignment.get("driver_source", SURFACE))
             fastener_source = sources.get(fastener, assignment.get("fastener_source", SURFACE))
@@ -139,22 +183,31 @@ class WorkshopPlanningCompiler:
                     {("holding", driver)},
                     {("hand_empty",), ("at", driver, driver_source)},
                 ),
-                _action(
+            ])
+            if has_fasten_op:
+                actions.append(_action(
                     "SCREW", (driver, fastener, target),
                     {("holding", driver), ("inserted", fastener, target)},
                     {("repaired", target)},
                     set(),
-                ),
-                _action(
+                ))
+                goals.add(("repaired", target))
+            else:
+                goals.add(("inserted", fastener, target))
+
+            if has_return_op:
+                preconds = {("holding", driver)}
+                if has_fasten_op:
+                    preconds.add(("repaired", target))
+                actions.append(_action(
                     "PLACE", (driver, surface),
-                    {("holding", driver), ("repaired", target)},
+                    preconds,
                     {("hand_empty",), ("at", driver, surface)},
                     {("holding", driver)},
-                ),
-            ])
-            goals.update({
-                ("repaired", target), ("at", driver, surface), ("hand_empty",),
-            })
+                ))
+                goals.add(("at", driver, surface))
+
+            goals.add(("hand_empty",))
         elif driver and not fastener:
             # Candidate plan: stage driver onto work surface; fastening is uninstantiable
             driver_source = sources.get(driver, assignment.get("driver_source", SURFACE))
@@ -173,9 +226,9 @@ class WorkshopPlanningCompiler:
                     {("holding", driver)},
                 ),
             ])
-            goals.update({
-                ("repaired", target), ("at", driver, surface), ("hand_empty",),
-            })
+            if has_return_op:
+                goals.add(("at", driver, surface))
+            goals.add(("hand_empty",))
         elif fastener and not driver:
             # Candidate plan: place fastener at target; fastening is uninstantiable
             fastener_source = sources.get(fastener, assignment.get("fastener_source", SURFACE))
@@ -194,9 +247,8 @@ class WorkshopPlanningCompiler:
                     {("holding", fastener)},
                 ),
             ])
-            goals.update({
-                ("repaired", target), ("inserted", fastener, target), ("hand_empty",),
-            })
+            goals.add(("inserted", fastener, target))
+            goals.add(("hand_empty",))
 
         specification = context.get("specification")
         if specification is not None and "VLM" in specification.source:

@@ -147,22 +147,80 @@ class KitchenPlanningCompiler:
         specification = context.get("specification")
         grounded = context.get("ground_result")
         bindings = context.get("operation_bindings") or (getattr(grounded, "operation_bindings", {}) if grounded else {})
-        stir_pairs = set()
-        soup_pairs = set()
+        stir_pairs: set[tuple[str, str]] = set()
+        soup_pairs: set[tuple[str, str]] = set()
+        transfer_pairs: set[tuple[str, str, str]] = set()  # (source, target, content)
+
         if specification is not None:
             for group in specification.operation_groups:
-                for binding in bindings.get(group.id, []):
-                    pair = (binding["tool_id"], binding["target_id"])
-                    if group.tool_role == "coffee_stirrer":
-                        stir_pairs.add(pair)
-                    elif group.tool_role == "soup_eating_utensil":
-                        soup_pairs.add(pair)
-        # Standalone role relations may verify a pair without a group. Dedicated
-        # multi-target binding, when expressed, remains authoritative above.
-        if not stir_pairs:
+                func_lower = group.function.lower()
+                cap_id = getattr(group, "capability_id", "") or ""
+
+                # 1. Material transfer / pour operation
+                if cap_id == "TRANSFER_CONTENT_TO_CONTAINER" or any(w in func_lower for w in ("pour", "transfer", "fill", "dispense")):
+                    group_bindings = bindings.get(group.id, [])
+                    if group_bindings:
+                        for b in group_bindings:
+                            s = b.get("tool_id")
+                            t = b.get("target_id")
+                            if s and t:
+                                content = "coffee" if (s in coffee_sources or "coffee" in func_lower or "coffee" in group.tool_role.lower()) else "water"
+                                transfer_pairs.add((s, t, content))
+                    else:
+                        sources = _extract_cands(group.tool_role)
+                        targets = _extract_cands(group.target_role)
+                        for s in sources:
+                            for t in targets:
+                                content = "coffee" if (s in coffee_sources or "coffee" in func_lower or "coffee" in group.tool_role.lower()) else "water"
+                                transfer_pairs.add((s, t, content))
+
+                # 2. Stirring operation
+                elif cap_id == "MIX_BEVERAGE_CONTENTS" or any(w in func_lower for w in ("stir", "mix")):
+                    group_bindings = bindings.get(group.id, [])
+                    if group_bindings:
+                        for b in group_bindings:
+                            pair = (b.get("tool_id"), b.get("target_id"))
+                            if pair[0] and pair[1]:
+                                stir_pairs.add(pair)
+                    else:
+                        tools = _extract_cands(group.tool_role)
+                        targets = _extract_cands(group.target_role)
+                        for tool in tools:
+                            for target in targets:
+                                stir_pairs.add((tool, target))
+
+                # 3. Soup eating utensil provision operation
+                elif cap_id == "PROVIDE_SOUP_EATING_UTENSIL" or any(w in func_lower for w in ("utensil", "spoon")) or (group.tool_role in ("soup_eating_utensil", "soup_utensil")):
+                    group_bindings = bindings.get(group.id, [])
+                    if group_bindings:
+                        for b in group_bindings:
+                            pair = (b.get("tool_id"), b.get("target_id"))
+                            if pair[0] and pair[1]:
+                                soup_pairs.add(pair)
+                    else:
+                        tools = _extract_cands(group.tool_role)
+                        targets = _extract_cands(group.target_role)
+                        for tool in tools:
+                            for target in targets:
+                                soup_pairs.add((tool, target))
+
+            has_serving = (
+                any("serve" in g.function.lower() or "dining" in g.function.lower() or g.target_role in {"serving_location", "dining_table"} for g in specification.operation_groups)
+                or any(r.object_role in {"serving_location", "dining_table"} for r in specification.relations)
+                or any(r.object_role in {"serving_location", "dining_table"} for r in getattr(specification, "task_causal_relations", ()))
+                or any(k in specification.task_instruction.lower() for k in ("serve", "dining", "table", "place coffee", "place soup"))
+            )
+        else:
+            # Standalone legacy invocation when specification is not provided
             stir_pairs = {(t, c) for t in coffee_stirrers for c in coffee_targets}
-        if not soup_pairs:
             soup_pairs = set(zip(soup_utensils, soup_targets))
+            for s in coffee_sources:
+                for t in coffee_targets:
+                    transfer_pairs.add((s, t, "coffee"))
+            for s in water_sources:
+                for t in coffee_targets:
+                    transfer_pairs.add((s, t, "water"))
+            has_serving = True
 
         home = "countertop"
         serving_destination = "dining_table"
@@ -205,12 +263,20 @@ class KitchenPlanningCompiler:
                 preconditions = {("holding", obj)}
                 if destination == serving_destination:
                     if obj in coffee_targets:
-                        preconditions.add(("contains", obj, "coffee"))
-                        preconditions.add(("contains", obj, "water"))
-                        preconditions.add(("stirred", obj))
+                        if specification is None:
+                            preconditions.add(("contains", obj, "coffee"))
+                            preconditions.add(("contains", obj, "water"))
+                            preconditions.add(("stirred", obj))
+                        else:
+                            if any(t == obj and c == "coffee" for _, t, c in transfer_pairs):
+                                preconditions.add(("contains", obj, "coffee"))
+                            if any(t == obj and c == "water" for _, t, c in transfer_pairs):
+                                preconditions.add(("contains", obj, "water"))
+                            if any(t == obj for _, t in stir_pairs):
+                                preconditions.add(("stirred", obj))
                     elif obj in soup_targets:
                         preconditions.add(("contains", obj, "soup"))
-                        if soup_utensils:
+                        if soup_utensils and any(t == obj for _, t in soup_pairs):
                             for u in soup_utensils:
                                 if (u, obj) not in soup_pairs:
                                     continue
@@ -227,43 +293,50 @@ class KitchenPlanningCompiler:
                     {("holding", obj)},
                 ))
 
-        for source in coffee_sources:
-            for target in coffee_targets:
-                actions.append(_action(
-                    "POUR", (source, target),
-                    {("holding", source), ("at", target, home)},
-                    {("contains", target, "coffee")}, set(),
-                ))
-        for source in water_sources:
-            for target in coffee_targets:
-                actions.append(_action(
-                    "POUR", (source, target),
-                    {("holding", source), ("at", target, home)},
-                    {("contains", target, "water")}, set(),
-                ))
-        for tool in coffee_stirrers:
-            for target in coffee_targets:
-                if (tool, target) not in stir_pairs:
-                    continue
-                actions.append(_action(
-                    "STIR", (tool, target),
-                    {
-                        ("holding", tool),
-                        ("at", target, home),
-                        ("contains", target, "coffee"),
-                        ("contains", target, "water"),
-                    },
-                    {("stirred", target)}, set(),
-                ))
+        for source, target, content in sorted(transfer_pairs):
+            actions.append(_action(
+                "POUR", (source, target),
+                {("holding", source), ("at", target, home)},
+                {("contains", target, content)}, set(),
+            ))
+
+        for tool, target in sorted(stir_pairs):
+            preconditions = {("holding", tool), ("at", target, home)}
+            if specification is None:
+                preconditions.add(("contains", target, "coffee"))
+                preconditions.add(("contains", target, "water"))
+            else:
+                if any(t == target and c == "coffee" for _, t, c in transfer_pairs):
+                    preconditions.add(("contains", target, "coffee"))
+                if any(t == target and c == "water" for _, t, c in transfer_pairs):
+                    preconditions.add(("contains", target, "water"))
+            actions.append(_action(
+                "STIR", (tool, target),
+                preconditions,
+                {("stirred", target)}, set(),
+            ))
 
         goal_atoms = set()
-        for c in coffee_targets:
-            goal_atoms.add(("at", c, serving_destination))
-            goal_atoms.add(("stirred", c))
-        for s in soup_targets:
-            goal_atoms.add(("at", s, serving_destination))
-        for u, s in soup_pairs:
-            goal_atoms.add(("at", u, s))
+        if specification is None:
+            for c in coffee_targets:
+                goal_atoms.add(("at", c, serving_destination))
+                goal_atoms.add(("stirred", c))
+            for s in soup_targets:
+                goal_atoms.add(("at", s, serving_destination))
+            for u, s in soup_pairs:
+                goal_atoms.add(("at", u, s))
+        else:
+            for _, target, content in sorted(transfer_pairs):
+                goal_atoms.add(("contains", target, content))
+            for _, target in sorted(stir_pairs):
+                goal_atoms.add(("stirred", target))
+            for u, s in sorted(soup_pairs):
+                goal_atoms.add(("at", u, s))
+            if has_serving:
+                for c in coffee_targets:
+                    goal_atoms.add(("at", c, serving_destination))
+                for s in soup_targets:
+                    goal_atoms.add(("at", s, serving_destination))
         goal_atoms.add(("hand_empty",))
 
         actions.sort(key=lambda item: (
