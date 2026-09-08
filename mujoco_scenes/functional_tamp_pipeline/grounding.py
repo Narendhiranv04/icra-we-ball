@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from itertools import combinations, permutations, product
 from typing import Any, Sequence
 
@@ -14,6 +15,48 @@ from .models import (
     OperationGroup,
 )
 from .scene_graph import ObservedNode, ObservedRelation, ObservedSceneGraph
+
+
+def project_functional_graph_to_roles(
+    graph_f: FunctionalRequirementGraph,
+    keep: set[str] | frozenset[str] | Sequence[str],
+) -> FunctionalRequirementGraph:
+    """Return the valid semantic subgraph induced by retained physical roles.
+
+    The authoritative graph is never mutated. Graph-level configuration and
+    metadata remain unchanged because this projection is only a temporary
+    grounding candidate, not a rewritten FM contract.
+    """
+    retained = frozenset(keep)
+    unknown = retained.difference(graph_f.nodes)
+    if unknown:
+        raise ValueError(f"Cannot project unknown functional roles: {sorted(unknown)}")
+
+    projected = replace(
+        graph_f,
+        nodes={name: node for name, node in graph_f.nodes.items() if name in retained},
+        relations=tuple(
+            relation for relation in graph_f.relations
+            if {relation.subject_role, relation.object_role} <= retained
+        ),
+        task_causal_relations=tuple(
+            relation for relation in graph_f.task_causal_relations
+            if {relation.subject_role, relation.object_role} <= retained
+        ),
+        task_effect_relations=tuple(
+            effect for effect in graph_f.task_effect_relations
+            if effect.subject_role in retained
+            and (effect.object_is_literal or effect.object_value in retained)
+        ),
+        operation_groups=tuple(
+            group for group in graph_f.operation_groups
+            if group.tool_role in retained
+            and group.target_role in retained
+            and (group.context_role is None or group.context_role in retained)
+        ),
+    )
+    projected.validate()
+    return projected
 
 
 def _extract_property_value(node: ObservedNode, property_name: str) -> float | None:
@@ -839,7 +882,6 @@ def ground_verified_candidate_subgraph(graph_f, graph_o, context=None):
     induced by its retained roles. This is grounding, never an A* replan.
     The original requested graph/cardinalities remain unchanged.
     """
-    from dataclasses import replace
     from itertools import combinations
     context = dict(context or {}, search_exhausted=True)
     full = ground_graph(graph_f, graph_o, context)
@@ -851,11 +893,7 @@ def ground_verified_candidate_subgraph(graph_f, graph_o, context=None):
     for size in range(len(names) - 1, 0, -1):
         for selected in combinations(names, size):
             keep = set(selected)
-            groups = tuple(g for g in graph_f.operation_groups if
-                {g.tool_role, g.target_role, *([g.context_role] if g.context_role else [])} <= keep)
-            candidate = replace(graph_f, nodes={r: graph_f.nodes[r] for r in selected},
-                relations=tuple(r for r in graph_f.relations if {r.subject_role, r.object_role} <= keep),
-                operation_groups=groups)
+            candidate = project_functional_graph_to_roles(graph_f, keep)
             verified = ground_graph(candidate, graph_o, context)
             if verified.complete and verified.assignment:
                 return replace(verified, complete=False, status='PARTIAL_VERIFIED_GROUNDING',
