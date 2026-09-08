@@ -148,6 +148,15 @@ LIVING_REGION_ROLE_ALIASES = {
         "shared remote surface",
         "central coffee table",
         "television remote for both viewers",
+        "support entertainment control",
+        "support entertainment control device",
+        "central destination surface for the entertainment control device",
+        "central destination surface",
+        "control target surface",
+        "access surface",
+        "control placement region",
+        "accessible zone",
+        "accessible spot",
     ),
 }
 
@@ -170,6 +179,16 @@ LIVING_OBJECT_ROLE_ALIASES = {
         "cup and saucer set for each person",
         "individual cup and saucer",
         "drinkware set for viewers",
+        "a collection of items designated for consumption by one person",
+        "collection of items designated for consumption by one person",
+        "collection of items designated for consumption",
+        "a set comprising a drink vessel and a serving dish intended for consumption",
+        "set comprising a drink vessel and a serving dish intended for consumption",
+        "container for consumables assigned to a specific person",
+        "refreshment setting",
+        "refreshment item pair",
+        "vessel containing food snack assigned to one person",
+        "refreshment items",
     ),
     "CUP_COMPONENT": (
         "contain hot beverage",
@@ -217,6 +236,19 @@ LIVING_OBJECT_ROLE_ALIASES = {
         "television remote",
         "handheld remote",
         "shared remote control",
+        "device used to operate the television or media system",
+        "device used to operate the television",
+        "device used to operate television",
+        "device used to operate the television or media equipment",
+        "a handheld device used to operate the television system",
+        "handheld device used to operate television",
+        "operate television",
+        "operate the television",
+        "entertainment control",
+        "entertainment controller",
+        "entertainment control device",
+        "entertainment control unit",
+        "media controller",
     ),
 }
 
@@ -246,6 +278,15 @@ LIVING_FIXED_TARGET_ROLE_ALIASES = {
         "chairs",
         "seat",
         "seats",
+        "fixed reference point representing the seating positions for the users",
+        "fixed reference point representing seating positions",
+        "location where a person sits to watch television",
+        "location where a person sits",
+        "physical area occupied by a person for viewing television",
+        "area occupied by the seated person",
+        "seating target",
+        "seating anchor",
+        "seating zone",
     ),
     "SEATING_PAIR": (
         "paired viewer seating area",
@@ -258,6 +299,8 @@ LIVING_FIXED_TARGET_ROLE_ALIASES = {
         "both seating positions",
         "paired seating positions",
         "both seats",
+        "seating arrangement",
+        "both viewer seating positions collectively",
         "paired armchairs",
         "both viewer armchairs",
         "both armchairs",
@@ -446,7 +489,11 @@ def map_living_room_role_function(raw: dict[str, Any] | str) -> str | None:
     # Exclude roles describing the display itself, while retaining explicit
     # remote-control support language ("television remote" is not a screen).
     display_words = ("television", "screen", "monitor", "display", "wall")
-    remote_words = ("remote", "remote control", "control surface")
+    remote_words = (
+        "remote", "remote control", "control surface", "entertainment",
+        "entertainment control", "media", "media control", "control", "controller",
+        "access surface", "control placement",
+    )
     if (any(_contains_phrase(norm, word) for word in display_words)
             and not any(_contains_phrase(norm, word) for word in remote_words)):
         return None
@@ -466,13 +513,19 @@ def map_living_room_role_function(raw: dict[str, Any] | str) -> str | None:
             "personal", "individual", "beside seat", "near seat", "viewer 1", "viewer 2",
             "for each viewer", "for each person", "each seat", "beside each", "next to each",
             "side table", "side tables", "each side", "armchair table", "beside viewer", "near viewer",
+            "refreshment support", "refreshment target surface", "surface near seat",
+            "tabletop surface near seat", "personal refreshment", "tabletop surface",
+            "near each person", "near each seat", "refreshment support surface",
         )
     )
     has_shared = any(
         w in words or _contains_phrase(norm, w)
         for w in (
             "shared", "central", "accessible to both", "between seats", "common", "mutual",
-            "both viewers", "both seats", "coffee table", "center table", "accessible from both",
+            "both viewers", "both seats", "both people", "coffee table", "center table",
+            "accessible from both", "accessible to both people", "support entertainment control",
+            "central surface", "central table", "access surface", "control placement",
+            "accessible zone", "destination surface", "control target surface", "accessible spot",
         )
     )
 
@@ -525,7 +578,7 @@ def map_living_room_object_payload_role(raw: dict[str, Any] | str) -> str | None
     )
     has_saucer = any(
         w in words or _contains_phrase(norm, w)
-        for w in ("saucer", "saucer plate", "under cup", "support drink", "support cup", "flat dish")
+        for w in ("saucer", "saucer plate", "under cup", "support drink", "support cup", "flat dish", "plate")
     )
     has_drinkware = any(
         w in words or _contains_phrase(norm, w)
@@ -533,7 +586,14 @@ def map_living_room_object_payload_role(raw: dict[str, Any] | str) -> str | None
     )
     has_remote = any(
         w in words or _contains_phrase(norm, w)
-        for w in ("remote", "tv remote", "remote control", "television remote", "control television", "control tv", "television controller", "controller")
+        for w in (
+            "remote", "tv remote", "remote control", "television remote", "control television",
+            "control tv", "television controller", "controller", "operate television",
+            "operate the television", "operate tv", "operate media", "television system",
+            "media system", "media equipment", "entertainment control", "entertainment controller",
+            "entertainment control device", "entertainment control unit", "media controller",
+            "device used to operate", "handheld device used to operate", "device used to control",
+        )
     )
     has_entertainment = any(
         w in words or _contains_phrase(norm, w)
@@ -543,25 +603,49 @@ def map_living_room_object_payload_role(raw: dict[str, Any] | str) -> str | None
         w in words or _contains_phrase(norm, w)
         for w in ("refreshment", "refreshments", "hold refreshment", "contain refreshment", "refreshment container")
     )
+    has_collection = any(
+        w in words or _contains_phrase(norm, w)
+        for w in (
+            "collection of items", "collection", "set", "pair", "setting",
+            "refreshment setting", "refreshment item pair", "consumables",
+            "set comprising", "drink vessel and a serving dish",
+            "designated for consumption", "intended for consumption",
+        )
+    )
+    has_consumption = any(
+        w in words or _contains_phrase(norm, w)
+        for w in ("consumption", "consumables", "refreshment", "refreshments", "drink", "drinkware", "beverage", "snack")
+    )
+
+    # Television / media device check
+    if not has_remote and (
+        ("television" in words or "tv" in words or "media" in words or "entertainment" in words)
+        and any(w in words for w in ("operate", "control", "controller", "device", "unit", "handheld", "remote"))
+        and not any(w in words for w in ("view", "viewer", "viewers", "watching", "sit", "sitting", "seat", "seats", "person", "people"))
+    ):
+        has_remote = True
+
+    cand_text = " ".join(raw_cats + raw_hints)
+    if not has_remote and any(c in cand_text for c in ("remote", "controller", "gamepad", "ir blaster")):
+        if any(w in words for w in ("device", "operate", "control", "television", "tv", "media", "entertainment", "unit", "handheld")):
+            has_remote = True
 
     if has_remote:
         return "REMOTE"
     if has_entertainment:
-        cand_text = " ".join(raw_cats + raw_hints)
         if any(c in cand_text for c in ("remote", "controller")):
             return "REMOTE"
         return None
 
-    if (has_cup and has_saucer) or has_drinkware:
+    if (has_cup and has_saucer) or has_drinkware or (has_collection and has_consumption):
         return "CUP_SAUCER_SET"
     if has_cup and not has_saucer:
         return "CUP_COMPONENT"
     if has_saucer and not has_cup:
         return "SAUCER_COMPONENT"
 
-    if has_refreshment:
+    if has_refreshment or has_collection or has_consumption:
         # Multi-signal check: candidate categories/hints for cup-like and/or saucer-like
-        cand_text = " ".join(raw_cats + raw_hints)
         has_cat_cup = any(c in cand_text for c in ("cup", "mug", "glass", "drinkware", "drink"))
         has_cat_saucer = any(c in cand_text for c in ("saucer", "plate", "dish"))
         if has_cat_cup or has_cat_saucer:
@@ -579,7 +663,7 @@ def map_living_room_fixed_target_role(raw: dict[str, Any] | str) -> str | None:
     """
     if isinstance(raw, dict):
         raw_k = raw.get("entity_kind")
-        if raw_k not in (None, "FIXED_TARGET", "REGION"):
+        if raw_k not in (None, "FIXED_TARGET", "REGION", "OBJECT"):
             return None
         if raw_k == "REGION":
             # For REGION, only consider seating anchors if the function explicitly refers to seating/occupant support,
@@ -591,10 +675,17 @@ def map_living_room_fixed_target_role(raw: dict[str, Any] | str) -> str | None:
                 return None
         text = f"{raw.get('function', '')} {raw.get('description', '')}"
     else:
+        raw_k = None
         text = str(raw)
     norm = _phrase(text)
     if not norm:
         return None
+
+    words = set(norm.split())
+    if raw_k == "OBJECT":
+        # Movable payload objects should not be mapped to fixed seating anchors
+        if any(w in words for w in ("remote", "cup", "saucer", "drinkware", "drink", "refreshment", "beverage", "tray", "controller")):
+            return None
 
     # 1. Forward match against reviewed aliases (check SEATING_PAIR before SEATING_POSITION)
     for role_name in ("SEATING_PAIR", "SEATING_POSITION"):
@@ -605,14 +696,13 @@ def map_living_room_fixed_target_role(raw: dict[str, Any] | str) -> str | None:
                 return role_name
 
     # 2. Semantic analysis on function + description tokens
-    words = set(norm.split())
     has_pair = any(
         w in words or _contains_phrase(norm, w)
-        for w in ("pair", "both", "paired", "collectively", "both seats", "seating area")
+        for w in ("pair", "both", "paired", "collectively", "both seats", "seating area", "arrangement")
     )
     has_seat = any(
         w in words or _contains_phrase(norm, w)
-        for w in ("seat", "seating", "viewer", "armchair", "position", "chair", "seated", "occupant", "user", "person")
+        for w in ("seat", "seating", "viewer", "armchair", "position", "chair", "seated", "occupant", "user", "person", "sits")
     )
 
     if has_pair and has_seat:

@@ -33,7 +33,8 @@ KITCHEN_ROLE_REGISTRY: dict[str, tuple[str, ...]] = {
         "hold coffee serving", "receptacle for coffee", "vessel for coffee",
         "individual serving of coffee", "cup for coffee", "mug for coffee",
         "hold an individual serving of coffee", "receptacle to hold coffee",
-        "contain coffee serving",
+        "contain coffee serving", "coffee serving vessel", "serving vessel for coffee",
+        "receives coffee and water ingredients", "target of stirring action",
     ),
     "soup_container": (
         "contain soup", "hold soup", "soup container", "soup receptacle",
@@ -42,13 +43,18 @@ KITCHEN_ROLE_REGISTRY: dict[str, tuple[str, ...]] = {
         "hold soup serving", "receptacle for soup", "vessel for soup",
         "individual serving of soup", "bowl for soup",
         "hold an individual serving of soup", "receptacle to hold soup",
-        "contain soup serving",
+        "contain soup serving", "holds soup ready for consumption",
+        "holds soup for consumption", "soup serving vessel", "serving vessel for soup",
+        "holds soup",
     ),
     "coffee_stirrer": (
         "stir coffee", "mix coffee", "coffee stirrer", "coffee stirring",
         "stir", "mix", "stir beverage", "agitate coffee", "stirring utensil",
         "stirring implement", "stir both coffees", "coffee implement",
         "mixing implement", "stir drink", "mix beverage", "stir beverage in cups",
+        "tool used to mix ingredients inside the coffee serving vessel",
+        "tool used to mix ingredients", "tool to mix ingredients",
+        "tool used to mix", "implement used to mix", "implement used to stir",
     ),
     "soup_eating_utensil": (
         "serve soup", "soup utensil", "eat soup", "consume soup", "soup spoon",
@@ -57,17 +63,21 @@ KITCHEN_ROLE_REGISTRY: dict[str, tuple[str, ...]] = {
         "eating utensil", "soup eating utensil", "soup eating implement",
         "provide utensil", "provide eating utensil", "provide eating utensil for each soup bowl",
         "eating utensil for soup bowl", "provide a suitable utensil for each soup bowl",
+        "tool provided alongside the soup vessel for consumption",
+        "tool provided alongside soup vessel", "tool provided for consumption",
     ),
     "coffee_source": (
         "provide coffee", "coffee source", "coffee material", "coffee ingredient",
         "coffee supply", "coffee jar", "source of coffee", "coffee grounds",
         "provide coffee material", "coffee beans", "instant coffee",
         "instant coffee jar", "package of coffee", "coffee container jar",
+        "source of dry or liquid coffee substance",
     ),
     "water_source": (
         "provide water", "water source", "pour water", "hot water", "kettle",
         "water supply", "source of water", "provide water for coffee",
         "water container", "water pitcher", "water jug", "compact kettle",
+        "source of water to be transferred",
     ),
 }
 
@@ -215,6 +225,8 @@ def map_kitchen_role_function(raw: dict[str, Any] | str) -> str | None:
     if not norm:
         return None
     words = set(norm.split())
+    cat_norm = _phrase(" ".join(str(c) for c in cats))
+    cat_words = set(cat_norm.split())
 
     has_coffee = (
         "coffee" in norm
@@ -227,49 +239,83 @@ def map_kitchen_role_function(raw: dict[str, Any] | str) -> str | None:
 
     has_stir = any(
         w in words or _contains_phrase(norm, w)
-        for w in ("stir", "mix", "agitate", "stirrer", "stirring", "stir beverage", "mixing implement")
+        for w in (
+            "stir", "stirs", "stirring", "stirred", "stirrer", "stirrers",
+            "mix", "mixes", "mixing", "mixed", "agitate", "agitates",
+            "stir beverage", "mixing implement", "stirring utensil",
+        )
+    )
+    has_tool_head = any(
+        w in words or _contains_phrase(norm, w)
+        for w in (
+            "tool", "tools", "implement", "implements", "utensil", "utensils",
+            "instrument", "instruments", "spoon", "spoons", "teaspoon", "teaspoons",
+            "tablespoon", "tablespoons", "stirrer", "stirrers", "whisk", "fork", "forks",
+            "chopsticks", "tool used", "implement used", "utensil used", "device used",
+        )
+    )
+    has_target_head = any(
+        w in words or _contains_phrase(norm, w)
+        for w in (
+            "target of", "target of stirring", "target of mixing", "receives", "receive",
+            "receives coffee", "receives water", "receives ingredients",
+            "target of stirring action", "target of mixing action",
+            "holds soup", "hold soup", "holds coffee", "hold coffee",
+        )
     )
     has_utensil = any(
         w in words or _contains_phrase(norm, w)
         for w in (
-            "utensil", "eat", "consume", "eating", "tablespoon", "fork",
+            "utensil", "utensils", "eat", "eating", "tablespoon", "fork",
             "soup utensil", "soup spoon", "eating utensil", "serve with soup",
-            "provide utensil",
+            "provide utensil", "tool provided",
         )
     )
     has_spoon = any(
         w in words or _contains_phrase(norm, w)
-        for w in ("spoon", "teaspoon", "soup spoon", "coffee spoon")
+        for w in ("spoon", "spoons", "teaspoon", "teaspoons", "soup spoon", "coffee spoon")
     )
 
     has_cup = any(
         w in words or _contains_phrase(norm, w)
-        for w in ("cup", "mug", "tumbler", "glass", "beaker", "coffee cup", "coffee mug")
+        for w in ("cup", "cups", "mug", "mugs", "tumbler", "tumblers", "glass", "glasses", "beaker", "beakers", "coffee cup", "coffee mug")
     )
     has_bowl = any(
         w in words or _contains_phrase(norm, w)
-        for w in ("bowl", "dish", "soup bowl", "deep bowl", "shallow bowl")
+        for w in ("bowl", "bowls", "dish", "dishes", "soup bowl", "deep bowl", "shallow bowl", "plate with soup")
     )
     has_contain = (
         has_cup or has_bowl
         or any(
             w in words or _contains_phrase(norm, w)
-            for w in ("contain", "hold", "receptacle", "vessel", "serving", "container", "individual serving", "liquid")
+            for w in (
+                "contain", "contains", "containing", "container", "containers",
+                "hold", "holds", "holding", "receptacle", "receptacles",
+                "vessel", "vessels", "serving", "servings", "individual serving",
+                "liquid",
+            )
         )
     )
 
     has_source = any(
         w in words or _contains_phrase(norm, w)
-        for w in ("source", "provide", "supply", "pour", "ingredient", "material", "grounds", "beans", "supply of", "source of")
+        for w in (
+            "source", "sources", "provide", "provides", "supply", "supplies",
+            "pour", "ingredient", "material", "grounds", "beans", "supply of",
+            "source of", "source provider",
+        )
     )
     has_water = any(
         w in words or _contains_phrase(norm, w)
-        for w in ("water", "kettle", "hot water", "pour water", "pitcher", "water container", "water pitcher", "water jug", "water supply", "source of water")
-    )
+        for w in (
+            "water", "kettle", "hot water", "pour water", "pitcher",
+            "water container", "water pitcher", "water jug", "water supply", "source of water",
+        )
+    ) or any(w in cat_words for w in ("kettle", "pitcher", "water_pitcher", "water_jug"))
     has_jar = any(
         w in words or _contains_phrase(norm, w)
-        for w in ("jar", "coffee jar", "can", "box", "package", "instant coffee jar")
-    )
+        for w in ("jar", "coffee jar", "can", "box", "package", "instant coffee jar", "canister")
+    ) or any(w in cat_words for w in ("jar", "canister", "packet"))
 
     # 1. Water source from function/description
     if has_water and not has_coffee and not has_soup:
@@ -280,17 +326,31 @@ def map_kitchen_role_function(raw: dict[str, Any] | str) -> str | None:
     # 2. Coffee source from function/description
     if (
         (has_coffee and has_source and not has_contain and not has_stir)
-        or (has_coffee and has_jar)
+        or (has_coffee and has_jar and not has_contain)
         or ("source of coffee" in norm)
         or ("coffee grounds" in norm)
         or ("coffee jar" in norm)
+        or ("source of dry or liquid coffee" in norm)
     ):
         return "coffee_source"
 
-    # 3. Stirrer vs Eating utensil from function/description
-    if has_stir or (has_spoon and has_coffee and not has_contain and not has_cup and not has_soup):
-        if not has_soup:
+    # 3. Stirrer vs Eating utensil vs Container (Prioritize causal head)
+    # If the head is an implement/tool acting on a target:
+    if has_tool_head:
+        if has_stir or (has_coffee and "mix" in norm):
             return "coffee_stirrer"
+        if has_soup or (has_utensil and not has_coffee) or "consume" in norm or "consumption" in norm or any(w in cat_words for w in ("spoon", "fork", "chopsticks")):
+            return "soup_eating_utensil"
+
+    # If the role is explicitly the target/receptacle of an action:
+    if has_target_head and not has_tool_head:
+        if has_coffee or has_cup or ("stirring" in norm and not has_soup):
+            return "coffee_container"
+        if has_soup or has_bowl:
+            return "soup_container"
+
+    if has_stir and not has_target_head and not has_soup:
+        return "coffee_stirrer"
     if (has_soup and (has_utensil or has_spoon)) and not has_bowl and not (has_contain and not has_spoon and not has_utensil):
         return "soup_eating_utensil"
     if (has_utensil or (has_spoon and not has_coffee and not has_stir)) and not has_bowl and not (has_contain and not has_spoon and not has_utensil):
@@ -299,9 +359,9 @@ def map_kitchen_role_function(raw: dict[str, Any] | str) -> str | None:
             return "soup_eating_utensil"
 
     # 4. Containers from function/description
-    if (has_coffee or has_cup) and has_contain and not has_stir and not has_source and not has_spoon:
+    if (has_coffee or has_cup) and has_contain and not has_stir and not has_tool_head and not has_source and not has_spoon:
         return "coffee_container"
-    if (has_soup or has_bowl) and has_contain and not has_utensil and not has_source and not has_spoon:
+    if (has_soup or has_bowl) and has_contain and not has_tool_head and not has_source and not has_spoon and not has_utensil:
         return "soup_container"
 
     # 5. Registry dictionary match (exact alias or alias contained as a phrase in norm, forward-only)

@@ -489,6 +489,12 @@ def map_workshop_role_function(raw: dict[str, Any] | str) -> str | None:
         "tool capable of driving a screw", "tool to tighten screws",
         "tool used to install", "device used to install", "used to install the component",
         "implement used to apply", "tool used to apply", "apply the fastener",
+        "manipulate or install", "manipulate or install the fastening component",
+        "implement used to manipulate", "implement used to install",
+        "implement used to manipulate or install", "tool used to manipulate",
+        "tool used to manipulate or install", "used to manipulate or install",
+        "manipulate the fastening component", "install the fastening component",
+        "tool to manipulate or install", "implement used to drive", "tool to drive",
     )
     driver_tokens = (
         "screwdriver", "screwdrivers", "drill", "drills", "driver", "drivers",
@@ -505,6 +511,12 @@ def map_workshop_role_function(raw: dict[str, Any] | str) -> str | None:
         "fasten the frame", "fasten frame", "threaded fastener capable of",
         "fastener that joins parts", "threaded fastener to hold parts",
         "secure joint and anchor", "screw inserted into",
+        "connecting or securing", "connecting or securing elements",
+        "capable of connecting or securing", "item capable of connecting or securing",
+        "physical item capable of connecting or securing",
+        "connecting or securing elements at the marked location",
+        "connecting elements", "securing elements", "fastener to connect",
+        "item to connect or secure", "connect elements", "secure elements",
     )
     fastener_tokens = (
         "screw", "screws", "fastener", "fasteners", "bolt", "bolts", "hardware", "joiner",
@@ -526,10 +538,10 @@ def map_workshop_role_function(raw: dict[str, Any] | str) -> str | None:
 
     # Action verb analysis
     has_driver_action = any(
-        w in words for w in ("tighten", "tightening", "torque", "torquing", "turning", "screwing", "drive", "driving")
+        w in words for w in ("tighten", "tightening", "torque", "torquing", "turning", "screwing", "drive", "driving", "manipulate", "manipulating", "install", "installing")
     )
     has_fastener_action = any(
-        w in words for w in ("fasten", "fastening", "anchor", "anchoring")
+        w in words for w in ("fasten", "fastening", "anchor", "anchoring", "connect", "connecting", "secure", "securing", "join", "joining")
     )
 
     has_instrument_indicator = any(w in words for w in driver_tokens) or any(
@@ -546,10 +558,13 @@ def map_workshop_role_function(raw: dict[str, Any] | str) -> str | None:
         return "CAN_DRIVE_SCREW"
 
     # Tool/implement semantics override generic action verb
+    if has_instrument_indicator and (has_driver_phrase or has_driver_action) and not is_fastener_target:
+        return "CAN_DRIVE_SCREW"
+
     if (has_driver_action or has_fastener_action or has_driver_phrase or has_fastener_phrase) and has_instrument_indicator and not has_component_indicator and not is_fastener_target:
         return "CAN_DRIVE_SCREW"
 
-    if has_driver_action and not is_fastener_target:
+    if has_driver_action and not is_fastener_target and not has_fastener_phrase and not has_component_indicator:
         return "CAN_DRIVE_SCREW"
 
     if is_fastener_target and not any(p in norm for p in ("tool to", "tool for", "tool capable", "driver", "screwdriver", "drill")):

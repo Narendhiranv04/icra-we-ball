@@ -48,16 +48,22 @@ def causal_position(role: dict, document: dict) -> set[str]:
 def can_merge_roles(a: dict, b: dict, document: dict) -> bool:
     if any(a.get(k) != b.get(k) for k in ('entity_kind', 'binding_policy', 'required_count', 'binding_cardinality', 'min_count', 'max_count')):
         return False
-    if causal_position(a, document) != causal_position(b, document):
-        return False
+    pos_a = causal_position(a, document)
+    pos_b = causal_position(b, document)
+    if pos_a != pos_b:
+        # If both roles have distinct non-empty causal positions, they serve different causal functions.
+        # However, if one role is an unreferenced duplicate (empty causal position) with identical function
+        # and binding specification, it can safely merge with the active role.
+        if pos_a and pos_b:
+            return False
     pair = {a['id'], b['id']}
     if any({r.get('subject_role'), r.get('object_role')} == pair for r in document.get('functional_relations', [])):
         return False
     if any({g.get('tool_role'), g.get('target_role')} == pair for g in document.get('interaction_groups', [])):
         return False
     # Equal canonical names alone do not establish equal causal function.
-    normalize = lambda x: re.sub(r'\W+', ' ', x.lower()).strip()
-    return normalize(a['function']) == normalize(b['function']) and normalize(a.get('description', '')) == normalize(b.get('description', ''))
+    normalize = lambda x: re.sub(r'\W+', ' ', (x or '').lower()).strip()
+    return normalize(a.get('function', '')) == normalize(b.get('function', '')) and normalize(a.get('description', '')) == normalize(b.get('description', ''))
 
 
 def _map_role(domain: str, role: dict, doc: dict) -> tuple[str | None, str]:
