@@ -1,0 +1,222 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "entertainment_control": [
+        {
+          "label": "Remote Control",
+          "visual_description": "Black remote control located on the long wooden table."
+        }
+      ],
+      "entertainment_device": [
+        {
+          "label": "Television",
+          "visual_description": "Black flat-screen television mounted on the wall."
+        }
+      ],
+      "refreshment_setting": [
+        {
+          "label": "Red Mug 1",
+          "visual_description": "Red ceramic mug located on the long wooden table."
+        },
+        {
+          "label": "Red Mug 2",
+          "visual_description": "Red ceramic mug located on the long wooden table."
+        },
+        {
+          "label": "White Plate 1",
+          "visual_description": "White round plate located on the long wooden table."
+        },
+        {
+          "label": "White Plate 2",
+          "visual_description": "White round plate located on the long wooden table."
+        }
+      ],
+      "seating_unit": [
+        {
+          "label": "Armchair 1",
+          "visual_description": "Black upholstered armchair with wooden frame, located on the left side of the room."
+        },
+        {
+          "label": "Armchair 2",
+          "visual_description": "Black upholstered armchair with wooden frame, located on the right side of the room."
+        }
+      ],
+      "support_surface": [
+        {
+          "label": "Side Table 1",
+          "visual_description": "Small wooden side table located to the left of the left armchair."
+        },
+        {
+          "label": "Side Table 2",
+          "visual_description": "Small wooden side table located to the right of the right armchair."
+        },
+        {
+          "label": "Coffee Table",
+          "visual_description": "Large rectangular coffee table with a glass top located between the two armchairs."
+        },
+        {
+          "label": "Long Wooden Table",
+          "visual_description": "Long wooden table located in the foreground with mugs and plates on it."
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_1",
+        "object_role": "support_surface",
+        "relation": "is located near",
+        "required": true,
+        "subject_role": "seating_unit"
+      },
+      {
+        "id": "rel_2",
+        "object_role": "support_surface",
+        "relation": "is placed on",
+        "required": true,
+        "subject_role": "refreshment_setting"
+      },
+      {
+        "id": "rel_3",
+        "object_role": "support_surface",
+        "relation": "is placed on",
+        "required": true,
+        "subject_role": "entertainment_control"
+      },
+      {
+        "id": "rel_4",
+        "object_role": "seating_unit",
+        "relation": "is accessible to",
+        "required": true,
+        "subject_role": "entertainment_control"
+      },
+      {
+        "id": "rel_5",
+        "object_role": "entertainment_device",
+        "relation": "controls",
+        "required": true,
+        "subject_role": "entertainment_control"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "armchair",
+          "sofa",
+          "couch",
+          "recliner",
+          "chair"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Seating unit for a person",
+        "id": "seating_unit",
+        "required_count": 2,
+        "required_properties": [
+          "supports human sitting",
+          "has a seat surface"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "mug",
+          "glass",
+          "bowl",
+          "plate",
+          "dish",
+          "napkin",
+          "utensil"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Refreshment setting for a person",
+        "id": "refreshment_setting",
+        "required_count": 2,
+        "required_properties": [
+          "holds refreshment",
+          "is edible or drinkable"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "side table",
+          "end table",
+          "nightstand",
+          "coffee table",
+          "dining table",
+          "desk"
+        ],
+        "entity_kind": "REGION",
+        "function": "Support surface for refreshment setting",
+        "id": "support_surface",
+        "required_count": 2,
+        "required_properties": [
+          "has a flat top surface",
+          "is stable"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "remote control",
+          "media remote",
+          "TV remote",
+          "game controller"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Entertainment control device",
+        "id": "entertainment_control",
+        "required_count": 1,
+        "required_properties": [
+          "controls entertainment device",
+          "has buttons"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "television",
+          "TV",
+          "monitor",
+          "screen"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Entertainment device",
+        "id": "entertainment_device",
+        "required_count": 1,
+        "required_properties": [
+          "displays video",
+          "is an entertainment device"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "seating_unit",
+        "id": "op_1",
+        "operation": "Place refreshment setting on support surface",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "refreshment_setting",
+        "target_role": "support_surface"
+      },
+      {
+        "anchor_role": "seating_unit",
+        "id": "op_2",
+        "operation": "Place entertainment control on support surface",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "entertainment_control",
+        "target_role": "support_surface"
+      }
+    ]
+  },
+  "task_summary": "Prepare a living room for two people by arranging seating, placing refreshment settings on side tables, and positioning a remote control for accessibility.",
+  "unsupported_reason": ""
+}

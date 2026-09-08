@@ -1,0 +1,297 @@
+{
+  "canonical_physical_relations": [],
+  "canonical_roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "CUP_SAUCER_SET",
+      "unary_predicates": []
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ]
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "unary_predicates": []
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "SEATING_POSITION",
+      "unary_predicates": []
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'binding_policy': 'DISTINCT', 'candidate_categories': ['television', 'TV', 'monitor', 'screen'], 'entity_kind': 'OBJECT', 'function': 'Entertainment device', 'id': 'entertainment_device', 'required_count': 1, 'required_properties': ['displays video', 'is an entertainment device'], 'visible_candidates': [{'label': 'Television', 'visual_description': 'Black flat-screen television mounted on the wall.'}], 'description': ''}, 'collision_with': 'entertainment_control'}]",
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_2', 'function': 'Place entertainment control on support surface', 'tool_role': 'entertainment_control', 'target_role': 'support_surface', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'seating_unit', 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"Operation semantic evidence ['SUPPORT_ENTERTAINMENT_CONTROL'] is incompatible with endpoints (PERSONAL_CUP_SAUCER_REGION, REMOTE, SEATING_POSITION)\", 'interp_status': 'UNMAPPABLE_OPERATION'}]",
+    "Unresolved required relations: [{'raw_subject': 'seating_unit', 'raw_phrase': 'is located near', 'raw_object': 'support_surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'is located near' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'entertainment_control', 'raw_phrase': 'is placed on', 'raw_object': 'support_surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Semantic candidates ['FITS_ON', 'FITS_SET_ON'] incompatible with endpoints (REMOTE, PERSONAL_CUP_SAUCER_REGION)\"}, {'raw_subject': 'entertainment_control', 'raw_phrase': 'is accessible to', 'raw_object': 'seating_unit', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'is accessible to' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'entertainment_control', 'raw_phrase': 'controls', 'raw_object': 'entertainment_device', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]"
+  ],
+  "diagnostics": {
+    "dangling_endpoints": [],
+    "disabled_operations": [
+      {
+        "interp_status": "UNMAPPABLE_OPERATION",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "seating_unit",
+          "function": "Place entertainment control on support surface",
+          "id": "op_2",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "support_surface",
+          "tool_role": "entertainment_control",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "reason": "Operation semantic evidence ['SUPPORT_ENTERTAINMENT_CONTROL'] is incompatible with endpoints (PERSONAL_CUP_SAUCER_REGION, REMOTE, SEATING_POSITION)",
+        "status": "UNSUPPORTED_OPERATOR"
+      }
+    ],
+    "sanitizer_semantically_incomplete": false,
+    "unmappable_operations": [],
+    "unmappable_required_relations": [
+      {
+        "raw_object": "support_surface",
+        "raw_phrase": "is located near",
+        "raw_subject": "seating_unit",
+        "reason": "Relation text 'is located near' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      {
+        "raw_object": "support_surface",
+        "raw_phrase": "is placed on",
+        "raw_subject": "entertainment_control",
+        "reason": "Semantic candidates ['FITS_ON', 'FITS_SET_ON'] incompatible with endpoints (REMOTE, PERSONAL_CUP_SAUCER_REGION)",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      {
+        "raw_object": "seating_unit",
+        "raw_phrase": "is accessible to",
+        "raw_subject": "entertainment_control",
+        "reason": "Relation text 'is accessible to' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      {
+        "raw_object": "entertainment_device",
+        "raw_phrase": "controls",
+        "raw_subject": "entertainment_control",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      }
+    ],
+    "unresolved_roles": [
+      {
+        "code": "AMBIGUOUS_ROLE_MAPPING",
+        "collision_with": "entertainment_control",
+        "raw_role": {
+          "binding_policy": "DISTINCT",
+          "candidate_categories": [
+            "television",
+            "TV",
+            "monitor",
+            "screen"
+          ],
+          "description": "",
+          "entity_kind": "OBJECT",
+          "function": "Entertainment device",
+          "id": "entertainment_device",
+          "required_count": 1,
+          "required_properties": [
+            "displays video",
+            "is an entertainment device"
+          ],
+          "visible_candidates": [
+            {
+              "label": "Television",
+              "visual_description": "Black flat-screen television mounted on the wall."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "domain": "living_room",
+  "live_contract_validation": "PASS",
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": "seating_unit",
+      "compiler_status": "CANONICAL_OPERATION_GROUP",
+      "id": "op_1",
+      "interpretation_status": "LEXICAL_SEMANTIC_MATCH",
+      "matched_capability": "SUPPORT_DRINKWARE",
+      "planner_context": null,
+      "planner_operation": "SUPPORT_DRINKWARE",
+      "preconditions_provenance": [
+        {
+          "capability_id": "SUPPORT_DRINKWARE",
+          "predicate": "FITS_SET_ON",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_1"
+        },
+        {
+          "capability_id": "SUPPORT_DRINKWARE",
+          "predicate": "NEAR_SEAT",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_1"
+        }
+      ],
+      "raw_phrase": "Place refreshment setting on support surface",
+      "reason": null,
+      "required_relations": [
+        "FITS_SET_ON"
+      ],
+      "source_role": "refreshment_setting",
+      "target_role": "support_surface"
+    },
+    {
+      "anchor_role": "seating_unit",
+      "compiler_status": "UNSUPPORTED_OPERATOR",
+      "id": "op_2",
+      "interpretation_status": "UNMAPPABLE_OPERATION",
+      "matched_capability": null,
+      "planner_context": null,
+      "planner_operation": null,
+      "preconditions_provenance": [],
+      "raw_phrase": "Place entertainment control on support surface",
+      "reason": "Operation semantic evidence ['SUPPORT_ENTERTAINMENT_CONTROL'] is incompatible with endpoints (PERSONAL_CUP_SAUCER_REGION, REMOTE, SEATING_POSITION)",
+      "required_relations": [],
+      "source_role": "entertainment_control",
+      "target_role": "support_surface"
+    }
+  ],
+  "operation_groups": [
+    {
+      "capability_id": "SUPPORT_DRINKWARE",
+      "context_relations": [
+        "NEAR_SEAT"
+      ],
+      "context_role": "SEATING_POSITION",
+      "distinct_within_group": true,
+      "function": "SUPPORT_DRINKWARE",
+      "id": "personal_support_group",
+      "preconditions_provenance": [
+        {
+          "capability_id": "SUPPORT_DRINKWARE",
+          "predicate": "FITS_SET_ON",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_1"
+        },
+        {
+          "capability_id": "SUPPORT_DRINKWARE",
+          "predicate": "NEAR_SEAT",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_1"
+        }
+      ],
+      "required_relations": [
+        "FITS_SET_ON"
+      ],
+      "required_target_count": 2,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": null,
+      "target_role": "CUP_SAUCER_SET",
+      "tool_role": "PERSONAL_CUP_SAUCER_REGION",
+      "usage_policy": "DEDICATED_PER_TARGET"
+    }
+  ],
+  "primary_status": "C. COMPILER_MAPPING_BLOCKER",
+  "relation_audit": [
+    {
+      "canonical": [],
+      "canonical_verifiers": [],
+      "classification": "UNMAPPED",
+      "compiler_status": "UNINTERPRETABLE_REQUIRED_RELATION",
+      "id": "rel_1",
+      "planner_context": null,
+      "raw_object": "support_surface",
+      "raw_phrase": "is located near",
+      "raw_subject": "seating_unit",
+      "reason": "Relation text 'is located near' provides no semantic evidence for valid predicates [] or task causal semantics"
+    },
+    {
+      "canonical": [
+        [
+          "PERSONAL_CUP_SAUCER_REGION",
+          "FITS_SET_ON",
+          "CUP_SAUCER_SET"
+        ]
+      ],
+      "canonical_verifiers": [
+        "FITS_SET_ON"
+      ],
+      "classification": "PHYSICAL_VERIFIER",
+      "compiler_status": "CANONICAL_EXECUTABLE_SEMANTIC",
+      "id": "rel_2",
+      "planner_context": null,
+      "raw_object": "support_surface",
+      "raw_phrase": "is placed on",
+      "raw_subject": "refreshment_setting",
+      "reason": null
+    },
+    {
+      "canonical": [],
+      "canonical_verifiers": [],
+      "classification": "UNMAPPED",
+      "compiler_status": "UNINTERPRETABLE_REQUIRED_RELATION",
+      "id": "rel_3",
+      "planner_context": null,
+      "raw_object": "support_surface",
+      "raw_phrase": "is placed on",
+      "raw_subject": "entertainment_control",
+      "reason": "Semantic candidates ['FITS_ON', 'FITS_SET_ON'] incompatible with endpoints (REMOTE, PERSONAL_CUP_SAUCER_REGION)"
+    },
+    {
+      "canonical": [],
+      "canonical_verifiers": [],
+      "classification": "UNMAPPED",
+      "compiler_status": "UNINTERPRETABLE_REQUIRED_RELATION",
+      "id": "rel_4",
+      "planner_context": null,
+      "raw_object": "seating_unit",
+      "raw_phrase": "is accessible to",
+      "raw_subject": "entertainment_control",
+      "reason": "Relation text 'is accessible to' provides no semantic evidence for valid predicates [] or task causal semantics"
+    },
+    {
+      "canonical": [],
+      "canonical_verifiers": [],
+      "classification": "UNMAPPED",
+      "compiler_status": "UNINTERPRETABLE_REQUIRED_RELATION",
+      "id": "rel_5",
+      "planner_context": null,
+      "raw_object": "entertainment_device",
+      "raw_phrase": "controls",
+      "raw_subject": "entertainment_control",
+      "reason": "Unresolved or context-only endpoint"
+    }
+  ],
+  "semantic_findings": [
+    "Two seating contexts, two personal refreshment settings, two nearby supports, and one entertainment control are represented without person roles.",
+    "The accessibility and placement requirements are explicit and atomic.",
+    "The raw graph is semantically usable, but required near/access/control relations and the entertainment-control placement operation fail deterministic mapping.",
+    "Observation guidance describes visible evidence and asserts no hidden contents."
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "variant": "L1"
+}

@@ -1,0 +1,44 @@
+{
+  "base_url": "http://127.0.0.1:18000/v1",
+  "domain": "kitchen",
+  "generated_at_utc": "2026-09-08T23:45:12.069489+00:00",
+  "generation_error": null,
+  "image_count": 5,
+  "images": [
+    {
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_semantic_probe_20260909T051240IST/K1/vlm_inputs/front_camera.png",
+      "sha256": "255b2c5d8f813e8990fe3fdd21b0d4facdf9bfde93be620d730c9e9ee329f51b"
+    },
+    {
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_semantic_probe_20260909T051240IST/K1/vlm_inputs/left_shoulder_camera.png",
+      "sha256": "920f8b75a338b0de46f4efe51ab58e2c1882285cb1e3d64a118484cff689168e"
+    },
+    {
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_semantic_probe_20260909T051240IST/K1/vlm_inputs/overhead_camera.png",
+      "sha256": "00f546946d6644e9b19db943d526ad57daf119b3d38dfc2e24295ad49a16f7f7"
+    },
+    {
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_semantic_probe_20260909T051240IST/K1/vlm_inputs/right_shoulder_camera.png",
+      "sha256": "cf93499fccaea8463fd02c7c89b2b30443dfb488f3ae1473376d7b8c0cb535fe"
+    },
+    {
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_semantic_probe_20260909T051240IST/K1/vlm_inputs/side_camera.png",
+      "sha256": "0ef4f65effd377178e43620d78b082ce18c804d5020825e2ecc55a961a9d4624"
+    }
+  ],
+  "inference_config": {
+    "enable_thinking": false,
+    "max_tokens": 8192,
+    "schema_version": 2,
+    "temperature": 0.0,
+    "top_k": 20,
+    "top_p": 1.0
+  },
+  "live_contract_validation": "PASS",
+  "model": "qwen35-9b",
+  "prompt_schema_hash": "766a9fcb4d3248d542ea543a2474c6078cb8528632fc8467e7a294fe5aacea01",
+  "raw_v2_sha256": "4e34b0396f6c585990274c8b25055458d691672b333e36ddea4c90493aa05cf2",
+  "semantic_fm_calls": 1,
+  "task_instruction": "Prepare and serve one coffee and one soup for each of two people. Make each coffee using coffee and water and stir it before serving. Serve each soup bowl with its own suitable eating utensil.",
+  "variant": "K1"
+}

@@ -1,0 +1,44 @@
+{
+  "base_url": "http://127.0.0.1:18000/v1",
+  "domain": "living_room",
+  "generated_at_utc": "2026-09-08T23:45:35.268460+00:00",
+  "generation_error": null,
+  "image_count": 5,
+  "images": [
+    {
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_semantic_probe_20260909T051240IST/L1/vlm_inputs/l2_camera_close.png",
+      "sha256": "1fc3fd7bf72c2c7f53e7ae46989e8bcc239c4d3a4c9abf82b8f15cbb9f8813b6"
+    },
+    {
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_semantic_probe_20260909T051240IST/L1/vlm_inputs/l2_camera_front.png",
+      "sha256": "36c0ad92d93e727e37d61cb5745d9013ce68d0dcc1dae04ff8301fb8425f3f58"
+    },
+    {
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_semantic_probe_20260909T051240IST/L1/vlm_inputs/l2_camera_left.png",
+      "sha256": "09349f9d6f9871eed96e2b0b70369a98ba8b58911f85b7cf5c251ef6237356a1"
+    },
+    {
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_semantic_probe_20260909T051240IST/L1/vlm_inputs/l2_camera_right.png",
+      "sha256": "747c7a61d79443c2abce54f35fd9029d99d662aeedbb9883c6a295d442d8a196"
+    },
+    {
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_semantic_probe_20260909T051240IST/L1/vlm_inputs/l2_camera_top.png",
+      "sha256": "3f1e4fedd73eb0aa8a960cd8d2de3c540830c3b242d4b6df587b2ce536a37f75"
+    }
+  ],
+  "inference_config": {
+    "enable_thinking": false,
+    "max_tokens": 8192,
+    "schema_version": 2,
+    "temperature": 0.0,
+    "top_k": 20,
+    "top_p": 1.0
+  },
+  "live_contract_validation": "PASS",
+  "model": "qwen35-9b",
+  "prompt_schema_hash": "766a9fcb4d3248d542ea543a2474c6078cb8528632fc8467e7a294fe5aacea01",
+  "raw_v2_sha256": "d08f2f516a54349ccc056291a915ae4fa42ac5f9b7771410057d9d021a04ada4",
+  "semantic_fm_calls": 1,
+  "task_instruction": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+  "variant": "L1"
+}

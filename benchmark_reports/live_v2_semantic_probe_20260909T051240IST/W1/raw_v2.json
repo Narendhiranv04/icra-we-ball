@@ -1,0 +1,151 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "fastening_component": [
+        {
+          "label": "yellow_fastener",
+          "visual_description": "Yellow cylindrical object on the workbench, possibly a fastener"
+        }
+      ],
+      "fastening_target": [
+        {
+          "label": "marked_workbench_location",
+          "visual_description": "Yellow rectangular marker on the workbench surface"
+        }
+      ],
+      "fastening_tool": [
+        {
+          "label": "robotic_arm",
+          "visual_description": "White robotic arm with yellow end-effector, likely a fastening tool"
+        }
+      ],
+      "workbench_surface": [
+        {
+          "label": "wooden_workbench",
+          "visual_description": "Wooden table with drawers and a flat top surface"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_001",
+        "object_role": "fastening_target",
+        "relation": "compatible with fastening target",
+        "required": true,
+        "subject_role": "fastening_component"
+      },
+      {
+        "id": "rel_002",
+        "object_role": "fastening_component",
+        "relation": "capable of fastening fastening_component",
+        "required": true,
+        "subject_role": "fastening_tool"
+      },
+      {
+        "id": "rel_003",
+        "object_role": "workbench_surface",
+        "relation": "placed on workbench surface",
+        "required": true,
+        "subject_role": "fastening_tool"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "marked workbench surface",
+          "designated fastening point"
+        ],
+        "entity_kind": "REGION",
+        "function": "Marked workbench location for fastening",
+        "id": "fastening_target",
+        "required_count": 1,
+        "required_properties": [
+          "has marked location indicator"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut",
+          "washer",
+          "fastener"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Compatible fastening component",
+        "id": "fastening_component",
+        "required_count": 1,
+        "required_properties": [
+          "compatible with fastening target"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "drill",
+          "fastening implement"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Reusable fastening tool",
+        "id": "fastening_tool",
+        "required_count": 1,
+        "required_properties": [
+          "capable of applying fastening force"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wooden workbench top",
+          "table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "Workbench surface for equipment placement",
+        "id": "workbench_surface",
+        "required_count": 1,
+        "required_properties": [
+          "flat horizontal surface"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "fastening_target",
+        "id": "op_001",
+        "operation": "select compatible fastening component",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "fastening_tool",
+        "target_role": "fastening_component"
+      },
+      {
+        "anchor_role": "fastening_target",
+        "id": "op_002",
+        "operation": "apply fastening component to target",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "fastening_tool",
+        "target_role": "fastening_target"
+      },
+      {
+        "id": "op_003",
+        "operation": "place fastening tool on workbench",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "fastening_tool",
+        "target_role": "workbench_surface"
+      }
+    ]
+  },
+  "task_summary": "Identify compatible fastening components, perform the fastening at a marked location, and leave reusable equipment on the workbench.",
+  "unsupported_reason": ""
+}

@@ -1,0 +1,249 @@
+{
+  "canonical_physical_relations": [
+    {
+      "capability_id": null,
+      "category": "PHYSICAL_VERIFIER",
+      "expected": true,
+      "object_role": "repair_target",
+      "predicate": "COMPATIBLE_WITH_TARGET",
+      "provenance": "EXPLICIT_REQUIREMENT",
+      "source_operation_id": null,
+      "subject_role": "fastener"
+    },
+    {
+      "capability_id": "FASTEN_JOINT",
+      "category": "PHYSICAL_VERIFIER",
+      "expected": true,
+      "object_role": "fastener",
+      "predicate": "COMPATIBLE_WITH",
+      "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+      "source_operation_id": "op_001",
+      "subject_role": "driver"
+    },
+    {
+      "capability_id": "FASTEN_JOINT",
+      "category": "PHYSICAL_VERIFIER",
+      "expected": true,
+      "object_role": "repair_target",
+      "predicate": "REACHES_TARGET",
+      "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+      "source_operation_id": "op_001",
+      "subject_role": "driver"
+    }
+  ],
+  "canonical_roles": [
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "driver",
+      "unary_predicates": []
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "fastener",
+      "unary_predicates": []
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "repair_target",
+      "unary_predicates": []
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_002', 'function': 'apply fastening component to target', 'tool_role': 'fastening_tool', 'target_role': 'fastening_target', 'required_target_count': 1, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': 'fastening_target', 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, repair_target)\", 'interp_status': 'UNMAPPABLE_OPERATION'}]",
+    "Unresolved required relations: [{'raw_subject': 'fastening_tool', 'raw_phrase': 'capable of fastening fastening_component', 'raw_object': 'fastening_component', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'capable of fastening fastening_component' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics\"}]"
+  ],
+  "diagnostics": {
+    "dangling_endpoints": [],
+    "disabled_operations": [
+      {
+        "interp_status": "UNMAPPABLE_OPERATION",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "fastening_target",
+          "function": "apply fastening component to target",
+          "id": "op_002",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "fastening_target",
+          "tool_role": "fastening_tool",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "reason": "Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, repair_target)",
+        "status": "UNSUPPORTED_OPERATOR"
+      }
+    ],
+    "sanitizer_semantically_incomplete": false,
+    "unmappable_operations": [],
+    "unmappable_required_relations": [
+      {
+        "raw_object": "fastening_component",
+        "raw_phrase": "capable of fastening fastening_component",
+        "raw_subject": "fastening_tool",
+        "reason": "Relation text 'capable of fastening fastening_component' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      }
+    ],
+    "unresolved_roles": []
+  },
+  "domain": "workshop",
+  "live_contract_validation": "PASS",
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": "fastening_target",
+      "compiler_status": "STATIC_ALREADY_SATISFIED",
+      "id": "op_001",
+      "interpretation_status": "STATIC_ALREADY_SATISFIED",
+      "matched_capability": "FASTEN_JOINT",
+      "planner_context": null,
+      "planner_operation": "DRIVE_FASTENER_INTO_TARGET",
+      "preconditions_provenance": [
+        {
+          "capability_id": "FASTEN_JOINT",
+          "object_role": "fastener",
+          "predicate": "COMPATIBLE_WITH",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_001",
+          "subject_role": "driver"
+        },
+        {
+          "capability_id": "FASTEN_JOINT",
+          "object_role": "repair_target",
+          "predicate": "REACHES_TARGET",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_001",
+          "subject_role": "driver"
+        },
+        {
+          "capability_id": "FASTEN_JOINT",
+          "object_role": "repair_target",
+          "predicate": "COMPATIBLE_WITH_TARGET",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_001",
+          "subject_role": "fastener"
+        }
+      ],
+      "raw_phrase": "select compatible fastening component",
+      "reason": null,
+      "required_relations": [
+        [
+          "driver",
+          "COMPATIBLE_WITH",
+          "fastener"
+        ],
+        [
+          "driver",
+          "REACHES_TARGET",
+          "repair_target"
+        ],
+        [
+          "fastener",
+          "COMPATIBLE_WITH_TARGET",
+          "repair_target"
+        ]
+      ],
+      "source_role": "fastening_tool",
+      "target_role": "fastening_component"
+    },
+    {
+      "anchor_role": "fastening_target",
+      "compiler_status": "UNSUPPORTED_OPERATOR",
+      "id": "op_002",
+      "interpretation_status": "UNMAPPABLE_OPERATION",
+      "matched_capability": null,
+      "planner_context": null,
+      "planner_operation": null,
+      "preconditions_provenance": [],
+      "raw_phrase": "apply fastening component to target",
+      "reason": "Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, repair_target)",
+      "required_relations": [],
+      "source_role": "fastening_tool",
+      "target_role": "fastening_target"
+    },
+    {
+      "anchor_role": null,
+      "compiler_status": "ABSORBED_INTO_PLANNER_CONTEXT",
+      "id": "op_003",
+      "interpretation_status": "ABSORBED_INTO_PLANNER_CONTEXT",
+      "matched_capability": null,
+      "planner_context": "MAIN_WORKBENCH_ZONE",
+      "planner_operation": null,
+      "preconditions_provenance": [],
+      "raw_phrase": "place fastening tool on workbench",
+      "reason": null,
+      "required_relations": [],
+      "source_role": "fastening_tool",
+      "target_role": "workbench_surface"
+    }
+  ],
+  "operation_groups": [],
+  "primary_status": "A. RAW_FM_INCOMPLETE",
+  "relation_audit": [
+    {
+      "canonical": [
+        [
+          "fastener",
+          "COMPATIBLE_WITH_TARGET",
+          "repair_target"
+        ]
+      ],
+      "canonical_verifiers": [
+        "COMPATIBLE_WITH_TARGET"
+      ],
+      "classification": "PHYSICAL_VERIFIER",
+      "compiler_status": "CANONICAL_EXECUTABLE_SEMANTIC",
+      "id": "rel_001",
+      "planner_context": null,
+      "raw_object": "fastening_target",
+      "raw_phrase": "compatible with fastening target",
+      "raw_subject": "fastening_component",
+      "reason": null
+    },
+    {
+      "canonical": [],
+      "canonical_verifiers": [],
+      "classification": "UNMAPPED",
+      "compiler_status": "UNINTERPRETABLE_REQUIRED_RELATION",
+      "id": "rel_002",
+      "planner_context": null,
+      "raw_object": "fastening_component",
+      "raw_phrase": "capable of fastening fastening_component",
+      "raw_subject": "fastening_tool",
+      "reason": "Relation text 'capable of fastening fastening_component' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics"
+    },
+    {
+      "canonical": [],
+      "canonical_verifiers": [],
+      "classification": "UNMAPPED",
+      "compiler_status": "ABSORBED_INTO_PLANNER_CONTEXT",
+      "id": "rel_003",
+      "planner_context": "MAIN_WORKBENCH_ZONE",
+      "raw_object": "workbench_surface",
+      "raw_phrase": "placed on workbench surface",
+      "raw_subject": "fastening_tool",
+      "reason": null
+    }
+  ],
+  "semantic_findings": [
+    "Reusable tool, retained component, fastening target, and workbench support roles are present.",
+    "The fastening operation phrase mentions the component, but binds tool to target with the target duplicated as anchor; the component is absent from its endpoints.",
+    "A non-physical selection step is emitted as an operation, while the actual fastening transformation is not represented with coherent source/target/anchor roles.",
+    "The final tool placement operation is explicit; observation guidance asserts no hidden contents."
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "variant": "W1"
+}

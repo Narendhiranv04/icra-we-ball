@@ -1,0 +1,281 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "coffee_beans": [
+        {
+          "label": "Coffee can",
+          "visual_description": "Green cylindrical can on table"
+        }
+      ],
+      "coffee_cup": [
+        {
+          "label": "Blue mug",
+          "visual_description": "Blue ceramic mug with handle on table"
+        },
+        {
+          "label": "Grey cup",
+          "visual_description": "Grey ceramic cup on table"
+        }
+      ],
+      "eating_utensil": [
+        {
+          "label": "Spoon",
+          "visual_description": "Metal spoon on table"
+        },
+        {
+          "label": "Spoon",
+          "visual_description": "Metal spoon on table"
+        }
+      ],
+      "soup_bowl": [
+        {
+          "label": "Blue bowl",
+          "visual_description": "Blue ceramic bowl on table"
+        },
+        {
+          "label": "Red bowl",
+          "visual_description": "Red ceramic bowl on table"
+        }
+      ],
+      "spoon": [
+        {
+          "label": "Spoon",
+          "visual_description": "Metal spoon on table"
+        },
+        {
+          "label": "Spoon",
+          "visual_description": "Metal spoon on table"
+        }
+      ],
+      "table": [
+        {
+          "label": "Table",
+          "visual_description": "White table with drawers and green stool"
+        }
+      ],
+      "water_source": [
+        {
+          "label": "Teapot",
+          "visual_description": "White ceramic teapot on table"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_1",
+        "object_role": "coffee_beans",
+        "relation": "receives contents from",
+        "required": true,
+        "subject_role": "coffee_cup"
+      },
+      {
+        "id": "rel_2",
+        "object_role": "water_source",
+        "relation": "receives contents from",
+        "required": true,
+        "subject_role": "coffee_cup"
+      },
+      {
+        "id": "rel_3",
+        "object_role": "coffee_beans",
+        "relation": "receives contents from",
+        "required": true,
+        "subject_role": "soup_bowl"
+      },
+      {
+        "id": "rel_4",
+        "object_role": "coffee_cup",
+        "relation": "is used to stir",
+        "required": true,
+        "subject_role": "spoon"
+      },
+      {
+        "id": "rel_5",
+        "object_role": "soup_bowl",
+        "relation": "is paired with",
+        "required": true,
+        "subject_role": "eating_utensil"
+      },
+      {
+        "id": "rel_6",
+        "object_role": "table",
+        "relation": "is placed on",
+        "required": true,
+        "subject_role": "coffee_cup"
+      },
+      {
+        "id": "rel_7",
+        "object_role": "table",
+        "relation": "is placed on",
+        "required": true,
+        "subject_role": "soup_bowl"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mug",
+          "cup",
+          "coffee cup",
+          "tea cup"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Coffee serving vessel",
+        "id": "coffee_cup",
+        "required_count": 2,
+        "required_properties": [
+          "holds liquid",
+          "has handle"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "soup bowl",
+          "bowl",
+          "dinner bowl"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Soup serving vessel",
+        "id": "soup_bowl",
+        "required_count": 2,
+        "required_properties": [
+          "holds liquid",
+          "has rim"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "coffee can",
+          "coffee jar",
+          "coffee container"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Coffee ingredient",
+        "id": "coffee_beans",
+        "required_count": 1,
+        "required_properties": [
+          "contains coffee"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "water bottle",
+          "water jug",
+          "water container"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Water source",
+        "id": "water_source",
+        "required_count": 1,
+        "required_properties": [
+          "contains water"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "stirring spoon"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Stirring utensil",
+        "id": "spoon",
+        "required_count": 2,
+        "required_properties": [
+          "has bowl",
+          "is rigid"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "soup spoon",
+          "eating spoon"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Soup eating utensil",
+        "id": "eating_utensil",
+        "required_count": 2,
+        "required_properties": [
+          "has bowl",
+          "is rigid"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "counter",
+          "work surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "Preparation surface",
+        "id": "table",
+        "required_count": 1,
+        "required_properties": [
+          "is flat",
+          "is stable"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "table",
+        "id": "op_1",
+        "operation": "Pour coffee into cup",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "coffee_beans",
+        "target_role": "coffee_cup"
+      },
+      {
+        "anchor_role": "table",
+        "id": "op_2",
+        "operation": "Pour water into cup",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "water_source",
+        "target_role": "coffee_cup"
+      },
+      {
+        "anchor_role": "table",
+        "id": "op_3",
+        "operation": "Stir coffee",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "spoon",
+        "target_role": "coffee_cup"
+      },
+      {
+        "anchor_role": "table",
+        "id": "op_4",
+        "operation": "Serve soup",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "coffee_beans",
+        "target_role": "soup_bowl"
+      },
+      {
+        "anchor_role": "table",
+        "id": "op_5",
+        "operation": "Place utensil with bowl",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "eating_utensil",
+        "target_role": "soup_bowl"
+      }
+    ]
+  },
+  "task_summary": "Prepare and serve two sets of coffee and soup, each with a stirring action and a dedicated utensil.",
+  "unsupported_reason": ""
+}

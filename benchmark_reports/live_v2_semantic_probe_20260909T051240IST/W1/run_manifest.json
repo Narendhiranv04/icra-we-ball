@@ -1,0 +1,36 @@
+{
+  "base_url": "http://127.0.0.1:18000/v1",
+  "domain": "workshop",
+  "generated_at_utc": "2026-09-08T23:45:51.069659+00:00",
+  "generation_error": null,
+  "image_count": 3,
+  "images": [
+    {
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_semantic_probe_20260909T051240IST/W1/vlm_inputs/initial_detail.png",
+      "sha256": "054b165ce0391245a8094d5794346e1b67b1b88f62057d6970c752bd57d64bfa"
+    },
+    {
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_semantic_probe_20260909T051240IST/W1/vlm_inputs/initial_iso_left.png",
+      "sha256": "7211057e9bc73ab54e44fe28eb3a18aba02bb6b994d9dd75a0045e7209d6dfd5"
+    },
+    {
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_semantic_probe_20260909T051240IST/W1/vlm_inputs/initial_iso_right.png",
+      "sha256": "51d10708df9675232724315712ed29e8c09f24a0d617263654edbbc99fea71ce"
+    }
+  ],
+  "inference_config": {
+    "enable_thinking": false,
+    "max_tokens": 8192,
+    "schema_version": 2,
+    "temperature": 0.0,
+    "top_k": 20,
+    "top_p": 1.0
+  },
+  "live_contract_validation": "PASS",
+  "model": "qwen35-9b",
+  "prompt_schema_hash": "766a9fcb4d3248d542ea543a2474c6078cb8528632fc8467e7a294fe5aacea01",
+  "raw_v2_sha256": "de33bb4aad157884476d040f64c5d060392d4da8fe12ac24bdc27df4bae5078b",
+  "semantic_fm_calls": 1,
+  "task_instruction": "Identify the compatible components required to complete the fastening at the marked workbench location, complete the fastening, and leave any reusable equipment used for the task safely on the workbench.",
+  "variant": "W1"
+}

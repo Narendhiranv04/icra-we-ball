@@ -1,0 +1,194 @@
+{
+  "all_three_g_f_ready": false,
+  "first_generic_blocker": {
+    "description": "The FM can name a physical participant in an operation phrase while omitting it from source/target/anchor, or bind an unrelated role. K1 binds coffee material as the source for serving soup; W1 names the fastening component but omits it from the fastening operation endpoints.",
+    "kind": "RAW_FM_OPERATION_ENDPOINT_SEMANTIC_INCONSISTENCY",
+    "responsibility": "Raw FM output under the production V2 contract; downstream failures surface in semantic_compiler.compile_candidate_graph and robot_capability_registry.interpret_operation."
+  },
+  "primary_statuses": {
+    "K1": "A. RAW_FM_INCOMPLETE",
+    "L1": "C. COMPILER_MAPPING_BLOCKER",
+    "W1": "A. RAW_FM_INCOMPLETE"
+  },
+  "probe_root": "benchmark_reports/live_v2_semantic_probe_20260909T051240IST",
+  "total_fm_calls": 3,
+  "unmappable_or_ambiguous_operations": [
+    {
+      "anchor_role": "table",
+      "compiler_status": "UNSUPPORTED_OPERATOR",
+      "id": "op_4",
+      "interpretation_status": "UNMAPPABLE_OPERATION",
+      "matched_capability": null,
+      "planner_context": null,
+      "planner_operation": null,
+      "preconditions_provenance": [],
+      "raw_phrase": "Serve soup",
+      "reason": "Operation semantic evidence ['PROVIDE_SOUP_EATING_UTENSIL'] is incompatible with endpoints (coffee_source, soup_container, None)",
+      "required_relations": [],
+      "source_role": "coffee_beans",
+      "target_role": "soup_bowl",
+      "variant": "K1"
+    },
+    {
+      "anchor_role": "seating_unit",
+      "compiler_status": "UNSUPPORTED_OPERATOR",
+      "id": "op_2",
+      "interpretation_status": "UNMAPPABLE_OPERATION",
+      "matched_capability": null,
+      "planner_context": null,
+      "planner_operation": null,
+      "preconditions_provenance": [],
+      "raw_phrase": "Place entertainment control on support surface",
+      "reason": "Operation semantic evidence ['SUPPORT_ENTERTAINMENT_CONTROL'] is incompatible with endpoints (PERSONAL_CUP_SAUCER_REGION, REMOTE, SEATING_POSITION)",
+      "required_relations": [],
+      "source_role": "entertainment_control",
+      "target_role": "support_surface",
+      "variant": "L1"
+    },
+    {
+      "anchor_role": "fastening_target",
+      "compiler_status": "UNSUPPORTED_OPERATOR",
+      "id": "op_002",
+      "interpretation_status": "UNMAPPABLE_OPERATION",
+      "matched_capability": null,
+      "planner_context": null,
+      "planner_operation": null,
+      "preconditions_provenance": [],
+      "raw_phrase": "apply fastening component to target",
+      "reason": "Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, repair_target)",
+      "required_relations": [],
+      "source_role": "fastening_tool",
+      "target_role": "fastening_target",
+      "variant": "W1"
+    }
+  ],
+  "unmapped_relations": [
+    {
+      "canonical": [],
+      "canonical_verifiers": [],
+      "classification": "UNMAPPED",
+      "compiler_status": "UNINTERPRETABLE_REQUIRED_RELATION",
+      "id": "rel_4",
+      "planner_context": null,
+      "raw_object": "coffee_cup",
+      "raw_phrase": "is used to stir",
+      "raw_subject": "spoon",
+      "reason": "Relation text 'is used to stir' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics",
+      "variant": "K1"
+    },
+    {
+      "canonical": [],
+      "canonical_verifiers": [],
+      "classification": "UNMAPPED",
+      "compiler_status": "SOFT_SEMANTIC_EVIDENCE",
+      "id": "rel_6",
+      "planner_context": null,
+      "raw_object": "table",
+      "raw_phrase": "is placed on",
+      "raw_subject": "coffee_cup",
+      "reason": "Context-only support endpoint",
+      "variant": "K1"
+    },
+    {
+      "canonical": [],
+      "canonical_verifiers": [],
+      "classification": "UNMAPPED",
+      "compiler_status": "SOFT_SEMANTIC_EVIDENCE",
+      "id": "rel_7",
+      "planner_context": null,
+      "raw_object": "table",
+      "raw_phrase": "is placed on",
+      "raw_subject": "soup_bowl",
+      "reason": "Context-only support endpoint",
+      "variant": "K1"
+    },
+    {
+      "canonical": [],
+      "canonical_verifiers": [],
+      "classification": "UNMAPPED",
+      "compiler_status": "UNINTERPRETABLE_REQUIRED_RELATION",
+      "id": "rel_1",
+      "planner_context": null,
+      "raw_object": "support_surface",
+      "raw_phrase": "is located near",
+      "raw_subject": "seating_unit",
+      "reason": "Relation text 'is located near' provides no semantic evidence for valid predicates [] or task causal semantics",
+      "variant": "L1"
+    },
+    {
+      "canonical": [],
+      "canonical_verifiers": [],
+      "classification": "UNMAPPED",
+      "compiler_status": "UNINTERPRETABLE_REQUIRED_RELATION",
+      "id": "rel_3",
+      "planner_context": null,
+      "raw_object": "support_surface",
+      "raw_phrase": "is placed on",
+      "raw_subject": "entertainment_control",
+      "reason": "Semantic candidates ['FITS_ON', 'FITS_SET_ON'] incompatible with endpoints (REMOTE, PERSONAL_CUP_SAUCER_REGION)",
+      "variant": "L1"
+    },
+    {
+      "canonical": [],
+      "canonical_verifiers": [],
+      "classification": "UNMAPPED",
+      "compiler_status": "UNINTERPRETABLE_REQUIRED_RELATION",
+      "id": "rel_4",
+      "planner_context": null,
+      "raw_object": "seating_unit",
+      "raw_phrase": "is accessible to",
+      "raw_subject": "entertainment_control",
+      "reason": "Relation text 'is accessible to' provides no semantic evidence for valid predicates [] or task causal semantics",
+      "variant": "L1"
+    },
+    {
+      "canonical": [],
+      "canonical_verifiers": [],
+      "classification": "UNMAPPED",
+      "compiler_status": "UNINTERPRETABLE_REQUIRED_RELATION",
+      "id": "rel_5",
+      "planner_context": null,
+      "raw_object": "entertainment_device",
+      "raw_phrase": "controls",
+      "raw_subject": "entertainment_control",
+      "reason": "Unresolved or context-only endpoint",
+      "variant": "L1"
+    },
+    {
+      "canonical": [],
+      "canonical_verifiers": [],
+      "classification": "UNMAPPED",
+      "compiler_status": "UNINTERPRETABLE_REQUIRED_RELATION",
+      "id": "rel_002",
+      "planner_context": null,
+      "raw_object": "fastening_component",
+      "raw_phrase": "capable of fastening fastening_component",
+      "raw_subject": "fastening_tool",
+      "reason": "Relation text 'capable of fastening fastening_component' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics",
+      "variant": "W1"
+    },
+    {
+      "canonical": [],
+      "canonical_verifiers": [],
+      "classification": "UNMAPPED",
+      "compiler_status": "ABSORBED_INTO_PLANNER_CONTEXT",
+      "id": "rel_003",
+      "planner_context": "MAIN_WORKBENCH_ZONE",
+      "raw_object": "workbench_surface",
+      "raw_phrase": "placed on workbench surface",
+      "raw_subject": "fastening_tool",
+      "reason": null,
+      "variant": "W1"
+    }
+  ],
+  "validation_results": {
+    "K1": "PASS",
+    "L1": "PASS",
+    "W1": "PASS"
+  },
+  "variants": [
+    "K1",
+    "L1",
+    "W1"
+  ]
+}
