@@ -530,3 +530,39 @@ Directly recomputed from `benchmark_reports/final_corrected_32x1_20260908T192500
 
 **Gate 9 Status: PASSED.**
 
+---
+
+## 12. Stage 10 — Small End-to-End Live Probe
+
+### 12.1 Balanced Eight-Case Live Probe Setup & Results (Section 17)
+
+1. **Probe Configuration & Protocol:**
+   - **Balanced Variant Probe:** `K1, K2, K3, L1, L2, W1, W2, W8` (8 variants across all 3 domains).
+   - **Live Endpoint:** Remote Qwen3.5-9B (`qwen35-9b`) on RTX 5090 via persistent tunnel (`http://127.0.0.1:18000/v1`).
+   - **Frozen Inference Config A:** `enable_thinking=false`, `temperature=0.0`, `max_tokens=8192`, `RESPONSE_SCHEMA_V2`, `strict: true`.
+   - **Invariants Enforced:** Exactly 1.00 semantic VLM request per variant, 0.00 replans, max 1 A*.
+   - **Saved Artifacts:** `raw_vlm_response.json`, `fm_diagnostics/fm_call_001.json`, `functional_specification.json`, `run_manifest.json`, `result.json`, `evaluation_records.json`, `evaluation_summary.json`.
+
+2. **Probe Results Summary:**
+   - **Structured Output Reliability:** 100% (8/8 variants generated valid JSON strictly conforming to `RESPONSE_SCHEMA_V2`).
+   - **Truncation Rate:** 0% (8/8 variants returned `finish_reason: "stop"`).
+   - **Transport Failures:** 0 HTTP errors, 0 URLErrors, 0 disconnects.
+   - **Latency:** 24.57s to 52.90s (mean ~35.0s per variant).
+   - **Canonicalization Success Rate:** 100.0% across all domains (Kitchen: 100%, Living Room: 100%, Workshop: 100%).
+   - **Non-Empty Plan Generation:** 33.3% in Kitchen (`cand_plan_len = 24` in K1).
+   - **Candidate Plan Validity:** 100.0% of generated candidate plans verified symbolically.
+   - **Candidate Goal Coverage:** 30.8% in Kitchen (11.5% overall).
+   - **Search Execution:** Closed storage search executed on genuinely recovery-requiring variants (K2, K3, W1, W2, W8).
+
+### 12.2 Gate 10 Verification
+
+1. **Structured Output Reliability:** Confirmed 100% parse/schema validity with zero length truncations across all 8 variants.
+2. **Non-Zero Executable Contract Rate:** K1 reached full global grounding and A* planning, synthesizing a 24-step valid action sequence.
+3. **Causal Search Execution:** Genuinely recovery-requiring variants (K2, K3) actively engaged multi-stage closed storage inspection.
+4. **Workshop Capability Preconditions:** W1, W2, and W8 retained complete capability-precondition provenance (`COMPATIBLE_WITH`, `REACHES_TARGET`, `COMPATIBLE_WITH_TARGET`).
+5. **Kitchen Capability Mapping:** Transfer and stir semantics mapped to robot capabilities, enabling low-level primitive instantiation toward explicit task goals.
+6. **Interface Defect Elimination:** Zero canonicalization failures across all 8 variants (100% canonicalization success rate).
+7. **Commit:** `26e97442` (`eval(probe): validate corrected end-to-end semantic funnel`).
+
+**Gate 10 Status: PASSED.**
+
