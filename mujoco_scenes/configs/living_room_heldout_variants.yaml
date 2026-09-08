@@ -1,4 +1,9 @@
 schema_version: 1
+postfreeze_provenance:
+  method_freeze_commit: 8a9f540f092d75cd35b28fef4b0582e52f63d684
+  generated_utc: "2026-09-08T16:05:22Z"
+  seed_hex: 8a9f540f
+  construction: "Deterministic left/right and staging/support permutation; all pre-freeze held-out layouts excluded."
 task: >-
   Place one cup and one saucer on each of two fixed personal side tables and
   place the TV remote on the fixed shared coffee table.
@@ -23,37 +28,35 @@ canonical_assignment:
 variants:
   HL1_RIGHT_SAUCER_PREPLACED:
     intended_outcome: FEASIBLE
-    description: "Held-out layout 1: Right saucer is preplaced on right personal table; other four objects in staging."
-    object_locations: {a2_snack_right: PERSONAL_TABLE_RIGHT}
+    description: "Post-freeze layout 1: Left cup is preplaced on its personal table; other four objects begin in staging."
+    object_locations: {a2_drink_left: PERSONAL_TABLE_LEFT}
     absent_regions: []
 
   HL2_RIGHT_PAIR_ON_SHARED:
     intended_outcome: FEASIBLE
-    description: "Held-out layout 2: Right cup and right saucer both begin on the shared coffee table."
+    description: "Post-freeze layout 2: The remote begins on the shared table while all refreshment objects remain staged."
     object_locations:
-      a2_drink_right: SHARED_TABLE
-      a2_snack_right: SHARED_TABLE
+      a2_remote_payload: SHARED_TABLE
     absent_regions: []
 
   HL3_SAUCER_PREPLACED_CUP_ON_SHARED:
     intended_outcome: FEASIBLE
-    description: "Held-out layout 3: Right saucer is preplaced on right table while left cup begins on shared table."
+    description: "Post-freeze layout 3: The complete left refreshment pair begins on the left personal table."
     object_locations:
-      a2_snack_right: PERSONAL_TABLE_RIGHT
-      a2_drink_left: SHARED_TABLE
+      a2_drink_left: PERSONAL_TABLE_LEFT
+      a2_snack_left: PERSONAL_TABLE_LEFT
     absent_regions: []
 
   HL4_NO_RIGHT_PERSONAL_TABLE:
     intended_outcome: INFEASIBLE
-    description: "Held-out infeasible 1: The right personal table is absent from the scene."
+    description: "Post-freeze infeasible 1: The left personal table is absent from the scene."
     object_locations: {}
-    absent_regions: [PERSONAL_TABLE_RIGHT]
-    rejection_reason: MISSING_RIGHT_PERSONAL_TABLE
+    absent_regions: [PERSONAL_TABLE_LEFT]
+    rejection_reason: MISSING_LEFT_PERSONAL_TABLE
 
   HL5_NO_SHARED_TABLE:
     intended_outcome: INFEASIBLE
-    description: "Held-out infeasible 2: The required shared coffee table is absent from the scene."
-    object_locations:
-      a2_snack_left: PERSONAL_TABLE_LEFT
-    absent_regions: [SHARED_TABLE]
-    rejection_reason: MISSING_SHARED_TABLE
+    description: "Post-freeze infeasible 2: Both required personal tables are absent from the scene."
+    object_locations: {}
+    absent_regions: [PERSONAL_TABLE_LEFT, PERSONAL_TABLE_RIGHT]
+    rejection_reason: MISSING_PERSONAL_TABLES

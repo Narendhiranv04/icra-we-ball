@@ -1,4 +1,9 @@
 schema_version: 2
+postfreeze_provenance:
+  method_freeze_commit: 8a9f540f092d75cd35b28fef4b0582e52f63d684
+  generated_utc: "2026-09-08T16:05:22Z"
+  seed_hex: 8a9f540f
+  construction: "Deterministic component-to-region permutation plus two new missing-resource cases; all pre-freeze held-out layouts excluded."
 benchmark: W2_workshop_fixed_objects_position_presence
 description: >-
   Held-out workshop variants with unseen component distributions across storage regions.
@@ -17,35 +22,35 @@ fixed_insertion_target: MAIN_WORKBENCH_ZONE
 variants:
   HW1_SCREW_IN_RIGHT_DRAWER:
     intended_outcome: FEASIBLE
-    description: "Held-out layout 1: Screw in right drawer; both manual and power drivers in tool cabinet."
+    description: "Post-freeze layout 1: Screw is in the left drawer, manual driver in the right drawer, and power driver in the cabinet."
     storage_contents:
-      LEFT_DRAWER: [workshop_wooden_hammer]
-      RIGHT_DRAWER: [workshop_medium_phillips_screw]
-      TOOL_CABINET: [workshop_power_driver, workshop_long_phillips_driver]
-    active_surfaces: [MAIN_WORKBENCH_ZONE]
-    active_containers: []
-    expected_inspection_regions: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
-    expected_solution: {driver: workshop_power_driver, fastener: workshop_medium_phillips_screw, work_surface: MAIN_WORKBENCH_ZONE}
-
-  HW2_POWER_AND_SCREW_RIGHT_DRAWER:
-    intended_outcome: FEASIBLE
-    description: "Held-out layout 2: Power driver and screw both in right drawer; manual driver in tool cabinet."
-    storage_contents:
-      LEFT_DRAWER: [workshop_wooden_hammer]
-      RIGHT_DRAWER: [workshop_power_driver, workshop_medium_phillips_screw]
-      TOOL_CABINET: [workshop_long_phillips_driver]
+      LEFT_DRAWER: [workshop_medium_phillips_screw]
+      RIGHT_DRAWER: [workshop_long_phillips_driver]
+      TOOL_CABINET: [workshop_power_driver, workshop_wooden_hammer]
     active_surfaces: [MAIN_WORKBENCH_ZONE]
     active_containers: []
     expected_inspection_regions: [LEFT_DRAWER, RIGHT_DRAWER]
+    expected_solution: {driver: workshop_long_phillips_driver, fastener: workshop_medium_phillips_screw, work_surface: MAIN_WORKBENCH_ZONE}
+
+  HW2_POWER_AND_SCREW_RIGHT_DRAWER:
+    intended_outcome: FEASIBLE
+    description: "Post-freeze layout 2: Power driver and screw are colocated in the left drawer."
+    storage_contents:
+      LEFT_DRAWER: [workshop_power_driver, workshop_medium_phillips_screw]
+      RIGHT_DRAWER: [workshop_wooden_hammer]
+      TOOL_CABINET: [workshop_long_phillips_driver]
+    active_surfaces: [MAIN_WORKBENCH_ZONE]
+    active_containers: []
+    expected_inspection_regions: [LEFT_DRAWER]
     expected_solution: {driver: workshop_power_driver, fastener: workshop_medium_phillips_screw, work_surface: MAIN_WORKBENCH_ZONE}
 
   HW3_MANUAL_AND_SCREW_CABINET:
     intended_outcome: FEASIBLE
-    description: "Held-out layout 3: Manual driver and screw in tool cabinet; power driver in left drawer."
+    description: "Post-freeze layout 3: Manual driver is in the left drawer, power driver in the right drawer, and screw in the cabinet."
     storage_contents:
-      LEFT_DRAWER: [workshop_power_driver]
-      RIGHT_DRAWER: [workshop_wooden_hammer]
-      TOOL_CABINET: [workshop_long_phillips_driver, workshop_medium_phillips_screw]
+      LEFT_DRAWER: [workshop_long_phillips_driver, workshop_wooden_hammer]
+      RIGHT_DRAWER: [workshop_power_driver]
+      TOOL_CABINET: [workshop_medium_phillips_screw]
     active_surfaces: [MAIN_WORKBENCH_ZONE]
     active_containers: []
     expected_inspection_regions: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
@@ -53,11 +58,11 @@ variants:
 
   HW4_NO_SCREW_IN_STORAGE:
     intended_outcome: INFEASIBLE
-    description: "Held-out infeasible 1: Both drivers present, but compatible screw is completely absent from all storage."
+    description: "Post-freeze infeasible 1: Neither a compatible screw nor a driver exists in storage."
     storage_contents:
-      LEFT_DRAWER: [workshop_power_driver]
+      LEFT_DRAWER: []
       RIGHT_DRAWER: [workshop_wooden_hammer]
-      TOOL_CABINET: [workshop_long_phillips_driver]
+      TOOL_CABINET: []
     active_surfaces: [MAIN_WORKBENCH_ZONE]
     active_containers: []
     expected_inspection_regions: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
@@ -65,12 +70,12 @@ variants:
 
   HW5_NO_DRIVER_IN_STORAGE:
     intended_outcome: INFEASIBLE
-    description: "Held-out infeasible 2: Screw present in right drawer, but no driver exists in any storage region."
+    description: "Post-freeze infeasible 2: All components exist, but the required work surface is absent."
     storage_contents:
       LEFT_DRAWER: []
       RIGHT_DRAWER: [workshop_medium_phillips_screw]
-      TOOL_CABINET: [workshop_wooden_hammer]
-    active_surfaces: [MAIN_WORKBENCH_ZONE]
+      TOOL_CABINET: [workshop_power_driver, workshop_long_phillips_driver, workshop_wooden_hammer]
+    active_surfaces: []
     active_containers: []
     expected_inspection_regions: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
     expected_solution: null
