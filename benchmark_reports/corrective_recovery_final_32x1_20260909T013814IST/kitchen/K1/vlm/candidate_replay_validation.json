@@ -1,0 +1,387 @@
+{
+  "status": "VALID",
+  "goal_status": "PARTIAL_GOAL_SATISFIED",
+  "missing_goals": [
+    [
+      "at",
+      "object_0006",
+      "object_0003"
+    ]
+  ],
+  "satisfied_goals": [
+    [
+      "at",
+      "object_0001",
+      "dining_table"
+    ],
+    [
+      "at",
+      "object_0002",
+      "dining_table"
+    ],
+    [
+      "at",
+      "object_0003",
+      "dining_table"
+    ],
+    [
+      "at",
+      "object_0004",
+      "dining_table"
+    ],
+    [
+      "at",
+      "object_0006",
+      "object_0004"
+    ],
+    [
+      "contains",
+      "object_0001",
+      "coffee"
+    ],
+    [
+      "contains",
+      "object_0001",
+      "water"
+    ],
+    [
+      "contains",
+      "object_0002",
+      "coffee"
+    ],
+    [
+      "contains",
+      "object_0002",
+      "water"
+    ],
+    [
+      "hand_empty"
+    ],
+    [
+      "stirred",
+      "object_0001"
+    ],
+    [
+      "stirred",
+      "object_0002"
+    ]
+  ],
+  "final_atoms": [
+    [
+      "at",
+      "object_0001",
+      "dining_table"
+    ],
+    [
+      "at",
+      "object_0002",
+      "dining_table"
+    ],
+    [
+      "at",
+      "object_0003",
+      "dining_table"
+    ],
+    [
+      "at",
+      "object_0004",
+      "dining_table"
+    ],
+    [
+      "at",
+      "object_0005",
+      "countertop"
+    ],
+    [
+      "at",
+      "object_0006",
+      "object_0004"
+    ],
+    [
+      "at",
+      "object_0008",
+      "countertop"
+    ],
+    [
+      "at",
+      "object_0009",
+      "countertop"
+    ],
+    [
+      "contains",
+      "object_0001",
+      "coffee"
+    ],
+    [
+      "contains",
+      "object_0001",
+      "water"
+    ],
+    [
+      "contains",
+      "object_0002",
+      "coffee"
+    ],
+    [
+      "contains",
+      "object_0002",
+      "water"
+    ],
+    [
+      "contains",
+      "object_0003",
+      "soup"
+    ],
+    [
+      "contains",
+      "object_0004",
+      "soup"
+    ],
+    [
+      "hand_empty"
+    ],
+    [
+      "stirred",
+      "object_0001"
+    ],
+    [
+      "stirred",
+      "object_0002"
+    ]
+  ],
+  "steps": [
+    {
+      "step": 0,
+      "operator": "PICK",
+      "arguments": [
+        "object_0006"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 1,
+      "operator": "PLACE",
+      "arguments": [
+        "object_0006",
+        "object_0003"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 2,
+      "operator": "PICK",
+      "arguments": [
+        "object_0003"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 3,
+      "operator": "PLACE",
+      "arguments": [
+        "object_0003",
+        "dining_table"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 4,
+      "operator": "PICK",
+      "arguments": [
+        "object_0008"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 5,
+      "operator": "POUR",
+      "arguments": [
+        "object_0008",
+        "object_0001"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 6,
+      "operator": "POUR",
+      "arguments": [
+        "object_0008",
+        "object_0002"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 7,
+      "operator": "PLACE",
+      "arguments": [
+        "object_0008",
+        "countertop"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 8,
+      "operator": "PICK",
+      "arguments": [
+        "object_0009"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 9,
+      "operator": "POUR",
+      "arguments": [
+        "object_0009",
+        "object_0001"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 10,
+      "operator": "POUR",
+      "arguments": [
+        "object_0009",
+        "object_0002"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 11,
+      "operator": "PLACE",
+      "arguments": [
+        "object_0009",
+        "countertop"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 12,
+      "operator": "PICK",
+      "arguments": [
+        "object_0005"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 13,
+      "operator": "STIR",
+      "arguments": [
+        "object_0005",
+        "object_0001"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 14,
+      "operator": "STIR",
+      "arguments": [
+        "object_0005",
+        "object_0002"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 15,
+      "operator": "PLACE",
+      "arguments": [
+        "object_0005",
+        "countertop"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 16,
+      "operator": "PICK",
+      "arguments": [
+        "object_0001"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 17,
+      "operator": "PLACE",
+      "arguments": [
+        "object_0001",
+        "dining_table"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 18,
+      "operator": "PICK",
+      "arguments": [
+        "object_0002"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 19,
+      "operator": "PLACE",
+      "arguments": [
+        "object_0002",
+        "dining_table"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 20,
+      "operator": "PICK",
+      "arguments": [
+        "object_0006"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 21,
+      "operator": "PLACE",
+      "arguments": [
+        "object_0006",
+        "object_0004"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 22,
+      "operator": "PICK",
+      "arguments": [
+        "object_0004"
+      ],
+      "status": "VALID",
+      "failure": null
+    },
+    {
+      "step": 23,
+      "operator": "PLACE",
+      "arguments": [
+        "object_0004",
+        "dining_table"
+      ],
+      "status": "VALID",
+      "failure": null
+    }
+  ],
+  "validator": "independent_symbolic_replay_v1",
+  "uses_planner_transition": false
+}

@@ -1,0 +1,1090 @@
+{
+  "candidate_regions": [],
+  "cross_group_reuse_allowed": true,
+  "detector_vocabulary": [
+    "marked workbench surface",
+    "assembly fixture",
+    "workbench area",
+    "screw",
+    "bolt",
+    "nut",
+    "washer",
+    "fastener",
+    "assembly hardware",
+    "screwdriver",
+    "wrench",
+    "drill",
+    "driver bit",
+    "hand tool",
+    "workbench top",
+    "table surface",
+    "assembly table",
+    "Phillips screw",
+    "Phillips head screw",
+    "power driver",
+    "power drill",
+    "Phillips screwdriver",
+    "cordless power drill"
+  ],
+  "domain": "workshop",
+  "metadata": {
+    "alias_to_canonical": {
+      "cordless drill": "power_driver",
+      "cordless power drill": "power_driver",
+      "cordless screwdriver": "power_driver",
+      "cross-head screw": "screw",
+      "cross-head screwdriver": "screwdriver",
+      "drill driver": "power_driver",
+      "electric screwdriver": "power_driver",
+      "fastener": "screw",
+      "hammer": "hammer",
+      "hand screwdriver": "screwdriver",
+      "machine screw": "screw",
+      "mallet": "hammer",
+      "manual screwdriver": "screwdriver",
+      "phillips head screw": "screw",
+      "phillips screw": "screw",
+      "phillips screwdriver": "screwdriver",
+      "power drill": "power_driver",
+      "power driver": "power_driver",
+      "power_driver": "power_driver",
+      "powered screwdriver": "power_driver",
+      "screw": "screw",
+      "screwdriver": "screwdriver",
+      "threaded screw": "screw",
+      "wood mallet": "hammer",
+      "wooden hammer": "hammer"
+    },
+    "candidate_categories_used_for_detector_vocabulary": true,
+    "candidate_categories_used_for_grounding_acceptance": false,
+    "candidate_categories_used_for_role_identity": true,
+    "candidate_requirement_statuses": [
+      {
+        "id": "fastening_target",
+        "status": "CONTEXT_ONLY"
+      },
+      {
+        "id": "workbench_surface",
+        "status": "CONTEXT_ONLY"
+      },
+      {
+        "id": "fastening_components",
+        "requirement": "compatible with fastening target",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "fastening_tool",
+        "requirement": "capable of fastening",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "fastening_components",
+        "requirement": "physically compatible with",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "fastening_tool",
+        "requirement": "physically capable of operating on",
+        "status": "SOFT_SEMANTIC_ONLY"
+      },
+      {
+        "id": "complete_fastening",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "fastening_target",
+          "function": "complete fastening at target location",
+          "id": "complete_fastening",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "fastening_target",
+          "tool_role": "fastening_tool",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      }
+    ],
+    "canonicalization_status": "PARTIAL",
+    "canonicalization_trace": {
+      "context_only_roles": [
+        {
+          "canonical_role": "MAIN_WORKBENCH_ZONE",
+          "raw_role": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "marked workbench surface",
+              "assembly fixture",
+              "workbench area"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "The specific workbench location where the fastening must be completed.",
+            "id": "fastening_target",
+            "required_count": 1,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "marked_workbench_location",
+                "visual_description": "A yellow rectangular marker on a black baseplate located on the wooden workbench surface."
+              }
+            ]
+          },
+          "status": "PLANNER_CONTEXT_CONSTANT"
+        },
+        {
+          "canonical_role": "MAIN_WORKBENCH_ZONE",
+          "raw_role": {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "workbench top",
+              "table surface",
+              "assembly table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "The physical surface where reusable equipment must be left safely.",
+            "id": "workbench_surface",
+            "required_count": 1,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "wooden_workbench",
+                "visual_description": "A wooden table with drawers and a flat top surface."
+              }
+            ]
+          },
+          "status": "PLANNER_CONTEXT_CONSTANT"
+        }
+      ],
+      "disabled_groups": [
+        {
+          "raw_group": {
+            "context_relations": [],
+            "context_role": "fastening_target",
+            "function": "complete fastening at target location",
+            "id": "complete_fastening",
+            "required_relations": [],
+            "required_target_count": 1,
+            "target_role": "fastening_target",
+            "tool_role": "fastening_tool",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          },
+          "status": "UNINSTANTIABLE_MISSING_ROLE"
+        }
+      ],
+      "disambiguated_roles": [],
+      "groups": [
+        {
+          "capability_id": "FASTEN_JOINT",
+          "physical_preconditions": [
+            [
+              "driver",
+              "COMPATIBLE_WITH",
+              "fastener"
+            ]
+          ],
+          "planner_operation": "DRIVE_FASTENER_INTO_TARGET",
+          "preconditions_provenance": [
+            {
+              "capability_id": "FASTEN_JOINT",
+              "object_role": "fastener",
+              "predicate": "COMPATIBLE_WITH",
+              "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+              "source_operation_id": "identify_components",
+              "subject_role": "driver"
+            }
+          ],
+          "raw_group": {
+            "context_relations": [],
+            "context_role": "fastening_target",
+            "function": "identify compatible fastening components",
+            "id": "identify_components",
+            "required_relations": [],
+            "required_target_count": 1,
+            "target_role": "fastening_components",
+            "tool_role": "fastening_tool",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          },
+          "representation": "SINGLETON_RELATIONS",
+          "status": "STATIC_ALREADY_SATISFIED"
+        },
+        {
+          "planner_context": "MAIN_WORKBENCH_ZONE",
+          "raw_group": {
+            "context_relations": [],
+            "context_role": null,
+            "function": "place reusable equipment on workbench surface",
+            "id": "place_tool",
+            "required_relations": [],
+            "required_target_count": 1,
+            "target_role": "workbench_surface",
+            "tool_role": "fastening_tool",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          },
+          "status": "ABSORBED_INTO_PLANNER_CONTEXT"
+        }
+      ],
+      "merged_roles": [],
+      "precondition_provenance": [
+        {
+          "capability_id": "FASTEN_JOINT",
+          "object_role": "fastener",
+          "predicate": "COMPATIBLE_WITH",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "identify_components",
+          "subject_role": "driver"
+        }
+      ],
+      "properties": [
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "compatible with fastening target",
+          "raw_role_id": "fastening_components",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "canonical_predicate": null,
+          "raw_phrase": "capable of fastening",
+          "raw_role_id": "fastening_tool",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        }
+      ],
+      "relations": [
+        {
+          "raw_object": "fastening_target",
+          "raw_phrase": "physically compatible with",
+          "raw_subject": "fastening_components",
+          "reason": "Context-only support endpoint",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        },
+        {
+          "raw_object": "fastening_components",
+          "raw_phrase": "physically capable of operating on",
+          "raw_subject": "fastening_tool",
+          "reason": "Relation text 'physically capable of operating on' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "fastening_target",
+          "raw_phrase": "physically capable of operating on",
+          "raw_subject": "fastening_tool",
+          "reason": "Context-only support endpoint",
+          "status": "SOFT_SEMANTIC_EVIDENCE"
+        }
+      ],
+      "roles": [
+        {
+          "canonical_role": "fastener",
+          "raw_id": "fastening_components",
+          "rule": "CAUSAL_OPERATION_PARTICIPANT",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "driver",
+          "raw_id": "fastening_tool",
+          "rule": "CAUSAL_OPERATION_PARTICIPANT",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        }
+      ],
+      "task_causal_relations": [],
+      "unresolved_required_operations": [],
+      "unresolved_required_relations": [
+        {
+          "raw_object": "fastening_components",
+          "raw_phrase": "physically capable of operating on",
+          "raw_subject": "fastening_tool",
+          "reason": "Relation text 'physically capable of operating on' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "unresolved_roles": []
+    },
+    "contract_missing_reasons": [
+      "Disabled/unsupported operations: [{'raw_group': {'id': 'complete_fastening', 'function': 'complete fastening at target location', 'tool_role': 'fastening_tool', 'target_role': 'fastening_target', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'fastening_target', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+      "Unresolved required relations: [{'raw_subject': 'fastening_tool', 'raw_phrase': 'physically capable of operating on', 'raw_object': 'fastening_components', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'physically capable of operating on' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics\"}]"
+    ],
+    "detector_label_to_canonical": {
+      "power drill": "power_driver",
+      "screw": "screw",
+      "screwdriver": "screwdriver",
+      "wooden hammer": "hammer"
+    },
+    "detector_vocabulary_source": "VLM_CANDIDATES_PLUS_RELEVANT_SYSTEM_ALIASES",
+    "is_v2_specification": true,
+    "online_executable_contract_complete": false,
+    "precondition_provenance": [
+      {
+        "capability_id": "FASTEN_JOINT",
+        "object_role": "fastener",
+        "predicate": "COMPATIBLE_WITH",
+        "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+        "source_operation_id": "identify_components",
+        "subject_role": "driver"
+      }
+    ],
+    "raw_decomposition": {
+      "observation_guidance": {
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "visible_candidates_per_role": {
+          "fastening_components": [
+            {
+              "label": "yellow_fastener",
+              "visual_description": "A yellow cylindrical object, likely a screw or bolt, resting on the black baseplate on the workbench."
+            }
+          ],
+          "fastening_target": [
+            {
+              "label": "marked_workbench_location",
+              "visual_description": "A yellow rectangular marker on a black baseplate located on the wooden workbench surface."
+            }
+          ],
+          "fastening_tool": [
+            {
+              "label": "robotic_arm",
+              "visual_description": "A white robotic arm positioned near the workbench, potentially holding or capable of holding a tool."
+            }
+          ],
+          "workbench_surface": [
+            {
+              "label": "wooden_workbench",
+              "visual_description": "A wooden table with drawers and a flat top surface."
+            }
+          ]
+        }
+      },
+      "status": "SUPPORTED",
+      "task_contract": {
+        "functional_relations": [
+          {
+            "object_role": "fastening_target",
+            "relation": "physically compatible with",
+            "required": true,
+            "subject_role": "fastening_components"
+          },
+          {
+            "object_role": "fastening_components",
+            "relation": "physically capable of operating on",
+            "required": true,
+            "subject_role": "fastening_tool"
+          },
+          {
+            "object_role": "fastening_target",
+            "relation": "physically capable of operating on",
+            "required": true,
+            "subject_role": "fastening_tool"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "marked workbench surface",
+              "assembly fixture",
+              "workbench area"
+            ],
+            "entity_kind": "REGION",
+            "function": "The specific workbench location where the fastening must be completed.",
+            "id": "fastening_target",
+            "required_count": 1,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "screw",
+              "bolt",
+              "nut",
+              "washer",
+              "fastener",
+              "assembly hardware"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "Compatible components required to complete the fastening at the target location.",
+            "id": "fastening_components",
+            "required_count": 1,
+            "required_properties": [
+              "compatible with fastening target"
+            ]
+          },
+          {
+            "binding_policy": "REUSABLE",
+            "candidate_categories": [
+              "screwdriver",
+              "wrench",
+              "drill",
+              "driver bit",
+              "hand tool"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "Equipment used to perform the fastening operation.",
+            "id": "fastening_tool",
+            "required_count": 1,
+            "required_properties": [
+              "capable of fastening"
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "workbench top",
+              "table surface",
+              "assembly table"
+            ],
+            "entity_kind": "REGION",
+            "function": "The physical surface where reusable equipment must be left safely.",
+            "id": "workbench_surface",
+            "required_count": 1,
+            "required_properties": []
+          }
+        ],
+        "operation_pairings": [
+          {
+            "anchor_role": "fastening_target",
+            "id": "identify_components",
+            "operation": "identify compatible fastening components",
+            "operation_count": 1,
+            "reuse_policy": "DEDICATED_PER_TARGET",
+            "source_role": "fastening_tool",
+            "target_role": "fastening_components"
+          },
+          {
+            "anchor_role": "fastening_target",
+            "id": "complete_fastening",
+            "operation": "complete fastening at target location",
+            "operation_count": 1,
+            "reuse_policy": "DEDICATED_PER_TARGET",
+            "source_role": "fastening_tool",
+            "target_role": "fastening_target"
+          },
+          {
+            "id": "place_tool",
+            "operation": "place reusable equipment on workbench surface",
+            "operation_count": 1,
+            "reuse_policy": "DEDICATED_PER_TARGET",
+            "source_role": "fastening_tool",
+            "target_role": "workbench_surface"
+          }
+        ]
+      },
+      "task_summary": "Identify compatible fastening components, complete the fastening at the marked workbench location, and leave reusable equipment safely on the workbench.",
+      "unsupported_reason": ""
+    },
+    "raw_role_to_canonical": {
+      "fastening_components": "fastener",
+      "fastening_tool": "driver"
+    },
+    "raw_vlm_response": {
+      "observation_guidance": {
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "visible_candidates_per_role": {
+          "fastening_components": [
+            {
+              "label": "yellow_fastener",
+              "visual_description": "A yellow cylindrical object, likely a screw or bolt, resting on the black baseplate on the workbench."
+            }
+          ],
+          "fastening_target": [
+            {
+              "label": "marked_workbench_location",
+              "visual_description": "A yellow rectangular marker on a black baseplate located on the wooden workbench surface."
+            }
+          ],
+          "fastening_tool": [
+            {
+              "label": "robotic_arm",
+              "visual_description": "A white robotic arm positioned near the workbench, potentially holding or capable of holding a tool."
+            }
+          ],
+          "workbench_surface": [
+            {
+              "label": "wooden_workbench",
+              "visual_description": "A wooden table with drawers and a flat top surface."
+            }
+          ]
+        }
+      },
+      "status": "SUPPORTED",
+      "task_contract": {
+        "functional_relations": [
+          {
+            "object_role": "fastening_target",
+            "relation": "physically compatible with",
+            "required": true,
+            "subject_role": "fastening_components"
+          },
+          {
+            "object_role": "fastening_components",
+            "relation": "physically capable of operating on",
+            "required": true,
+            "subject_role": "fastening_tool"
+          },
+          {
+            "object_role": "fastening_target",
+            "relation": "physically capable of operating on",
+            "required": true,
+            "subject_role": "fastening_tool"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "marked workbench surface",
+              "assembly fixture",
+              "workbench area"
+            ],
+            "entity_kind": "REGION",
+            "function": "The specific workbench location where the fastening must be completed.",
+            "id": "fastening_target",
+            "required_count": 1,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "screw",
+              "bolt",
+              "nut",
+              "washer",
+              "fastener",
+              "assembly hardware"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "Compatible components required to complete the fastening at the target location.",
+            "id": "fastening_components",
+            "required_count": 1,
+            "required_properties": [
+              "compatible with fastening target"
+            ]
+          },
+          {
+            "binding_policy": "REUSABLE",
+            "candidate_categories": [
+              "screwdriver",
+              "wrench",
+              "drill",
+              "driver bit",
+              "hand tool"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "Equipment used to perform the fastening operation.",
+            "id": "fastening_tool",
+            "required_count": 1,
+            "required_properties": [
+              "capable of fastening"
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "workbench top",
+              "table surface",
+              "assembly table"
+            ],
+            "entity_kind": "REGION",
+            "function": "The physical surface where reusable equipment must be left safely.",
+            "id": "workbench_surface",
+            "required_count": 1,
+            "required_properties": []
+          }
+        ],
+        "operation_pairings": [
+          {
+            "anchor_role": "fastening_target",
+            "id": "identify_components",
+            "operation": "identify compatible fastening components",
+            "operation_count": 1,
+            "reuse_policy": "DEDICATED_PER_TARGET",
+            "source_role": "fastening_tool",
+            "target_role": "fastening_components"
+          },
+          {
+            "anchor_role": "fastening_target",
+            "id": "complete_fastening",
+            "operation": "complete fastening at target location",
+            "operation_count": 1,
+            "reuse_policy": "DEDICATED_PER_TARGET",
+            "source_role": "fastening_tool",
+            "target_role": "fastening_target"
+          },
+          {
+            "id": "place_tool",
+            "operation": "place reusable equipment on workbench surface",
+            "operation_count": 1,
+            "reuse_policy": "DEDICATED_PER_TARGET",
+            "source_role": "fastening_tool",
+            "target_role": "workbench_surface"
+          }
+        ]
+      },
+      "task_summary": "Identify compatible fastening components, complete the fastening at the marked workbench location, and leave reusable equipment safely on the workbench.",
+      "unsupported_reason": ""
+    },
+    "required_contract_complete": false,
+    "role_semantic_ontology_version": "phase3_p3i_4_semantic_ontology_v1",
+    "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+    "soft_semantic_evidence": [
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "compatible with fastening target",
+        "raw_role_id": "fastening_components",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "canonical_predicate": null,
+        "raw_phrase": "capable of fastening",
+        "raw_role_id": "fastening_tool",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "raw_object": "fastening_target",
+        "raw_phrase": "physically compatible with",
+        "raw_subject": "fastening_components",
+        "reason": "Context-only support endpoint",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      {
+        "raw_object": "fastening_target",
+        "raw_phrase": "physically capable of operating on",
+        "raw_subject": "fastening_tool",
+        "reason": "Context-only support endpoint",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      }
+    ],
+    "structural_sanitizer": {
+      "document": {
+        "functional_relations": [
+          {
+            "object_role": "fastening_target",
+            "relation": "physically compatible with",
+            "required": true,
+            "subject_role": "fastening_components"
+          },
+          {
+            "object_role": "fastening_components",
+            "relation": "physically capable of operating on",
+            "required": true,
+            "subject_role": "fastening_tool"
+          },
+          {
+            "object_role": "fastening_target",
+            "relation": "physically capable of operating on",
+            "required": true,
+            "subject_role": "fastening_tool"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "marked workbench surface",
+              "assembly fixture",
+              "workbench area"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "The specific workbench location where the fastening must be completed.",
+            "id": "fastening_target",
+            "required_count": 1,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "marked_workbench_location",
+                "visual_description": "A yellow rectangular marker on a black baseplate located on the wooden workbench surface."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "screw",
+              "bolt",
+              "nut",
+              "washer",
+              "fastener",
+              "assembly hardware"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "Compatible components required to complete the fastening at the target location.",
+            "id": "fastening_components",
+            "required_count": 1,
+            "required_properties": [
+              "compatible with fastening target"
+            ],
+            "visible_candidates": [
+              {
+                "label": "yellow_fastener",
+                "visual_description": "A yellow cylindrical object, likely a screw or bolt, resting on the black baseplate on the workbench."
+              }
+            ]
+          },
+          {
+            "binding_policy": "REUSABLE",
+            "candidate_categories": [
+              "screwdriver",
+              "wrench",
+              "drill",
+              "driver bit",
+              "hand tool"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "Equipment used to perform the fastening operation.",
+            "id": "fastening_tool",
+            "required_count": 1,
+            "required_properties": [
+              "capable of fastening"
+            ],
+            "visible_candidates": [
+              {
+                "label": "robotic_arm",
+                "visual_description": "A white robotic arm positioned near the workbench, potentially holding or capable of holding a tool."
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "workbench top",
+              "table surface",
+              "assembly table"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "The physical surface where reusable equipment must be left safely.",
+            "id": "workbench_surface",
+            "required_count": 1,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "wooden_workbench",
+                "visual_description": "A wooden table with drawers and a flat top surface."
+              }
+            ]
+          }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "interaction_groups": [
+          {
+            "context_relations": [],
+            "context_role": "fastening_target",
+            "function": "identify compatible fastening components",
+            "id": "identify_components",
+            "required_relations": [],
+            "required_target_count": 1,
+            "target_role": "fastening_components",
+            "tool_role": "fastening_tool",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          },
+          {
+            "context_relations": [],
+            "context_role": "fastening_target",
+            "function": "complete fastening at target location",
+            "id": "complete_fastening",
+            "required_relations": [],
+            "required_target_count": 1,
+            "target_role": "fastening_target",
+            "tool_role": "fastening_tool",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          },
+          {
+            "context_relations": [],
+            "context_role": null,
+            "function": "place reusable equipment on workbench surface",
+            "id": "place_tool",
+            "required_relations": [],
+            "required_target_count": 1,
+            "target_role": "workbench_surface",
+            "tool_role": "fastening_tool",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          }
+        ],
+        "raw_v2_contract": {
+          "functional_relations": [
+            {
+              "object_role": "fastening_target",
+              "relation": "physically compatible with",
+              "required": true,
+              "subject_role": "fastening_components"
+            },
+            {
+              "object_role": "fastening_components",
+              "relation": "physically capable of operating on",
+              "required": true,
+              "subject_role": "fastening_tool"
+            },
+            {
+              "object_role": "fastening_target",
+              "relation": "physically capable of operating on",
+              "required": true,
+              "subject_role": "fastening_tool"
+            }
+          ],
+          "functional_roles": [
+            {
+              "binding_policy": "DISTINCT",
+              "candidate_categories": [
+                "marked workbench surface",
+                "assembly fixture",
+                "workbench area"
+              ],
+              "entity_kind": "REGION",
+              "function": "The specific workbench location where the fastening must be completed.",
+              "id": "fastening_target",
+              "required_count": 1,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "DISTINCT",
+              "candidate_categories": [
+                "screw",
+                "bolt",
+                "nut",
+                "washer",
+                "fastener",
+                "assembly hardware"
+              ],
+              "entity_kind": "OBJECT",
+              "function": "Compatible components required to complete the fastening at the target location.",
+              "id": "fastening_components",
+              "required_count": 1,
+              "required_properties": [
+                "compatible with fastening target"
+              ]
+            },
+            {
+              "binding_policy": "REUSABLE",
+              "candidate_categories": [
+                "screwdriver",
+                "wrench",
+                "drill",
+                "driver bit",
+                "hand tool"
+              ],
+              "entity_kind": "OBJECT",
+              "function": "Equipment used to perform the fastening operation.",
+              "id": "fastening_tool",
+              "required_count": 1,
+              "required_properties": [
+                "capable of fastening"
+              ]
+            },
+            {
+              "binding_policy": "SHARED",
+              "candidate_categories": [
+                "workbench top",
+                "table surface",
+                "assembly table"
+              ],
+              "entity_kind": "REGION",
+              "function": "The physical surface where reusable equipment must be left safely.",
+              "id": "workbench_surface",
+              "required_count": 1,
+              "required_properties": []
+            }
+          ],
+          "operation_pairings": [
+            {
+              "anchor_role": "fastening_target",
+              "id": "identify_components",
+              "operation": "identify compatible fastening components",
+              "operation_count": 1,
+              "reuse_policy": "DEDICATED_PER_TARGET",
+              "source_role": "fastening_tool",
+              "target_role": "fastening_components"
+            },
+            {
+              "anchor_role": "fastening_target",
+              "id": "complete_fastening",
+              "operation": "complete fastening at target location",
+              "operation_count": 1,
+              "reuse_policy": "DEDICATED_PER_TARGET",
+              "source_role": "fastening_tool",
+              "target_role": "fastening_target"
+            },
+            {
+              "id": "place_tool",
+              "operation": "place reusable equipment on workbench surface",
+              "operation_count": 1,
+              "reuse_policy": "DEDICATED_PER_TARGET",
+              "source_role": "fastening_tool",
+              "target_role": "workbench_surface"
+            }
+          ]
+        },
+        "raw_v2_guidance": {
+          "inspectable_regions": [],
+          "inspection_order": [],
+          "visible_candidates_per_role": {
+            "fastening_components": [
+              {
+                "label": "yellow_fastener",
+                "visual_description": "A yellow cylindrical object, likely a screw or bolt, resting on the black baseplate on the workbench."
+              }
+            ],
+            "fastening_target": [
+              {
+                "label": "marked_workbench_location",
+                "visual_description": "A yellow rectangular marker on a black baseplate located on the wooden workbench surface."
+              }
+            ],
+            "fastening_tool": [
+              {
+                "label": "robotic_arm",
+                "visual_description": "A white robotic arm positioned near the workbench, potentially holding or capable of holding a tool."
+              }
+            ],
+            "workbench_surface": [
+              {
+                "label": "wooden_workbench",
+                "visual_description": "A wooden table with drawers and a flat top surface."
+              }
+            ]
+          }
+        },
+        "schema_version": 2,
+        "status": "SUPPORTED",
+        "task_summary": "Identify compatible fastening components, complete the fastening at the marked workbench location, and leave reusable equipment safely on the workbench.",
+        "unsupported_reason": ""
+      },
+      "repairs": [],
+      "semantically_incomplete": false,
+      "succeeded": true
+    },
+    "task_causal_relations": [],
+    "unresolved_semantics": [
+      {
+        "raw_object": "fastening_components",
+        "raw_phrase": "physically capable of operating on",
+        "raw_subject": "fastening_tool",
+        "reason": "Relation text 'physically capable of operating on' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      }
+    ],
+    "unverified_required_properties": []
+  },
+  "nodes": {
+    "driver": {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "driver",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "semantic_hints": [
+        "capable of fastening"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    "fastener": {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "fastener",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "screw",
+        "Phillips screw",
+        "Phillips head screw"
+      ],
+      "semantic_hints": [
+        "compatible with fastening target"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  },
+  "operation_groups": [],
+  "region_ranking": [],
+  "relations": [
+    {
+      "capability_id": "FASTEN_JOINT",
+      "category": "PHYSICAL_VERIFIER",
+      "expected": true,
+      "object_role": "fastener",
+      "predicate": "COMPATIBLE_WITH",
+      "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+      "source_operation_id": "identify_components",
+      "subject_role": "driver"
+    }
+  ],
+  "roles": [
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "driver",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "semantic_hints": [
+        "capable of fastening"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "fastener",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "screw",
+        "Phillips screw",
+        "Phillips head screw"
+      ],
+      "semantic_hints": [
+        "compatible with fastening target"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "source": "VLM_CANONICAL_G_F",
+  "task_causal_relations": [],
+  "task_instruction": "Identify the compatible components required to complete the fastening at the marked workbench location, complete the fastening, and leave any reusable equipment used for the task safely on the workbench."
+}

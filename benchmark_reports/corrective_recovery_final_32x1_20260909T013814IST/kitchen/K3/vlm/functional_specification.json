@@ -1,0 +1,2157 @@
+{
+  "candidate_regions": [
+    "D1",
+    "D2",
+    "C1",
+    "C2"
+  ],
+  "cross_group_reuse_allowed": false,
+  "detector_vocabulary": [
+    "mug",
+    "cup",
+    "coffee cup",
+    "glass",
+    "bowl",
+    "soup bowl",
+    "dish",
+    "coffee",
+    "hot beverage",
+    "liquid",
+    "water",
+    "soup",
+    "broth",
+    "spoon",
+    "fork",
+    "knife",
+    "eating utensil",
+    "stirrer",
+    "utensil",
+    "table",
+    "counter",
+    "surface",
+    "place"
+  ],
+  "domain": "kitchen",
+  "metadata": {
+    "candidate_categories_used_for_detector_vocabulary": true,
+    "candidate_categories_used_for_grounding_acceptance": false,
+    "candidate_categories_used_for_role_identity": true,
+    "candidate_requirement_statuses": [
+      {
+        "id": "coffee_liquid",
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "water_liquid",
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "soup_liquid",
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "coffee_serving_location",
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "soup_serving_location",
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "fill_coffee_cup",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "coffee_serving_location",
+          "function": "fill coffee cup with coffee and water",
+          "id": "fill_coffee_cup",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "coffee_cup",
+          "tool_role": "coffee_liquid",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "fill_soup_bowl",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "soup_serving_location",
+          "function": "fill soup bowl with soup",
+          "id": "fill_soup_bowl",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "soup_bowl",
+          "tool_role": "soup_liquid",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "place_coffee",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": null,
+          "function": "place coffee cup on serving location",
+          "id": "place_coffee",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "coffee_serving_location",
+          "tool_role": "coffee_cup",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "place_soup",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": null,
+          "function": "place soup bowl on serving location",
+          "id": "place_soup",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "soup_serving_location",
+          "tool_role": "soup_bowl",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "coffee_stirring",
+        "missing_roles": [],
+        "roles": [
+          "coffee_stirrer",
+          "coffee_container"
+        ],
+        "status": "UNINSTANTIABLE_UNGROUNDED_ROLE"
+      },
+      {
+        "id": "soup_serving",
+        "missing_roles": [],
+        "roles": [
+          "soup_eating_utensil",
+          "soup_container"
+        ],
+        "status": "UNINSTANTIABLE_UNGROUNDED_ROLE"
+      }
+    ],
+    "canonicalization_status": "PARTIAL",
+    "canonicalization_trace": {
+      "context_only_roles": [],
+      "disabled_groups": [
+        {
+          "raw_group": {
+            "context_relations": [],
+            "context_role": "coffee_serving_location",
+            "function": "fill coffee cup with coffee and water",
+            "id": "fill_coffee_cup",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "coffee_cup",
+            "tool_role": "coffee_liquid",
+            "usage_policy": "REUSABLE_ACROSS_TARGETS"
+          },
+          "status": "UNINSTANTIABLE_MISSING_ROLE"
+        },
+        {
+          "raw_group": {
+            "context_relations": [],
+            "context_role": "soup_serving_location",
+            "function": "fill soup bowl with soup",
+            "id": "fill_soup_bowl",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "soup_bowl",
+            "tool_role": "soup_liquid",
+            "usage_policy": "REUSABLE_ACROSS_TARGETS"
+          },
+          "status": "UNINSTANTIABLE_MISSING_ROLE"
+        },
+        {
+          "raw_group": {
+            "context_relations": [],
+            "context_role": null,
+            "function": "place coffee cup on serving location",
+            "id": "place_coffee",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "coffee_serving_location",
+            "tool_role": "coffee_cup",
+            "usage_policy": "REUSABLE_ACROSS_TARGETS"
+          },
+          "status": "UNINSTANTIABLE_MISSING_ROLE"
+        },
+        {
+          "raw_group": {
+            "context_relations": [],
+            "context_role": null,
+            "function": "place soup bowl on serving location",
+            "id": "place_soup",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "soup_serving_location",
+            "tool_role": "soup_bowl",
+            "usage_policy": "REUSABLE_ACROSS_TARGETS"
+          },
+          "status": "UNINSTANTIABLE_MISSING_ROLE"
+        }
+      ],
+      "disambiguated_roles": [],
+      "groups": [
+        {
+          "capability_id": "STIR_COFFEE",
+          "context_relations": [],
+          "interp_status": "LEXICAL_SEMANTIC_MATCH",
+          "planner_operation": "STIR_COFFEE",
+          "preconditions_provenance": [
+            {
+              "capability_id": "STIR_COFFEE",
+              "predicate": "INSERTABLE_IN",
+              "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+              "source_operation_id": "stir_coffee"
+            },
+            {
+              "capability_id": "STIR_COFFEE",
+              "predicate": "REACHES_BOTTOM",
+              "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+              "source_operation_id": "stir_coffee"
+            }
+          ],
+          "raw_group": {
+            "context_relations": [],
+            "context_role": null,
+            "function": "stir coffee in cup",
+            "id": "stir_coffee",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "coffee_cup",
+            "tool_role": "stirring_utensil",
+            "usage_policy": "REUSABLE_ACROSS_TARGETS"
+          },
+          "required_relations": [
+            "INSERTABLE_IN",
+            "REACHES_BOTTOM"
+          ],
+          "status": "CANONICAL_OPERATION_GROUP"
+        },
+        {
+          "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+          "context_relations": [],
+          "interp_status": "LEXICAL_SEMANTIC_MATCH",
+          "planner_operation": "PROVIDE_SOUP_EATING_UTENSIL",
+          "preconditions_provenance": [
+            {
+              "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+              "predicate": "INSERTABLE_IN",
+              "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+              "source_operation_id": "place_utensil"
+            },
+            {
+              "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+              "predicate": "REACHES_BOTTOM",
+              "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+              "source_operation_id": "place_utensil"
+            }
+          ],
+          "raw_group": {
+            "context_relations": [],
+            "context_role": null,
+            "function": "place eating utensil with soup bowl",
+            "id": "place_utensil",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "soup_bowl",
+            "tool_role": "eating_utensil",
+            "usage_policy": "REUSABLE_ACROSS_TARGETS"
+          },
+          "required_relations": [
+            "INSERTABLE_IN",
+            "REACHES_BOTTOM"
+          ],
+          "status": "CANONICAL_OPERATION_GROUP"
+        }
+      ],
+      "merged_roles": [],
+      "precondition_provenance": [
+        {
+          "capability_id": "STIR_COFFEE",
+          "predicate": "INSERTABLE_IN",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "stir_coffee"
+        },
+        {
+          "capability_id": "STIR_COFFEE",
+          "predicate": "REACHES_BOTTOM",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "stir_coffee"
+        },
+        {
+          "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+          "predicate": "INSERTABLE_IN",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "place_utensil"
+        },
+        {
+          "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+          "predicate": "REACHES_BOTTOM",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "place_utensil"
+        }
+      ],
+      "properties": [],
+      "relations": [
+        {
+          "raw_object": "coffee_liquid",
+          "raw_phrase": "contains",
+          "raw_subject": "coffee_cup",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "water_liquid",
+          "raw_phrase": "contains",
+          "raw_subject": "coffee_cup",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "soup_liquid",
+          "raw_phrase": "contains",
+          "raw_subject": "soup_bowl",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "soup_bowl",
+          "raw_phrase": "assigned_to",
+          "raw_subject": "eating_utensil",
+          "reason": "Relation text 'assigned_to' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "coffee_cup",
+          "raw_phrase": "assigned_to",
+          "raw_subject": "stirring_utensil",
+          "reason": "Relation text 'assigned_to' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "coffee_serving_location",
+          "raw_phrase": "placed_on",
+          "raw_subject": "coffee_cup",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "soup_serving_location",
+          "raw_phrase": "placed_on",
+          "raw_subject": "soup_bowl",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "roles": [
+        {
+          "canonical_role": "coffee_container",
+          "raw_id": "coffee_cup",
+          "rule": "DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "soup_container",
+          "raw_id": "soup_bowl",
+          "rule": "DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "soup_eating_utensil",
+          "raw_id": "eating_utensil",
+          "rule": "DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "coffee_stirrer",
+          "raw_id": "stirring_utensil",
+          "rule": "DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        }
+      ],
+      "task_causal_relations": [],
+      "unresolved_required_operations": [],
+      "unresolved_required_relations": [
+        {
+          "raw_object": "coffee_liquid",
+          "raw_phrase": "contains",
+          "raw_subject": "coffee_cup",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "water_liquid",
+          "raw_phrase": "contains",
+          "raw_subject": "coffee_cup",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "soup_liquid",
+          "raw_phrase": "contains",
+          "raw_subject": "soup_bowl",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "soup_bowl",
+          "raw_phrase": "assigned_to",
+          "raw_subject": "eating_utensil",
+          "reason": "Relation text 'assigned_to' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "coffee_cup",
+          "raw_phrase": "assigned_to",
+          "raw_subject": "stirring_utensil",
+          "reason": "Relation text 'assigned_to' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "coffee_serving_location",
+          "raw_phrase": "placed_on",
+          "raw_subject": "coffee_cup",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "soup_serving_location",
+          "raw_phrase": "placed_on",
+          "raw_subject": "soup_bowl",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "unresolved_roles": [
+        {
+          "code": "AMBIGUOUS_ROLE_MAPPING",
+          "collision_with": "coffee_cup",
+          "raw_role": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "coffee",
+              "hot beverage",
+              "liquid"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "The liquid component of coffee.",
+            "id": "coffee_liquid",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": []
+          }
+        },
+        {
+          "code": "AMBIGUOUS_ROLE_MAPPING",
+          "collision_with": "coffee_cup",
+          "raw_role": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "water",
+              "liquid"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "The liquid component of coffee.",
+            "id": "water_liquid",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": []
+          }
+        },
+        {
+          "code": "AMBIGUOUS_ROLE_MAPPING",
+          "collision_with": "soup_bowl",
+          "raw_role": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "soup",
+              "liquid",
+              "broth"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "The liquid component of soup.",
+            "id": "soup_liquid",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "red_soup",
+                "visual_description": "Red liquid in the bowl."
+              }
+            ]
+          }
+        },
+        {
+          "raw_role": {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "table",
+              "counter",
+              "surface",
+              "place"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "A surface or area where coffee is served.",
+            "id": "coffee_serving_location",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "table_surface",
+                "visual_description": "The surface of the table."
+              }
+            ]
+          },
+          "status": "UNRESOLVED_SEMANTIC"
+        },
+        {
+          "raw_role": {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "table",
+              "counter",
+              "surface",
+              "place"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "A surface or area where soup is served.",
+            "id": "soup_serving_location",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "table_surface",
+                "visual_description": "The surface of the table."
+              }
+            ]
+          },
+          "status": "UNRESOLVED_SEMANTIC"
+        }
+      ]
+    },
+    "contract_missing_reasons": [
+      "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'coffee_liquid', 'entity_kind': 'OBJECT', 'function': 'The liquid component of coffee.', 'required_count': 2, 'binding_policy': 'DISTINCT', 'candidate_categories': ['coffee', 'hot beverage', 'liquid'], 'required_properties': [], 'visible_candidates': [], 'description': ''}, 'collision_with': 'coffee_cup'}, {'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'water_liquid', 'entity_kind': 'OBJECT', 'function': 'The liquid component of coffee.', 'required_count': 2, 'binding_policy': 'DISTINCT', 'candidate_categories': ['water', 'liquid'], 'required_properties': [], 'visible_candidates': [], 'description': ''}, 'collision_with': 'coffee_cup'}, {'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'soup_liquid', 'entity_kind': 'OBJECT', 'function': 'The liquid component of soup.', 'required_count': 2, 'binding_policy': 'DISTINCT', 'candidate_categories': ['soup', 'liquid', 'broth'], 'required_properties': [], 'visible_candidates': [{'label': 'red_soup', 'visual_description': 'Red liquid in the bowl.'}], 'description': ''}, 'collision_with': 'soup_bowl'}, {'raw_role': {'id': 'coffee_serving_location', 'entity_kind': 'REGION', 'function': 'A surface or area where coffee is served.', 'required_count': 2, 'binding_policy': 'SHARED', 'candidate_categories': ['table', 'counter', 'surface', 'place'], 'required_properties': [], 'visible_candidates': [{'label': 'table_surface', 'visual_description': 'The surface of the table.'}], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}, {'raw_role': {'id': 'soup_serving_location', 'entity_kind': 'REGION', 'function': 'A surface or area where soup is served.', 'required_count': 2, 'binding_policy': 'SHARED', 'candidate_categories': ['table', 'counter', 'surface', 'place'], 'required_properties': [], 'visible_candidates': [{'label': 'table_surface', 'visual_description': 'The surface of the table.'}], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}]",
+      "Disabled/unsupported operations: [{'raw_group': {'id': 'fill_coffee_cup', 'function': 'fill coffee cup with coffee and water', 'tool_role': 'coffee_liquid', 'target_role': 'coffee_cup', 'required_target_count': 2, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': 'coffee_serving_location', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}, {'raw_group': {'id': 'fill_soup_bowl', 'function': 'fill soup bowl with soup', 'tool_role': 'soup_liquid', 'target_role': 'soup_bowl', 'required_target_count': 2, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': 'soup_serving_location', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}, {'raw_group': {'id': 'place_coffee', 'function': 'place coffee cup on serving location', 'tool_role': 'coffee_cup', 'target_role': 'coffee_serving_location', 'required_target_count': 2, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': None, 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}, {'raw_group': {'id': 'place_soup', 'function': 'place soup bowl on serving location', 'tool_role': 'soup_bowl', 'target_role': 'soup_serving_location', 'required_target_count': 2, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': None, 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+      "Unresolved required relations: [{'raw_subject': 'coffee_cup', 'raw_phrase': 'contains', 'raw_object': 'coffee_liquid', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'coffee_cup', 'raw_phrase': 'contains', 'raw_object': 'water_liquid', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'soup_bowl', 'raw_phrase': 'contains', 'raw_object': 'soup_liquid', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'eating_utensil', 'raw_phrase': 'assigned_to', 'raw_object': 'soup_bowl', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'assigned_to' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics\"}, {'raw_subject': 'stirring_utensil', 'raw_phrase': 'assigned_to', 'raw_object': 'coffee_cup', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'assigned_to' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics\"}, {'raw_subject': 'coffee_cup', 'raw_phrase': 'placed_on', 'raw_object': 'coffee_serving_location', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'soup_bowl', 'raw_phrase': 'placed_on', 'raw_object': 'soup_serving_location', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]"
+    ],
+    "detector_vocabulary_source": "VLM_CANDIDATES_PLUS_RELEVANT_SYSTEM_ALIASES",
+    "is_v2_specification": true,
+    "online_executable_contract_complete": false,
+    "precondition_provenance": [
+      {
+        "capability_id": "STIR_COFFEE",
+        "predicate": "INSERTABLE_IN",
+        "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+        "source_operation_id": "stir_coffee"
+      },
+      {
+        "capability_id": "STIR_COFFEE",
+        "predicate": "REACHES_BOTTOM",
+        "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+        "source_operation_id": "stir_coffee"
+      },
+      {
+        "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+        "predicate": "INSERTABLE_IN",
+        "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+        "source_operation_id": "place_utensil"
+      },
+      {
+        "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+        "predicate": "REACHES_BOTTOM",
+        "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+        "source_operation_id": "place_utensil"
+      }
+    ],
+    "raw_decomposition": {
+      "observation_guidance": {
+        "inspectable_regions": [
+          {
+            "id": "drawer_1",
+            "label": "left_drawer",
+            "visual_description": "A drawer under the table on the left."
+          },
+          {
+            "id": "drawer_2",
+            "label": "right_drawer",
+            "visual_description": "A drawer under the table on the right."
+          },
+          {
+            "id": "cabinet_1",
+            "label": "left_cabinet",
+            "visual_description": "A cabinet in the background on the left."
+          },
+          {
+            "id": "cabinet_2",
+            "label": "right_cabinet",
+            "visual_description": "A cabinet in the background on the right."
+          }
+        ],
+        "inspection_order": [
+          "drawer_1",
+          "drawer_2",
+          "cabinet_1",
+          "cabinet_2"
+        ],
+        "visible_candidates_per_role": {
+          "coffee_cup": [
+            {
+              "label": "blue_mug",
+              "visual_description": "A blue mug on the table."
+            },
+            {
+              "label": "beige_cup",
+              "visual_description": "A beige cup on the table."
+            }
+          ],
+          "coffee_liquid": [],
+          "coffee_serving_location": [
+            {
+              "label": "table_surface",
+              "visual_description": "The surface of the table."
+            }
+          ],
+          "eating_utensil": [
+            {
+              "label": "spoon_1",
+              "visual_description": "A spoon on the table."
+            },
+            {
+              "label": "spoon_2",
+              "visual_description": "Another spoon on the table."
+            }
+          ],
+          "soup_bowl": [
+            {
+              "label": "red_bowl",
+              "visual_description": "A bowl with red liquid on the table."
+            }
+          ],
+          "soup_liquid": [
+            {
+              "label": "red_soup",
+              "visual_description": "Red liquid in the bowl."
+            }
+          ],
+          "soup_serving_location": [
+            {
+              "label": "table_surface",
+              "visual_description": "The surface of the table."
+            }
+          ],
+          "stirring_utensil": [
+            {
+              "label": "spoon_1",
+              "visual_description": "A spoon on the table."
+            },
+            {
+              "label": "spoon_2",
+              "visual_description": "Another spoon on the table."
+            }
+          ],
+          "water_liquid": []
+        }
+      },
+      "status": "SUPPORTED",
+      "task_contract": {
+        "functional_relations": [
+          {
+            "object_role": "coffee_liquid",
+            "relation": "contains",
+            "required": true,
+            "subject_role": "coffee_cup"
+          },
+          {
+            "object_role": "water_liquid",
+            "relation": "contains",
+            "required": true,
+            "subject_role": "coffee_cup"
+          },
+          {
+            "object_role": "soup_liquid",
+            "relation": "contains",
+            "required": true,
+            "subject_role": "soup_bowl"
+          },
+          {
+            "object_role": "soup_bowl",
+            "relation": "assigned_to",
+            "required": true,
+            "subject_role": "eating_utensil"
+          },
+          {
+            "object_role": "coffee_cup",
+            "relation": "assigned_to",
+            "required": true,
+            "subject_role": "stirring_utensil"
+          },
+          {
+            "object_role": "coffee_serving_location",
+            "relation": "placed_on",
+            "required": true,
+            "subject_role": "coffee_cup"
+          },
+          {
+            "object_role": "soup_serving_location",
+            "relation": "placed_on",
+            "required": true,
+            "subject_role": "soup_bowl"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "mug",
+              "cup",
+              "coffee cup",
+              "glass"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "A container for coffee.",
+            "id": "coffee_cup",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "bowl",
+              "soup bowl",
+              "dish"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "A container for soup.",
+            "id": "soup_bowl",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "coffee",
+              "hot beverage",
+              "liquid"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "The liquid component of coffee.",
+            "id": "coffee_liquid",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "water",
+              "liquid"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "The liquid component of coffee.",
+            "id": "water_liquid",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "soup",
+              "liquid",
+              "broth"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "The liquid component of soup.",
+            "id": "soup_liquid",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "spoon",
+              "fork",
+              "knife",
+              "eating utensil"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "A tool for eating soup.",
+            "id": "eating_utensil",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "spoon",
+              "stirrer",
+              "utensil"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "A tool for stirring coffee.",
+            "id": "stirring_utensil",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "table",
+              "counter",
+              "surface",
+              "place"
+            ],
+            "entity_kind": "REGION",
+            "function": "A surface or area where coffee is served.",
+            "id": "coffee_serving_location",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "table",
+              "counter",
+              "surface",
+              "place"
+            ],
+            "entity_kind": "REGION",
+            "function": "A surface or area where soup is served.",
+            "id": "soup_serving_location",
+            "required_count": 2,
+            "required_properties": []
+          }
+        ],
+        "operation_pairings": [
+          {
+            "anchor_role": "coffee_serving_location",
+            "id": "fill_coffee_cup",
+            "operation": "fill coffee cup with coffee and water",
+            "operation_count": 2,
+            "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+            "source_role": "coffee_liquid",
+            "target_role": "coffee_cup"
+          },
+          {
+            "anchor_role": "soup_serving_location",
+            "id": "fill_soup_bowl",
+            "operation": "fill soup bowl with soup",
+            "operation_count": 2,
+            "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+            "source_role": "soup_liquid",
+            "target_role": "soup_bowl"
+          },
+          {
+            "id": "stir_coffee",
+            "operation": "stir coffee in cup",
+            "operation_count": 2,
+            "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+            "source_role": "stirring_utensil",
+            "target_role": "coffee_cup"
+          },
+          {
+            "id": "place_utensil",
+            "operation": "place eating utensil with soup bowl",
+            "operation_count": 2,
+            "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+            "source_role": "eating_utensil",
+            "target_role": "soup_bowl"
+          },
+          {
+            "id": "place_coffee",
+            "operation": "place coffee cup on serving location",
+            "operation_count": 2,
+            "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+            "source_role": "coffee_cup",
+            "target_role": "coffee_serving_location"
+          },
+          {
+            "id": "place_soup",
+            "operation": "place soup bowl on serving location",
+            "operation_count": 2,
+            "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+            "source_role": "soup_bowl",
+            "target_role": "soup_serving_location"
+          }
+        ]
+      },
+      "task_summary": "Prepare and serve two coffee servings and two soup servings, each with a dedicated utensil, using available ingredients and tools.",
+      "unsupported_reason": ""
+    },
+    "raw_role_to_canonical": {
+      "coffee_cup": "coffee_container",
+      "eating_utensil": "soup_eating_utensil",
+      "soup_bowl": "soup_container",
+      "stirring_utensil": "coffee_stirrer"
+    },
+    "raw_vlm_response": {
+      "observation_guidance": {
+        "inspectable_regions": [
+          {
+            "id": "drawer_1",
+            "label": "left_drawer",
+            "visual_description": "A drawer under the table on the left."
+          },
+          {
+            "id": "drawer_2",
+            "label": "right_drawer",
+            "visual_description": "A drawer under the table on the right."
+          },
+          {
+            "id": "cabinet_1",
+            "label": "left_cabinet",
+            "visual_description": "A cabinet in the background on the left."
+          },
+          {
+            "id": "cabinet_2",
+            "label": "right_cabinet",
+            "visual_description": "A cabinet in the background on the right."
+          }
+        ],
+        "inspection_order": [
+          "drawer_1",
+          "drawer_2",
+          "cabinet_1",
+          "cabinet_2"
+        ],
+        "visible_candidates_per_role": {
+          "coffee_cup": [
+            {
+              "label": "blue_mug",
+              "visual_description": "A blue mug on the table."
+            },
+            {
+              "label": "beige_cup",
+              "visual_description": "A beige cup on the table."
+            }
+          ],
+          "coffee_liquid": [],
+          "coffee_serving_location": [
+            {
+              "label": "table_surface",
+              "visual_description": "The surface of the table."
+            }
+          ],
+          "eating_utensil": [
+            {
+              "label": "spoon_1",
+              "visual_description": "A spoon on the table."
+            },
+            {
+              "label": "spoon_2",
+              "visual_description": "Another spoon on the table."
+            }
+          ],
+          "soup_bowl": [
+            {
+              "label": "red_bowl",
+              "visual_description": "A bowl with red liquid on the table."
+            }
+          ],
+          "soup_liquid": [
+            {
+              "label": "red_soup",
+              "visual_description": "Red liquid in the bowl."
+            }
+          ],
+          "soup_serving_location": [
+            {
+              "label": "table_surface",
+              "visual_description": "The surface of the table."
+            }
+          ],
+          "stirring_utensil": [
+            {
+              "label": "spoon_1",
+              "visual_description": "A spoon on the table."
+            },
+            {
+              "label": "spoon_2",
+              "visual_description": "Another spoon on the table."
+            }
+          ],
+          "water_liquid": []
+        }
+      },
+      "status": "SUPPORTED",
+      "task_contract": {
+        "functional_relations": [
+          {
+            "object_role": "coffee_liquid",
+            "relation": "contains",
+            "required": true,
+            "subject_role": "coffee_cup"
+          },
+          {
+            "object_role": "water_liquid",
+            "relation": "contains",
+            "required": true,
+            "subject_role": "coffee_cup"
+          },
+          {
+            "object_role": "soup_liquid",
+            "relation": "contains",
+            "required": true,
+            "subject_role": "soup_bowl"
+          },
+          {
+            "object_role": "soup_bowl",
+            "relation": "assigned_to",
+            "required": true,
+            "subject_role": "eating_utensil"
+          },
+          {
+            "object_role": "coffee_cup",
+            "relation": "assigned_to",
+            "required": true,
+            "subject_role": "stirring_utensil"
+          },
+          {
+            "object_role": "coffee_serving_location",
+            "relation": "placed_on",
+            "required": true,
+            "subject_role": "coffee_cup"
+          },
+          {
+            "object_role": "soup_serving_location",
+            "relation": "placed_on",
+            "required": true,
+            "subject_role": "soup_bowl"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "mug",
+              "cup",
+              "coffee cup",
+              "glass"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "A container for coffee.",
+            "id": "coffee_cup",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "bowl",
+              "soup bowl",
+              "dish"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "A container for soup.",
+            "id": "soup_bowl",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "coffee",
+              "hot beverage",
+              "liquid"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "The liquid component of coffee.",
+            "id": "coffee_liquid",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "water",
+              "liquid"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "The liquid component of coffee.",
+            "id": "water_liquid",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "soup",
+              "liquid",
+              "broth"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "The liquid component of soup.",
+            "id": "soup_liquid",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "spoon",
+              "fork",
+              "knife",
+              "eating utensil"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "A tool for eating soup.",
+            "id": "eating_utensil",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "spoon",
+              "stirrer",
+              "utensil"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "A tool for stirring coffee.",
+            "id": "stirring_utensil",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "table",
+              "counter",
+              "surface",
+              "place"
+            ],
+            "entity_kind": "REGION",
+            "function": "A surface or area where coffee is served.",
+            "id": "coffee_serving_location",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "table",
+              "counter",
+              "surface",
+              "place"
+            ],
+            "entity_kind": "REGION",
+            "function": "A surface or area where soup is served.",
+            "id": "soup_serving_location",
+            "required_count": 2,
+            "required_properties": []
+          }
+        ],
+        "operation_pairings": [
+          {
+            "anchor_role": "coffee_serving_location",
+            "id": "fill_coffee_cup",
+            "operation": "fill coffee cup with coffee and water",
+            "operation_count": 2,
+            "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+            "source_role": "coffee_liquid",
+            "target_role": "coffee_cup"
+          },
+          {
+            "anchor_role": "soup_serving_location",
+            "id": "fill_soup_bowl",
+            "operation": "fill soup bowl with soup",
+            "operation_count": 2,
+            "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+            "source_role": "soup_liquid",
+            "target_role": "soup_bowl"
+          },
+          {
+            "id": "stir_coffee",
+            "operation": "stir coffee in cup",
+            "operation_count": 2,
+            "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+            "source_role": "stirring_utensil",
+            "target_role": "coffee_cup"
+          },
+          {
+            "id": "place_utensil",
+            "operation": "place eating utensil with soup bowl",
+            "operation_count": 2,
+            "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+            "source_role": "eating_utensil",
+            "target_role": "soup_bowl"
+          },
+          {
+            "id": "place_coffee",
+            "operation": "place coffee cup on serving location",
+            "operation_count": 2,
+            "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+            "source_role": "coffee_cup",
+            "target_role": "coffee_serving_location"
+          },
+          {
+            "id": "place_soup",
+            "operation": "place soup bowl on serving location",
+            "operation_count": 2,
+            "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+            "source_role": "soup_bowl",
+            "target_role": "soup_serving_location"
+          }
+        ]
+      },
+      "task_summary": "Prepare and serve two coffee servings and two soup servings, each with a dedicated utensil, using available ingredients and tools.",
+      "unsupported_reason": ""
+    },
+    "required_contract_complete": false,
+    "role_semantic_ontology_version": "phase3_p3i_4_semantic_ontology_v1",
+    "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+    "soft_semantic_evidence": [],
+    "structural_sanitizer": {
+      "document": {
+        "functional_relations": [
+          {
+            "object_role": "coffee_liquid",
+            "relation": "contains",
+            "required": true,
+            "subject_role": "coffee_cup"
+          },
+          {
+            "object_role": "water_liquid",
+            "relation": "contains",
+            "required": true,
+            "subject_role": "coffee_cup"
+          },
+          {
+            "object_role": "soup_liquid",
+            "relation": "contains",
+            "required": true,
+            "subject_role": "soup_bowl"
+          },
+          {
+            "object_role": "soup_bowl",
+            "relation": "assigned_to",
+            "required": true,
+            "subject_role": "eating_utensil"
+          },
+          {
+            "object_role": "coffee_cup",
+            "relation": "assigned_to",
+            "required": true,
+            "subject_role": "stirring_utensil"
+          },
+          {
+            "object_role": "coffee_serving_location",
+            "relation": "placed_on",
+            "required": true,
+            "subject_role": "coffee_cup"
+          },
+          {
+            "object_role": "soup_serving_location",
+            "relation": "placed_on",
+            "required": true,
+            "subject_role": "soup_bowl"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "mug",
+              "cup",
+              "coffee cup",
+              "glass"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "A container for coffee.",
+            "id": "coffee_cup",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "blue_mug",
+                "visual_description": "A blue mug on the table."
+              },
+              {
+                "label": "beige_cup",
+                "visual_description": "A beige cup on the table."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "bowl",
+              "soup bowl",
+              "dish"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "A container for soup.",
+            "id": "soup_bowl",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "red_bowl",
+                "visual_description": "A bowl with red liquid on the table."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "coffee",
+              "hot beverage",
+              "liquid"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "The liquid component of coffee.",
+            "id": "coffee_liquid",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "water",
+              "liquid"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "The liquid component of coffee.",
+            "id": "water_liquid",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "soup",
+              "liquid",
+              "broth"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "The liquid component of soup.",
+            "id": "soup_liquid",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "red_soup",
+                "visual_description": "Red liquid in the bowl."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "spoon",
+              "fork",
+              "knife",
+              "eating utensil"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "A tool for eating soup.",
+            "id": "eating_utensil",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "spoon_1",
+                "visual_description": "A spoon on the table."
+              },
+              {
+                "label": "spoon_2",
+                "visual_description": "Another spoon on the table."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "spoon",
+              "stirrer",
+              "utensil"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "A tool for stirring coffee.",
+            "id": "stirring_utensil",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "spoon_1",
+                "visual_description": "A spoon on the table."
+              },
+              {
+                "label": "spoon_2",
+                "visual_description": "Another spoon on the table."
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "table",
+              "counter",
+              "surface",
+              "place"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "A surface or area where coffee is served.",
+            "id": "coffee_serving_location",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "table_surface",
+                "visual_description": "The surface of the table."
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "table",
+              "counter",
+              "surface",
+              "place"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "A surface or area where soup is served.",
+            "id": "soup_serving_location",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "table_surface",
+                "visual_description": "The surface of the table."
+              }
+            ]
+          }
+        ],
+        "inspectable_regions": [
+          {
+            "id": "drawer_1",
+            "label": "left_drawer",
+            "visual_description": "A drawer under the table on the left."
+          },
+          {
+            "id": "drawer_2",
+            "label": "right_drawer",
+            "visual_description": "A drawer under the table on the right."
+          },
+          {
+            "id": "cabinet_1",
+            "label": "left_cabinet",
+            "visual_description": "A cabinet in the background on the left."
+          },
+          {
+            "id": "cabinet_2",
+            "label": "right_cabinet",
+            "visual_description": "A cabinet in the background on the right."
+          }
+        ],
+        "inspection_order": [
+          "drawer_1",
+          "drawer_2",
+          "cabinet_1",
+          "cabinet_2"
+        ],
+        "interaction_groups": [
+          {
+            "context_relations": [],
+            "context_role": "coffee_serving_location",
+            "function": "fill coffee cup with coffee and water",
+            "id": "fill_coffee_cup",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "coffee_cup",
+            "tool_role": "coffee_liquid",
+            "usage_policy": "REUSABLE_ACROSS_TARGETS"
+          },
+          {
+            "context_relations": [],
+            "context_role": "soup_serving_location",
+            "function": "fill soup bowl with soup",
+            "id": "fill_soup_bowl",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "soup_bowl",
+            "tool_role": "soup_liquid",
+            "usage_policy": "REUSABLE_ACROSS_TARGETS"
+          },
+          {
+            "context_relations": [],
+            "context_role": null,
+            "function": "stir coffee in cup",
+            "id": "stir_coffee",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "coffee_cup",
+            "tool_role": "stirring_utensil",
+            "usage_policy": "REUSABLE_ACROSS_TARGETS"
+          },
+          {
+            "context_relations": [],
+            "context_role": null,
+            "function": "place eating utensil with soup bowl",
+            "id": "place_utensil",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "soup_bowl",
+            "tool_role": "eating_utensil",
+            "usage_policy": "REUSABLE_ACROSS_TARGETS"
+          },
+          {
+            "context_relations": [],
+            "context_role": null,
+            "function": "place coffee cup on serving location",
+            "id": "place_coffee",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "coffee_serving_location",
+            "tool_role": "coffee_cup",
+            "usage_policy": "REUSABLE_ACROSS_TARGETS"
+          },
+          {
+            "context_relations": [],
+            "context_role": null,
+            "function": "place soup bowl on serving location",
+            "id": "place_soup",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "soup_serving_location",
+            "tool_role": "soup_bowl",
+            "usage_policy": "REUSABLE_ACROSS_TARGETS"
+          }
+        ],
+        "raw_v2_contract": {
+          "functional_relations": [
+            {
+              "object_role": "coffee_liquid",
+              "relation": "contains",
+              "required": true,
+              "subject_role": "coffee_cup"
+            },
+            {
+              "object_role": "water_liquid",
+              "relation": "contains",
+              "required": true,
+              "subject_role": "coffee_cup"
+            },
+            {
+              "object_role": "soup_liquid",
+              "relation": "contains",
+              "required": true,
+              "subject_role": "soup_bowl"
+            },
+            {
+              "object_role": "soup_bowl",
+              "relation": "assigned_to",
+              "required": true,
+              "subject_role": "eating_utensil"
+            },
+            {
+              "object_role": "coffee_cup",
+              "relation": "assigned_to",
+              "required": true,
+              "subject_role": "stirring_utensil"
+            },
+            {
+              "object_role": "coffee_serving_location",
+              "relation": "placed_on",
+              "required": true,
+              "subject_role": "coffee_cup"
+            },
+            {
+              "object_role": "soup_serving_location",
+              "relation": "placed_on",
+              "required": true,
+              "subject_role": "soup_bowl"
+            }
+          ],
+          "functional_roles": [
+            {
+              "binding_policy": "DISTINCT",
+              "candidate_categories": [
+                "mug",
+                "cup",
+                "coffee cup",
+                "glass"
+              ],
+              "entity_kind": "OBJECT",
+              "function": "A container for coffee.",
+              "id": "coffee_cup",
+              "required_count": 2,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "DISTINCT",
+              "candidate_categories": [
+                "bowl",
+                "soup bowl",
+                "dish"
+              ],
+              "entity_kind": "OBJECT",
+              "function": "A container for soup.",
+              "id": "soup_bowl",
+              "required_count": 2,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "DISTINCT",
+              "candidate_categories": [
+                "coffee",
+                "hot beverage",
+                "liquid"
+              ],
+              "entity_kind": "OBJECT",
+              "function": "The liquid component of coffee.",
+              "id": "coffee_liquid",
+              "required_count": 2,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "DISTINCT",
+              "candidate_categories": [
+                "water",
+                "liquid"
+              ],
+              "entity_kind": "OBJECT",
+              "function": "The liquid component of coffee.",
+              "id": "water_liquid",
+              "required_count": 2,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "DISTINCT",
+              "candidate_categories": [
+                "soup",
+                "liquid",
+                "broth"
+              ],
+              "entity_kind": "OBJECT",
+              "function": "The liquid component of soup.",
+              "id": "soup_liquid",
+              "required_count": 2,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "DISTINCT",
+              "candidate_categories": [
+                "spoon",
+                "fork",
+                "knife",
+                "eating utensil"
+              ],
+              "entity_kind": "OBJECT",
+              "function": "A tool for eating soup.",
+              "id": "eating_utensil",
+              "required_count": 2,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "DISTINCT",
+              "candidate_categories": [
+                "spoon",
+                "stirrer",
+                "utensil"
+              ],
+              "entity_kind": "OBJECT",
+              "function": "A tool for stirring coffee.",
+              "id": "stirring_utensil",
+              "required_count": 2,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "SHARED",
+              "candidate_categories": [
+                "table",
+                "counter",
+                "surface",
+                "place"
+              ],
+              "entity_kind": "REGION",
+              "function": "A surface or area where coffee is served.",
+              "id": "coffee_serving_location",
+              "required_count": 2,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "SHARED",
+              "candidate_categories": [
+                "table",
+                "counter",
+                "surface",
+                "place"
+              ],
+              "entity_kind": "REGION",
+              "function": "A surface or area where soup is served.",
+              "id": "soup_serving_location",
+              "required_count": 2,
+              "required_properties": []
+            }
+          ],
+          "operation_pairings": [
+            {
+              "anchor_role": "coffee_serving_location",
+              "id": "fill_coffee_cup",
+              "operation": "fill coffee cup with coffee and water",
+              "operation_count": 2,
+              "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+              "source_role": "coffee_liquid",
+              "target_role": "coffee_cup"
+            },
+            {
+              "anchor_role": "soup_serving_location",
+              "id": "fill_soup_bowl",
+              "operation": "fill soup bowl with soup",
+              "operation_count": 2,
+              "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+              "source_role": "soup_liquid",
+              "target_role": "soup_bowl"
+            },
+            {
+              "id": "stir_coffee",
+              "operation": "stir coffee in cup",
+              "operation_count": 2,
+              "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+              "source_role": "stirring_utensil",
+              "target_role": "coffee_cup"
+            },
+            {
+              "id": "place_utensil",
+              "operation": "place eating utensil with soup bowl",
+              "operation_count": 2,
+              "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+              "source_role": "eating_utensil",
+              "target_role": "soup_bowl"
+            },
+            {
+              "id": "place_coffee",
+              "operation": "place coffee cup on serving location",
+              "operation_count": 2,
+              "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+              "source_role": "coffee_cup",
+              "target_role": "coffee_serving_location"
+            },
+            {
+              "id": "place_soup",
+              "operation": "place soup bowl on serving location",
+              "operation_count": 2,
+              "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+              "source_role": "soup_bowl",
+              "target_role": "soup_serving_location"
+            }
+          ]
+        },
+        "raw_v2_guidance": {
+          "inspectable_regions": [
+            {
+              "id": "drawer_1",
+              "label": "left_drawer",
+              "visual_description": "A drawer under the table on the left."
+            },
+            {
+              "id": "drawer_2",
+              "label": "right_drawer",
+              "visual_description": "A drawer under the table on the right."
+            },
+            {
+              "id": "cabinet_1",
+              "label": "left_cabinet",
+              "visual_description": "A cabinet in the background on the left."
+            },
+            {
+              "id": "cabinet_2",
+              "label": "right_cabinet",
+              "visual_description": "A cabinet in the background on the right."
+            }
+          ],
+          "inspection_order": [
+            "drawer_1",
+            "drawer_2",
+            "cabinet_1",
+            "cabinet_2"
+          ],
+          "visible_candidates_per_role": {
+            "coffee_cup": [
+              {
+                "label": "blue_mug",
+                "visual_description": "A blue mug on the table."
+              },
+              {
+                "label": "beige_cup",
+                "visual_description": "A beige cup on the table."
+              }
+            ],
+            "coffee_liquid": [],
+            "coffee_serving_location": [
+              {
+                "label": "table_surface",
+                "visual_description": "The surface of the table."
+              }
+            ],
+            "eating_utensil": [
+              {
+                "label": "spoon_1",
+                "visual_description": "A spoon on the table."
+              },
+              {
+                "label": "spoon_2",
+                "visual_description": "Another spoon on the table."
+              }
+            ],
+            "soup_bowl": [
+              {
+                "label": "red_bowl",
+                "visual_description": "A bowl with red liquid on the table."
+              }
+            ],
+            "soup_liquid": [
+              {
+                "label": "red_soup",
+                "visual_description": "Red liquid in the bowl."
+              }
+            ],
+            "soup_serving_location": [
+              {
+                "label": "table_surface",
+                "visual_description": "The surface of the table."
+              }
+            ],
+            "stirring_utensil": [
+              {
+                "label": "spoon_1",
+                "visual_description": "A spoon on the table."
+              },
+              {
+                "label": "spoon_2",
+                "visual_description": "Another spoon on the table."
+              }
+            ],
+            "water_liquid": []
+          }
+        },
+        "schema_version": 2,
+        "status": "SUPPORTED",
+        "task_summary": "Prepare and serve two coffee servings and two soup servings, each with a dedicated utensil, using available ingredients and tools.",
+        "unsupported_reason": ""
+      },
+      "repairs": [],
+      "semantically_incomplete": false,
+      "succeeded": true
+    },
+    "task_causal_relations": [],
+    "unresolved_semantics": [
+      {
+        "raw_object": "coffee_liquid",
+        "raw_phrase": "contains",
+        "raw_subject": "coffee_cup",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      {
+        "raw_object": "water_liquid",
+        "raw_phrase": "contains",
+        "raw_subject": "coffee_cup",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      {
+        "raw_object": "soup_liquid",
+        "raw_phrase": "contains",
+        "raw_subject": "soup_bowl",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      {
+        "raw_object": "soup_bowl",
+        "raw_phrase": "assigned_to",
+        "raw_subject": "eating_utensil",
+        "reason": "Relation text 'assigned_to' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      {
+        "raw_object": "coffee_cup",
+        "raw_phrase": "assigned_to",
+        "raw_subject": "stirring_utensil",
+        "reason": "Relation text 'assigned_to' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      {
+        "raw_object": "coffee_serving_location",
+        "raw_phrase": "placed_on",
+        "raw_subject": "coffee_cup",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      {
+        "raw_object": "soup_serving_location",
+        "raw_phrase": "placed_on",
+        "raw_subject": "soup_bowl",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      }
+    ],
+    "unverified_required_properties": []
+  },
+  "nodes": {
+    "coffee_container": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "coffee_container",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup",
+        "mug"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    "coffee_stirrer": {
+      "binding_policy": "REUSABLE",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": 1,
+      "name": "coffee_stirrer",
+      "numeric_constraints": [],
+      "preference": "minimize_distinct",
+      "reusable": true,
+      "semantic_categories": [
+        "spoon"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    "soup_container": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "soup_container",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "bowl"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    "soup_eating_utensil": {
+      "binding_policy": "REUSABLE",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": 1,
+      "name": "soup_eating_utensil",
+      "numeric_constraints": [],
+      "preference": "minimize_distinct",
+      "reusable": true,
+      "semantic_categories": [
+        "spoon"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    }
+  },
+  "operation_groups": [
+    {
+      "capability_id": "STIR_COFFEE",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": false,
+      "function": "STIR_COFFEE",
+      "id": "coffee_stirring",
+      "preconditions_provenance": [
+        {
+          "capability_id": "STIR_COFFEE",
+          "predicate": "INSERTABLE_IN",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "stir_coffee"
+        },
+        {
+          "capability_id": "STIR_COFFEE",
+          "predicate": "REACHES_BOTTOM",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "stir_coffee"
+        }
+      ],
+      "required_relations": [
+        "INSERTABLE_IN",
+        "REACHES_BOTTOM"
+      ],
+      "required_target_count": 2,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": "minimize_distinct_tools",
+      "target_role": "coffee_container",
+      "tool_role": "coffee_stirrer",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": false,
+      "function": "PROVIDE_SOUP_EATING_UTENSIL",
+      "id": "soup_serving",
+      "preconditions_provenance": [
+        {
+          "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+          "predicate": "INSERTABLE_IN",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "place_utensil"
+        },
+        {
+          "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+          "predicate": "REACHES_BOTTOM",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "place_utensil"
+        }
+      ],
+      "required_relations": [
+        "INSERTABLE_IN",
+        "REACHES_BOTTOM"
+      ],
+      "required_target_count": 2,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": "minimize_distinct_tools",
+      "target_role": "soup_container",
+      "tool_role": "soup_eating_utensil",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  ],
+  "region_ranking": [
+    "D1",
+    "D2",
+    "C1",
+    "C2"
+  ],
+  "relations": [],
+  "roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "coffee_container",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup",
+        "mug"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "REUSABLE",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": 1,
+      "name": "coffee_stirrer",
+      "numeric_constraints": [],
+      "preference": "minimize_distinct",
+      "reusable": true,
+      "semantic_categories": [
+        "spoon"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "soup_container",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "bowl"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "REUSABLE",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": 1,
+      "name": "soup_eating_utensil",
+      "numeric_constraints": [],
+      "preference": "minimize_distinct",
+      "reusable": true,
+      "semantic_categories": [
+        "spoon"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    }
+  ],
+  "source": "VLM_CANONICAL_G_F",
+  "task_causal_relations": [],
+  "task_instruction": "Prepare and serve one coffee and one soup for each of two people. Make each coffee using coffee and water and stir it before serving. Serve each soup bowl with its own suitable eating utensil."
+}

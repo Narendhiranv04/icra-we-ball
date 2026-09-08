@@ -1,0 +1,1050 @@
+{
+  "candidate_regions": [],
+  "cross_group_reuse_allowed": false,
+  "detector_vocabulary": [
+    "coffee table surface",
+    "side table surface",
+    "console table surface",
+    "desk surface",
+    "any flat furniture surface",
+    "remote control",
+    "media controller",
+    "TV remote",
+    "television",
+    "TV screen",
+    "wall-mounted display",
+    "floor area between chairs",
+    "tv remote"
+  ],
+  "domain": "living_room",
+  "metadata": {
+    "candidate_categories_used_for_detector_vocabulary": true,
+    "candidate_categories_used_for_grounding_acceptance": false,
+    "candidate_categories_used_for_role_identity": true,
+    "candidate_requirement_statuses": [
+      {
+        "id": "television",
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "op_1",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "refreshment_setting",
+          "function": "Place refreshment setting on surface",
+          "id": "op_1",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "refreshment_setting",
+          "tool_role": "refreshment_setting",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "status": "UNSUPPORTED_OPERATOR"
+      },
+      {
+        "id": "op_2",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "access_zone",
+          "function": "Place entertainment control on surface",
+          "id": "op_2",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "access_zone",
+          "tool_role": "entertainment_control",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "status": "UNSUPPORTED_OPERATOR"
+      }
+    ],
+    "canonicalization_status": "PARTIAL",
+    "canonicalization_trace": {
+      "context_only_roles": [],
+      "disabled_groups": [
+        {
+          "interp_status": "UNMAPPABLE_OPERATION",
+          "raw_group": {
+            "context_relations": [],
+            "context_role": "refreshment_setting",
+            "function": "Place refreshment setting on surface",
+            "id": "op_1",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "refreshment_setting",
+            "tool_role": "refreshment_setting",
+            "usage_policy": "REUSABLE_ACROSS_TARGETS"
+          },
+          "reason": "Operation semantic evidence ['SUPPORT_DRINKWARE'] is incompatible with endpoints (PERSONAL_CUP_SAUCER_REGION, PERSONAL_CUP_SAUCER_REGION, PERSONAL_CUP_SAUCER_REGION)",
+          "status": "UNSUPPORTED_OPERATOR"
+        },
+        {
+          "interp_status": "UNMAPPABLE_OPERATION",
+          "raw_group": {
+            "context_relations": [],
+            "context_role": "access_zone",
+            "function": "Place entertainment control on surface",
+            "id": "op_2",
+            "required_relations": [],
+            "required_target_count": 1,
+            "target_role": "access_zone",
+            "tool_role": "entertainment_control",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          },
+          "reason": "Operation semantic evidence ['SUPPORT_ENTERTAINMENT_CONTROL'] is incompatible with endpoints (SHARED_REMOTE_REGION, REMOTE, SHARED_REMOTE_REGION)",
+          "status": "UNSUPPORTED_OPERATOR"
+        }
+      ],
+      "disambiguated_roles": [],
+      "groups": [],
+      "merged_roles": [],
+      "precondition_provenance": [],
+      "properties": [],
+      "relations": [
+        {
+          "raw_object": "television",
+          "raw_phrase": "must be located near",
+          "raw_subject": "refreshment_setting",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "refreshment_setting",
+          "raw_phrase": "must be located between",
+          "raw_subject": "access_zone",
+          "reason": "Relation text 'must be located between' provides no semantic evidence for valid predicates [] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "television",
+          "raw_phrase": "must be located between",
+          "raw_subject": "access_zone",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "roles": [
+        {
+          "canonical_role": "PERSONAL_CUP_SAUCER_REGION",
+          "raw_id": "refreshment_setting",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "REMOTE",
+          "raw_id": "entertainment_control",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "raw_id": "access_zone",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        }
+      ],
+      "task_causal_relations": [],
+      "unresolved_required_operations": [],
+      "unresolved_required_relations": [
+        {
+          "raw_object": "television",
+          "raw_phrase": "must be located near",
+          "raw_subject": "refreshment_setting",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "refreshment_setting",
+          "raw_phrase": "must be located between",
+          "raw_subject": "access_zone",
+          "reason": "Relation text 'must be located between' provides no semantic evidence for valid predicates [] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "television",
+          "raw_phrase": "must be located between",
+          "raw_subject": "access_zone",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "unresolved_roles": [
+        {
+          "raw_role": {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "television",
+              "TV screen",
+              "wall-mounted display"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "The display device that is the focus of the viewing activity.",
+            "id": "television",
+            "required_count": 1,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "television",
+                "visual_description": "A black flat-screen television mounted on the back wall."
+              }
+            ]
+          },
+          "status": "UNRESOLVED_SEMANTIC"
+        }
+      ]
+    },
+    "contract_missing_reasons": [
+      "Unresolved roles: [{'raw_role': {'id': 'television', 'entity_kind': 'OBJECT', 'function': 'The display device that is the focus of the viewing activity.', 'required_count': 1, 'binding_policy': 'SHARED', 'candidate_categories': ['television', 'TV screen', 'wall-mounted display'], 'required_properties': [], 'visible_candidates': [{'label': 'television', 'visual_description': 'A black flat-screen television mounted on the back wall.'}], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}]",
+      "Disabled/unsupported operations: [{'raw_group': {'id': 'op_1', 'function': 'Place refreshment setting on surface', 'tool_role': 'refreshment_setting', 'target_role': 'refreshment_setting', 'required_target_count': 2, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': 'refreshment_setting', 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"Operation semantic evidence ['SUPPORT_DRINKWARE'] is incompatible with endpoints (PERSONAL_CUP_SAUCER_REGION, PERSONAL_CUP_SAUCER_REGION, PERSONAL_CUP_SAUCER_REGION)\", 'interp_status': 'UNMAPPABLE_OPERATION'}, {'raw_group': {'id': 'op_2', 'function': 'Place entertainment control on surface', 'tool_role': 'entertainment_control', 'target_role': 'access_zone', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'access_zone', 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"Operation semantic evidence ['SUPPORT_ENTERTAINMENT_CONTROL'] is incompatible with endpoints (SHARED_REMOTE_REGION, REMOTE, SHARED_REMOTE_REGION)\", 'interp_status': 'UNMAPPABLE_OPERATION'}]",
+      "Unresolved required relations: [{'raw_subject': 'refreshment_setting', 'raw_phrase': 'must be located near', 'raw_object': 'television', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'access_zone', 'raw_phrase': 'must be located between', 'raw_object': 'refreshment_setting', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'must be located between' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'access_zone', 'raw_phrase': 'must be located between', 'raw_object': 'television', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]"
+    ],
+    "detector_vocabulary_source": "VLM_CANDIDATES_PLUS_RELEVANT_SYSTEM_ALIASES",
+    "is_v2_specification": true,
+    "online_executable_contract_complete": false,
+    "precondition_provenance": [],
+    "raw_decomposition": {
+      "observation_guidance": {
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "visible_candidates_per_role": {
+          "access_zone": [
+            {
+              "label": "coffee_table",
+              "visual_description": "The surface of the central coffee table."
+            },
+            {
+              "label": "side_table_left",
+              "visual_description": "The surface of the side table to the left."
+            },
+            {
+              "label": "side_table_right",
+              "visual_description": "The surface of the side table to the right."
+            },
+            {
+              "label": "console_table",
+              "visual_description": "The surface of the console table."
+            },
+            {
+              "label": "desk",
+              "visual_description": "The surface of the desk."
+            }
+          ],
+          "entertainment_control": [
+            {
+              "label": "remote_control",
+              "visual_description": "A black remote control located on the desk."
+            }
+          ],
+          "refreshment_setting": [
+            {
+              "label": "coffee_table",
+              "visual_description": "A rectangular coffee table with a light green top located in the center of the seating arrangement."
+            },
+            {
+              "label": "side_table_left",
+              "visual_description": "A small wooden side table located to the left of the left armchair."
+            },
+            {
+              "label": "side_table_right",
+              "visual_description": "A small wooden side table located to the right of the right armchair."
+            },
+            {
+              "label": "console_table",
+              "visual_description": "A long wooden console table located against the back wall."
+            },
+            {
+              "label": "desk",
+              "visual_description": "A large wooden desk located in the foreground."
+            }
+          ],
+          "television": [
+            {
+              "label": "television",
+              "visual_description": "A black flat-screen television mounted on the back wall."
+            }
+          ]
+        }
+      },
+      "status": "SUPPORTED",
+      "task_contract": {
+        "functional_relations": [
+          {
+            "object_role": "television",
+            "relation": "must be located near",
+            "required": true,
+            "subject_role": "refreshment_setting"
+          },
+          {
+            "object_role": "refreshment_setting",
+            "relation": "must be located between",
+            "required": true,
+            "subject_role": "access_zone"
+          },
+          {
+            "object_role": "television",
+            "relation": "must be located between",
+            "required": true,
+            "subject_role": "access_zone"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "coffee table surface",
+              "side table surface",
+              "console table surface",
+              "desk surface",
+              "any flat furniture surface"
+            ],
+            "entity_kind": "REGION",
+            "function": "A surface area designated to hold a complete refreshment setting for one person.",
+            "id": "refreshment_setting",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "remote control",
+              "media controller",
+              "TV remote"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "A device used to control the television.",
+            "id": "entertainment_control",
+            "required_count": 1,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "television",
+              "TV screen",
+              "wall-mounted display"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "The display device that is the focus of the viewing activity.",
+            "id": "television",
+            "required_count": 1,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table surface",
+              "side table surface",
+              "console table surface",
+              "desk surface",
+              "floor area between chairs"
+            ],
+            "entity_kind": "REGION",
+            "function": "A spatial region where the entertainment control is placed to be reachable by both people.",
+            "id": "access_zone",
+            "required_count": 1,
+            "required_properties": []
+          }
+        ],
+        "operation_pairings": [
+          {
+            "anchor_role": "refreshment_setting",
+            "id": "op_1",
+            "operation": "Place refreshment setting on surface",
+            "operation_count": 2,
+            "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+            "source_role": "refreshment_setting",
+            "target_role": "refreshment_setting"
+          },
+          {
+            "anchor_role": "access_zone",
+            "id": "op_2",
+            "operation": "Place entertainment control on surface",
+            "operation_count": 1,
+            "reuse_policy": "DEDICATED_PER_TARGET",
+            "source_role": "entertainment_control",
+            "target_role": "access_zone"
+          }
+        ]
+      },
+      "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+      "unsupported_reason": ""
+    },
+    "raw_role_to_canonical": {
+      "access_zone": "SHARED_REMOTE_REGION",
+      "entertainment_control": "REMOTE",
+      "refreshment_setting": "PERSONAL_CUP_SAUCER_REGION"
+    },
+    "raw_vlm_response": {
+      "observation_guidance": {
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "visible_candidates_per_role": {
+          "access_zone": [
+            {
+              "label": "coffee_table",
+              "visual_description": "The surface of the central coffee table."
+            },
+            {
+              "label": "side_table_left",
+              "visual_description": "The surface of the side table to the left."
+            },
+            {
+              "label": "side_table_right",
+              "visual_description": "The surface of the side table to the right."
+            },
+            {
+              "label": "console_table",
+              "visual_description": "The surface of the console table."
+            },
+            {
+              "label": "desk",
+              "visual_description": "The surface of the desk."
+            }
+          ],
+          "entertainment_control": [
+            {
+              "label": "remote_control",
+              "visual_description": "A black remote control located on the desk."
+            }
+          ],
+          "refreshment_setting": [
+            {
+              "label": "coffee_table",
+              "visual_description": "A rectangular coffee table with a light green top located in the center of the seating arrangement."
+            },
+            {
+              "label": "side_table_left",
+              "visual_description": "A small wooden side table located to the left of the left armchair."
+            },
+            {
+              "label": "side_table_right",
+              "visual_description": "A small wooden side table located to the right of the right armchair."
+            },
+            {
+              "label": "console_table",
+              "visual_description": "A long wooden console table located against the back wall."
+            },
+            {
+              "label": "desk",
+              "visual_description": "A large wooden desk located in the foreground."
+            }
+          ],
+          "television": [
+            {
+              "label": "television",
+              "visual_description": "A black flat-screen television mounted on the back wall."
+            }
+          ]
+        }
+      },
+      "status": "SUPPORTED",
+      "task_contract": {
+        "functional_relations": [
+          {
+            "object_role": "television",
+            "relation": "must be located near",
+            "required": true,
+            "subject_role": "refreshment_setting"
+          },
+          {
+            "object_role": "refreshment_setting",
+            "relation": "must be located between",
+            "required": true,
+            "subject_role": "access_zone"
+          },
+          {
+            "object_role": "television",
+            "relation": "must be located between",
+            "required": true,
+            "subject_role": "access_zone"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "coffee table surface",
+              "side table surface",
+              "console table surface",
+              "desk surface",
+              "any flat furniture surface"
+            ],
+            "entity_kind": "REGION",
+            "function": "A surface area designated to hold a complete refreshment setting for one person.",
+            "id": "refreshment_setting",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "remote control",
+              "media controller",
+              "TV remote"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "A device used to control the television.",
+            "id": "entertainment_control",
+            "required_count": 1,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "television",
+              "TV screen",
+              "wall-mounted display"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "The display device that is the focus of the viewing activity.",
+            "id": "television",
+            "required_count": 1,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table surface",
+              "side table surface",
+              "console table surface",
+              "desk surface",
+              "floor area between chairs"
+            ],
+            "entity_kind": "REGION",
+            "function": "A spatial region where the entertainment control is placed to be reachable by both people.",
+            "id": "access_zone",
+            "required_count": 1,
+            "required_properties": []
+          }
+        ],
+        "operation_pairings": [
+          {
+            "anchor_role": "refreshment_setting",
+            "id": "op_1",
+            "operation": "Place refreshment setting on surface",
+            "operation_count": 2,
+            "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+            "source_role": "refreshment_setting",
+            "target_role": "refreshment_setting"
+          },
+          {
+            "anchor_role": "access_zone",
+            "id": "op_2",
+            "operation": "Place entertainment control on surface",
+            "operation_count": 1,
+            "reuse_policy": "DEDICATED_PER_TARGET",
+            "source_role": "entertainment_control",
+            "target_role": "access_zone"
+          }
+        ]
+      },
+      "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+      "unsupported_reason": ""
+    },
+    "required_contract_complete": false,
+    "role_semantic_ontology_version": "phase3_p3i_4_semantic_ontology_v1",
+    "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+    "semantic_vocabulary_path": "/home/naren/RA_iiith/mujoco_scenes/configs/l2_integrated_region_function_semantic_vocabulary.yaml",
+    "soft_semantic_evidence": [],
+    "structural_sanitizer": {
+      "document": {
+        "functional_relations": [
+          {
+            "object_role": "television",
+            "relation": "must be located near",
+            "required": true,
+            "subject_role": "refreshment_setting"
+          },
+          {
+            "object_role": "refreshment_setting",
+            "relation": "must be located between",
+            "required": true,
+            "subject_role": "access_zone"
+          },
+          {
+            "object_role": "television",
+            "relation": "must be located between",
+            "required": true,
+            "subject_role": "access_zone"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "coffee table surface",
+              "side table surface",
+              "console table surface",
+              "desk surface",
+              "any flat furniture surface"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "A surface area designated to hold a complete refreshment setting for one person.",
+            "id": "refreshment_setting",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "coffee_table",
+                "visual_description": "A rectangular coffee table with a light green top located in the center of the seating arrangement."
+              },
+              {
+                "label": "side_table_left",
+                "visual_description": "A small wooden side table located to the left of the left armchair."
+              },
+              {
+                "label": "side_table_right",
+                "visual_description": "A small wooden side table located to the right of the right armchair."
+              },
+              {
+                "label": "console_table",
+                "visual_description": "A long wooden console table located against the back wall."
+              },
+              {
+                "label": "desk",
+                "visual_description": "A large wooden desk located in the foreground."
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "remote control",
+              "media controller",
+              "TV remote"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "A device used to control the television.",
+            "id": "entertainment_control",
+            "required_count": 1,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "remote_control",
+                "visual_description": "A black remote control located on the desk."
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "television",
+              "TV screen",
+              "wall-mounted display"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "The display device that is the focus of the viewing activity.",
+            "id": "television",
+            "required_count": 1,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "television",
+                "visual_description": "A black flat-screen television mounted on the back wall."
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table surface",
+              "side table surface",
+              "console table surface",
+              "desk surface",
+              "floor area between chairs"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "A spatial region where the entertainment control is placed to be reachable by both people.",
+            "id": "access_zone",
+            "required_count": 1,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "coffee_table",
+                "visual_description": "The surface of the central coffee table."
+              },
+              {
+                "label": "side_table_left",
+                "visual_description": "The surface of the side table to the left."
+              },
+              {
+                "label": "side_table_right",
+                "visual_description": "The surface of the side table to the right."
+              },
+              {
+                "label": "console_table",
+                "visual_description": "The surface of the console table."
+              },
+              {
+                "label": "desk",
+                "visual_description": "The surface of the desk."
+              }
+            ]
+          }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "interaction_groups": [
+          {
+            "context_relations": [],
+            "context_role": "refreshment_setting",
+            "function": "Place refreshment setting on surface",
+            "id": "op_1",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "refreshment_setting",
+            "tool_role": "refreshment_setting",
+            "usage_policy": "REUSABLE_ACROSS_TARGETS"
+          },
+          {
+            "context_relations": [],
+            "context_role": "access_zone",
+            "function": "Place entertainment control on surface",
+            "id": "op_2",
+            "required_relations": [],
+            "required_target_count": 1,
+            "target_role": "access_zone",
+            "tool_role": "entertainment_control",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          }
+        ],
+        "raw_v2_contract": {
+          "functional_relations": [
+            {
+              "object_role": "television",
+              "relation": "must be located near",
+              "required": true,
+              "subject_role": "refreshment_setting"
+            },
+            {
+              "object_role": "refreshment_setting",
+              "relation": "must be located between",
+              "required": true,
+              "subject_role": "access_zone"
+            },
+            {
+              "object_role": "television",
+              "relation": "must be located between",
+              "required": true,
+              "subject_role": "access_zone"
+            }
+          ],
+          "functional_roles": [
+            {
+              "binding_policy": "DISTINCT",
+              "candidate_categories": [
+                "coffee table surface",
+                "side table surface",
+                "console table surface",
+                "desk surface",
+                "any flat furniture surface"
+              ],
+              "entity_kind": "REGION",
+              "function": "A surface area designated to hold a complete refreshment setting for one person.",
+              "id": "refreshment_setting",
+              "required_count": 2,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "SHARED",
+              "candidate_categories": [
+                "remote control",
+                "media controller",
+                "TV remote"
+              ],
+              "entity_kind": "OBJECT",
+              "function": "A device used to control the television.",
+              "id": "entertainment_control",
+              "required_count": 1,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "SHARED",
+              "candidate_categories": [
+                "television",
+                "TV screen",
+                "wall-mounted display"
+              ],
+              "entity_kind": "OBJECT",
+              "function": "The display device that is the focus of the viewing activity.",
+              "id": "television",
+              "required_count": 1,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "SHARED",
+              "candidate_categories": [
+                "coffee table surface",
+                "side table surface",
+                "console table surface",
+                "desk surface",
+                "floor area between chairs"
+              ],
+              "entity_kind": "REGION",
+              "function": "A spatial region where the entertainment control is placed to be reachable by both people.",
+              "id": "access_zone",
+              "required_count": 1,
+              "required_properties": []
+            }
+          ],
+          "operation_pairings": [
+            {
+              "anchor_role": "refreshment_setting",
+              "id": "op_1",
+              "operation": "Place refreshment setting on surface",
+              "operation_count": 2,
+              "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+              "source_role": "refreshment_setting",
+              "target_role": "refreshment_setting"
+            },
+            {
+              "anchor_role": "access_zone",
+              "id": "op_2",
+              "operation": "Place entertainment control on surface",
+              "operation_count": 1,
+              "reuse_policy": "DEDICATED_PER_TARGET",
+              "source_role": "entertainment_control",
+              "target_role": "access_zone"
+            }
+          ]
+        },
+        "raw_v2_guidance": {
+          "inspectable_regions": [],
+          "inspection_order": [],
+          "visible_candidates_per_role": {
+            "access_zone": [
+              {
+                "label": "coffee_table",
+                "visual_description": "The surface of the central coffee table."
+              },
+              {
+                "label": "side_table_left",
+                "visual_description": "The surface of the side table to the left."
+              },
+              {
+                "label": "side_table_right",
+                "visual_description": "The surface of the side table to the right."
+              },
+              {
+                "label": "console_table",
+                "visual_description": "The surface of the console table."
+              },
+              {
+                "label": "desk",
+                "visual_description": "The surface of the desk."
+              }
+            ],
+            "entertainment_control": [
+              {
+                "label": "remote_control",
+                "visual_description": "A black remote control located on the desk."
+              }
+            ],
+            "refreshment_setting": [
+              {
+                "label": "coffee_table",
+                "visual_description": "A rectangular coffee table with a light green top located in the center of the seating arrangement."
+              },
+              {
+                "label": "side_table_left",
+                "visual_description": "A small wooden side table located to the left of the left armchair."
+              },
+              {
+                "label": "side_table_right",
+                "visual_description": "A small wooden side table located to the right of the right armchair."
+              },
+              {
+                "label": "console_table",
+                "visual_description": "A long wooden console table located against the back wall."
+              },
+              {
+                "label": "desk",
+                "visual_description": "A large wooden desk located in the foreground."
+              }
+            ],
+            "television": [
+              {
+                "label": "television",
+                "visual_description": "A black flat-screen television mounted on the back wall."
+              }
+            ]
+          }
+        },
+        "schema_version": 2,
+        "status": "SUPPORTED",
+        "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+        "unsupported_reason": ""
+      },
+      "repairs": [],
+      "semantically_incomplete": false,
+      "succeeded": true
+    },
+    "task_causal_relations": [],
+    "unresolved_semantics": [
+      {
+        "raw_object": "television",
+        "raw_phrase": "must be located near",
+        "raw_subject": "refreshment_setting",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      {
+        "raw_object": "refreshment_setting",
+        "raw_phrase": "must be located between",
+        "raw_subject": "access_zone",
+        "reason": "Relation text 'must be located between' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      {
+        "raw_object": "television",
+        "raw_phrase": "must be located between",
+        "raw_subject": "access_zone",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      }
+    ],
+    "unverified_required_properties": []
+  },
+  "nodes": {
+    "PERSONAL_CUP_SAUCER_REGION": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    "REMOTE": {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    "SHARED_REMOTE_REGION": {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    }
+  },
+  "operation_groups": [],
+  "region_ranking": [],
+  "relations": [],
+  "roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    }
+  ],
+  "source": "VLM_CANONICAL_G_F",
+  "task_causal_relations": [],
+  "task_instruction": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people."
+}

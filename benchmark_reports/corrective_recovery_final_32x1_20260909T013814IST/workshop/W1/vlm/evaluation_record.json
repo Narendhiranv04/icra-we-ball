@@ -1,0 +1,545 @@
+{
+  "domain": "workshop",
+  "variant": "W1",
+  "gt_feasible": true,
+  "requires_observation_recovery": true,
+  "spec_acquisition": "live_provider",
+  "specification_input": null,
+  "semantic_vlm_requests": 1,
+  "vlm_request_count": 1,
+  "raw_vlm_spec_complete": false,
+  "runtime_contract_complete": false,
+  "canonicalization_succeeded": true,
+  "expressed_role_count": 1,
+  "missing_reference_roles": [
+    "driver",
+    "repair_target"
+  ],
+  "environment_projected_roles": [],
+  "regions_available": [
+    "LEFT_DRAWER",
+    "RIGHT_DRAWER",
+    "TOOL_CABINET"
+  ],
+  "regions_inspected": [],
+  "inspection_order_source": "FM",
+  "inspection_order_used": [
+    "LEFT_DRAWER",
+    "RIGHT_DRAWER",
+    "TOOL_CABINET"
+  ],
+  "search_exhausted": false,
+  "search_required_by_offline_benchmark": true,
+  "candidate_grounding_eligible": false,
+  "candidate_grounding_succeeded": false,
+  "candidate_goal_count": 0,
+  "candidate_goal_satisfied_count": 0,
+  "candidate_goal_coverage": 0.0,
+  "uninstantiable_goal_count": 0,
+  "uninstantiable_reasons": [
+    "fastener, fastener"
+  ],
+  "candidate_plan_status": "INCOMPLETE",
+  "candidate_plan_length": 0,
+  "candidate_plan_valid": false,
+  "full_task_goal_count": 3,
+  "full_task_goal_satisfied_count": 0,
+  "full_task_goal_coverage": 0.0,
+  "full_task_satisfied": false,
+  "false_completion": false,
+  "outcome_correct": false,
+  "astar_invocations": 0,
+  "high_level_replans": 0,
+  "astar_expanded": 0,
+  "astar_generated": 0,
+  "runtime_seconds": 27.0794764799939,
+  "terminal_status": "INCOMPLETE",
+  "failure_reason": "fastener, fastener",
+  "raw_role_precision": 0.5,
+  "raw_role_recall": 0.6666666666666666,
+  "raw_role_f1": 0.5714285714285715,
+  "raw_relation_precision": 0.0,
+  "raw_relation_recall": 0.0,
+  "raw_relation_f1": 0.0,
+  "raw_operation_precision": 0.3333333333333333,
+  "raw_operation_recall": 1.0,
+  "raw_operation_f1": 0.5,
+  "raw_group_precision": 0.3333333333333333,
+  "raw_group_recall": 1.0,
+  "raw_group_f1": 0.5,
+  "task_instruction": "Identify the compatible components required to complete the fastening at the marked workbench location, complete the fastening, and leave any reusable equipment used for the task safely on the workbench.",
+  "git_commit": "1930b9ce6cb0873e67200465d78149bca53c4f8c",
+  "git_dirty": false,
+  "model": "qwen35-9b",
+  "prompt_hash": "3496b1413fd13098b59a9b34f5546905c239822b04cf42d2f5b3b37a41de9b5e",
+  "inference_config": {
+    "chat_template_kwargs": {
+      "enable_thinking": false
+    },
+    "max_tokens": 8192,
+    "min_p": 0.0,
+    "model": "qwen35-9b",
+    "presence_penalty": 0.0,
+    "repetition_penalty": 1.0,
+    "response_format": {
+      "json_schema": {
+        "name": "functional_specification",
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "additionalProperties": false,
+          "properties": {
+            "observation_guidance": {
+              "additionalProperties": false,
+              "properties": {
+                "inspectable_regions": {
+                  "items": {
+                    "additionalProperties": true,
+                    "properties": {
+                      "description": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "visual_description": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "maxItems": 16,
+                  "type": "array"
+                },
+                "inspection_order": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "visible_candidates_per_role": {
+                  "additionalProperties": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "visual_description": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "visual_description"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "visible_candidates_per_role",
+                "inspectable_regions",
+                "inspection_order"
+              ],
+              "type": "object"
+            },
+            "status": {
+              "enum": [
+                "SUPPORTED",
+                "UNSUPPORTED"
+              ],
+              "type": "string"
+            },
+            "task_contract": {
+              "additionalProperties": false,
+              "properties": {
+                "functional_relations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "object_role": {
+                        "type": "string"
+                      },
+                      "relation": {
+                        "type": "string"
+                      },
+                      "required": {
+                        "type": "boolean"
+                      },
+                      "subject_role": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "subject_role",
+                      "relation",
+                      "object_role"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 32,
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "functional_roles": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "binding_policy": {
+                        "enum": [
+                          "DISTINCT",
+                          "REUSABLE",
+                          "SHARED"
+                        ],
+                        "type": "string"
+                      },
+                      "candidate_categories": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "maxItems": 16,
+                        "minItems": 0,
+                        "type": "array"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "entity_kind": {
+                        "enum": [
+                          "OBJECT",
+                          "REGION",
+                          "FIXED_TARGET"
+                        ],
+                        "type": "string"
+                      },
+                      "function": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "required_count": {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "required_properties": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "maxItems": 16,
+                        "minItems": 0,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "entity_kind",
+                      "function",
+                      "required_count",
+                      "binding_policy"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 16,
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "operation_pairings": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "anchor_role": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "operation": {
+                        "type": "string"
+                      },
+                      "operation_count": {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "reuse_policy": {
+                        "enum": [
+                          "DEDICATED_PER_TARGET",
+                          "REUSABLE_ACROSS_TARGETS"
+                        ],
+                        "type": "string"
+                      },
+                      "source_role": {
+                        "type": "string"
+                      },
+                      "target_role": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "operation",
+                      "target_role"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 16,
+                  "minItems": 0,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "functional_roles",
+                "functional_relations",
+                "operation_pairings"
+              ],
+              "type": "object"
+            },
+            "task_summary": {
+              "type": "string"
+            },
+            "unsupported_reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "task_summary",
+            "task_contract",
+            "observation_guidance",
+            "unsupported_reason"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
+      "type": "json_schema"
+    },
+    "stream": false,
+    "temperature": 0.0,
+    "top_k": 20,
+    "top_p": 1.0
+  },
+  "transport_retries": 0,
+  "vlm_json_valid": true,
+  "sanitization_succeeded": true,
+  "sanitizer_repairs": [],
+  "canonicalization_status": "PARTIAL",
+  "soft_semantic_evidence": [
+    {
+      "canonical_predicate": null,
+      "raw_phrase": "compatible with fastening target",
+      "raw_role_id": "fastening_component",
+      "status": "SOFT_SEMANTIC_EVIDENCE"
+    },
+    {
+      "raw_object": "fastening_target",
+      "raw_phrase": "compatible with",
+      "raw_subject": "fastening_component",
+      "reason": "Context-only support endpoint",
+      "status": "SOFT_SEMANTIC_EVIDENCE"
+    }
+  ],
+  "context_only_roles": [
+    {
+      "canonical_role": "MAIN_WORKBENCH_ZONE",
+      "raw_role": {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "workbench surface",
+          "marked workbench location",
+          "assembly fixture"
+        ],
+        "description": "",
+        "entity_kind": "REGION",
+        "function": "The specific workbench location where the fastening operation is to be performed.",
+        "id": "fastening_target",
+        "required_count": 1,
+        "required_properties": [],
+        "visible_candidates": [
+          {
+            "label": "workbench_surface",
+            "visual_description": "The wooden top surface of the workbench, specifically the area near the yellow object."
+          }
+        ]
+      },
+      "status": "PLANNER_CONTEXT_CONSTANT"
+    },
+    {
+      "canonical_role": "MAIN_WORKBENCH_ZONE",
+      "raw_role": {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "workbench top",
+          "table surface",
+          "assembly table"
+        ],
+        "description": "",
+        "entity_kind": "REGION",
+        "function": "The physical surface where reusable equipment is to be left after the task.",
+        "id": "workbench_surface",
+        "required_count": 1,
+        "required_properties": [],
+        "visible_candidates": [
+          {
+            "label": "workbench_top",
+            "visual_description": "The wooden top surface of the workbench."
+          }
+        ]
+      },
+      "status": "PLANNER_CONTEXT_CONSTANT"
+    }
+  ],
+  "unresolved_roles": [
+    {
+      "raw_role": {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "hammer",
+          "drill",
+          "pliers",
+          "assembly tool"
+        ],
+        "description": "",
+        "entity_kind": "OBJECT",
+        "function": "A physical tool required to apply the fastening component to the fastening target.",
+        "id": "fastening_tool",
+        "required_count": 1,
+        "required_properties": [
+          "capable of applying fastening component"
+        ],
+        "visible_candidates": [
+          {
+            "label": "robot_arm",
+            "visual_description": "The white robotic arm visible in the foreground, which may be used as a tool or may be holding a tool."
+          }
+        ]
+      },
+      "status": "UNRESOLVED_SEMANTIC"
+    }
+  ],
+  "dropped_relations": [],
+  "merged_roles": [],
+  "disambiguated_roles": [],
+  "grounded_roles": {},
+  "ungrounded_expressed_roles": [
+    "fastener"
+  ],
+  "candidate_requirement_statuses": [
+    {
+      "id": "fastening_target",
+      "status": "CONTEXT_ONLY"
+    },
+    {
+      "id": "workbench_surface",
+      "status": "CONTEXT_ONLY"
+    },
+    {
+      "id": "fastening_tool",
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    },
+    {
+      "id": "fastening_component",
+      "requirement": "compatible with fastening target",
+      "status": "SOFT_SEMANTIC_ONLY"
+    },
+    {
+      "id": "fastening_component",
+      "requirement": "compatible with",
+      "status": "SOFT_SEMANTIC_ONLY"
+    },
+    {
+      "id": "identify_component",
+      "status": "UNINSTANTIABLE_MISSING_ROLE",
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "identify compatible fastening component",
+        "id": "identify_component",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "fastening_component",
+        "tool_role": "fastening_tool",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      }
+    },
+    {
+      "id": "perform_fastening",
+      "status": "UNINSTANTIABLE_MISSING_ROLE",
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "apply fastening component to target",
+        "id": "perform_fastening",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "fastening_target",
+        "tool_role": "fastening_tool",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      }
+    },
+    {
+      "id": "place_tool",
+      "status": "UNINSTANTIABLE_MISSING_ROLE",
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "place fastening tool on workbench",
+        "id": "place_tool",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "workbench_surface",
+        "tool_role": "fastening_tool",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      }
+    }
+  ],
+  "complete_candidate_grounding": false,
+  "grounded_expressed_role_coverage": 0.0,
+  "candidate_plan_eligible": false,
+  "candidate_plan_found": false,
+  "nonempty_candidate_plan_generated": false,
+  "offline_reference_task_complete": false,
+  "fm_count_correct": false,
+  "fm_binding_correct": false,
+  "full_task_semantic_goal_count": 3,
+  "full_task_semantic_goal_satisfied_count": 0,
+  "canonical_role_coverage": 0.6666666666666666,
+  "execution_state": "planning_only",
+  "raw_semantic_matching_method": "frozen_evaluation_only_semantic_matcher_v2",
+  "online_executable_contract_complete": false,
+  "required_contract_complete": false,
+  "executable_contract_complete": false,
+  "required_compiler_interpretation": false,
+  "search_recovery_succeeded": false,
+  "initial_grounding_complete": false,
+  "search_state_trace": [
+    "CONTRACT_INCOMPLETE_NOT_SEARCHABLE"
+  ],
+  "search_eligible": false,
+  "raw_requirement_present": false,
+  "production_mapped": false,
+  "capability_mapped": false,
+  "physical_evidence_available": false,
+  "search_attempted": false,
+  "grounding_complete": false,
+  "astar_attempted": false,
+  "plan_valid": false,
+  "first_cause_category": "GRAPH_COMPILATION_FAILURE",
+  "failure_category": "CANONICALIZATION_AMBIGUITY",
+  "failure_stage": "CANONICALIZER"
+}

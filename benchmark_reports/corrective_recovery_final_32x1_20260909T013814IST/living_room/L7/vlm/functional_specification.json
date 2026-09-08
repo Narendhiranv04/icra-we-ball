@@ -1,0 +1,1204 @@
+{
+  "candidate_regions": [],
+  "cross_group_reuse_allowed": false,
+  "detector_vocabulary": [
+    "table surface",
+    "side table surface",
+    "coffee table surface",
+    "desk surface",
+    "bench surface",
+    "cup",
+    "mug",
+    "plate",
+    "dish",
+    "remote control",
+    "TV remote",
+    "media controller",
+    "television",
+    "TV",
+    "screen",
+    "cup saucer set",
+    "saucer",
+    "tv remote"
+  ],
+  "domain": "living_room",
+  "metadata": {
+    "candidate_categories_used_for_detector_vocabulary": true,
+    "candidate_categories_used_for_grounding_acceptance": false,
+    "candidate_categories_used_for_role_identity": true,
+    "candidate_requirement_statuses": [
+      {
+        "id": "television",
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      {
+        "id": "op_1",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "refreshment_setting",
+          "function": "Place refreshment setting on surface",
+          "id": "op_1",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "refreshment_setting",
+          "tool_role": "refreshment_setting_payload",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "status": "UNSUPPORTED_OPERATOR"
+      },
+      {
+        "id": "op_2",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "accessible_location",
+          "function": "Place entertainment control on surface",
+          "id": "op_2",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "accessible_location",
+          "tool_role": "entertainment_control",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "status": "UNSUPPORTED_OPERATOR"
+      }
+    ],
+    "canonicalization_status": "PARTIAL",
+    "canonicalization_trace": {
+      "context_only_roles": [],
+      "disabled_groups": [
+        {
+          "interp_status": "UNMAPPABLE_OPERATION",
+          "raw_group": {
+            "context_relations": [],
+            "context_role": "refreshment_setting",
+            "function": "Place refreshment setting on surface",
+            "id": "op_1",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "refreshment_setting",
+            "tool_role": "refreshment_setting_payload",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          },
+          "reason": "Operation semantic evidence ['SUPPORT_DRINKWARE'] is incompatible with endpoints (PERSONAL_CUP_SAUCER_REGION, CUP_SAUCER_SET, PERSONAL_CUP_SAUCER_REGION)",
+          "status": "UNSUPPORTED_OPERATOR"
+        },
+        {
+          "interp_status": "UNMAPPABLE_OPERATION",
+          "raw_group": {
+            "context_relations": [],
+            "context_role": "accessible_location",
+            "function": "Place entertainment control on surface",
+            "id": "op_2",
+            "required_relations": [],
+            "required_target_count": 1,
+            "target_role": "accessible_location",
+            "tool_role": "entertainment_control",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          },
+          "reason": "Operation semantic evidence ['SUPPORT_ENTERTAINMENT_CONTROL'] is incompatible with endpoints (SHARED_REMOTE_REGION, REMOTE, SHARED_REMOTE_REGION)",
+          "status": "UNSUPPORTED_OPERATOR"
+        }
+      ],
+      "disambiguated_roles": [],
+      "groups": [],
+      "merged_roles": [],
+      "precondition_provenance": [],
+      "properties": [],
+      "relations": [
+        {
+          "raw_object": "refreshment_setting",
+          "raw_phrase": "is placed upon",
+          "raw_subject": "refreshment_setting_payload",
+          "reason": "Relation text 'is placed upon' provides no semantic evidence for valid predicates [] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "television",
+          "raw_phrase": "controls",
+          "raw_subject": "entertainment_control",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "accessible_location",
+          "raw_phrase": "is placed upon",
+          "raw_subject": "entertainment_control",
+          "reason": "Relation text 'is placed upon' provides no semantic evidence for valid predicates [] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "roles": [
+        {
+          "canonical_role": "PERSONAL_CUP_SAUCER_REGION",
+          "raw_id": "refreshment_setting",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "CUP_SAUCER_SET",
+          "raw_id": "refreshment_setting_payload",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "REMOTE",
+          "raw_id": "entertainment_control",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        },
+        {
+          "canonical_role": "SHARED_REMOTE_REGION",
+          "raw_id": "accessible_location",
+          "rule": "TYPED_DOMAIN_SEMANTICS",
+          "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+        }
+      ],
+      "task_causal_relations": [],
+      "unresolved_required_operations": [],
+      "unresolved_required_relations": [
+        {
+          "raw_object": "refreshment_setting",
+          "raw_phrase": "is placed upon",
+          "raw_subject": "refreshment_setting_payload",
+          "reason": "Relation text 'is placed upon' provides no semantic evidence for valid predicates [] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "television",
+          "raw_phrase": "controls",
+          "raw_subject": "entertainment_control",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "accessible_location",
+          "raw_phrase": "is placed upon",
+          "raw_subject": "entertainment_control",
+          "reason": "Relation text 'is placed upon' provides no semantic evidence for valid predicates [] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "unresolved_roles": [
+        {
+          "code": "AMBIGUOUS_ROLE_MAPPING",
+          "collision_with": "entertainment_control",
+          "raw_role": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "television",
+              "TV",
+              "screen"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "The display device that is the target of the entertainment control.",
+            "id": "television",
+            "required_count": 1,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "television",
+                "visual_description": "A black flat-screen television mounted on the back wall."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contract_missing_reasons": [
+      "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'television', 'entity_kind': 'OBJECT', 'function': 'The display device that is the target of the entertainment control.', 'required_count': 1, 'binding_policy': 'DISTINCT', 'candidate_categories': ['television', 'TV', 'screen'], 'required_properties': [], 'visible_candidates': [{'label': 'television', 'visual_description': 'A black flat-screen television mounted on the back wall.'}], 'description': ''}, 'collision_with': 'entertainment_control'}]",
+      "Disabled/unsupported operations: [{'raw_group': {'id': 'op_1', 'function': 'Place refreshment setting on surface', 'tool_role': 'refreshment_setting_payload', 'target_role': 'refreshment_setting', 'required_target_count': 2, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'refreshment_setting', 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"Operation semantic evidence ['SUPPORT_DRINKWARE'] is incompatible with endpoints (PERSONAL_CUP_SAUCER_REGION, CUP_SAUCER_SET, PERSONAL_CUP_SAUCER_REGION)\", 'interp_status': 'UNMAPPABLE_OPERATION'}, {'raw_group': {'id': 'op_2', 'function': 'Place entertainment control on surface', 'tool_role': 'entertainment_control', 'target_role': 'accessible_location', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'accessible_location', 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"Operation semantic evidence ['SUPPORT_ENTERTAINMENT_CONTROL'] is incompatible with endpoints (SHARED_REMOTE_REGION, REMOTE, SHARED_REMOTE_REGION)\", 'interp_status': 'UNMAPPABLE_OPERATION'}]",
+      "Unresolved required relations: [{'raw_subject': 'refreshment_setting_payload', 'raw_phrase': 'is placed upon', 'raw_object': 'refreshment_setting', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'is placed upon' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'entertainment_control', 'raw_phrase': 'controls', 'raw_object': 'television', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'entertainment_control', 'raw_phrase': 'is placed upon', 'raw_object': 'accessible_location', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'is placed upon' provides no semantic evidence for valid predicates [] or task causal semantics\"}]"
+    ],
+    "detector_vocabulary_source": "VLM_CANDIDATES_PLUS_RELEVANT_SYSTEM_ALIASES",
+    "is_v2_specification": true,
+    "online_executable_contract_complete": false,
+    "precondition_provenance": [],
+    "raw_decomposition": {
+      "observation_guidance": {
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "visible_candidates_per_role": {
+          "accessible_location": [
+            {
+              "label": "coffee_table_surface",
+              "visual_description": "The top surface of the large wooden coffee table in the foreground."
+            },
+            {
+              "label": "side_table_surface_left",
+              "visual_description": "The top surface of the small wooden side table to the left of the left armchair."
+            },
+            {
+              "label": "side_table_surface_right",
+              "visual_description": "The top surface of the small wooden side table to the right of the right armchair."
+            },
+            {
+              "label": "bench_surface",
+              "visual_description": "The top surface of the long wooden bench against the back wall."
+            }
+          ],
+          "entertainment_control": [
+            {
+              "label": "remote_control",
+              "visual_description": "A black remote control on the coffee table."
+            }
+          ],
+          "refreshment_setting": [
+            {
+              "label": "coffee_table_surface",
+              "visual_description": "The top surface of the large wooden coffee table in the foreground."
+            },
+            {
+              "label": "side_table_surface_left",
+              "visual_description": "The top surface of the small wooden side table to the left of the left armchair."
+            },
+            {
+              "label": "side_table_surface_right",
+              "visual_description": "The top surface of the small wooden side table to the right of the right armchair."
+            },
+            {
+              "label": "bench_surface",
+              "visual_description": "The top surface of the long wooden bench against the back wall."
+            }
+          ],
+          "refreshment_setting_payload": [
+            {
+              "label": "cup_1",
+              "visual_description": "A red cup on the coffee table."
+            },
+            {
+              "label": "plate_1",
+              "visual_description": "A white plate on the coffee table."
+            },
+            {
+              "label": "cup_2",
+              "visual_description": "A red cup on the coffee table."
+            },
+            {
+              "label": "plate_2",
+              "visual_description": "A white plate on the coffee table."
+            }
+          ],
+          "television": [
+            {
+              "label": "television",
+              "visual_description": "A black flat-screen television mounted on the back wall."
+            }
+          ]
+        }
+      },
+      "status": "SUPPORTED",
+      "task_contract": {
+        "functional_relations": [
+          {
+            "object_role": "refreshment_setting",
+            "relation": "is placed upon",
+            "required": true,
+            "subject_role": "refreshment_setting_payload"
+          },
+          {
+            "object_role": "television",
+            "relation": "controls",
+            "required": true,
+            "subject_role": "entertainment_control"
+          },
+          {
+            "object_role": "accessible_location",
+            "relation": "is placed upon",
+            "required": true,
+            "subject_role": "entertainment_control"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "table surface",
+              "side table surface",
+              "coffee table surface",
+              "desk surface",
+              "bench surface"
+            ],
+            "entity_kind": "REGION",
+            "function": "A surface area designated to hold a complete refreshment setting for one person.",
+            "id": "refreshment_setting",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "cup",
+              "mug",
+              "plate",
+              "dish"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "A complete refreshment setting consisting of a cup and a plate.",
+            "id": "refreshment_setting_payload",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "remote control",
+              "TV remote",
+              "media controller"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "A device used to control the television.",
+            "id": "entertainment_control",
+            "required_count": 1,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "television",
+              "TV",
+              "screen"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "The display device that is the target of the entertainment control.",
+            "id": "television",
+            "required_count": 1,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "table surface",
+              "side table surface",
+              "coffee table surface",
+              "desk surface",
+              "bench surface"
+            ],
+            "entity_kind": "REGION",
+            "function": "A surface area where the entertainment control is placed to be accessible to both people.",
+            "id": "accessible_location",
+            "required_count": 1,
+            "required_properties": []
+          }
+        ],
+        "operation_pairings": [
+          {
+            "anchor_role": "refreshment_setting",
+            "id": "op_1",
+            "operation": "Place refreshment setting on surface",
+            "operation_count": 2,
+            "reuse_policy": "DEDICATED_PER_TARGET",
+            "source_role": "refreshment_setting_payload",
+            "target_role": "refreshment_setting"
+          },
+          {
+            "anchor_role": "accessible_location",
+            "id": "op_2",
+            "operation": "Place entertainment control on surface",
+            "operation_count": 1,
+            "reuse_policy": "DEDICATED_PER_TARGET",
+            "source_role": "entertainment_control",
+            "target_role": "accessible_location"
+          }
+        ]
+      },
+      "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+      "unsupported_reason": ""
+    },
+    "raw_role_to_canonical": {
+      "accessible_location": "SHARED_REMOTE_REGION",
+      "entertainment_control": "REMOTE",
+      "refreshment_setting": "PERSONAL_CUP_SAUCER_REGION",
+      "refreshment_setting_payload": "CUP_SAUCER_SET"
+    },
+    "raw_vlm_response": {
+      "observation_guidance": {
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "visible_candidates_per_role": {
+          "accessible_location": [
+            {
+              "label": "coffee_table_surface",
+              "visual_description": "The top surface of the large wooden coffee table in the foreground."
+            },
+            {
+              "label": "side_table_surface_left",
+              "visual_description": "The top surface of the small wooden side table to the left of the left armchair."
+            },
+            {
+              "label": "side_table_surface_right",
+              "visual_description": "The top surface of the small wooden side table to the right of the right armchair."
+            },
+            {
+              "label": "bench_surface",
+              "visual_description": "The top surface of the long wooden bench against the back wall."
+            }
+          ],
+          "entertainment_control": [
+            {
+              "label": "remote_control",
+              "visual_description": "A black remote control on the coffee table."
+            }
+          ],
+          "refreshment_setting": [
+            {
+              "label": "coffee_table_surface",
+              "visual_description": "The top surface of the large wooden coffee table in the foreground."
+            },
+            {
+              "label": "side_table_surface_left",
+              "visual_description": "The top surface of the small wooden side table to the left of the left armchair."
+            },
+            {
+              "label": "side_table_surface_right",
+              "visual_description": "The top surface of the small wooden side table to the right of the right armchair."
+            },
+            {
+              "label": "bench_surface",
+              "visual_description": "The top surface of the long wooden bench against the back wall."
+            }
+          ],
+          "refreshment_setting_payload": [
+            {
+              "label": "cup_1",
+              "visual_description": "A red cup on the coffee table."
+            },
+            {
+              "label": "plate_1",
+              "visual_description": "A white plate on the coffee table."
+            },
+            {
+              "label": "cup_2",
+              "visual_description": "A red cup on the coffee table."
+            },
+            {
+              "label": "plate_2",
+              "visual_description": "A white plate on the coffee table."
+            }
+          ],
+          "television": [
+            {
+              "label": "television",
+              "visual_description": "A black flat-screen television mounted on the back wall."
+            }
+          ]
+        }
+      },
+      "status": "SUPPORTED",
+      "task_contract": {
+        "functional_relations": [
+          {
+            "object_role": "refreshment_setting",
+            "relation": "is placed upon",
+            "required": true,
+            "subject_role": "refreshment_setting_payload"
+          },
+          {
+            "object_role": "television",
+            "relation": "controls",
+            "required": true,
+            "subject_role": "entertainment_control"
+          },
+          {
+            "object_role": "accessible_location",
+            "relation": "is placed upon",
+            "required": true,
+            "subject_role": "entertainment_control"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "table surface",
+              "side table surface",
+              "coffee table surface",
+              "desk surface",
+              "bench surface"
+            ],
+            "entity_kind": "REGION",
+            "function": "A surface area designated to hold a complete refreshment setting for one person.",
+            "id": "refreshment_setting",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "cup",
+              "mug",
+              "plate",
+              "dish"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "A complete refreshment setting consisting of a cup and a plate.",
+            "id": "refreshment_setting_payload",
+            "required_count": 2,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "remote control",
+              "TV remote",
+              "media controller"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "A device used to control the television.",
+            "id": "entertainment_control",
+            "required_count": 1,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "television",
+              "TV",
+              "screen"
+            ],
+            "entity_kind": "OBJECT",
+            "function": "The display device that is the target of the entertainment control.",
+            "id": "television",
+            "required_count": 1,
+            "required_properties": []
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "table surface",
+              "side table surface",
+              "coffee table surface",
+              "desk surface",
+              "bench surface"
+            ],
+            "entity_kind": "REGION",
+            "function": "A surface area where the entertainment control is placed to be accessible to both people.",
+            "id": "accessible_location",
+            "required_count": 1,
+            "required_properties": []
+          }
+        ],
+        "operation_pairings": [
+          {
+            "anchor_role": "refreshment_setting",
+            "id": "op_1",
+            "operation": "Place refreshment setting on surface",
+            "operation_count": 2,
+            "reuse_policy": "DEDICATED_PER_TARGET",
+            "source_role": "refreshment_setting_payload",
+            "target_role": "refreshment_setting"
+          },
+          {
+            "anchor_role": "accessible_location",
+            "id": "op_2",
+            "operation": "Place entertainment control on surface",
+            "operation_count": 1,
+            "reuse_policy": "DEDICATED_PER_TARGET",
+            "source_role": "entertainment_control",
+            "target_role": "accessible_location"
+          }
+        ]
+      },
+      "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+      "unsupported_reason": ""
+    },
+    "required_contract_complete": false,
+    "role_semantic_ontology_version": "phase3_p3i_4_semantic_ontology_v1",
+    "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+    "semantic_vocabulary_path": "/home/naren/RA_iiith/mujoco_scenes/configs/l2_integrated_region_function_semantic_vocabulary.yaml",
+    "soft_semantic_evidence": [],
+    "structural_sanitizer": {
+      "document": {
+        "functional_relations": [
+          {
+            "object_role": "refreshment_setting",
+            "relation": "is placed upon",
+            "required": true,
+            "subject_role": "refreshment_setting_payload"
+          },
+          {
+            "object_role": "television",
+            "relation": "controls",
+            "required": true,
+            "subject_role": "entertainment_control"
+          },
+          {
+            "object_role": "accessible_location",
+            "relation": "is placed upon",
+            "required": true,
+            "subject_role": "entertainment_control"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "table surface",
+              "side table surface",
+              "coffee table surface",
+              "desk surface",
+              "bench surface"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "A surface area designated to hold a complete refreshment setting for one person.",
+            "id": "refreshment_setting",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "coffee_table_surface",
+                "visual_description": "The top surface of the large wooden coffee table in the foreground."
+              },
+              {
+                "label": "side_table_surface_left",
+                "visual_description": "The top surface of the small wooden side table to the left of the left armchair."
+              },
+              {
+                "label": "side_table_surface_right",
+                "visual_description": "The top surface of the small wooden side table to the right of the right armchair."
+              },
+              {
+                "label": "bench_surface",
+                "visual_description": "The top surface of the long wooden bench against the back wall."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "cup",
+              "mug",
+              "plate",
+              "dish"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "A complete refreshment setting consisting of a cup and a plate.",
+            "id": "refreshment_setting_payload",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "cup_1",
+                "visual_description": "A red cup on the coffee table."
+              },
+              {
+                "label": "plate_1",
+                "visual_description": "A white plate on the coffee table."
+              },
+              {
+                "label": "cup_2",
+                "visual_description": "A red cup on the coffee table."
+              },
+              {
+                "label": "plate_2",
+                "visual_description": "A white plate on the coffee table."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "remote control",
+              "TV remote",
+              "media controller"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "A device used to control the television.",
+            "id": "entertainment_control",
+            "required_count": 1,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "remote_control",
+                "visual_description": "A black remote control on the coffee table."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "television",
+              "TV",
+              "screen"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "The display device that is the target of the entertainment control.",
+            "id": "television",
+            "required_count": 1,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "television",
+                "visual_description": "A black flat-screen television mounted on the back wall."
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "table surface",
+              "side table surface",
+              "coffee table surface",
+              "desk surface",
+              "bench surface"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "A surface area where the entertainment control is placed to be accessible to both people.",
+            "id": "accessible_location",
+            "required_count": 1,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "coffee_table_surface",
+                "visual_description": "The top surface of the large wooden coffee table in the foreground."
+              },
+              {
+                "label": "side_table_surface_left",
+                "visual_description": "The top surface of the small wooden side table to the left of the left armchair."
+              },
+              {
+                "label": "side_table_surface_right",
+                "visual_description": "The top surface of the small wooden side table to the right of the right armchair."
+              },
+              {
+                "label": "bench_surface",
+                "visual_description": "The top surface of the long wooden bench against the back wall."
+              }
+            ]
+          }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "interaction_groups": [
+          {
+            "context_relations": [],
+            "context_role": "refreshment_setting",
+            "function": "Place refreshment setting on surface",
+            "id": "op_1",
+            "required_relations": [],
+            "required_target_count": 2,
+            "target_role": "refreshment_setting",
+            "tool_role": "refreshment_setting_payload",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          },
+          {
+            "context_relations": [],
+            "context_role": "accessible_location",
+            "function": "Place entertainment control on surface",
+            "id": "op_2",
+            "required_relations": [],
+            "required_target_count": 1,
+            "target_role": "accessible_location",
+            "tool_role": "entertainment_control",
+            "usage_policy": "DEDICATED_PER_TARGET"
+          }
+        ],
+        "raw_v2_contract": {
+          "functional_relations": [
+            {
+              "object_role": "refreshment_setting",
+              "relation": "is placed upon",
+              "required": true,
+              "subject_role": "refreshment_setting_payload"
+            },
+            {
+              "object_role": "television",
+              "relation": "controls",
+              "required": true,
+              "subject_role": "entertainment_control"
+            },
+            {
+              "object_role": "accessible_location",
+              "relation": "is placed upon",
+              "required": true,
+              "subject_role": "entertainment_control"
+            }
+          ],
+          "functional_roles": [
+            {
+              "binding_policy": "DISTINCT",
+              "candidate_categories": [
+                "table surface",
+                "side table surface",
+                "coffee table surface",
+                "desk surface",
+                "bench surface"
+              ],
+              "entity_kind": "REGION",
+              "function": "A surface area designated to hold a complete refreshment setting for one person.",
+              "id": "refreshment_setting",
+              "required_count": 2,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "DISTINCT",
+              "candidate_categories": [
+                "cup",
+                "mug",
+                "plate",
+                "dish"
+              ],
+              "entity_kind": "OBJECT",
+              "function": "A complete refreshment setting consisting of a cup and a plate.",
+              "id": "refreshment_setting_payload",
+              "required_count": 2,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "DISTINCT",
+              "candidate_categories": [
+                "remote control",
+                "TV remote",
+                "media controller"
+              ],
+              "entity_kind": "OBJECT",
+              "function": "A device used to control the television.",
+              "id": "entertainment_control",
+              "required_count": 1,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "DISTINCT",
+              "candidate_categories": [
+                "television",
+                "TV",
+                "screen"
+              ],
+              "entity_kind": "OBJECT",
+              "function": "The display device that is the target of the entertainment control.",
+              "id": "television",
+              "required_count": 1,
+              "required_properties": []
+            },
+            {
+              "binding_policy": "SHARED",
+              "candidate_categories": [
+                "table surface",
+                "side table surface",
+                "coffee table surface",
+                "desk surface",
+                "bench surface"
+              ],
+              "entity_kind": "REGION",
+              "function": "A surface area where the entertainment control is placed to be accessible to both people.",
+              "id": "accessible_location",
+              "required_count": 1,
+              "required_properties": []
+            }
+          ],
+          "operation_pairings": [
+            {
+              "anchor_role": "refreshment_setting",
+              "id": "op_1",
+              "operation": "Place refreshment setting on surface",
+              "operation_count": 2,
+              "reuse_policy": "DEDICATED_PER_TARGET",
+              "source_role": "refreshment_setting_payload",
+              "target_role": "refreshment_setting"
+            },
+            {
+              "anchor_role": "accessible_location",
+              "id": "op_2",
+              "operation": "Place entertainment control on surface",
+              "operation_count": 1,
+              "reuse_policy": "DEDICATED_PER_TARGET",
+              "source_role": "entertainment_control",
+              "target_role": "accessible_location"
+            }
+          ]
+        },
+        "raw_v2_guidance": {
+          "inspectable_regions": [],
+          "inspection_order": [],
+          "visible_candidates_per_role": {
+            "accessible_location": [
+              {
+                "label": "coffee_table_surface",
+                "visual_description": "The top surface of the large wooden coffee table in the foreground."
+              },
+              {
+                "label": "side_table_surface_left",
+                "visual_description": "The top surface of the small wooden side table to the left of the left armchair."
+              },
+              {
+                "label": "side_table_surface_right",
+                "visual_description": "The top surface of the small wooden side table to the right of the right armchair."
+              },
+              {
+                "label": "bench_surface",
+                "visual_description": "The top surface of the long wooden bench against the back wall."
+              }
+            ],
+            "entertainment_control": [
+              {
+                "label": "remote_control",
+                "visual_description": "A black remote control on the coffee table."
+              }
+            ],
+            "refreshment_setting": [
+              {
+                "label": "coffee_table_surface",
+                "visual_description": "The top surface of the large wooden coffee table in the foreground."
+              },
+              {
+                "label": "side_table_surface_left",
+                "visual_description": "The top surface of the small wooden side table to the left of the left armchair."
+              },
+              {
+                "label": "side_table_surface_right",
+                "visual_description": "The top surface of the small wooden side table to the right of the right armchair."
+              },
+              {
+                "label": "bench_surface",
+                "visual_description": "The top surface of the long wooden bench against the back wall."
+              }
+            ],
+            "refreshment_setting_payload": [
+              {
+                "label": "cup_1",
+                "visual_description": "A red cup on the coffee table."
+              },
+              {
+                "label": "plate_1",
+                "visual_description": "A white plate on the coffee table."
+              },
+              {
+                "label": "cup_2",
+                "visual_description": "A red cup on the coffee table."
+              },
+              {
+                "label": "plate_2",
+                "visual_description": "A white plate on the coffee table."
+              }
+            ],
+            "television": [
+              {
+                "label": "television",
+                "visual_description": "A black flat-screen television mounted on the back wall."
+              }
+            ]
+          }
+        },
+        "schema_version": 2,
+        "status": "SUPPORTED",
+        "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+        "unsupported_reason": ""
+      },
+      "repairs": [],
+      "semantically_incomplete": false,
+      "succeeded": true
+    },
+    "task_causal_relations": [],
+    "unresolved_semantics": [
+      {
+        "raw_object": "refreshment_setting",
+        "raw_phrase": "is placed upon",
+        "raw_subject": "refreshment_setting_payload",
+        "reason": "Relation text 'is placed upon' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      {
+        "raw_object": "television",
+        "raw_phrase": "controls",
+        "raw_subject": "entertainment_control",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      {
+        "raw_object": "accessible_location",
+        "raw_phrase": "is placed upon",
+        "raw_subject": "entertainment_control",
+        "reason": "Relation text 'is placed upon' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      }
+    ],
+    "unverified_required_properties": []
+  },
+  "nodes": {
+    "CUP_SAUCER_SET": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "CUP_SAUCER_SET",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup_saucer_set",
+        "cup",
+        "saucer"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    "PERSONAL_CUP_SAUCER_REGION": {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    "REMOTE": {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    "SHARED_REMOTE_REGION": {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    }
+  },
+  "operation_groups": [],
+  "region_ranking": [],
+  "relations": [],
+  "roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "CUP_SAUCER_SET",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup_saucer_set",
+        "cup",
+        "saucer"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    }
+  ],
+  "source": "VLM_CANONICAL_G_F",
+  "task_causal_relations": [],
+  "task_instruction": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people."
+}

@@ -1,0 +1,321 @@
+{
+  "artifacts": {
+    "functional_graph": "functional_requirement_graph.json",
+    "functional_specification": "functional_specification.json",
+    "grounding": "graph_grounding_result.json",
+    "observed_graph": "observed_scene_graph.json",
+    "result": "result.json"
+  },
+  "astar_invocations": 0,
+  "candidate_plan": null,
+  "candidate_search_statistics": {},
+  "canonicalization_succeeded": true,
+  "domain": "living_room",
+  "execution_state": "planning_only",
+  "exploration_actuation": "not_applicable",
+  "failure_category": null,
+  "failure_reason": "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement",
+  "finished_at_utc": "2026-09-08T20:18:32.001051+00:00",
+  "functional_spec_complete": false,
+  "git_commit": "1930b9ce6cb0873e67200465d78149bca53c4f8c",
+  "git_dirty": false,
+  "high_level_replans": 0,
+  "inference_config": {
+    "chat_template_kwargs": {
+      "enable_thinking": false
+    },
+    "max_tokens": 8192,
+    "min_p": 0.0,
+    "model": "qwen35-9b",
+    "presence_penalty": 0.0,
+    "repetition_penalty": 1.0,
+    "response_format": {
+      "json_schema": {
+        "name": "functional_specification",
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "additionalProperties": false,
+          "properties": {
+            "observation_guidance": {
+              "additionalProperties": false,
+              "properties": {
+                "inspectable_regions": {
+                  "items": {
+                    "additionalProperties": true,
+                    "properties": {
+                      "description": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "visual_description": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "maxItems": 16,
+                  "type": "array"
+                },
+                "inspection_order": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "visible_candidates_per_role": {
+                  "additionalProperties": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "visual_description": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "visual_description"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "visible_candidates_per_role",
+                "inspectable_regions",
+                "inspection_order"
+              ],
+              "type": "object"
+            },
+            "status": {
+              "enum": [
+                "SUPPORTED",
+                "UNSUPPORTED"
+              ],
+              "type": "string"
+            },
+            "task_contract": {
+              "additionalProperties": false,
+              "properties": {
+                "functional_relations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "object_role": {
+                        "type": "string"
+                      },
+                      "relation": {
+                        "type": "string"
+                      },
+                      "required": {
+                        "type": "boolean"
+                      },
+                      "subject_role": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "subject_role",
+                      "relation",
+                      "object_role"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 32,
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "functional_roles": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "binding_policy": {
+                        "enum": [
+                          "DISTINCT",
+                          "REUSABLE",
+                          "SHARED"
+                        ],
+                        "type": "string"
+                      },
+                      "candidate_categories": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "maxItems": 16,
+                        "minItems": 0,
+                        "type": "array"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "entity_kind": {
+                        "enum": [
+                          "OBJECT",
+                          "REGION",
+                          "FIXED_TARGET"
+                        ],
+                        "type": "string"
+                      },
+                      "function": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "required_count": {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "required_properties": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "maxItems": 16,
+                        "minItems": 0,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "entity_kind",
+                      "function",
+                      "required_count",
+                      "binding_policy"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 16,
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "operation_pairings": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "anchor_role": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "operation": {
+                        "type": "string"
+                      },
+                      "operation_count": {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "reuse_policy": {
+                        "enum": [
+                          "DEDICATED_PER_TARGET",
+                          "REUSABLE_ACROSS_TARGETS"
+                        ],
+                        "type": "string"
+                      },
+                      "source_role": {
+                        "type": "string"
+                      },
+                      "target_role": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "operation",
+                      "target_role"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 16,
+                  "minItems": 0,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "functional_roles",
+                "functional_relations",
+                "operation_pairings"
+              ],
+              "type": "object"
+            },
+            "task_summary": {
+              "type": "string"
+            },
+            "unsupported_reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "task_summary",
+            "task_contract",
+            "observation_guidance",
+            "unsupported_reason"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
+      "type": "json_schema"
+    },
+    "stream": false,
+    "temperature": 0.0,
+    "top_k": 20,
+    "top_p": 1.0
+  },
+  "internal_variant": "F4_SAUCER_PREPLACED_CUP_ON_SHARED",
+  "observer_errors": [],
+  "pipeline_runtime_seconds": 25.4406,
+  "prompt_schema_hash": "3496b1413fd13098b59a9b34f5546905c239822b04cf42d2f5b3b37a41de9b5e",
+  "provider_model": "qwen35-9b",
+  "provider_region_ranking": [],
+  "region_order_used": [],
+  "robot_capability_registry_hash": "2cd5bf9fcc6bcdbe5e173a37658354a2cf24757e63c81fa8ab54c5c77bf548cf",
+  "runtime_semantic_ontology_hash": "ab5095cdcf2ed6a2799548ebdd5510062ce488d2c047a1e2e71d997fec44a57d",
+  "schema_version": 1,
+  "search_contract": {
+    "canonical_region_ids": [],
+    "domain": "living_room",
+    "no_search_required": true,
+    "policy_version": "phase3_p3h_1_v1",
+    "proposal_trace": [],
+    "region_proposal_trace": [],
+    "search_policy_trace": [],
+    "search_seed": null,
+    "source": "SYSTEM_DECLARED_NO_SEARCH"
+  },
+  "search_order_source_effective": "not_applicable",
+  "search_order_source_requested": "auto",
+  "search_policy_version": "phase3_p3h_1_v1",
+  "search_seed_effective": null,
+  "search_seed_requested": null,
+  "semantic_vlm_requests": 1,
+  "spec_acquisition": "live_provider",
+  "spec_mode": "vlm",
+  "spec_provider_source": "VLM_CANONICAL_G_F",
+  "specification_input": null,
+  "specification_sha256": "37c1795ad5006799e98825c691ebaf6a97daaa3087f058c231d648826be7993f",
+  "started_at_utc": "2026-09-08T20:18:06.560467+00:00",
+  "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+  "transport_retries": 0,
+  "variant": "L5",
+  "visualization_requested": false,
+  "vlm_request_count": 1
+}
