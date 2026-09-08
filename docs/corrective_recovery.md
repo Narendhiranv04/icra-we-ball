@@ -341,7 +341,46 @@ Directly recomputed from `benchmark_reports/final_corrected_32x1_20260908T192500
   - Stages 1 through 5: 41 passed in 0.20s.
   - Search eligibility and recovery: 11 passed in 0.32s.
   - Full functional TAMP pipeline test suite: 513 passed in 6m18s (0 failures).
-- **Commit:** `64d3e975` (`fix(search): restore evidence-driven inspection eligibility`).
-
 **Gate 5 Status: PASSED.**
+
+---
+
+## 8. Stage 6 — Planner Action Provenance and Goal Compilation
+
+### 8.1 Architectural Changes Implemented
+
+1. **Kitchen Planner Provenance Audit (Section 13.2):**
+   - In `domains/kitchen.py`, decoupled action schemas and goal compilation from mere role presence:
+     - Role pairs alone (`coffee_source`, `coffee_container`) no longer synthesize `POUR` actions or transfer goals. `POUR` is only instantiated when an explicit `TRANSFER_CONTENT_TO_CONTAINER` operation (or `"pour"`, `"transfer"`, `"fill"`) is mapped.
+     - Role pairs alone (`coffee_stirrer`, `coffee_container`) no longer synthesize `STIR` actions or stir goals. `STIR` is only instantiated when an explicit `MIX_BEVERAGE_CONTENTS` operation (or `"stir"`, `"mix"`) is mapped.
+     - Soup utensil associations are only instantiated when explicit `PROVIDE_SOUP_EATING_UTENSIL` operations are mapped.
+     - Final serving goals at the dining table are strictly derived from explicit task semantics / instructions rather than hidden recipe assumptions.
+     - Preserved legacy compiler preconditions and goal behavior when `specification is None` (ensuring compatibility with partial-planning and negative-control test suites).
+
+2. **Workshop Planner Provenance Audit (Section 13.4):**
+   - In `domains/workshop.py`, decoupled fastening and equipment return from role presence alone:
+     - Driver and fastener roles alone no longer instantiate `SCREW` actions or repair goals. Fastening actions and goals require explicit `FASTEN_JOINT` operations (or `"fasten"`, `"drive"`, `"screw"` in operation groups, canonicalization trace groups, concept accounting, or task instruction).
+     - Tool return actions and goals (`PLACE(driver, surface)`) require explicit `RETURN_REUSABLE_ITEM_TO_SUPPORT` operations (or return cues in task instruction / trace groups).
+     - If only driver or only fastener is grounded without a complete fastening operation, partial candidate plans stage the grounded component safely onto the work surface without hallucinating screw actions.
+
+3. **Low-Level Robot Primitives and Single A* Search (Section 13.1, 13.5):**
+   - Generic low-level primitives (`PICK`, `PLACE`, `POUR`, `STIR`, `SCREW`) remain available to the planner but are only instantiated toward goals derived from explicit FM task semantics.
+   - All plan generation runs strictly in a single A* search pass (zero high-level replans).
+   - Every candidate plan is validated with independent symbolic replay.
+
+### 8.2 Gate 6 Verification
+
+- **New Test Suite:** `mujoco_scenes/functional_tamp_pipeline/tests/test_stage6_planner_action_provenance.py` (5 tests passed).
+  - Kitchen roles without explicit operation do not synthesize `POUR` or `STIR` actions or goals.
+  - Explicit `TRANSFER_CONTENT_TO_CONTAINER` enables `POUR` action and transfer goal, validated via independent replay.
+  - Explicit `MIX_BEVERAGE_CONTENTS` enables `STIR` action and stir goal, validated via independent replay.
+  - Workshop roles without explicit operation do not synthesize `SCREW` action or return goals.
+  - Explicit `FASTEN_JOINT` enables `SCREW` and valid low-level primitive sequence (`PICK`, `PLACE`, `PICK`, `SCREW`, `PLACE`), validated via independent replay.
+- **Regression Suites:**
+  - `test_planning_validation_and_audit.py`: 7 passed in 24.95s (including `test_w1_produces_known_full_valid_plan`).
+  - `test_vlm_pipeline_final_invariants.py`: partial planning and no meaningless actions passed.
+  - Stages 1 through 6: 46 passed in 0.57s.
+- **Commit:** `594203d1` (`fix(planner): gate task goals on explicit compiled semantics`).
+
+**Gate 6 Status: PASSED.**
 
