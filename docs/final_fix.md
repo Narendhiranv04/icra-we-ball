@@ -3168,7 +3168,8 @@ The Phase 13 development matrix and Phase 14 additional matrix are **SUPERSEDED 
 | C7 controlled live probe | Complete | new immutable probe roots | six-case comparisons | — | multiple controlled six-case configurations | Prompt 4 plus Config C selected by the prescribed semantic-first ordering | corrective freeze commit | none |
 | C8 generic prompt/schema | Complete | `fm_schema_v2.py`, `fm_adapter.py` | prompt/schema and leakage tests | — | six-case probes only | one-call generic decomposition retained; benchmark nouns and verifier descriptions absent from active prompts | corrective freeze commit | none |
 | C9 downstream repair | Complete | workshop role mapping, relation interpretation, compiler | focused compiler/grounding/planning regressions | W1/W2 capability retained | 0 additional tuning calls | explicit patient/tool/fastener roles no longer collide; no semantic synthesis | corrective freeze commit | none |
-| C10 method freeze | Complete | all corrective implementation and tests | **472 passed, 1 safety-preserving detector skip** in `functional_tamp_pipeline/tests`; 56/56 focused | complete | 0 | method frozen for final evaluation | corrective freeze commit | final matrices and generated reports |
+| C10 method freeze | Complete | all corrective implementation and tests | **472 passed, 1 safety-preserving detector skip** in `functional_tamp_pipeline/tests`; 56/56 focused | complete | 0 | method frozen for final evaluation | `8a9f540f` | none |
+| C11 final evaluation and reporting | Complete | deterministic post-freeze dataset plus immutable report roots | 15/15 scene definitions built; both matrix invariants VALID | development 32x1 and held-out 15x1 | 47 final live calls | final metrics and provenance audit generated; hash freeze verified; zero prompt leakage | dataset `5932c7ba` | none |
 
 ### Frozen inference and runtime identity
 
@@ -3180,8 +3181,27 @@ The Phase 13 development matrix and Phase 14 additional matrix are **SUPERSEDED 
 - V2 prompt SHA-256: `c2453625a0636c75cdcf56b50979af0c6f57e6ce160a5ccdf0ed3240a82a2bdf`
 - V2 schema SHA-256: `27f3dff978bb0d344fd4ed24e54ed49bb6b79f8304aadfe49670f4e7f83e5f73`
 - Combined V2 prompt/schema hash: `381770ded79ef1c189fb81ee7b04632b876c02ead68aa6c4b4841e0c6216cdd2`
-- Runtime semantic ontology SHA-256: `31d8f5f5be7e35909a19330dc2d0809819d441c276fe1dc3a9ef76d6e9dd5266`
+- Runtime semantic ontology YAML SHA-256: `ab5095cdcf2ed6a2799548ebdd5510062ce488d2c047a1e2e71d997fec44a57d`
+- Role-semantic ontology implementation-file SHA-256: `31d8f5f5be7e35909a19330dc2d0809819d441c276fe1dc3a9ef76d6e9dd5266`
 - Predicate registry SHA-256: `f8afb189d77138e58994ec525ba7d72b4be26254a2af2d5a9c8b2042c599e639`
-- Robot capability registry SHA-256: `5f981a616390757a1b240843bc39a33bf05fc8bd072546b36a17503cc5406dfe`
+- Robot capability registry source-file SHA-256: `5f981a616390757a1b240843bc39a33bf05fc8bd072546b36a17503cc5406dfe`
+- Robot capability registry canonical-content SHA-256: `fbe4595e7636dd3955f6e95334868b94fea9e928da38620cfd0e851b7af52537`
 
 No method, prompt, schema, ontology, predicate, capability, grounding, search, planning, or evaluation-definition change is permitted after the corrective freeze. Post-freeze additions may define the new deterministic evaluation dataset and generate reports, but cannot modify the frozen method.
+
+### Final corrective evaluation results
+
+The final development confirmation is `benchmark_reports/final_corrected_32x1_20260908T192500IST_rerun/`. It contains 32 records (20 feasible, 12 infeasible), a clean source-tree provenance flag on every record, one model and prompt-manifest hash throughout, and `invariants.json: VALID`.
+
+The final held-out generalization run is `benchmark_reports/heldout_postfreeze_15x1_20260908T214400IST_rerun/`. Its 15 scene layouts were generated after the method freeze and committed as dataset-only changes. It contains 15 records (9 feasible, 6 infeasible), no pipeline exceptions, a clean source-tree provenance flag on every record, one model and prompt-manifest hash throughout, and `invariants.json: VALID`.
+
+| Matrix | Raw role F1 | Raw relation F1 | Executable contract complete | Feasible success | Goal coverage | Outcome correct | False completion | VLM calls / case | Replans / case |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Development 32x1 | 60.2% | 0.8% | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | 1.00 | 0.00 |
+| Held-out 15x1 | 62.5% | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | 1.00 | 0.00 |
+
+The principal scientific finding is therefore negative but unambiguous: the corrected 9B one-call system recognizes many required object roles, but it does not reliably express the required relations and operations. The strict compiler consequently rejects incomplete contracts instead of inventing semantics, producing zero full-task successes and zero false completions. All 29 feasible failures across the two final matrices are first attributed to `TASK_SPECIFICATION_FAILURE`; 27 are detailed as `FM_SEMANTIC_OMISSION` and 2 as `FM_STRUCTURAL_ERROR`.
+
+The consolidated paper tables and audits are under `benchmark_reports/final_corrective_analysis_20260908/`. The provenance audit covers all 47 final live records, reports zero prompt leakage, and verifies the frozen hashes.
+
+Two roots are explicitly non-authoritative: `final_corrected_32x1_20260908T185300IST` was invalidated because the source tree changed mid-run, and `heldout_postfreeze_15x1_20260908T213700IST` was aborted after an unsupported dataset placement raised a scene-construction exception. Both are retained only as audit evidence and are excluded from every final metric above.

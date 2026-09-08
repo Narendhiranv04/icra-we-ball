@@ -1,0 +1,476 @@
+{
+  "development": {
+    "K1": {
+      "domain": "kitchen",
+      "gt_feasible": true,
+      "requires_recovery": false,
+      "terminal_status": "VLM_SPEC_FAILED",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_STRUCTURAL_ERROR",
+      "runtime_sec": 284.0689388309838
+    },
+    "K2": {
+      "domain": "kitchen",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "ACTION_SEQUENCE_READY",
+      "candidate_plan_length": 4,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 64.04574906200287
+    },
+    "K3": {
+      "domain": "kitchen",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 130.05210994099616
+    },
+    "K4": {
+      "domain": "kitchen",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "VLM_SPEC_FAILED",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 62.998823144007474
+    },
+    "K5": {
+      "domain": "kitchen",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "PARTIAL_ACTION_SEQUENCE_READY",
+      "candidate_plan_length": 4,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 88.44000603799941
+    },
+    "K6": {
+      "domain": "kitchen",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 85.57366118597565
+    },
+    "K7": {
+      "domain": "kitchen",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 52.97535026402329
+    },
+    "K8": {
+      "domain": "kitchen",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 87.30267600298976
+    },
+    "K9": {
+      "domain": "kitchen",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 88.67129647501861
+    },
+    "K10": {
+      "domain": "kitchen",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 72.4257839070051
+    },
+    "K11": {
+      "domain": "kitchen",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 107.97637262800708
+    },
+    "K12": {
+      "domain": "kitchen",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "VLM_SPEC_FAILED",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 106.13191409900901
+    },
+    "L1": {
+      "domain": "living_room",
+      "gt_feasible": true,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 113.35144225598196
+    },
+    "L2": {
+      "domain": "living_room",
+      "gt_feasible": true,
+      "requires_recovery": false,
+      "terminal_status": "VLM_SPEC_FAILED",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_STRUCTURAL_ERROR",
+      "runtime_sec": 279.78644414502196
+    },
+    "L3": {
+      "domain": "living_room",
+      "gt_feasible": true,
+      "requires_recovery": false,
+      "terminal_status": "INFEASIBLE",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 58.92820656800177
+    },
+    "L4": {
+      "domain": "living_room",
+      "gt_feasible": true,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 89.45565154001815
+    },
+    "L5": {
+      "domain": "living_room",
+      "gt_feasible": true,
+      "requires_recovery": false,
+      "terminal_status": "VLM_SPEC_FAILED",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 102.37296360498294
+    },
+    "L6": {
+      "domain": "living_room",
+      "gt_feasible": true,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 96.53178119700169
+    },
+    "L7": {
+      "domain": "living_room",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 124.05956182500813
+    },
+    "L8": {
+      "domain": "living_room",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 84.18254600898945
+    },
+    "L9": {
+      "domain": "living_room",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 103.9505732349935
+    },
+    "L10": {
+      "domain": "living_room",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "INFEASIBLE",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 101.7846825059969
+    },
+    "W1": {
+      "domain": "workshop",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "INCOMPLETE",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 90.76634080000804
+    },
+    "W2": {
+      "domain": "workshop",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "INCOMPLETE",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 51.88118682001368
+    },
+    "W3": {
+      "domain": "workshop",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "INCOMPLETE",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 61.3277090540214
+    },
+    "W4": {
+      "domain": "workshop",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "VLM_SPEC_FAILED",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 83.4840228150133
+    },
+    "W5": {
+      "domain": "workshop",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "INCOMPLETE",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 78.26842516500619
+    },
+    "W6": {
+      "domain": "workshop",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "INCOMPLETE",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 46.421248838014435
+    },
+    "W7": {
+      "domain": "workshop",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "INCOMPLETE",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 65.4146680989943
+    },
+    "W8": {
+      "domain": "workshop",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "INCOMPLETE",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 93.41326667298563
+    },
+    "W9": {
+      "domain": "workshop",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "VLM_SPEC_FAILED",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 45.70430773499538
+    },
+    "W10": {
+      "domain": "workshop",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "INCOMPLETE",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 54.704581578000216
+    }
+  },
+  "held_out": {
+    "HK1": {
+      "domain": "kitchen",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 36.65
+    },
+    "HK2": {
+      "domain": "kitchen",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 38.06
+    },
+    "HK3": {
+      "domain": "kitchen",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 30.16
+    },
+    "HK4": {
+      "domain": "kitchen",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 35.64
+    },
+    "HK5": {
+      "domain": "kitchen",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 43.18
+    },
+    "HL1": {
+      "domain": "living_room",
+      "gt_feasible": true,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 23.47
+    },
+    "HL2": {
+      "domain": "living_room",
+      "gt_feasible": true,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 25.21
+    },
+    "HL3": {
+      "domain": "living_room",
+      "gt_feasible": true,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 26.85
+    },
+    "HL4": {
+      "domain": "living_room",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 23.24
+    },
+    "HL5": {
+      "domain": "living_room",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "INFEASIBLE",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 22.44
+    },
+    "HW1": {
+      "domain": "workshop",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "INCOMPLETE",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 23.54
+    },
+    "HW2": {
+      "domain": "workshop",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "INCOMPLETE",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 21.64
+    },
+    "HW3": {
+      "domain": "workshop",
+      "gt_feasible": true,
+      "requires_recovery": true,
+      "terminal_status": "INCOMPLETE",
+      "candidate_plan_length": 0,
+      "first_cause": "TASK_SPECIFICATION_FAILURE",
+      "failure_category": "FM_SEMANTIC_OMISSION",
+      "runtime_sec": 22.3
+    },
+    "HW4": {
+      "domain": "workshop",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "INCOMPLETE",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 21.49
+    },
+    "HW5": {
+      "domain": "workshop",
+      "gt_feasible": false,
+      "requires_recovery": false,
+      "terminal_status": "INCOMPLETE",
+      "candidate_plan_length": 0,
+      "first_cause": null,
+      "failure_category": null,
+      "runtime_sec": 21.03
+    }
+  }
+}

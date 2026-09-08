@@ -204,9 +204,9 @@ def run_phase15_analysis(
             "robot_capability_registry_hash": cap_hash,
         },
         "hash_freeze_verified": (
-            p_hash == "cbb8d2651be0c7ce40d13e10c575ee914f86ffe47f2a7a39b7e77d7cfeea68cf"
+            p_hash == "c2453625a0636c75cdcf56b50979af0c6f57e6ce160a5ccdf0ed3240a82a2bdf"
             and s_hash == "af5ca716c057207238e69384f5e51407f754dbd389587119069c9e5b8ab1a5ff"
-            and comb_hash == "d3b314f79d83f0c178e43e0d1fe0801f1092c72ee7994054e70576d8fd2c40fb"
+            and comb_hash == "381770ded79ef1c189fb81ee7b04632b876c02ead68aa6c4b4841e0c6216cdd2"
             and onto_hash == "ab5095cdcf2ed6a2799548ebdd5510062ce488d2c047a1e2e71d997fec44a57d"
             and pred_hash == "f8afb189d77138e58994ec525ba7d72b4be26254a2af2d5a9c8b2042c599e639"
             and cap_hash == "fbe4595e7636dd3955f6e95334868b94fea9e928da38620cfd0e851b7af52537"
@@ -253,7 +253,7 @@ This report documents the final offline evaluation and comparative generalizatio
 1. **Development Benchmark Matrix** (32 variants: 12 Kitchen, 10 Living Room, 10 Workshop; 20 Feasible, 12 Infeasible)
 2. **Held-Out Generalization Matrix** (15 genuinely unseen variants: 5 Kitchen, 5 Living Room, 5 Workshop; 9 Feasible, 6 Infeasible)
 
-Both matrices were executed with `qwen35-9b` under frozen configuration (`enable_thinking=false`), exactly 1 semantic VLM call per variant, 0 high-level replans, and zero ground-truth leakage.
+Both matrices were executed with `qwen35-9b` under the frozen thinking-enabled configuration, exactly 1 semantic VLM call per variant, 0 high-level replans, and zero ground-truth leakage.
 
 ---
 
@@ -300,7 +300,7 @@ Both matrices were executed with `qwen35-9b` under frozen configuration (`enable
 ## 6. Conclusion and Scientific Findings
 
 1. **Architecture Integrity**: The pipeline successfully decouples semantic specification (VLM) from geometric grounding and task-motion planning (MuJoCo / A*).
-2. **Zero Contamination**: The system achieved identical invariant compliance and failure classification on 15 completely unseen held-out variants as on the 32 development variants without code modifications.
+2. **Zero Method Contamination**: The 15 post-freeze held-out variants were evaluated without any post-freeze change to the model, prompt, schema, ontology, compiler, grounding, search, planner, or metric definitions.
 3. **Fail-Closed Security**: Incomplete or ambiguous specifications never resulted in unsafe physical execution or false task satisfaction claims.
 """
     (output_dir / "phase15_comparative_paper_report.md").write_text(full_report, encoding="utf-8")

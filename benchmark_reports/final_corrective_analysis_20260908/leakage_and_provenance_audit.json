@@ -1,0 +1,27 @@
+{
+  "timestamp_utc": "2026-09-08T16:22:55.237772+00:00",
+  "total_live_runs_audited": 47,
+  "total_prompt_leakages_detected": 0,
+  "leakage_audit_status": "CLEAN",
+  "frozen_configuration_hashes": {
+    "prompt_hash": "c2453625a0636c75cdcf56b50979af0c6f57e6ce160a5ccdf0ed3240a82a2bdf",
+    "schema_hash": "af5ca716c057207238e69384f5e51407f754dbd389587119069c9e5b8ab1a5ff",
+    "combined_prompt_schema_hash": "381770ded79ef1c189fb81ee7b04632b876c02ead68aa6c4b4841e0c6216cdd2",
+    "runtime_semantic_ontology_hash": "ab5095cdcf2ed6a2799548ebdd5510062ce488d2c047a1e2e71d997fec44a57d",
+    "predicate_registry_file_hash": "f8afb189d77138e58994ec525ba7d72b4be26254a2af2d5a9c8b2042c599e639",
+    "robot_capability_registry_hash": "fbe4595e7636dd3955f6e95334868b94fea9e928da38620cfd0e851b7af52537"
+  },
+  "hash_freeze_verified": true,
+  "invariants_development": {
+    "status": "VALID",
+    "errors": []
+  },
+  "invariants_held_out": {
+    "status": "VALID",
+    "errors": [],
+    "variant_count": 15,
+    "feasible_count": 9,
+    "vlm_requests_per_variant": 1.0,
+    "replans_per_variant": 0.0
+  }
+}
