@@ -1,0 +1,505 @@
+{
+  "timestamp_utc": "2026-09-08T20:29:57.590397+00:00",
+  "domain": "kitchen",
+  "variant": "HK2",
+  "mode": "vlm",
+  "gt_feasible": true,
+  "requires_observation_recovery": true,
+  "semantic_vlm_requests": 1,
+  "high_level_replans": 0,
+  "pipeline_runtime_sec": 40.12,
+  "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+  "failure_reason": "('coffee_container', 'water_source')",
+  "failure_category": "CANONICALIZATION_AMBIGUITY",
+  "canonicalization_succeeded": true,
+  "required_contract_complete": false,
+  "complete_candidate_grounding": false,
+  "candidate_plan_found": false,
+  "candidate_plan_length": 0,
+  "candidate_plan_status": "EMPTY",
+  "regions_inspected": [],
+  "full_task_satisfied": false,
+  "outcome_correct": false,
+  "false_completion": false,
+  "candidate_goal_coverage": 0.0,
+  "candidate_goal_count": 0,
+  "candidate_goal_satisfied_count": 0,
+  "full_task_goal_count": 4,
+  "full_task_goal_satisfied_count": 0,
+  "full_task_goal_coverage": 0.0,
+  "candidate_plan_valid": false,
+  "astar_invocations": 0,
+  "regions_available": [],
+  "search_exhausted": false,
+  "git_commit": "746ad19b27def0059a1aafb0bedd2db2d057b482",
+  "git_dirty": false,
+  "model": "qwen35-9b",
+  "prompt_hash": "3496b1413fd13098b59a9b34f5546905c239822b04cf42d2f5b3b37a41de9b5e",
+  "spec_acquisition": "live_provider",
+  "specification_input": null,
+  "execution_state": "planning_only",
+  "inspection_order_source": "FM",
+  "raw_role_precision": 0.75,
+  "raw_role_recall": 1.0,
+  "raw_role_f1": 0.8571428571428571,
+  "raw_relation_precision": 0.0,
+  "raw_relation_recall": 0.0,
+  "raw_relation_f1": 0.0,
+  "raw_operation_precision": 0.25,
+  "raw_operation_recall": 0.5,
+  "raw_operation_f1": 0.3333333333333333,
+  "raw_group_precision": 0.25,
+  "raw_group_recall": 0.5,
+  "raw_group_f1": 0.3333333333333333,
+  "task_instruction": "Prepare and serve one coffee and one soup for each of two people. Make each coffee using coffee and water and stir it before serving. Serve each soup bowl with its own suitable eating utensil.",
+  "inference_config": {
+    "chat_template_kwargs": {
+      "enable_thinking": false
+    },
+    "max_tokens": 8192,
+    "min_p": 0.0,
+    "model": "qwen35-9b",
+    "presence_penalty": 0.0,
+    "repetition_penalty": 1.0,
+    "response_format": {
+      "json_schema": {
+        "name": "functional_specification",
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "additionalProperties": false,
+          "properties": {
+            "observation_guidance": {
+              "additionalProperties": false,
+              "properties": {
+                "inspectable_regions": {
+                  "items": {
+                    "additionalProperties": true,
+                    "properties": {
+                      "description": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "visual_description": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "maxItems": 16,
+                  "type": "array"
+                },
+                "inspection_order": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "visible_candidates_per_role": {
+                  "additionalProperties": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "visual_description": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "visual_description"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "visible_candidates_per_role",
+                "inspectable_regions",
+                "inspection_order"
+              ],
+              "type": "object"
+            },
+            "status": {
+              "enum": [
+                "SUPPORTED",
+                "UNSUPPORTED"
+              ],
+              "type": "string"
+            },
+            "task_contract": {
+              "additionalProperties": false,
+              "properties": {
+                "functional_relations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "object_role": {
+                        "type": "string"
+                      },
+                      "relation": {
+                        "type": "string"
+                      },
+                      "required": {
+                        "type": "boolean"
+                      },
+                      "subject_role": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "subject_role",
+                      "relation",
+                      "object_role"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 32,
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "functional_roles": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "binding_policy": {
+                        "enum": [
+                          "DISTINCT",
+                          "REUSABLE",
+                          "SHARED"
+                        ],
+                        "type": "string"
+                      },
+                      "candidate_categories": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "maxItems": 16,
+                        "minItems": 0,
+                        "type": "array"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "entity_kind": {
+                        "enum": [
+                          "OBJECT",
+                          "REGION",
+                          "FIXED_TARGET"
+                        ],
+                        "type": "string"
+                      },
+                      "function": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "required_count": {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "required_properties": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "maxItems": 16,
+                        "minItems": 0,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "entity_kind",
+                      "function",
+                      "required_count",
+                      "binding_policy"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 16,
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "operation_pairings": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "anchor_role": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "operation": {
+                        "type": "string"
+                      },
+                      "operation_count": {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "reuse_policy": {
+                        "enum": [
+                          "DEDICATED_PER_TARGET",
+                          "REUSABLE_ACROSS_TARGETS"
+                        ],
+                        "type": "string"
+                      },
+                      "source_role": {
+                        "type": "string"
+                      },
+                      "target_role": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "operation",
+                      "target_role"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 16,
+                  "minItems": 0,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "functional_roles",
+                "functional_relations",
+                "operation_pairings"
+              ],
+              "type": "object"
+            },
+            "task_summary": {
+              "type": "string"
+            },
+            "unsupported_reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "task_summary",
+            "task_contract",
+            "observation_guidance",
+            "unsupported_reason"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
+      "type": "json_schema"
+    },
+    "stream": false,
+    "temperature": 0.0,
+    "top_k": 20,
+    "top_p": 1.0
+  },
+  "transport_retries": 0,
+  "vlm_json_valid": true,
+  "sanitization_succeeded": true,
+  "sanitizer_repairs": [
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "soup",
+        "relation": "contains",
+        "required": true,
+        "subject_role": "soup_bowl"
+      }
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "soft_semantic_evidence": [],
+  "context_only_roles": [],
+  "unresolved_roles": [
+    {
+      "code": "AMBIGUOUS_ROLE_MAPPING",
+      "collision_with": "coffee_cup",
+      "raw_role": {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table surface",
+          "counter surface",
+          "dining table"
+        ],
+        "description": "",
+        "entity_kind": "REGION",
+        "function": "A surface for placing a coffee cup.",
+        "id": "coffee_cup_location",
+        "required_count": 2,
+        "required_properties": [],
+        "visible_candidates": [
+          {
+            "label": "table_surface",
+            "visual_description": "The surface of the table."
+          }
+        ]
+      }
+    },
+    {
+      "code": "AMBIGUOUS_ROLE_MAPPING",
+      "collision_with": "soup_bowl",
+      "raw_role": {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table surface",
+          "counter surface",
+          "dining table"
+        ],
+        "description": "",
+        "entity_kind": "REGION",
+        "function": "A surface for placing a soup bowl.",
+        "id": "soup_bowl_location",
+        "required_count": 2,
+        "required_properties": [],
+        "visible_candidates": [
+          {
+            "label": "table_surface",
+            "visual_description": "The surface of the table."
+          }
+        ]
+      }
+    }
+  ],
+  "dropped_relations": [
+    {
+      "code": "DANGLING_RELATION_REFERENCE",
+      "raw": {
+        "object_role": "soup",
+        "relation": "contains",
+        "required": true,
+        "subject_role": "soup_bowl"
+      }
+    }
+  ],
+  "merged_roles": [],
+  "disambiguated_roles": [
+    {
+      "canonical_role": "coffee_source",
+      "code": "RAW_ROLE_DISAMBIGUATED",
+      "evidence": [
+        "group_tool",
+        "source"
+      ],
+      "raw_id": "coffee"
+    },
+    {
+      "canonical_role": "water_source",
+      "code": "RAW_ROLE_DISAMBIGUATED",
+      "evidence": [
+        "source"
+      ],
+      "raw_id": "water"
+    }
+  ],
+  "grounded_roles": {},
+  "ungrounded_expressed_roles": [
+    "coffee_container",
+    "water_source"
+  ],
+  "candidate_requirement_statuses": [
+    {
+      "id": "coffee_cup_location",
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    },
+    {
+      "id": "soup_bowl_location",
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    },
+    {
+      "id": "place_coffee_cup",
+      "status": "UNINSTANTIABLE_MISSING_ROLE",
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "place coffee cup on surface",
+        "id": "place_coffee_cup",
+        "required_relations": [],
+        "required_target_count": 2,
+        "target_role": "coffee_cup_location",
+        "tool_role": "coffee_cup",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      }
+    },
+    {
+      "id": "material_transfer",
+      "status": "UNINSTANTIABLE_MISSING_RELATION",
+      "roles": [
+        "coffee_source",
+        "coffee_container"
+      ],
+      "missing_roles": []
+    },
+    {
+      "id": "coffee_stirring",
+      "status": "UNINSTANTIABLE_UNGROUNDED_ROLE",
+      "roles": [
+        "coffee_stirrer",
+        "coffee_container"
+      ],
+      "missing_roles": []
+    },
+    {
+      "id": "soup_serving",
+      "status": "UNINSTANTIABLE_UNGROUNDED_ROLE",
+      "roles": [
+        "soup_eating_utensil",
+        "soup_container"
+      ],
+      "missing_roles": []
+    }
+  ],
+  "candidate_grounding_succeeded": false,
+  "grounded_expressed_role_coverage": 0.0,
+  "candidate_plan_eligible": false,
+  "nonempty_candidate_plan_generated": false,
+  "raw_vlm_spec_complete": false,
+  "offline_reference_task_complete": false,
+  "fm_count_correct": false,
+  "fm_binding_correct": false,
+  "full_task_semantic_goal_count": 4,
+  "full_task_semantic_goal_satisfied_count": 0,
+  "canonical_role_coverage": 1.0,
+  "raw_semantic_matching_method": "frozen_evaluation_only_semantic_matcher_v2",
+  "online_executable_contract_complete": false,
+  "executable_contract_complete": false,
+  "runtime_contract_complete": false,
+  "required_compiler_interpretation": false,
+  "candidate_grounding_eligible": false,
+  "search_recovery_succeeded": false,
+  "initial_grounding_complete": false,
+  "search_state_trace": [
+    "CONTRACT_INCOMPLETE_NOT_SEARCHABLE",
+    "CONTRACT_INCOMPLETE_NOT_SEARCHABLE",
+    "CONTRACT_INCOMPLETE_NOT_SEARCHABLE"
+  ],
+  "search_eligible": false,
+  "raw_requirement_present": false,
+  "production_mapped": false,
+  "capability_mapped": false,
+  "physical_evidence_available": false,
+  "search_attempted": true,
+  "grounding_complete": false,
+  "astar_attempted": false,
+  "plan_valid": false,
+  "first_cause_category": "GRAPH_COMPILATION_FAILURE",
+  "failure_stage": "CANONICALIZER"
+}

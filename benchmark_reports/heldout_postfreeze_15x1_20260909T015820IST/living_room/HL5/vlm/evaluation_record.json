@@ -1,0 +1,381 @@
+{
+  "timestamp_utc": "2026-09-08T20:34:54.435907+00:00",
+  "domain": "living_room",
+  "variant": "HL5",
+  "mode": "vlm",
+  "gt_feasible": false,
+  "requires_observation_recovery": false,
+  "semantic_vlm_requests": 1,
+  "high_level_replans": 0,
+  "pipeline_runtime_sec": 28.54,
+  "terminal_status": "INFEASIBLE",
+  "failure_reason": "('PERSONAL_CUP_SAUCER_REGION',)",
+  "failure_category": null,
+  "canonicalization_succeeded": true,
+  "required_contract_complete": false,
+  "complete_candidate_grounding": false,
+  "candidate_plan_found": false,
+  "candidate_plan_length": 0,
+  "candidate_plan_status": "EMPTY",
+  "regions_inspected": [],
+  "full_task_satisfied": false,
+  "outcome_correct": false,
+  "false_completion": false,
+  "candidate_goal_coverage": 0.0,
+  "candidate_goal_count": 0,
+  "candidate_goal_satisfied_count": 0,
+  "full_task_goal_count": 3,
+  "full_task_goal_satisfied_count": 0,
+  "full_task_goal_coverage": 0.0,
+  "candidate_plan_valid": false,
+  "astar_invocations": 0,
+  "regions_available": [],
+  "search_exhausted": false,
+  "git_commit": "746ad19b27def0059a1aafb0bedd2db2d057b482",
+  "git_dirty": false,
+  "model": "qwen35-9b",
+  "prompt_hash": "3496b1413fd13098b59a9b34f5546905c239822b04cf42d2f5b3b37a41de9b5e",
+  "spec_acquisition": "live_provider",
+  "specification_input": null,
+  "execution_state": "planning_only",
+  "inspection_order_source": "SYSTEM_FALLBACK",
+  "raw_role_precision": 0.5,
+  "raw_role_recall": 0.3333333333333333,
+  "raw_role_f1": 0.4,
+  "raw_relation_precision": 0.0,
+  "raw_relation_recall": 0.0,
+  "raw_relation_f1": 0.0,
+  "raw_operation_precision": 0.0,
+  "raw_operation_recall": 0.0,
+  "raw_operation_f1": 0.0,
+  "raw_group_precision": 0.0,
+  "raw_group_recall": 0.0,
+  "raw_group_f1": 0.0,
+  "task_instruction": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+  "inference_config": {
+    "chat_template_kwargs": {
+      "enable_thinking": false
+    },
+    "max_tokens": 8192,
+    "min_p": 0.0,
+    "model": "qwen35-9b",
+    "presence_penalty": 0.0,
+    "repetition_penalty": 1.0,
+    "response_format": {
+      "json_schema": {
+        "name": "functional_specification",
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "additionalProperties": false,
+          "properties": {
+            "observation_guidance": {
+              "additionalProperties": false,
+              "properties": {
+                "inspectable_regions": {
+                  "items": {
+                    "additionalProperties": true,
+                    "properties": {
+                      "description": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "visual_description": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "maxItems": 16,
+                  "type": "array"
+                },
+                "inspection_order": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "visible_candidates_per_role": {
+                  "additionalProperties": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "visual_description": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "visual_description"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "visible_candidates_per_role",
+                "inspectable_regions",
+                "inspection_order"
+              ],
+              "type": "object"
+            },
+            "status": {
+              "enum": [
+                "SUPPORTED",
+                "UNSUPPORTED"
+              ],
+              "type": "string"
+            },
+            "task_contract": {
+              "additionalProperties": false,
+              "properties": {
+                "functional_relations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "object_role": {
+                        "type": "string"
+                      },
+                      "relation": {
+                        "type": "string"
+                      },
+                      "required": {
+                        "type": "boolean"
+                      },
+                      "subject_role": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "subject_role",
+                      "relation",
+                      "object_role"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 32,
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "functional_roles": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "binding_policy": {
+                        "enum": [
+                          "DISTINCT",
+                          "REUSABLE",
+                          "SHARED"
+                        ],
+                        "type": "string"
+                      },
+                      "candidate_categories": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "maxItems": 16,
+                        "minItems": 0,
+                        "type": "array"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "entity_kind": {
+                        "enum": [
+                          "OBJECT",
+                          "REGION",
+                          "FIXED_TARGET"
+                        ],
+                        "type": "string"
+                      },
+                      "function": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "required_count": {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "required_properties": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "maxItems": 16,
+                        "minItems": 0,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "entity_kind",
+                      "function",
+                      "required_count",
+                      "binding_policy"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 16,
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "operation_pairings": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "anchor_role": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "operation": {
+                        "type": "string"
+                      },
+                      "operation_count": {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "reuse_policy": {
+                        "enum": [
+                          "DEDICATED_PER_TARGET",
+                          "REUSABLE_ACROSS_TARGETS"
+                        ],
+                        "type": "string"
+                      },
+                      "source_role": {
+                        "type": "string"
+                      },
+                      "target_role": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "operation",
+                      "target_role"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 16,
+                  "minItems": 0,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "functional_roles",
+                "functional_relations",
+                "operation_pairings"
+              ],
+              "type": "object"
+            },
+            "task_summary": {
+              "type": "string"
+            },
+            "unsupported_reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "task_summary",
+            "task_contract",
+            "observation_guidance",
+            "unsupported_reason"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
+      "type": "json_schema"
+    },
+    "stream": false,
+    "temperature": 0.0,
+    "top_k": 20,
+    "top_p": 1.0
+  },
+  "transport_retries": 0,
+  "vlm_json_valid": true,
+  "sanitization_succeeded": true,
+  "sanitizer_repairs": [],
+  "canonicalization_status": "PARTIAL",
+  "soft_semantic_evidence": [],
+  "context_only_roles": [],
+  "unresolved_roles": [],
+  "dropped_relations": [],
+  "merged_roles": [],
+  "disambiguated_roles": [],
+  "grounded_roles": {},
+  "ungrounded_expressed_roles": [
+    "PERSONAL_CUP_SAUCER_REGION"
+  ],
+  "candidate_requirement_statuses": [
+    {
+      "id": "personal_support_group",
+      "status": "UNINSTANTIABLE_UNGROUNDED_ROLE",
+      "roles": [
+        "PERSONAL_CUP_SAUCER_REGION",
+        "CUP_SAUCER_SET"
+      ],
+      "missing_roles": []
+    },
+    {
+      "id": "shared_entertainment_group",
+      "status": "UNINSTANTIABLE_UNGROUNDED_ROLE",
+      "roles": [
+        "SHARED_REMOTE_REGION",
+        "REMOTE"
+      ],
+      "missing_roles": []
+    }
+  ],
+  "candidate_grounding_succeeded": false,
+  "grounded_expressed_role_coverage": 0.0,
+  "candidate_plan_eligible": false,
+  "nonempty_candidate_plan_generated": false,
+  "raw_vlm_spec_complete": false,
+  "offline_reference_task_complete": false,
+  "fm_count_correct": false,
+  "fm_binding_correct": false,
+  "full_task_semantic_goal_count": 3,
+  "full_task_semantic_goal_satisfied_count": 0,
+  "canonical_role_coverage": 0.3333333333333333,
+  "raw_semantic_matching_method": "frozen_evaluation_only_semantic_matcher_v2",
+  "online_executable_contract_complete": false,
+  "executable_contract_complete": false,
+  "runtime_contract_complete": false,
+  "required_compiler_interpretation": false,
+  "candidate_grounding_eligible": false,
+  "search_recovery_succeeded": false,
+  "initial_grounding_complete": false,
+  "search_state_trace": [],
+  "search_eligible": false,
+  "raw_requirement_present": false,
+  "production_mapped": false,
+  "capability_mapped": false,
+  "physical_evidence_available": false,
+  "search_attempted": false,
+  "grounding_complete": false,
+  "astar_attempted": false,
+  "plan_valid": false,
+  "first_cause_category": null,
+  "failure_stage": null
+}

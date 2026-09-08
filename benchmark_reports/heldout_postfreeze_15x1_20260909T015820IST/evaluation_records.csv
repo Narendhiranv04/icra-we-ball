@@ -1,0 +1,16 @@
+domain,variant,mode,gt_feasible,requires_observation_recovery,terminal_status,first_cause_category,failure_category,failure_reason,semantic_vlm_requests,high_level_replans,pipeline_runtime_sec,canonicalization_succeeded,required_contract_complete,complete_candidate_grounding,candidate_plan_length,candidate_plan_valid,full_task_satisfied,outcome_correct,false_completion,candidate_goal_coverage,full_task_goal_coverage
+kitchen,HK1,vlm,True,True,NO_MEANINGFUL_CANDIDATE_PLAN,GRAPH_COMPILATION_FAILURE,CANONICALIZATION_AMBIGUITY,"('coffee_container', 'coffee_source', 'soup_container')",1,0,53.06,True,False,False,0,False,False,False,False,0.0,0.0
+kitchen,HK2,vlm,True,True,NO_MEANINGFUL_CANDIDATE_PLAN,GRAPH_COMPILATION_FAILURE,CANONICALIZATION_AMBIGUITY,"('coffee_container', 'water_source')",1,0,40.12,True,False,False,0,False,False,False,False,0.0,0.0
+kitchen,HK3,vlm,True,True,NO_MEANINGFUL_CANDIDATE_PLAN,GRAPH_COMPILATION_FAILURE,CANONICALIZATION_AMBIGUITY,"('coffee_container', 'water_source', 'soup_container')",1,0,49.61,True,False,False,0,False,False,False,False,0.0,0.0
+kitchen,HK4,vlm,False,False,NO_MEANINGFUL_CANDIDATE_PLAN,,,NO_COMPLETE_FUNCTIONAL_WITNESS,1,0,40.59,True,False,False,0,False,False,False,False,0.0,0.0
+kitchen,HK5,vlm,False,False,NO_MEANINGFUL_CANDIDATE_PLAN,,,"('coffee_container',)",1,0,56.59,True,False,False,0,False,False,False,False,0.0,0.0
+living_room,HL1,vlm,True,False,NO_MEANINGFUL_CANDIDATE_PLAN,GRAPH_COMPILATION_FAILURE,CANONICALIZATION_AMBIGUITY,UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement,1,0,29.4,True,False,True,0,False,False,False,False,0.0,0.0
+living_room,HL2,vlm,True,False,NO_MEANINGFUL_CANDIDATE_PLAN,GRAPH_COMPILATION_FAILURE,CANONICALIZATION_AMBIGUITY,UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement,1,0,27.78,True,False,True,0,False,False,False,False,0.0,0.0
+living_room,HL3,vlm,True,False,NO_MEANINGFUL_CANDIDATE_PLAN,GRAPH_COMPILATION_FAILURE,CANONICALIZATION_AMBIGUITY,UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement,1,0,40.1,True,False,True,0,False,False,False,False,0.0,0.0
+living_room,HL4,vlm,False,False,NO_MEANINGFUL_CANDIDATE_PLAN,,,UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement,1,0,24.14,True,False,True,0,False,False,False,False,0.0,0.0
+living_room,HL5,vlm,False,False,INFEASIBLE,,,"('PERSONAL_CUP_SAUCER_REGION',)",1,0,28.54,True,False,False,0,False,False,False,False,0.0,0.0
+workshop,HW1,vlm,True,True,INCOMPLETE,GRAPH_COMPILATION_FAILURE,CANONICALIZATION_AMBIGUITY,"fastener, fastener",1,0,24.36,True,False,False,0,False,False,False,False,0.0,0.0
+workshop,HW2,vlm,True,True,INCOMPLETE,GRAPH_COMPILATION_FAILURE,CANONICALIZATION_UNRESOLVED_REQUIRED_SEMANTIC,"fastener, driver, fastener, driver",1,0,28.19,True,False,False,0,False,False,False,False,0.0,0.0
+workshop,HW3,vlm,True,True,INCOMPLETE,GRAPH_COMPILATION_FAILURE,CANONICALIZATION_AMBIGUITY,"fastener, fastener",1,0,27.16,True,False,False,0,False,False,False,False,0.0,0.0
+workshop,HW4,vlm,False,False,INCOMPLETE,,,"fastener, driver, fastener, driver",1,0,26.14,True,False,False,0,False,False,False,False,0.0,0.0
+workshop,HW5,vlm,False,False,INCOMPLETE,,,"driver, fastener, driver, fastener",1,0,29.75,True,False,False,0,False,False,False,False,0.0,0.0
