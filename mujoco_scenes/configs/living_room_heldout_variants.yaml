@@ -4,6 +4,9 @@ postfreeze_provenance:
   generated_utc: "2026-09-08T16:05:22Z"
   seed_hex: 8a9f540f
   construction: "Deterministic left/right and staging/support permutation; all pre-freeze held-out layouts excluded."
+  correction_utc: "2026-09-08T16:13:06Z"
+  supersedes_dataset_commit: af7bc34d
+  correction: "HL2 used an unsupported remote placement and was replaced before a complete held-out matrix existed."
 task: >-
   Place one cup and one saucer on each of two fixed personal side tables and
   place the TV remote on the fixed shared coffee table.
@@ -34,9 +37,10 @@ variants:
 
   HL2_RIGHT_PAIR_ON_SHARED:
     intended_outcome: FEASIBLE
-    description: "Post-freeze layout 2: The remote begins on the shared table while all refreshment objects remain staged."
+    description: "Post-freeze layout 2: Right cup is correctly preplaced while the left saucer begins on the shared table."
     object_locations:
-      a2_remote_payload: SHARED_TABLE
+      a2_drink_right: PERSONAL_TABLE_RIGHT
+      a2_snack_left: SHARED_TABLE
     absent_regions: []
 
   HL3_SAUCER_PREPLACED_CUP_ON_SHARED:
@@ -49,14 +53,14 @@ variants:
 
   HL4_NO_RIGHT_PERSONAL_TABLE:
     intended_outcome: INFEASIBLE
-    description: "Post-freeze infeasible 1: The left personal table is absent from the scene."
+    description: "Post-freeze infeasible 1: The left personal table and shared table are both absent."
     object_locations: {}
-    absent_regions: [PERSONAL_TABLE_LEFT]
-    rejection_reason: MISSING_LEFT_PERSONAL_TABLE
+    absent_regions: [PERSONAL_TABLE_LEFT, SHARED_TABLE]
+    rejection_reason: MISSING_LEFT_AND_SHARED_TABLES
 
   HL5_NO_SHARED_TABLE:
     intended_outcome: INFEASIBLE
-    description: "Post-freeze infeasible 2: Both required personal tables are absent from the scene."
+    description: "Post-freeze infeasible 2: The right personal table and shared table are both absent."
     object_locations: {}
-    absent_regions: [PERSONAL_TABLE_LEFT, PERSONAL_TABLE_RIGHT]
-    rejection_reason: MISSING_PERSONAL_TABLES
+    absent_regions: [PERSONAL_TABLE_RIGHT, SHARED_TABLE]
+    rejection_reason: MISSING_RIGHT_AND_SHARED_TABLES
