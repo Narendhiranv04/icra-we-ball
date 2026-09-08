@@ -1,0 +1,25 @@
+{
+  "audit_timestamp_utc": "2026-09-08T20:39:01.926731+00:00",
+  "git_commit": "1930b9ce6cb0873e67200465d78149bca53c4f8c",
+  "git_dirty": false,
+  "model": "qwen35-9b",
+  "endpoint": "http://127.0.0.1:18000/v1",
+  "development_matrix_invariants": {
+    "status": "VALID",
+    "errors": []
+  },
+  "heldout_matrix_invariants": {
+    "status": "VALID",
+    "errors": [],
+    "variant_count": 15,
+    "feasible_count": 9,
+    "vlm_requests_per_variant": 1.0,
+    "replans_per_variant": 0.0
+  },
+  "prompt_leakage_audit": {
+    "zero_leakage_verified": true,
+    "forbidden_checkers_found": [],
+    "forbidden_regions_found": [],
+    "forbidden_oracles_found": []
+  }
+}
