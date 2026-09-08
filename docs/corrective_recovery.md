@@ -488,3 +488,45 @@ Directly recomputed from `benchmark_reports/final_corrected_32x1_20260908T192500
 
 **Gate 8 Status: PASSED.**
 
+---
+
+## 11. Stage 9 — Real-Trace Regression Suite
+
+### 11.1 Real-Trace Regression Corpus Construction (Section 16)
+
+1. **Captured Real-Trace Corpus (`tests/fixtures/real_qwen_traces/`):**
+   - **Kitchen (`kitchen_real_trace.json`):**
+     - Clear role phrasing: `coffee_cup` (beverage container), `coffee` (source), `water_source` (source), `stirring_utensil` (stirrer), `soup_bowl` (soup container), `eating_utensil` (soup utensil).
+     - Operations & relations: `TRANSFER_CONTENT_TO_CONTAINER` (coffee and water transfers), `MIX_BEVERAGE_CONTENTS` (stirring), `PROVIDE_SOUP_EATING_UTENSIL` (utensil-to-bowl association).
+     - Strict distinction: source containers vs destination receptacles; physical verifiers vs task/causal relations.
+   - **Living Room (`living_room_real_trace.json`):**
+     - Clear role phrasing: `refreshment_setting` (personal support), `refreshment_setting_components` (drinkware set payload), `entertainment_control` (remote control), `accessible_location` (shared support).
+     - Operations & relations: `SUPPORT_DRINKWARE` (personal placement), `SUPPORT_ENTERTAINMENT_CONTROL` (shared placement), `NEAR_SEAT` (seating proximity).
+   - **Workshop (`workshop_real_trace.json`):**
+     - Clear role phrasing: `fastening_tool` (reusable driver), `fastening_component` (installed fastener), `fastening_target` (marked joint target), `workbench_surface` (support context).
+     - Operations & relations: `FASTEN_JOINT` mapping to `COMPATIBLE_WITH`, `REACHES_TARGET`, `COMPATIBLE_WITH_TARGET` capability preconditions; `RETURN_REUSABLE_ITEM_TO_SUPPORT` absorbed into planner context (`MAIN_WORKBENCH_ZONE`).
+
+2. **Negative Control Fixtures:**
+   - **`negative_vague_thing.json`:** Vague role functions and generic categories fail closed (`VLMSpecificationError("No executable role could be typed")` or unexecutable contract).
+   - **`negative_wrong_endpoint_semantics.json`:** Invalid predicate signatures or swapped endpoints fail closed (`online_executable_contract_complete is False`).
+   - **`negative_unsupported_operation.json`:** Unsupported actions (`"teleport components to mars instantly"`) are marked `UNSUPPORTED_OPERATOR` in canonicalization trace.
+   - **`negative_empty_operation.json`:** Empty operation strings are disabled under `UNSUPPORTED_OPERATOR`.
+   - **`negative_self_pairing.json`:** Self-pairing operations (driver acting on driver) fail closed.
+   - **`negative_ambiguous_role.json`:** Competing unresolvable duplicate roles fail closed.
+
+3. **Evaluator Lexical Expansion:**
+   - In `raw_semantic_evaluation.py`, expanded `PROVIDE_SOUP_EATING_UTENSIL` to recognize natural eating utensil associations (`r"associate.*utensil"`, `r"eating utensil"`).
+
+### 11.2 Gate 9 Verification
+
+- **New Test Suite:** `mujoco_scenes/functional_tamp_pipeline/tests/test_stage9_real_trace_regression.py` (9 tests passed in 0.19s).
+  - Domain real-trace fixtures green for Kitchen, Living Room, and Workshop.
+  - All 6 negative control fixtures green and fail-closed verified.
+  - Zero GT or provider access during compilation and evaluation.
+  - Zero variant ID logic or leakage.
+- **Full Regression Suite:**
+  - Stages 1 through 9: 67 passed in 0.59s (0 failures, 0 errors).
+- **Commit:** `37bb19df` (`test(vlm): add real-output semantic regression corpus`).
+
+**Gate 9 Status: PASSED.**
+
