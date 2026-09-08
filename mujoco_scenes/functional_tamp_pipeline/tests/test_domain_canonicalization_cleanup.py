@@ -16,6 +16,7 @@ import re
 import pytest
 
 from mujoco_scenes.functional_tamp_pipeline.semantic_compiler import compile_candidate_graph
+from mujoco_scenes.functional_tamp_pipeline.raw_semantic_evaluation import evaluate_raw_semantics
 from mujoco_scenes.functional_tamp_pipeline.run import _RunState, _write_run_manifest
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -156,7 +157,8 @@ def test_missing_fm_roles_remain_missing():
     }
     g_k = compile_candidate_graph("kitchen", "task", raw_kitchen_no_spoon)
     assert "soup_eating_utensil" not in g_k.nodes
-    assert g_k.required_contract_complete is False
+    raw_eval_k = evaluate_raw_semantics("kitchen", "task", raw_kitchen_no_spoon)
+    assert raw_eval_k["complete_task_contract"] is False
 
     # 2. Living room missing remote control
     raw_living_no_remote = {
@@ -179,7 +181,8 @@ def test_missing_fm_roles_remain_missing():
     g_l = compile_candidate_graph("living_room", "task", raw_living_no_remote)
     assert "REMOTE" not in g_l.nodes
     assert "ENTERTAINMENT_CONTROL" not in g_l.nodes
-    assert g_l.required_contract_complete is False
+    raw_eval_l = evaluate_raw_semantics("living_room", "task", raw_living_no_remote)
+    assert raw_eval_l["complete_task_contract"] is False
 
     # 3. Workshop missing fastener
     raw_workshop_no_fastener = {
@@ -199,7 +202,8 @@ def test_missing_fm_roles_remain_missing():
     }
     g_w = compile_candidate_graph("workshop", "task", raw_workshop_no_fastener)
     assert "fastener" not in g_w.nodes
-    assert g_w.required_contract_complete is False
+    raw_eval_w = evaluate_raw_semantics("workshop", "task", raw_workshop_no_fastener)
+    assert raw_eval_w["complete_task_contract"] is False
 
 
 def test_workshop_target_anchor_provenance_is_not_variant_answer_data(tmp_path):

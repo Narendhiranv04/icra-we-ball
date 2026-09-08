@@ -48,6 +48,9 @@ class FunctionalRelation:
     predicate: str
     object_role: str
     expected: bool = True
+    provenance: str = "EXPLICIT_REQUIREMENT"
+    source_operation_id: str | None = None
+    capability_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -59,6 +62,9 @@ class FunctionalRelation:
             predicate=str(data["predicate"]),
             object_role=str(data["object_role"]),
             expected=bool(data.get("expected", True)),
+            provenance=str(data.get("provenance", "EXPLICIT_REQUIREMENT")),
+            source_operation_id=str(data["source_operation_id"]) if data.get("source_operation_id") else None,
+            capability_id=str(data["capability_id"]) if data.get("capability_id") else None,
         )
 
 
@@ -180,6 +186,7 @@ class OperationGroup:
     same_tool_must_cover_all_targets: bool = False
     selection_preference: str | None = None
     capability_id: str | None = None
+    preconditions_provenance: tuple[dict[str, Any], ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -200,6 +207,7 @@ class OperationGroup:
             same_tool_must_cover_all_targets=bool(data.get("same_tool_must_cover_all_targets", False)),
             selection_preference=str(data["selection_preference"]) if data.get("selection_preference") else None,
             capability_id=str(data["capability_id"]) if data.get("capability_id") else None,
+            preconditions_provenance=tuple(data.get("preconditions_provenance", ())),
         )
 
 

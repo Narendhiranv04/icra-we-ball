@@ -155,9 +155,12 @@ def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
                 f"Operation group {grp.id!r} has invalid usage_policy {grp.usage_policy!r}"
             )
         if not grp.required_relations:
-            raise MalformedVLMSpecificationError(
-                f"Operation group {grp.id!r} has empty required_relations"
-            )
+            from .robot_capability_registry import get_robot_capabilities
+            caps = {c.capability_id: c for c in get_robot_capabilities(domain_norm)}
+            if not (grp.capability_id and grp.capability_id in caps and not caps[grp.capability_id].required_relation_templates):
+                raise MalformedVLMSpecificationError(
+                    f"Operation group {grp.id!r} has empty required_relations"
+                )
         cleaned_req_rels = []
         for r in grp.required_relations:
             if not isinstance(r, str) or not r.strip():

@@ -13,8 +13,8 @@
 | Stage | Status | Commit | Files changed | Tests | Raw replays | Live calls | Result | Remaining |
 |---|---|---|---|---|---|---:|---|---|
 | 0: Forensic Baseline & Safety Snapshot | PASSED | `62294f5a` | `docs/corrective_recovery.md`, `scripts/forensics_baseline.py`, `scripts/generate_stage0_forensic_table.py` | 32-record baseline metric recompute | K1, K2, K3, L1, L6, W1, W2, W8 | 0 | Gate 0 passed: immutable forensic baseline verified; exact causal failure points established for all 8 representative cases. | Complete |
-| 1: Separate Online Executability from Offline Completeness | PASSED | *pending* | `semantic_compiler.py`, `models.py`, `search.py`, `evaluation_metrics.py`, `test_v2_compiler_and_completeness.py`, `test_stage1_contract_separation.py` | 25 passed (`test_stage1_contract_separation.py`, `test_v2_compiler_and_completeness.py`, `test_raw_replay_and_evaluator_metrics.py`) | Synthetic & fixture separation verification | 0 | Gate 1 passed: removed domain checklists; online contract validates generic executability; offline checks reference completeness; first-cause attribution assigns GRAPH_COMPILATION_FAILURE to mapper failures. | Proceeding to Stage 2 |
-| 2: Complete Explicit Operation -> Capability Bridge | NOT STARTED | | | | | 0 | | |
+| 1: Separate Online Executability from Offline Completeness | PASSED | `92a7df0c` | `semantic_compiler.py`, `models.py`, `search.py`, `evaluation_metrics.py`, `test_v2_compiler_and_completeness.py`, `test_stage1_contract_separation.py` | 25 passed (`test_stage1_contract_separation.py`, `test_v2_compiler_and_completeness.py`, `test_raw_replay_and_evaluator_metrics.py`) | Synthetic & fixture separation verification | 0 | Gate 1 passed: removed domain checklists; online contract validates generic executability; offline checks reference completeness; first-cause attribution assigns GRAPH_COMPILATION_FAILURE to mapper failures. | Complete |
+| 2: Complete Explicit Operation -> Capability Bridge | PASSED | *pending* | `models.py`, `robot_capability_registry.py`, `semantic_compiler.py`, `task_interface_validator.py`, `test_domain_canonicalization_cleanup.py`, `test_stage2_capability_bridge.py` | 43 passed across Stage 1 & 2 suites (5 in `test_stage2_capability_bridge.py`, 9 in `test_robot_capabilities_and_operations.py`, 11 in `test_v2_compiler_and_completeness.py`) | V1/V2 contract compilation & planner action realization verification | 0 | Gate 2 passed: explicit FM operations map to generic robot capabilities; physical feasibility preconditions (including workshop singletons in V1 and V2) instantiated with provenance; roles alone never synthesize operations. | Proceeding to Stage 3 |
 | 3: Robust Role Canonicalization (Qwen Paraphrases) | NOT STARTED | | | | | 0 | | |
 | 4: Refactor Relations (Task Semantics vs Physical Verifiers) | NOT STARTED | | | | | 0 | | |
 | 5: Fix Search Eligibility and Causal Recovery | NOT STARTED | | | | | 0 | | |
@@ -112,3 +112,43 @@ Directly recomputed from `benchmark_reports/final_corrected_32x1_20260908T192500
   - True FM omissions -> `TASK_SPECIFICATION_FAILURE`.
 
 **Gate 1 Status: PASSED.**
+
+---
+
+## 4. Stage 2 — Complete Explicit Operation -> Robot Capability Bridge
+
+### 4.1 Architectural Changes Implemented
+
+1. **Material Transfer Capability Registered:** Added `TRANSFER_CONTENT_TO_CONTAINER` in `CANONICAL_ROBOT_CAPABILITIES["kitchen"]`:
+   - Allowed sources: `coffee_source`, `water_source`, `source`, `ingredient`.
+   - Allowed targets: `coffee_container`, `prepared_cup_target`, `beverage_cup`, `cup`, `target_container`.
+   - Planner operation: `POUR`.
+   - Broad semantic cues: `pour`, `pouring`, `transfer`, `transferring`, `dispense`, `fill`, `fill cup`, `transfer content to container`, `transfer material into container`, etc.
+2. **Equipment Return Capability Registered:** Added `RETURN_REUSABLE_ITEM_TO_SUPPORT` in `CANONICAL_ROBOT_CAPABILITIES["workshop"]`:
+   - Allowed sources: `driver`, `tool`, `fastening_tool`.
+   - Allowed targets: `MAIN_WORKBENCH_ZONE`, `workbench_surface`, `workbench`.
+   - Planner operation: `PLACE`.
+   - Semantic cues: `return`, `returning`, `return driver`, `return tool`, `return reusable equipment to workbench`, etc.
+3. **Workshop V2 Singleton Bug Fixed:**
+   - Excised `if not is_v2` restriction on defaulting context role: in Workshop, if `repair_target` is in nodes and context is unspecified, context defaults to `repair_target` in both V1 and V2.
+   - Excised `if not is_v2` guard around physical precondition instantiation in `semantic_compiler.py`: for singleton interactions (`count == 1`), `op_interp.physical_preconditions` (`COMPATIBLE_WITH`, `REACHES_TARGET`, `COMPATIBLE_WITH_TARGET`) are instantiated in both V1 and V2 without requiring the FM to name checker predicates.
+4. **Physical-Precondition Provenance Recorded:**
+   - Extended `FunctionalRelation` with `provenance: str = "EXPLICIT_REQUIREMENT"`, `source_operation_id: str | None = None`, `capability_id: str | None = None`.
+   - Capability-instantiated preconditions set `provenance="ROBOT_CAPABILITY_PRECONDITION"`, `source_operation_id=...`, `capability_id=...`.
+   - Provenance records collected and recorded in `OperationGroup.preconditions_provenance`, `trace['precondition_provenance']`, and `graph.metadata['precondition_provenance']`.
+5. **No Operation from Endpoints Preserved:**
+   - Verified that endpoints alone (`coffee_stirrer + coffee_container`, `driver + fastener`) never synthesize operations or physical preconditions if the FM omitted operations.
+6. **Task Interface Validator Updated:**
+   - Permitted empty `required_relations` on `OperationGroup` only when the mapped capability legitimately defines 0 relation templates (such as `TRANSFER_CONTENT_TO_CONTAINER` or `RETURN_REUSABLE_ITEM_TO_SUPPORT`), while maintaining strict non-empty validation on all other groups.
+
+### 4.2 Gate 2 Verification
+
+- **Test Suite:** `mujoco_scenes/functional_tamp_pipeline/tests/test_stage2_capability_bridge.py` (5 tests), plus regression on existing suites (43 total tests passed in 0.33s).
+- **Proved Properties:**
+  - Explicit FM `"stir contents"` -> `STIR_COFFEE` capability -> `INSERTABLE_IN + REACHES_BOTTOM` instantiated with provenance `ROBOT_CAPABILITY_PRECONDITION`.
+  - Explicit FM `"install/fasten component at target"` -> `FASTEN_JOINT` capability -> `COMPATIBLE_WITH`, `REACHES_TARGET`, `COMPATIBLE_WITH_TARGET` instantiated in both V1 and V2 without requiring FM to separately name checker predicates.
+  - Explicit FM `"transfer material into container"` -> `TRANSFER_CONTENT_TO_CONTAINER` capability -> planner generates `POUR` realization action.
+  - Roles only without explicit operation -> zero task operations synthesized, zero capability relations synthesized.
+  - Workshop equipment return -> `RETURN_REUSABLE_ITEM_TO_SUPPORT` -> `PLACE` operator.
+
+**Gate 2 Status: PASSED.**

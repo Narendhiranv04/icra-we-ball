@@ -419,7 +419,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 tool_raw, target_raw = target_raw, tool_raw
 
         is_v2 = is_v2_document(raw)
-        if not is_v2 and not ctx_role_id:
+        if not ctx_role_id:
             if domain == 'workshop' and 'repair_target' in nodes:
                 ctx_role_id = 'repair_target'
 
@@ -476,22 +476,40 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 add_relation(tool_raw, phrase, target_raw)
             for phrase in group.get('context_relations', []):
                 add_relation(tool_raw, phrase, ctx_raw)
-            if not is_v2:
-                for s_r, p, o_r in op_interp.physical_preconditions:
-                    fixed_anchors = set(get_domain_system_fixed_anchors(domain))
-                    if s_r not in nodes and s_r in fixed_anchors:
-                        nodes[s_r] = FunctionalRole(name=s_r, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
-                                                  semantic_categories=ontology.get_system_role_semantic_categories(domain, s_r),
-                                                  verification_mode='GEOMETRIC_ONLY')
-                    if o_r not in nodes and o_r in fixed_anchors:
-                        nodes[o_r] = FunctionalRole(name=o_r, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
-                                                  semantic_categories=ontology.get_system_role_semantic_categories(domain, o_r),
-                                                  verification_mode='GEOMETRIC_ONLY')
-                    validate_predicate_signature(domain=domain, predicate=p, subject_kind=nodes[s_r].entity_kind,
-                        subject_role=s_r, object_kind=nodes[o_r].entity_kind, object_role=o_r)
-                    rel = FunctionalRelation(s_r, p, o_r, expected=True)
-                    if rel not in relations:
-                        relations.append(rel)
+            preconditions_provenance = []
+            for s_r, p, o_r in op_interp.physical_preconditions:
+                fixed_anchors = set(get_domain_system_fixed_anchors(domain))
+                if s_r not in nodes and s_r in fixed_anchors:
+                    nodes[s_r] = FunctionalRole(name=s_r, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
+                                              semantic_categories=ontology.get_system_role_semantic_categories(domain, s_r),
+                                              verification_mode='GEOMETRIC_ONLY')
+                if o_r not in nodes and o_r in fixed_anchors:
+                    nodes[o_r] = FunctionalRole(name=o_r, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
+                                              semantic_categories=ontology.get_system_role_semantic_categories(domain, o_r),
+                                              verification_mode='GEOMETRIC_ONLY')
+                validate_predicate_signature(domain=domain, predicate=p, subject_kind=nodes[s_r].entity_kind,
+                    subject_role=s_r, object_kind=nodes[o_r].entity_kind, object_role=o_r)
+                source_op_id = group.get('id', op_interp.planner_operation or "FASTEN_JOINT")
+                cap_id = op_interp.capability.capability_id if op_interp.capability else None
+                rel = FunctionalRelation(
+                    subject_role=s_r,
+                    predicate=p,
+                    object_role=o_r,
+                    expected=True,
+                    provenance="ROBOT_CAPABILITY_PRECONDITION",
+                    source_operation_id=source_op_id,
+                    capability_id=cap_id,
+                )
+                if not any(r.subject_role == s_r and r.predicate == p and r.object_role == o_r for r in relations):
+                    relations.append(rel)
+                preconditions_provenance.append({
+                    "predicate": p,
+                    "subject_role": s_r,
+                    "object_role": o_r,
+                    "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+                    "source_operation_id": source_op_id,
+                    "capability_id": cap_id,
+                })
             trace['groups'].append({
                 'raw_group': group,
                 'status': 'STATIC_ALREADY_SATISFIED',
@@ -499,6 +517,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 'capability_id': op_interp.capability.capability_id if op_interp.capability else None,
                 'planner_operation': op_interp.planner_operation,
                 'physical_preconditions': [list(t) for t in op_interp.physical_preconditions],
+                'preconditions_provenance': preconditions_provenance,
             })
             continue
 
@@ -509,6 +528,8 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             'SUPPORT_DRINKWARE': 'personal_support_group',
             'SUPPORT_ENTERTAINMENT_CONTROL': 'shared_entertainment_group',
             'DRIVE_FASTENER_INTO_TARGET': 'drive_fastener_group',
+            'POUR': 'material_transfer',
+            'PLACE': 'equipment_return',
         }.get(runtime_function, group.get('id', runtime_function))
         g_id = canonical_group_id if not any(g.id == canonical_group_id for g in groups) else group.get('id', canonical_group_id)
 
@@ -532,6 +553,17 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 min_count=t_node.min_count or 1,
                 preference=t_node.preference or 'minimize_distinct',
             )
+        group_op_id = group.get('id', runtime_function)
+        cap_id = op_interp.capability.capability_id if op_interp.capability else None
+        grp_precond_provenance = [
+            {
+                "predicate": p,
+                "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+                "source_operation_id": group_op_id,
+                "capability_id": cap_id,
+            }
+            for p in all_required + all_context
+        ]
         groups.append(OperationGroup(
             id=g_id,
             function=runtime_function,
@@ -545,16 +577,18 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             distinct_within_group=group.get('distinct_within_group', usage_policy == 'DEDICATED_PER_TARGET'),
             same_tool_must_cover_all_targets=group.get('same_tool_must_cover_all_targets', False),
             selection_preference=group.get('selection_preference', ('minimize_distinct_tools' if usage_policy == 'SEQUENTIAL_REUSE_ALLOWED' else 'deterministic_rank') if domain == 'kitchen' else None),
-            capability_id=op_interp.capability.capability_id if op_interp.capability else None,
+            capability_id=cap_id,
+            preconditions_provenance=tuple(grp_precond_provenance),
         ))
         trace['groups'].append({
             'raw_group': group,
             'status': 'CANONICAL_OPERATION_GROUP',
-            'capability_id': op_interp.capability.capability_id if op_interp.capability else None,
+            'capability_id': cap_id,
             'planner_operation': runtime_function,
             'required_relations': all_required,
             'context_relations': all_context,
             'interp_status': op_interp.status,
+            'preconditions_provenance': grp_precond_provenance,
         })
     if domain == 'living_room':
         # Group pairing governs these edges, not unconstrained all-to-all checks.
@@ -585,6 +619,11 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     contract_complete, contract_missing_reasons = check_required_contract_complete(
         domain, nodes, relations, groups, trace, sanitized, unresolved
     )
+    all_precond_prov = [
+        p for g_trace in trace['groups']
+        for p in g_trace.get('preconditions_provenance', [])
+    ]
+    trace['precondition_provenance'] = all_precond_prov
     graph = FunctionalRequirementGraph(domain=domain, task_instruction=task, nodes=nodes, relations=tuple(relations),
         operation_groups=tuple(groups), source='VLM_CANONICAL_G_F', candidate_regions=tuple(proposed), region_ranking=tuple(ranking),
         detector_vocabulary=tuple(dict.fromkeys([c for r in doc['functional_roles'] for c in r['candidate_categories']] + [c.replace('_', ' ') for n in nodes.values() if n.entity_kind == 'OBJECT' for c in n.semantic_categories])),
@@ -601,6 +640,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             'online_executable_contract_complete': contract_complete,
             'contract_missing_reasons': contract_missing_reasons,
             'is_v2_specification': is_v2_document(raw),
+            'precondition_provenance': all_precond_prov,
             'soft_semantic_evidence': soft, 'unresolved_semantics': unresolved, 'unverified_required_properties': unverified_required, 'raw_role_to_canonical': id_map})
     from pathlib import Path
     if domain == 'living_room':
