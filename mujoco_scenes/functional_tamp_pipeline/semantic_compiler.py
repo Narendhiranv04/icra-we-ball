@@ -9,7 +9,13 @@ from dataclasses import replace
 import re
 from typing import Any
 
-from .models import FunctionalRequirementGraph, FunctionalRole, FunctionalRelation, OperationGroup
+from .models import (
+    FunctionalRequirementGraph,
+    FunctionalRole,
+    FunctionalRelation,
+    OperationGroup,
+    TaskEffectRelation,
+)
 from .structural_sanitizer import sanitize_functional_graph
 from . import role_semantic_ontology as ontology
 from .predicate_registry import validate_predicate_signature
@@ -69,7 +75,13 @@ def can_merge_roles(a: dict, b: dict, document: dict) -> bool:
 def _map_role(domain: str, role: dict, doc: dict) -> tuple[str | None, str]:
     position = causal_position(role, doc)
     if domain == 'kitchen':
-        from mujoco_scenes.kitchen_vlm_functional_graph import map_kitchen_role_function
+        from mujoco_scenes.kitchen_vlm_functional_graph import (
+            map_kitchen_planner_context_role,
+            map_kitchen_role_function,
+        )
+        planner_context = map_kitchen_planner_context_role(role, doc)
+        if planner_context:
+            return planner_context, 'TASK_EXPRESSED_SYSTEM_CONTEXT'
         enriched = dict(role)
         if 'source' in position and 'destination' not in position:
             # Preserve material identity while preventing a receptacle's physical
@@ -212,6 +224,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     nodes = {}
     id_map = {}
     planner_context_id_map = {}
+    planner_context_provenance = {}
     owners = {}
     soft = []
     unresolved = []
@@ -232,10 +245,17 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         if name not in allowed:
             if name in planner_constants:
                 planner_context_id_map[rid] = name
+                context_provenance = (
+                    'TASK_EXPRESSED_SYSTEM_CONTEXT'
+                    if rule == 'TASK_EXPRESSED_SYSTEM_CONTEXT'
+                    else 'PLANNER_CONTEXT_CONSTANT'
+                )
+                planner_context_provenance[rid] = context_provenance
                 trace['context_only_roles'].append({
                     'raw_role': role,
                     'canonical_role': name,
-                    'status': 'PLANNER_CONTEXT_CONSTANT',
+                    'status': context_provenance,
+                    'rule': rule,
                 })
                 continue
             # Only non-manipulated anchors/support context can be context-only.
@@ -299,6 +319,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         raise VLMSpecificationError('No executable role could be typed', category='CANONICALIZATION_AMBIGUITY')
     relations = []
     task_causal_relations = []
+    task_effect_relations = []
 
     def add_relation(raw_subject: str, phrase: str, raw_target: str, *, grouped=False, expected=True) -> str | None:
         # Extract explicit role IDs if embedded in phrase (e.g. "role_3 manipulates role_2")
@@ -313,6 +334,17 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         evidence = {'raw_subject': raw_subject, 'raw_phrase': phrase, 'raw_object': raw_target}
         try:
             if raw_subject not in id_map or raw_target not in id_map:
+                context_endpoint = planner_context_id_map.get(raw_subject) or planner_context_id_map.get(raw_target)
+                non_context_endpoint = raw_target if raw_subject in planner_context_id_map else raw_subject
+                if context_endpoint and non_context_endpoint in id_map:
+                    context_raw = raw_subject if raw_subject in planner_context_id_map else raw_target
+                    evidence.update(
+                        status='ABSORBED_INTO_PLANNER_CONTEXT',
+                        planner_context=context_endpoint,
+                        provenance=planner_context_provenance[context_raw],
+                    )
+                    trace['relations'].append(evidence)
+                    return None
                 context_ids = {r['raw_role']['id'] for r in trace['context_only_roles']}
                 if (raw_subject in id_map or raw_subject in context_ids) and (raw_target in id_map or raw_target in context_ids):
                     evidence.update(status='SOFT_SEMANTIC_EVIDENCE', reason='Context-only support endpoint')
@@ -405,6 +437,44 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             return None
 
     for rel in doc['functional_relations']:
+        from .relation_interpreter import (
+            has_compatible_explicit_effect_operation,
+            interpret_task_effect_predicate,
+        )
+        raw_subject = rel['subject_role']
+        raw_object = rel['object_role']
+        raw_phrase = rel.get('relation', rel.get('predicate'))
+        effect_predicate = rel.get('effect_predicate') or interpret_task_effect_predicate(raw_phrase)
+        object_is_literal = rel.get('object_is_literal') is True
+        operation_matches, source_operation_id = has_compatible_explicit_effect_operation(
+            effect_predicate or '', raw_subject, raw_object, doc.get('interaction_groups', [])
+        )
+        if (
+            effect_predicate
+            and raw_subject in id_map
+            and ((raw_object in id_map and operation_matches) or object_is_literal)
+        ):
+            effect = TaskEffectRelation(
+                subject_role=id_map[raw_subject],
+                predicate=effect_predicate,
+                object_value=(raw_object if object_is_literal else id_map[raw_object]),
+                object_is_literal=object_is_literal,
+                source_operation_id=source_operation_id,
+                raw_subject=raw_subject,
+                raw_phrase=raw_phrase,
+                raw_object=raw_object,
+            )
+            task_effect_relations.append(effect)
+            trace['relations'].append({
+                'raw_subject': raw_subject,
+                'raw_phrase': raw_phrase,
+                'raw_object': raw_object,
+                'status': 'TASK_EFFECT_SEMANTICS',
+                'category': 'TASK_EFFECT_SEMANTICS',
+                'canonical': effect.to_dict(),
+                'provenance': 'FM_EXPLICIT_SEMANTIC',
+            })
+            continue
         add_relation(rel['subject_role'], rel.get('relation', rel.get('predicate')), rel['object_role'], expected=rel.get('expected', True))
     from .robot_capability_registry import interpret_operation
     raw_groups = doc.get('interaction_groups') or doc.get('operations') or []
@@ -426,10 +496,12 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             and non_context_endpoint in id_map
             and re.search(r'\b(place|return|leave|restore|set down|put)\b', raw_op.lower())
         ):
+            context_raw = tool_raw if tool_raw in planner_context_id_map else target_raw
             trace['groups'].append({
                 'raw_group': group,
                 'status': 'ABSORBED_INTO_PLANNER_CONTEXT',
                 'planner_context': context_endpoint,
+                'provenance': planner_context_provenance[context_raw],
             })
             continue
 
@@ -655,6 +727,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     trace['precondition_provenance'] = all_precond_prov
     graph = FunctionalRequirementGraph(domain=domain, task_instruction=task, nodes=nodes, relations=tuple(relations),
         task_causal_relations=tuple(task_causal_relations),
+        task_effect_relations=tuple(task_effect_relations),
         operation_groups=tuple(groups), source='VLM_CANONICAL_G_F', candidate_regions=tuple(proposed), region_ranking=tuple(ranking),
         detector_vocabulary=tuple(dict.fromkeys([c for r in doc['functional_roles'] for c in r['candidate_categories']] + [c.replace('_', ' ') for n in nodes.values() if n.entity_kind == 'OBJECT' for c in n.semantic_categories])),
         cross_group_reuse_allowed=doc.get('cross_group_reuse_allowed', domain == 'workshop' and not groups) is True,
@@ -672,6 +745,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             'is_v2_specification': is_v2_document(raw),
             'precondition_provenance': all_precond_prov,
             'task_causal_relations': [r.to_dict() for r in task_causal_relations],
+            'task_effect_relations': [r.to_dict() for r in task_effect_relations],
             'soft_semantic_evidence': soft, 'unresolved_semantics': unresolved, 'unverified_required_properties': unverified_required, 'raw_role_to_canonical': id_map})
     from pathlib import Path
     if domain == 'living_room':

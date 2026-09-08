@@ -206,6 +206,51 @@ def _contains_phrase(text: str, phrase: str) -> bool:
     return any(words[i:i + k] == p_words for i in range(n - k + 1))
 
 
+def map_kitchen_planner_context_role(
+    raw: dict[str, Any], document: dict[str, Any]
+) -> str | None:
+    """Recognize an FM-expressed serving support as planner-owned context.
+
+    A support-shaped REGION alone is insufficient: the FM must also describe
+    serving/prepared-item purpose and explicitly connect the role to a placement
+    relation or operation.  The registered Kitchen serving destination then
+    realizes that expressed semantic without becoming a selectable G_F role.
+    """
+    if raw.get("entity_kind") not in {"REGION", "FIXED_TARGET"}:
+        return None
+
+    role_id = raw.get("id")
+    text = _phrase(f"{raw.get('function', '')} {raw.get('description', '')}")
+    has_support_form = bool(
+        re.search(r"\b(surface|support|destination|location|area|table|station)\b", text)
+    )
+    has_serving_purpose = bool(
+        re.search(r"\b(serv(?:e|ed|ing)|dining|prepared|ready for consumption|presentation)\b", text)
+    )
+    if not (has_support_form and has_serving_purpose):
+        return None
+
+    relation_evidence = any(
+        relation.get("object_role") == role_id
+        and re.search(
+            r"\b(placed? on|put on|set on|supported by|rest(?:ed|ing)? on|served? (?:at|on))\b",
+            _phrase(relation.get("relation", relation.get("predicate", ""))),
+        )
+        for relation in document.get("functional_relations", [])
+    )
+    operation_evidence = any(
+        role_id in (group.get("target_role"), group.get("context_role"), group.get("anchor_role"))
+        and re.search(
+            r"\b(place|put|set down|position|arrange|deliver|serve)\b",
+            _phrase(group.get("function", group.get("operation", ""))),
+        )
+        for group in document.get("interaction_groups", [])
+    )
+    if relation_evidence or operation_evidence:
+        return "dining_table"
+    return None
+
+
 def map_kitchen_role_function(raw: dict[str, Any] | str) -> str | None:
     """Map natural language role to unique canonical Kitchen role.
 

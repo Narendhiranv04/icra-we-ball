@@ -138,6 +138,20 @@ def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
                 f"Task causal relation between {rel.subject_role!r} and {rel.object_role!r} has empty predicate"
             )
 
+    for rel in graph.task_effect_relations:
+        if rel.subject_role not in graph.nodes:
+            raise MalformedVLMSpecificationError(
+                f"Task effect carrier {rel.subject_role!r} not in graph nodes"
+            )
+        if not rel.object_is_literal and rel.object_value not in graph.nodes:
+            raise MalformedVLMSpecificationError(
+                f"Task effect object {rel.object_value!r} not in graph nodes"
+            )
+        if rel.category != "TASK_EFFECT_SEMANTICS" or not rel.predicate:
+            raise MalformedVLMSpecificationError(
+                f"Invalid task effect relation {rel!r}"
+            )
+
     seen_op_ids: set[str] = set()
     for grp in graph.operation_groups:
         if not isinstance(grp.id, str) or not grp.id.strip():

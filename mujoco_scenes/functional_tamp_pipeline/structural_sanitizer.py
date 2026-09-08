@@ -115,6 +115,18 @@ def sanitize_functional_graph(raw: Mapping[str, Any]) -> SanitizationResult:
     doc["functional_roles"] = kept
     relations = doc.get("functional_relations", [])
     retained = []
+    operation_endpoint_ids = {
+        normalize_id(group.get(key, ""))
+        for group in groups if isinstance(group, dict)
+        for key in ("tool_role", "source_role", "target_role", "context_role", "anchor_role")
+        if group.get(key)
+    }
+    guidance = doc.get("raw_v2_guidance", doc.get("observation_guidance", {}))
+    observed_role_ids = {
+        normalize_id(role_id)
+        for role_id, candidates in guidance.get("visible_candidates_per_role", {}).items()
+        if candidates
+    } if isinstance(guidance, dict) else set()
     if not isinstance(relations, list):
         record("INVALID_RELATION_LIST", relations, semantic=True)
         relations = []
@@ -125,7 +137,28 @@ def sanitize_functional_graph(raw: Mapping[str, Any]) -> SanitizationResult:
         item = deepcopy(rel)
         for key in ("subject_role", "object_role"):
             item[key] = normalize_id(item.get(key, ""))
-        if any(item[key] not in ids for key in ("subject_role", "object_role")):
+        missing_subject = item["subject_role"] not in ids
+        missing_object = item["object_role"] not in ids
+        if not missing_subject and missing_object:
+            from .relation_interpreter import interpret_task_effect_predicate
+            phrase = item.get("relation", item.get("predicate", ""))
+            effect_predicate = (
+                interpret_task_effect_predicate(phrase)
+                if isinstance(phrase, str) else None
+            )
+            if (
+                effect_predicate
+                and item["object_role"]
+                and item["object_role"] not in operation_endpoint_ids
+                and item["object_role"] not in observed_role_ids
+            ):
+                item["semantic_category"] = "TASK_EFFECT_SEMANTICS"
+                item["effect_predicate"] = effect_predicate
+                item["object_is_literal"] = True
+                retained.append(item)
+                record("PRESERVED_TASK_EFFECT_LITERAL", rel)
+                continue
+        if missing_subject or missing_object:
             record("DANGLING_RELATION_REFERENCE", rel, semantic=True)
             continue
         if not isinstance(item.get("relation", item.get("predicate")), str):

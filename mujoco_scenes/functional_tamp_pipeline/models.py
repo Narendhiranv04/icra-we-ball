@@ -71,6 +71,43 @@ class FunctionalRelation:
 
 
 @dataclass(frozen=True)
+class TaskEffectRelation:
+    """FM-expressed resulting state, excluded from physical G_O verification."""
+
+    subject_role: str
+    predicate: str
+    object_value: str
+    object_is_literal: bool = False
+    provenance: str = "FM_EXPLICIT_SEMANTIC"
+    source_operation_id: str | None = None
+    category: str = "TASK_EFFECT_SEMANTICS"
+    raw_subject: str | None = None
+    raw_phrase: str | None = None
+    raw_object: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> TaskEffectRelation:
+        return cls(
+            subject_role=str(data["subject_role"]),
+            predicate=str(data["predicate"]),
+            object_value=str(data["object_value"]),
+            object_is_literal=bool(data.get("object_is_literal", False)),
+            provenance=str(data.get("provenance", "FM_EXPLICIT_SEMANTIC")),
+            source_operation_id=(
+                str(data["source_operation_id"])
+                if data.get("source_operation_id") else None
+            ),
+            category=str(data.get("category", "TASK_EFFECT_SEMANTICS")),
+            raw_subject=str(data["raw_subject"]) if data.get("raw_subject") else None,
+            raw_phrase=str(data["raw_phrase"]) if data.get("raw_phrase") else None,
+            raw_object=str(data["raw_object"]) if data.get("raw_object") else None,
+        )
+
+
+@dataclass(frozen=True)
 class FunctionalRole:
     """Node in the functional requirement graph G_F representing a required role."""
 
@@ -222,6 +259,7 @@ class FunctionalRequirementGraph:
     nodes: dict[str, FunctionalRole]
     relations: tuple[FunctionalRelation, ...] = ()
     task_causal_relations: tuple[FunctionalRelation, ...] = ()
+    task_effect_relations: tuple[TaskEffectRelation, ...] = ()
     operation_groups: tuple[OperationGroup, ...] = ()
     cross_group_reuse_allowed: bool = True
     detector_vocabulary: tuple[str, ...] = ()
@@ -301,6 +339,20 @@ class FunctionalRequirementGraph:
             if not rel.predicate:
                 raise ValueError(f"Invalid functional graph: task causal relation has empty predicate: {rel}")
 
+        for rel in self.task_effect_relations:
+            if rel.subject_role not in self.nodes:
+                raise ValueError(
+                    f"Invalid functional graph: task effect carrier {rel.subject_role!r} "
+                    f"not in nodes ({list(self.nodes.keys())})"
+                )
+            if not rel.object_is_literal and rel.object_value not in self.nodes:
+                raise ValueError(
+                    f"Invalid functional graph: task effect object {rel.object_value!r} "
+                    f"not in nodes ({list(self.nodes.keys())})"
+                )
+            if not rel.predicate or rel.category != "TASK_EFFECT_SEMANTICS":
+                raise ValueError(f"Invalid functional graph task effect relation: {rel}")
+
         seen_op_ids: set[str] = set()
         for grp in self.operation_groups:
             if grp.id in seen_op_ids:
@@ -354,6 +406,7 @@ class FunctionalRequirementGraph:
             "nodes": {name: sorted_nodes[name].to_dict() for name in sorted_nodes},
             "relations": [r.to_dict() for r in self.relations],
             "task_causal_relations": [r.to_dict() for r in self.task_causal_relations],
+            "task_effect_relations": [r.to_dict() for r in self.task_effect_relations],
             "operation_groups": [g.to_dict() for g in self.operation_groups],
             "cross_group_reuse_allowed": self.cross_group_reuse_allowed,
             "detector_vocabulary": list(self.detector_vocabulary),
@@ -386,6 +439,10 @@ class FunctionalRequirementGraph:
             FunctionalRelation.from_dict(r)
             for r in data.get("task_causal_relations", ())
         )
+        task_effect_relations = tuple(
+            TaskEffectRelation.from_dict(r)
+            for r in data.get("task_effect_relations", ())
+        )
         operation_groups = tuple(
             OperationGroup.from_dict(g)
             for g in data.get("operation_groups", ())
@@ -396,6 +453,7 @@ class FunctionalRequirementGraph:
             nodes=nodes,
             relations=relations,
             task_causal_relations=task_causal_relations,
+            task_effect_relations=task_effect_relations,
             operation_groups=operation_groups,
             cross_group_reuse_allowed=bool(data.get("cross_group_reuse_allowed", True)),
             detector_vocabulary=tuple(map(str, data.get("detector_vocabulary", ()))),
@@ -519,4 +577,3 @@ from .search_contract import (
     SearchRegionContractError,
     freeze_search_region_contract,
 )
-

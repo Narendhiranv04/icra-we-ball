@@ -246,6 +246,57 @@ _TASK_CAUSAL_INVERSE_CUES: dict[str, tuple[str, ...]] = {
 }
 
 
+_TASK_EFFECT_RELATION_CUES: dict[str, tuple[str, ...]] = {
+    "CONTAINS": (
+        "contains", "contain", "holds contents", "holds material",
+        "filled with", "has contents", "has material",
+    ),
+}
+
+_TRANSFER_OPERATION_CUES: tuple[str, ...] = (
+    "transfer", "pour", "fill", "dispense", "load", "add",
+)
+
+
+def interpret_task_effect_predicate(raw_phrase: str) -> str | None:
+    """Return a state/effect predicate supported directly by relation text."""
+    norm_phrase = _normalize_text(raw_phrase)
+    for predicate, cues in _TASK_EFFECT_RELATION_CUES.items():
+        if any(
+            (cue_norm := _normalize_text(cue)) == norm_phrase
+            or re.search(r"\b" + re.escape(cue_norm) + r"\b", norm_phrase)
+            for cue in cues
+        ):
+            return predicate
+    return None
+
+
+def has_compatible_explicit_effect_operation(
+    predicate: str,
+    raw_subject: str,
+    raw_object: str,
+    groups: Sequence[dict[str, Any]],
+) -> tuple[bool, str | None]:
+    """Match an expressed state edge to an explicitly expressed operation.
+
+    This recognizes direction only; it never creates an operation from a
+    relation.  For CONTAINS, the material/source must flow into the carrier.
+    """
+    if predicate != "CONTAINS":
+        return False, None
+    for group in groups:
+        source = group.get("tool_role") or group.get("source_role")
+        target = group.get("target_role")
+        phrase = _normalize_text(group.get("function") or group.get("operation") or "")
+        if (
+            source == raw_object
+            and target == raw_subject
+            and any(re.search(r"\b" + re.escape(cue) + r"\b", phrase) for cue in _TRANSFER_OPERATION_CUES)
+        ):
+            return True, str(group.get("id", "")) or None
+    return False, None
+
+
 def _extract_task_causal_candidates(norm_phrase: str) -> tuple[str, bool] | None:
     """Deterministically check if phrase matches a task/causal semantic relation."""
     # Check forward cues
