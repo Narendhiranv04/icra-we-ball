@@ -15,18 +15,18 @@
 | 0: Forensic Baseline & Safety Snapshot | PASSED | `62294f5a` | `docs/corrective_recovery.md`, `scripts/forensics_baseline.py`, `scripts/generate_stage0_forensic_table.py` | 32-record baseline metric recompute | K1, K2, K3, L1, L6, W1, W2, W8 | 0 | Gate 0 passed: immutable forensic baseline verified; exact causal failure points established for all 8 representative cases. | Complete |
 | 1: Separate Online Executability from Offline Completeness | PASSED | `92a7df0c` | `semantic_compiler.py`, `models.py`, `search.py`, `evaluation_metrics.py`, `test_v2_compiler_and_completeness.py`, `test_stage1_contract_separation.py` | 25 passed (`test_stage1_contract_separation.py`, `test_v2_compiler_and_completeness.py`, `test_raw_replay_and_evaluator_metrics.py`) | Synthetic & fixture separation verification | 0 | Gate 1 passed: removed domain checklists; online contract validates generic executability; offline checks reference completeness; first-cause attribution assigns GRAPH_COMPILATION_FAILURE to mapper failures. | Complete |
 | 2: Complete Explicit Operation -> Capability Bridge | PASSED | `9045790f` | `models.py`, `robot_capability_registry.py`, `semantic_compiler.py`, `task_interface_validator.py`, `test_domain_canonicalization_cleanup.py`, `test_stage2_capability_bridge.py` | 43 passed across Stage 1 & 2 suites (5 in `test_stage2_capability_bridge.py`, 9 in `test_robot_capabilities_and_operations.py`, 11 in `test_v2_compiler_and_completeness.py`) | V1/V2 contract compilation & planner action realization verification | 0 | Gate 2 passed: explicit FM operations map to generic robot capabilities; physical feasibility preconditions (including workshop singletons in V1 and V2) instantiated with provenance; roles alone never synthesize operations. | Complete |
-| 3: Robust Role Canonicalization (Qwen Paraphrases) | NOT STARTED | | | | | 0 | | |
-| 4: Refactor Relations (Task Semantics vs Physical Verifiers) | NOT STARTED | | | | | 0 | | |
-| 5: Fix Search Eligibility and Causal Recovery | NOT STARTED | | | | | 0 | | |
-| 6: Planner Action Provenance & Goal Compilation | NOT STARTED | | | | | 0 | | |
-| 7: Fix Raw Evaluation & First-Cause Attribution | NOT STARTED | | | | | 0 | | |
-| 8: Structured Output & Qwen Inference Reliability | NOT STARTED | | | | | 0 | | |
-| 9: Real-Trace Regression Suite | NOT STARTED | | | | | 0 | | |
-| 10: Small End-to-End Live Probe | NOT STARTED | | | | | 8 | | |
-| 11: Full Test Suite & Method Freeze | NOT STARTED | | | | | 0 | | |
-| 12: Final Development 32x1 Matrix | NOT STARTED | | | | | 32 | | |
-| 13: Held-Out / Generalization Matrix | NOT STARTED | | | | | 15 | | |
-| 14: Final Comparative Analysis & Paper Reports | NOT STARTED | | | | | 0 | | |
+| 3: Robust Role Canonicalization (Qwen Paraphrases) | PASSED | `78f8a93a` | `role_semantic_ontology.py`, `semantic_compiler.py`, `test_stage3_role_canonicalization.py` | 13 passed (`test_stage3_role_canonicalization.py`) | Real Qwen phrasing & synonym tests | 0 | Gate 3 passed: merged unreferenced duplicate roles, preserved distinct roles, robust to real Qwen phrasing. | Complete |
+| 4: Refactor Relations (Task Semantics vs Physical Verifiers) | PASSED | `3420ab1d` | `models.py`, `relation_interpreter.py`, `semantic_compiler.py`, `test_stage4_relation_handling.py` | 8 passed (`test_stage4_relation_handling.py`) | Physical verifier vs task relation tests | 0 | Gate 4 passed: strict separation of task/causal relations from physical feasibility verifiers; capability preconditions derived from operations. | Complete |
+| 5: Fix Search Eligibility and Causal Recovery | PASSED | `64d3e975` | `search.py`, `search_contract.py`, `evaluation_metrics.py`, `test_stage5_search_eligibility.py` | 11 passed (`test_stage5_search_eligibility.py`) | Search eligibility & causal recovery tests | 0 | Gate 5 passed: search eligibility restored based on candidate evidence states; causal recovery strictly conditioned on search execution. | Complete |
+| 6: Planner Action Provenance & Goal Compilation | PASSED | `594203d1` | `domains/kitchen.py`, `domains/workshop.py`, `domains/living_room.py`, `test_stage6_planner_action_provenance.py` | 5 passed (`test_stage6_planner_action_provenance.py`) | Single A* search & symbolic plan validation | 0 | Gate 6 passed: planner actions and goals gated on explicit compiled operations; zero replans; valid low-level primitive sequence verified. | Complete |
+| 7: Fix Raw Evaluation & First-Cause Attribution | PASSED | `f89ef05a` | `raw_semantic_evaluation.py`, `evaluation_contract_adapter.py`, `evaluation_metrics.py`, `test_stage7_raw_eval_and_first_cause.py` | 6 passed (`test_stage7_raw_eval_and_first_cause.py`) | Offline raw evaluation & attribution tests | 0 | Gate 7 passed: offline raw eval decoupled from compiler; all 8 diagnostic flags persisted; first-cause attribution strictly separates FM omission from compiler defect. | Complete |
+| 8: Structured Output & Qwen Inference Reliability | PASSED | `4d82bbf1` | `workshop_phase1/fm_adapter.py`, `semantic_compiler.py`, `test_stage8_inference_reliability.py` | 6 passed (`test_stage8_inference_reliability.py`) | Balanced 6-case live probe (K1, K2, L1, L2, W1, W2) | 6 | Gate 8 passed: 100% schema validity, zero truncations, frozen thinking=false config, length-truncation attribution. | Complete |
+| 9: Real-Trace Regression Suite | PASSED | `37bb19df` | `fixtures/real_qwen_traces/`, `raw_semantic_evaluation.py`, `test_stage9_real_trace_regression.py` | 9 passed (`test_stage9_real_trace_regression.py`) | 3 domain real-trace + 6 negative control fixtures | 0 | Gate 9 passed: real Qwen traces canonicalized green; all negative controls fail closed; zero leakage. | Complete |
+| 10: Small End-to-End Live Probe | PASSED | `26e97442` | `benchmark_reports/corrective_probe_8case_20260908T203000IST/` | 8-case live execution | Balanced 8-case live probe (K1, K2, K3, L1, L2, W1, W2, W8) | 8 | Gate 10 passed: 100% schema validity, 0% truncations, 100% canonicalization, valid 24-step plan in K1, search executed in K2/K3, exactly 1 VLM call/variant. | Complete |
+| 11: Full Test Suite & Method Freeze | PASSED | `b0ad530e` | `method_freeze.json`, `test_stage11_method_freeze.py` | 549 passed across full suite (540 pipeline + 9 scene/leak + 3 freeze) | Full repo test suite + anti-leakage audit | 0 | Gate 11 passed: 549 tests green, clean diff, zero variant ID or GT leakage, frozen SHA-256 hashes committed. | Complete |
+| 12: Final Development 32x1 Matrix | IN PROGRESS | | | | Canonical 32 development cases (K1-K12, L1-L10, W1-W10) | 32 | Ready to launch 32x1 live evaluation under frozen config. | In Progress |
+| 13: Held-Out / Generalization Matrix | NOT STARTED | | | | 15 held-out cases | 15 | Pending Stage 12 completion. | Pending |
+| 14: Final Comparative Analysis & Paper Reports | NOT STARTED | | | | | 0 | Pending Stage 13 completion. | Pending |
 
 ---
 
@@ -565,4 +565,70 @@ Directly recomputed from `benchmark_reports/final_corrected_32x1_20260908T192500
 7. **Commit:** `26e97442` (`eval(probe): validate corrected end-to-end semantic funnel`).
 
 **Gate 10 Status: PASSED.**
+
+---
+
+## 13. Stage 11 — Full Test Suite and Method Freeze
+
+### 13.1 Full Test Suite and Anti-Leakage Audit Execution (Section 18)
+
+1. **Full Pipeline and Domain Test Execution:**
+   - Executed complete pipeline test suite: `pytest -q mujoco_scenes/functional_tamp_pipeline/tests/` -> **540 passed, 0 failures, 24 warnings in 366.06s**.
+   - Executed scene adapter and anti-leakage tests: `pytest -q mujoco_scenes/tests/test_scene_loader.py mujoco_scenes/tests/test_workshop_phase1_no_privileged_leaks.py` -> **9 passed in 21.77s**.
+   - Executed Stage 11 freeze integrity suite: `pytest -v mujoco_scenes/functional_tamp_pipeline/tests/test_stage11_method_freeze.py` -> **3 passed in 0.10s**.
+   - Executed Stages 1 through 11 regression test suite: `pytest -v mujoco_scenes/functional_tamp_pipeline/tests/test_stage*.py` -> **70 passed in 0.67s**.
+
+2. **Clean Diff and Code Invariant Verification:**
+   - `git diff --check`: Clean (zero trailing whitespace, zero merge conflicts, zero syntax flags).
+   - Production modules verified clean of all benchmark variant IDs (`K1-K12`, `L1-L10`, `W1-W10`):
+     - `role_semantic_ontology.py`
+     - `semantic_compiler.py`
+     - `vlm_spec_provider.py`
+     - `robot_capability_registry.py`
+     - `predicate_registry.py`
+     - `domains/kitchen.py`
+     - `domains/living_room.py`
+     - `domains/workshop.py`
+   - Online modules verified clean of `GTSpecProvider`, `expected_plan`, `expected_assignment`, and task-specific answer graph lookups:
+     - `vlm_spec_provider.py`
+     - `semantic_compiler.py`
+     - `relation_interpreter.py`
+     - `grounding.py`
+     - `planning.py`
+     - `executability.py`
+     - `search.py`
+     - `role_semantic_ontology.py`
+     - `robot_capability_registry.py`
+
+3. **Frozen Method Hashes (`method_freeze.json`):**
+   - **Active System Prompt (`SYSTEM_PROMPT_V2`):** `c2453625a0636c75cdcf56b50979af0c6f57e6ce160a5ccdf0ed3240a82a2bdf`
+   - **Response Schema (`RESPONSE_SCHEMA_V2`):** `af5ca716c057207238e69384f5e51407f754dbd389587119069c9e5b8ab1a5ff`
+   - **Combined Prompt & Schema Hash:** `381770ded79ef1c189fb81ee7b04632b876c02ead68aa6c4b4841e0c6216cdd2`
+   - **Runtime Semantic Ontology Hash:** `ab5095cdcf2ed6a2799548ebdd5510062ce488d2c047a1e2e71d997fec44a57d`
+   - **Robot Capability Registry Hash:** `2cd5bf9fcc6bcdbe5e173a37658354a2cf24757e63c81fa8ab54c5c77bf548cf`
+   - **Predicate Registry File Hash:** `f8afb189d77138e58994ec525ba7d72b4be26254a2af2d5a9c8b2042c599e639`
+   - **Semantic Compiler File Hash:** `ee9166e3d8c0c24a1884ac6a1c082eb730f4bb0cf45a4389a92154a5a18ff43f`
+   - **Planning Module File Hash:** `508edd701670975f6f9896973e8c4daae99237f44fd5a3cd2c97b22d5e0b3828`
+   - **Kitchen Domain File Hash:** `b1fc220465a55f96c6b99702af6767ed600cba6e08880eb2b5f4aaa0b23d14c3`
+   - **Living Room Domain File Hash:** `cdc55e2850e41aafbb2bc9c3bac30697d054168cf6ca49d756d9f6d530061f7f`
+   - **Workshop Domain File Hash:** `443c55bf30ac2d5e5a7881e0f968b5618bebedeea0dfcd0f043b4f039df94a5c`
+   - **Frozen Inference Config Hash:** `32744750702e4862fe17f9462bf975b3a87c166cc272b44ef55b50fa7a8c1222`
+     - `model`: `qwen35-9b`
+     - `base_url`: `http://127.0.0.1:18000/v1`
+     - `enable_thinking`: `false`
+     - `temperature`: `0.0`
+     - `max_tokens`: `8192`
+     - `top_p`: `1.0`
+     - `top_k`: `20`
+     - `response_format`: `json_schema` (`strict: true`)
+
+### 13.2 Gate 11 Verification
+
+- **Full Test Suite Status:** 549 passed, 0 failures across all pipeline and domain suites.
+- **Diff Check Status:** Clean (`git diff --check` passed).
+- **Anti-Leakage Audit:** 0 leaked variant IDs, 0 GT provider imports, 0 expected plan/assignment lookups.
+- **Freeze Commit:** `b0ad530e` (`chore(freeze): freeze corrected functional-tamp method`).
+
+**Gate 11 Status: PASSED.**
+
 
