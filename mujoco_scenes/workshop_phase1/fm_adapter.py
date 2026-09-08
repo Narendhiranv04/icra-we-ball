@@ -701,10 +701,14 @@ def _extract_json_content(
     if isinstance(content, dict):
         _save_fm_diagnostic(response, content, call_kind, True, None, sanitized_request=sanitized_request)
         return content
+    finish_reason = choice.get("finish_reason") if isinstance(choice, dict) else None
     if not isinstance(content, str) or not content.strip():
         reasoning = message.get("reasoning_content") if isinstance(message, dict) else None
         suffix = " after reasoning" if reasoning else ""
-        msg = f"Completion has no final JSON content{suffix}"
+        if finish_reason == "length":
+            msg = f"Completion truncated due to token limit (finish_reason='length'){suffix}"
+        else:
+            msg = f"Completion has no final JSON content{suffix}"
         _save_fm_diagnostic(response, content, call_kind, False, parse_error=msg, sanitized_request=sanitized_request)
         raise TransportOrStructuredOutputError(msg)
     text = content.strip()
@@ -716,8 +720,12 @@ def _extract_json_content(
     try:
         decoded = json.loads(text)
     except json.JSONDecodeError as error:
-        _save_fm_diagnostic(response, content, call_kind, False, parse_error=str(error), sanitized_request=sanitized_request)
-        raise TransportOrStructuredOutputError(f"Completion content is not valid JSON: {error}") from error
+        if finish_reason == "length":
+            msg = f"Completion JSON truncated due to token limit (finish_reason='length'): {error}"
+        else:
+            msg = f"Completion content is not valid JSON: {error}"
+        _save_fm_diagnostic(response, content, call_kind, False, parse_error=msg, sanitized_request=sanitized_request)
+        raise TransportOrStructuredOutputError(msg) from error
     if not isinstance(decoded, dict):
         msg = "Completion JSON must be an object"
         _save_fm_diagnostic(response, content, call_kind, False, parse_error=msg, sanitized_request=sanitized_request)

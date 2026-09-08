@@ -562,7 +562,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         }.get(runtime_function, group.get('id', runtime_function))
         g_id = canonical_group_id if not any(g.id == canonical_group_id for g in groups) else group.get('id', canonical_group_id)
 
-        executable_context_role = ctx_role_id if (all_context or ctx_role_id) else None
+        executable_context_role = ctx_role_id if all_context else None
         usage_policy = policy
         if domain == 'living_room':
             if executable_context_role == 'SEATING_POSITION' and 'ACCESSIBLE_FROM_BOTH_SEATS' in all_context:
