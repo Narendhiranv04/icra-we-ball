@@ -151,4 +151,57 @@ Directly recomputed from `benchmark_reports/final_corrected_32x1_20260908T192500
   - Roles only without explicit operation -> zero task operations synthesized, zero capability relations synthesized.
   - Workshop equipment return -> `RETURN_REUSABLE_ITEM_TO_SUPPORT` -> `PLACE` operator.
 
-**Gate 2 Status: PASSED.**
+**Gate 2 Status: PASSED (Commit: `9045790f`).**
+
+---
+
+## 5. Stage 3 — Robust Role Canonicalization Using Real Qwen Language
+
+### 5.1 Architectural Changes Implemented
+
+1. **Real-Language Regression Fixtures (`test_stage3_role_canonicalization.py`):**
+   - Implemented real-language paraphrases captured from forensic records across domains:
+     - `"Holds soup ready for consumption."` -> `soup_container`
+     - `"Tool used to mix ingredients inside the coffee serving vessel."` -> `coffee_stirrer`
+     - `"Device used to operate the television or media system."` -> `REMOTE`
+     - `"A collection of items designated for consumption by one person."` -> `CUP_SAUCER_SET`
+     - `"An implement used to manipulate or install the fastening component."` -> `CAN_DRIVE_SCREW` (`driver`)
+     - `"A physical item capable of connecting or securing elements at the marked location."` -> `CAN_FASTEN` (`fastener`)
+   - Verified that no fixtures leak benchmark variant IDs into production code.
+
+2. **Causal Head Prioritization in Kitchen:**
+   - In `kitchen_vlm_functional_graph.py`, distinguished tool/implement vs receptacle/target heads.
+   - Roles describing the tool acting on a container (e.g. `"Tool used to mix ingredients inside the coffee serving vessel."`) resolve to `coffee_stirrer`.
+   - Roles describing the container receiving ingredients or being the target of an action (e.g. `"Receives coffee and water ingredients and is the target of stirring action."`) resolve to `coffee_container`.
+   - Expanded stemming and inflections for containers (`holds`, `holding`, `contains`, `receptacles`, `vessels`, `servings`).
+   - Resolved K2 collision without ambiguity crash.
+
+3. **Living Room Payloads, Regions, and Seating Anchors:**
+   - In `environment_vlm_requirements.py`, expanded `has_remote` to recognize natural phrases for television and media operating devices (`"device used to operate the television or media system"`, `"entertainment control"`, `"media controller"`).
+   - Expanded `CUP_SAUCER_SET` recognition for natural collection and consumption phrasing (`"collection of items designated for consumption by one person"`, `"set comprising a drink vessel and a serving dish intended for consumption"`).
+   - Expanded region recognition for personal refreshment support surfaces and shared entertainment control placement regions.
+   - Updated `map_living_room_fixed_target_role` to recognize seating reference points even when the FM labels the armchair entity kind as `OBJECT` rather than `FIXED_TARGET` or `REGION`, while ensuring movable payloads remain excluded.
+
+4. **Unreferenced Duplicate Role Merging:**
+   - Updated `can_merge_roles` in `semantic_compiler.py`: when one role participates in operations/relations (e.g. `causal_position = {'group_target'}`) and another role with identical normalized function and binding policy is unreferenced (`causal_position = set()`), the unreferenced duplicate merges cleanly (`RAW_ROLE_MERGED`) rather than causing an `AMBIGUOUS_ROLE_MAPPING` failure (resolving L1 forensic failure).
+
+5. **Workshop Tool, Component, and Target Distinction:**
+   - In `workshop_phase1/requirements.py`, expanded `driver_phrases` to include `"manipulate or install"` and `"implement used to manipulate or install"`.
+   - Expanded `fastener_phrases` to include `"connecting or securing elements at the marked location"` and fastener action verbs (`connect`, `secure`, `join`).
+   - Ensured fixed receiving targets (`repair_target`) and generic workbench support context (`MAIN_WORKBENCH_ZONE`) remain strictly distinct from movable tools and fasteners.
+   - Preserved fail-closed semantics: candidate categories alone cannot manufacture a role when the function is unrelated (e.g. `"illuminate workspace"` or `"paint the wall surface"`).
+
+6. **Preserved Invariant:**
+   - Confirmed that role mapping alone never synthesizes operations or relations.
+
+### 5.2 Gate 3 Verification
+
+- **Test Suite:** `mujoco_scenes/functional_tamp_pipeline/tests/test_stage3_role_canonicalization.py` (11 tests passed).
+- **Regression Suites:**
+  - Stages 1, 2, and 3: 21 passed in 0.15s.
+  - Domain canonicalization: 81 passed in 0.42s across Kitchen, Living Room, and Workshop.
+  - Functional TAMP pipeline: 494 passed.
+- **Commit:** `78f8a93a` (`fix(semantics): harden role canonicalization for natural FM paraphrases`).
+
+**Gate 3 Status: PASSED.**
+
