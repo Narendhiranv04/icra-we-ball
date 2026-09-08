@@ -30,7 +30,7 @@ try:
     )
     from mujoco_scenes.functional_tamp_pipeline.fm_schema_v2 import (
         SYSTEM_PROMPT_V2,
-        RESPONSE_SCHEMA_V2,
+        LIVE_RESPONSE_SCHEMA_V2,
         is_v2_document,
         validate_v2_functional_specification,
         validate_v2_live_contract,
@@ -1569,7 +1569,7 @@ class FMAdapter:
         schema_version = int(os.environ.get("TAMP_FM_SCHEMA_VERSION", "2"))
         if schema_version == 2:
             system_prompt = SYSTEM_PROMPT_V2
-            response_schema = RESPONSE_SCHEMA_V2
+            response_schema = LIVE_RESPONSE_SCHEMA_V2
             schema_name = "functional_specification"
         else:
             system_prompt = SYSTEM_PROMPT

@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from copy import deepcopy
 from typing import Any, Mapping
 import jsonschema
 
@@ -291,6 +292,37 @@ RESPONSE_SCHEMA_V2: dict[str, Any] = {
     "additionalProperties": False,
 }
 
+# Archived V2 documents were generated against RESPONSE_SCHEMA_V2 and may omit
+# fields that the legacy canonical conversion defaults. New one-call generation
+# uses this structurally stricter copy so constrained decoding and post-validation
+# agree without changing archived replay behavior.
+LIVE_RESPONSE_SCHEMA_V2: dict[str, Any] = deepcopy(RESPONSE_SCHEMA_V2)
+_live_contract_schema = LIVE_RESPONSE_SCHEMA_V2["properties"]["task_contract"]
+_live_contract_schema["properties"]["functional_roles"]["items"]["required"] = [
+    "id",
+    "entity_kind",
+    "function",
+    "required_count",
+    "binding_policy",
+    "candidate_categories",
+    "required_properties",
+]
+_live_contract_schema["properties"]["functional_relations"]["items"]["required"] = [
+    "id",
+    "subject_role",
+    "relation",
+    "object_role",
+    "required",
+]
+_live_contract_schema["properties"]["operation_pairings"]["items"]["required"] = [
+    "id",
+    "operation",
+    "source_role",
+    "target_role",
+    "operation_count",
+    "reuse_policy",
+]
+
 
 def is_v2_document(doc: Mapping[str, Any]) -> bool:
     """Return True if the document uses the V2 schema structure (has 'task_contract')."""
@@ -420,6 +452,15 @@ def _validate_atomic_phrase(value: Any, code: str, location: str) -> str:
     return phrase
 
 
+def _validate_live_response_schema(doc: Mapping[str, Any]) -> None:
+    try:
+        jsonschema.validate(instance=dict(doc), schema=LIVE_RESPONSE_SCHEMA_V2)
+    except jsonschema.ValidationError as err:
+        raise MalformedVLMSpecificationError(
+            f"Live V2 schema validation failed: {err.message}"
+        ) from err
+
+
 def validate_v2_live_contract(doc: Mapping[str, Any]) -> dict[str, Any]:
     """Enforce invariants required of newly generated live V2 documents.
 
@@ -427,8 +468,11 @@ def validate_v2_live_contract(doc: Mapping[str, Any]) -> dict[str, Any]:
     V2 replay. This stricter layer is called only at a live generation boundary.
     It rejects omissions and non-atomic prose without rewriting model output.
     """
+    if not isinstance(doc, Mapping):
+        raise MalformedVLMSpecificationError("Live V2 specification must be a JSON object")
     validated = validate_v2_functional_specification(doc)
     if validated.get("status") != "SUPPORTED":
+        _validate_live_response_schema(validated)
         return validated
 
     contract = validated["task_contract"]
@@ -437,9 +481,30 @@ def validate_v2_live_contract(doc: Mapping[str, Any]) -> dict[str, Any]:
     operations = contract["operation_pairings"]
     role_ids = {role["id"] for role in roles}
 
+    # Preserve stable, field-specific diagnostics while enforcing the same
+    # required-field sets carried by the live constrained-decoding schema.
+    for index, role in enumerate(roles):
+        _require_live_fields(
+            role, _LIVE_ROLE_FIELDS, "MISSING_LIVE_ROLE_FIELDS", f"functional_roles[{index}]"
+        )
+    for index, relation in enumerate(relations):
+        _require_live_fields(
+            relation,
+            _LIVE_RELATION_FIELDS,
+            "MISSING_LIVE_RELATION_FIELDS",
+            f"functional_relations[{index}]",
+        )
+    for index, operation in enumerate(operations):
+        _require_live_fields(
+            operation,
+            _LIVE_OPERATION_FIELDS,
+            "MISSING_LIVE_OPERATION_FIELDS",
+            f"operation_pairings[{index}]",
+        )
+    _validate_live_response_schema(validated)
+
     for index, role in enumerate(roles):
         location = f"functional_roles[{index}]"
-        _require_live_fields(role, _LIVE_ROLE_FIELDS, "MISSING_LIVE_ROLE_FIELDS", location)
         _validate_atomic_phrase(role["function"], "NON_ATOMIC_ROLE_FUNCTION", f"{location}.function")
         for prop_index, prop in enumerate(role["required_properties"]):
             property_location = f"{location}.required_properties[{prop_index}]"
@@ -457,9 +522,6 @@ def validate_v2_live_contract(doc: Mapping[str, Any]) -> dict[str, Any]:
 
     for index, relation in enumerate(relations):
         location = f"functional_relations[{index}]"
-        _require_live_fields(
-            relation, _LIVE_RELATION_FIELDS, "MISSING_LIVE_RELATION_FIELDS", location
-        )
         if not isinstance(relation["id"], str) or not relation["id"].strip():
             raise MalformedVLMSpecificationError(
                 f"INVALID_LIVE_RELATION_ID: {location}.id must be non-empty"
@@ -470,9 +532,6 @@ def validate_v2_live_contract(doc: Mapping[str, Any]) -> dict[str, Any]:
 
     for index, operation in enumerate(operations):
         location = f"operation_pairings[{index}]"
-        _require_live_fields(
-            operation, _LIVE_OPERATION_FIELDS, "MISSING_LIVE_OPERATION_FIELDS", location
-        )
         if not isinstance(operation["id"], str) or not operation["id"].strip():
             raise MalformedVLMSpecificationError(
                 f"INVALID_LIVE_OPERATION_ID: {location}.id must be non-empty"
@@ -553,11 +612,11 @@ def convert_v2_to_canonical_document(v2_doc: Mapping[str, Any]) -> dict[str, Any
 
 
 def compute_v2_prompt_and_schema_hash() -> str:
-    """Compute deterministic SHA-256 hash of the V2 system prompt and V2 response schema."""
+    """Hash the V2 prompt and strict schema actually sent for live generation."""
     blob = json.dumps(
         {
             "system_prompt_v2": SYSTEM_PROMPT_V2,
-            "response_schema_v2": RESPONSE_SCHEMA_V2,
+            "response_schema_v2": LIVE_RESPONSE_SCHEMA_V2,
         },
         sort_keys=True,
     )

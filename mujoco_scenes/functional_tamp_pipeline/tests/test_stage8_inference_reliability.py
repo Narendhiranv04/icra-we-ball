@@ -21,6 +21,7 @@ from mujoco_scenes.functional_tamp_pipeline.errors import (
     MalformedVLMSpecificationError,
 )
 from mujoco_scenes.functional_tamp_pipeline.fm_schema_v2 import (
+    LIVE_RESPONSE_SCHEMA_V2,
     RESPONSE_SCHEMA_V2,
     SYSTEM_PROMPT_V2,
     is_v2_document,
@@ -208,7 +209,7 @@ def test_thinking_disabled_by_default_in_adapter_payload(tmp_path):
     assert call_payload["chat_template_kwargs"] == {"enable_thinking": False}
     assert call_payload["response_format"]["type"] == "json_schema"
     assert call_payload["response_format"]["json_schema"]["strict"] is True
-    assert call_payload["response_format"]["json_schema"]["schema"] == RESPONSE_SCHEMA_V2
+    assert call_payload["response_format"]["json_schema"]["schema"] == LIVE_RESPONSE_SCHEMA_V2
     assert call_payload["max_tokens"] == 8192
     assert adapter.metrics.requirement_calls == 1
     assert adapter.metrics.total_calls == 1

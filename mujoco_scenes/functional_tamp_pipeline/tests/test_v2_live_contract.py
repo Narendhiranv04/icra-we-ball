@@ -2,15 +2,23 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+
+import jsonschema
 import pytest
 
 from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
 from mujoco_scenes.functional_tamp_pipeline.fm_schema_v2 import (
+    LIVE_RESPONSE_SCHEMA_V2,
+    RESPONSE_SCHEMA_V2,
     SYSTEM_PROMPT_V2,
+    compute_v2_prompt_and_schema_hash,
     convert_v2_to_canonical_document,
     validate_v2_functional_specification,
     validate_v2_live_contract,
 )
+from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter
 
 
 def _role(
@@ -251,3 +259,145 @@ def test_production_prompt_has_no_benchmark_answer_or_variant_leakage():
     )
     assert not [term for term in forbidden if term in prompt]
     assert "canonical predicate" not in prompt
+
+
+@pytest.mark.parametrize(
+    ("section", "field"),
+    [
+        ("functional_roles", "candidate_categories"),
+        ("functional_roles", "required_properties"),
+        ("functional_relations", "id"),
+        ("functional_relations", "required"),
+        ("operation_pairings", "id"),
+        ("operation_pairings", "source_role"),
+        ("operation_pairings", "operation_count"),
+        ("operation_pairings", "reuse_policy"),
+    ],
+)
+def test_live_schema_and_validator_agree_on_every_required_field(section, field):
+    document = _expressiveness_documents()["desired_task_effect"]
+    jsonschema.validate(document, LIVE_RESPONSE_SCHEMA_V2)
+    validate_v2_live_contract(document)
+
+    del document["task_contract"][section][0][field]
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(document, LIVE_RESPONSE_SCHEMA_V2)
+    with pytest.raises(MalformedVLMSpecificationError):
+        validate_v2_live_contract(document)
+
+
+def test_legacy_schema_and_parser_retain_archived_defaults():
+    document = _expressiveness_documents()["desired_task_effect"]
+    relation = document["task_contract"]["functional_relations"][0]
+    operation = document["task_contract"]["operation_pairings"][0]
+    del relation["id"]
+    del relation["required"]
+    for field in ("id", "source_role", "operation_count", "reuse_policy"):
+        del operation[field]
+
+    jsonschema.validate(document, RESPONSE_SCHEMA_V2)
+    validate_v2_functional_specification(document)
+    canonical = convert_v2_to_canonical_document(document)
+    assert canonical["functional_relations"][0]["required"] is True
+    assert canonical["interaction_groups"][0]["required_target_count"] == 1
+    assert canonical["interaction_groups"][0]["usage_policy"] == "DEDICATED_PER_TARGET"
+    with pytest.raises(MalformedVLMSpecificationError):
+        validate_v2_live_contract(document)
+
+
+def test_live_schema_allows_semantically_valid_unsupported_response():
+    document = _document([])
+    document.update(
+        status="UNSUPPORTED",
+        task_summary="Unsupported abstract request",
+        unsupported_reason="Cannot represent requested transformation",
+    )
+    jsonschema.validate(document, LIVE_RESPONSE_SCHEMA_V2)
+    assert validate_v2_live_contract(document)["status"] == "UNSUPPORTED"
+
+
+class _RecordingTransport:
+    def __init__(self, document):
+        self.document = document
+        self.calls = []
+
+    def complete(self, payload):
+        self.calls.append(payload)
+        return {
+            "choices": [
+                {
+                    "index": 0,
+                    "finish_reason": "stop",
+                    "message": {"role": "assistant", "content": json.dumps(self.document)},
+                }
+            ]
+        }
+
+
+def _capture_domain_payload(domain: str, document: dict, observation_image) -> dict:
+    transport = _RecordingTransport(document)
+    adapter = FMAdapter(
+        base_url="http://127.0.0.1:18000/v1",
+        model="test-model",
+        transport=transport,
+    )
+    if domain == "kitchen":
+        adapter.generate_kitchen_functional_graph(
+            "abstract task", observation_images=[observation_image]
+        )
+    else:
+        adapter.generate_task_requirements(
+            "abstract task", observation_images=[observation_image]
+        )
+    return transport.calls[0]
+
+
+def test_all_domain_requests_send_the_same_strict_live_schema(monkeypatch, tmp_path):
+    monkeypatch.setenv("TAMP_FM_SCHEMA_VERSION", "2")
+    document = _expressiveness_documents()["desired_task_effect"]
+    observation_image = tmp_path / "observation.png"
+    observation_image.write_bytes(b"synthetic image")
+    payloads = [_capture_domain_payload(domain, document, observation_image) for domain in (
+        "kitchen", "living_room", "workshop"
+    )]
+    schemas = [payload["response_format"]["json_schema"]["schema"] for payload in payloads]
+
+    assert all(payload["response_format"]["type"] == "json_schema" for payload in payloads)
+    assert all(payload["response_format"]["json_schema"]["strict"] is True for payload in payloads)
+    assert all(schema is LIVE_RESPONSE_SCHEMA_V2 for schema in schemas)
+    assert len({hashlib.sha256(json.dumps(schema, sort_keys=True).encode()).hexdigest()
+                for schema in schemas}) == 1
+
+    contract_schema = schemas[0]["properties"]["task_contract"]["properties"]
+    assert {"candidate_categories", "required_properties"} <= set(
+        contract_schema["functional_roles"]["items"]["required"]
+    )
+    assert {"id", "required"} <= set(
+        contract_schema["functional_relations"]["items"]["required"]
+    )
+    assert {"id", "source_role", "operation_count", "reuse_policy"} <= set(
+        contract_schema["operation_pairings"]["items"]["required"]
+    )
+
+
+def test_fake_transport_cannot_bypass_post_validation(monkeypatch, tmp_path):
+    monkeypatch.setenv("TAMP_FM_SCHEMA_VERSION", "2")
+    document = _expressiveness_documents()["desired_task_effect"]
+    del document["task_contract"]["functional_relations"][0]["id"]
+    del document["task_contract"]["functional_relations"][0]["required"]
+    observation_image = tmp_path / "observation.png"
+    observation_image.write_bytes(b"synthetic image")
+
+    with pytest.raises(MalformedVLMSpecificationError, match="MISSING_LIVE_RELATION_FIELDS"):
+        _capture_domain_payload("workshop", document, observation_image)
+
+
+def test_live_prompt_schema_hash_matches_actual_wire_contract():
+    expected = hashlib.sha256(json.dumps(
+        {
+            "system_prompt_v2": SYSTEM_PROMPT_V2,
+            "response_schema_v2": LIVE_RESPONSE_SCHEMA_V2,
+        },
+        sort_keys=True,
+    ).encode()).hexdigest()
+    assert compute_v2_prompt_and_schema_hash() == expected
