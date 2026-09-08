@@ -1,0 +1,45 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Perform operation with inverted or invalid relation endpoints",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "role_driver",
+        "entity_kind": "OBJECT",
+        "function": "implement used to manipulate or install fastener",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "role_fastener",
+        "entity_kind": "OBJECT",
+        "function": "connecting element used to secure joint",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw"
+        ],
+        "required_properties": []
+      }
+    ],
+    "functional_relations": [
+      {
+        "subject_role": "role_driver",
+        "relation": "reaches bottom of",
+        "object_role": "role_fastener",
+        "required": true
+      }
+    ],
+    "operation_pairings": []
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {},
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": ""
+}

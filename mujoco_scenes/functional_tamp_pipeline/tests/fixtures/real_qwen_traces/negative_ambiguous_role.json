@@ -1,0 +1,47 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Perform task with conflicting ambiguous roles",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "driver_alpha",
+        "entity_kind": "OBJECT",
+        "function": "implement used to manipulate or install fastener",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "driver_beta",
+        "entity_kind": "OBJECT",
+        "function": "implement used to manipulate or install fastener",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver"
+        ],
+        "required_properties": []
+      }
+    ],
+    "functional_relations": [],
+    "operation_pairings": [
+      {
+        "id": "op_a",
+        "operation": "drive fastener",
+        "source_role": "driver_alpha",
+        "target_role": "driver_beta",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET"
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {},
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": ""
+}

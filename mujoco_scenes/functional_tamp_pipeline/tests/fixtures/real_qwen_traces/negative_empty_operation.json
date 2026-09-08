@@ -1,0 +1,47 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Perform empty operation",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "driver",
+        "entity_kind": "OBJECT",
+        "function": "implement used to manipulate or install fastener",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "fastener",
+        "entity_kind": "OBJECT",
+        "function": "connecting element used to secure joint",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw"
+        ],
+        "required_properties": []
+      }
+    ],
+    "functional_relations": [],
+    "operation_pairings": [
+      {
+        "id": "empty_op",
+        "operation": "",
+        "source_role": "driver",
+        "target_role": "fastener",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET"
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {},
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": ""
+}

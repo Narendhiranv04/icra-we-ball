@@ -1,0 +1,91 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "REGION",
+        "function": "A surface area designated to hold a refreshment setting for one person near seating.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "side table surface",
+          "personal table surface",
+          "tray table"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "refreshment_setting_components",
+        "entity_kind": "OBJECT",
+        "function": "A complete set of items constituting a refreshment setting for one person.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup and saucer set",
+          "refreshment set",
+          "beverage setting"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "A device used to control the television or entertainment system.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "remote control",
+          "media controller",
+          "TV remote"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "accessible_location",
+        "entity_kind": "REGION",
+        "function": "A shared surface area where the entertainment control is accessible to both people.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table surface",
+          "central table surface"
+        ],
+        "required_properties": []
+      }
+    ],
+    "functional_relations": [
+      {
+        "subject_role": "entertainment_control",
+        "relation": "placed on",
+        "object_role": "accessible_location",
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "place_refreshments",
+        "operation": "support drinkware setting on personal surface",
+        "source_role": "refreshment_setting_components",
+        "target_role": "refreshment_setting",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET"
+      },
+      {
+        "id": "place_remote",
+        "operation": "place entertainment control on shared surface",
+        "source_role": "entertainment_control",
+        "target_role": "accessible_location",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET"
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {},
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": ""
+}

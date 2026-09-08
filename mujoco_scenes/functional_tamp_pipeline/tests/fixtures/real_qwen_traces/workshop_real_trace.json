@@ -1,0 +1,100 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Identify compatible fastening components, complete the fastening at the marked location, and leave reusable equipment on the workbench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "implement used to manipulate or install fastener into target",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "driver",
+          "wrench"
+        ],
+        "required_properties": [
+          "elongated shape"
+        ]
+      },
+      {
+        "id": "fastening_component",
+        "entity_kind": "OBJECT",
+        "function": "connecting element used to secure the joint at marked location",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "fastener"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "fastening_target",
+        "entity_kind": "FIXED_TARGET",
+        "function": "marked target joint location on the workbench",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "repair target",
+          "marked joint"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "workbench_surface",
+        "entity_kind": "REGION",
+        "function": "workbench work surface to support reusable equipment after task",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "workbench top",
+          "workbench surface"
+        ],
+        "required_properties": []
+      }
+    ],
+    "functional_relations": [
+      {
+        "subject_role": "fastening_tool",
+        "relation": "acts on",
+        "object_role": "fastening_component",
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "fasten_joint",
+        "operation": "fasten joint at target location",
+        "source_role": "fastening_tool",
+        "target_role": "fastening_component",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET"
+      },
+      {
+        "id": "return_tool",
+        "operation": "return reusable item to support surface",
+        "source_role": "fastening_tool",
+        "target_role": "workbench_surface",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET"
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {},
+    "inspectable_regions": [
+      {
+        "id": "left_drawer",
+        "label": "left drawer",
+        "visual_description": "drawer on left"
+      }
+    ],
+    "inspection_order": [
+      "left_drawer"
+    ]
+  },
+  "unsupported_reason": ""
+}

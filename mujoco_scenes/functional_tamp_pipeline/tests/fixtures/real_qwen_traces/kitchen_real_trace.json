@@ -1,0 +1,143 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare and serve one coffee and one soup for each of two people. Make each coffee using coffee and water and stir it before serving. Serve each soup bowl with its own suitable eating utensil.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "coffee_cup",
+        "entity_kind": "OBJECT",
+        "function": "A container for coffee.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "mug",
+          "coffee cup",
+          "glass"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "coffee",
+        "entity_kind": "OBJECT",
+        "function": "A source of coffee powder or grounds.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "coffee can",
+          "coffee jar",
+          "coffee container",
+          "coffee bag"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "water_source",
+        "entity_kind": "OBJECT",
+        "function": "A source of water.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "water bottle",
+          "water jug",
+          "water pitcher",
+          "water container"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "stirring_utensil",
+        "entity_kind": "OBJECT",
+        "function": "A tool for stirring the coffee.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "stirrer",
+          "coffee stirrer"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "soup_bowl",
+        "entity_kind": "OBJECT",
+        "function": "A container for soup.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "soup bowl",
+          "bowl",
+          "dish"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "eating_utensil",
+        "entity_kind": "OBJECT",
+        "function": "A tool for eating the soup.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "fork",
+          "eating utensil"
+        ],
+        "required_properties": []
+      }
+    ],
+    "functional_relations": [
+      {
+        "subject_role": "coffee",
+        "relation": "provides material to",
+        "object_role": "coffee_cup",
+        "required": true
+      },
+      {
+        "subject_role": "eating_utensil",
+        "relation": "associated with",
+        "object_role": "soup_bowl",
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "fill_coffee_cup",
+        "operation": "transfer coffee contents into cup",
+        "source_role": "coffee",
+        "target_role": "coffee_cup",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      {
+        "id": "add_water",
+        "operation": "transfer water contents into coffee cup",
+        "source_role": "water_source",
+        "target_role": "coffee_cup",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      {
+        "id": "stir_coffee",
+        "operation": "stir beverage contents",
+        "source_role": "stirring_utensil",
+        "target_role": "coffee_cup",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      {
+        "id": "serve_soup",
+        "operation": "associate eating utensil with soup bowl",
+        "source_role": "eating_utensil",
+        "target_role": "soup_bowl",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET"
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {},
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": ""
+}

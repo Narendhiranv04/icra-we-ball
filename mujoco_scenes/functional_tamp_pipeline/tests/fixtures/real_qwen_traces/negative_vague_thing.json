@@ -1,0 +1,29 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Perform unknown operation with unspecified item",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "thing_1",
+        "entity_kind": "OBJECT",
+        "function": "a general thing to do something unspecified in the environment",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "thing",
+          "item",
+          "stuff"
+        ],
+        "required_properties": []
+      }
+    ],
+    "functional_relations": [],
+    "operation_pairings": []
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {},
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": ""
+}

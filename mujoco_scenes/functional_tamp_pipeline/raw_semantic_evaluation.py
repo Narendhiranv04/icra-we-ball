@@ -124,6 +124,7 @@ _OPERATION_PATTERNS: dict[str, tuple[str, ...]] = {
     ),
     "PROVIDE_SOUP_EATING_UTENSIL": (
         r"serve soup", r"provide.*(soup|eating).*utensil", r"place.*utensil", r"spoon.*soup",
+        r"associate.*utensil", r"eating utensil",
     ),
     "SUPPORT_DRINKWARE": (
         r"support.*(drinkware|refreshment|cup|saucer)", r"place.*(refreshment|drinkware|cup|saucer).*surface",
