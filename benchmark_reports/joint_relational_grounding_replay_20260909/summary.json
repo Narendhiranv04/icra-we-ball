@@ -1,0 +1,109 @@
+{
+  "source_matrix": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST",
+  "source_contract_count": 32,
+  "semantic_fm_calls": 0,
+  "runtime_replay": "archived V2 contracts with deterministic scene variants",
+  "outcome_taxonomy": [
+    "SUCCESS",
+    "TASK_SPECIFICATION_FAILURE",
+    "GRAPH_COMPILATION_FAILURE",
+    "OBJECT_DISCOVERY_FAILURE",
+    "FUNCTIONAL_ASSIGNMENT_FAILURE",
+    "PLANNING_FAILURE"
+  ],
+  "outcome_counts": {
+    "kitchen": {"SUCCESS": 1, "TASK_SPECIFICATION_FAILURE": 0, "GRAPH_COMPILATION_FAILURE": 0, "OBJECT_DISCOVERY_FAILURE": 11, "FUNCTIONAL_ASSIGNMENT_FAILURE": 0, "PLANNING_FAILURE": 0},
+    "living_room": {"SUCCESS": 3, "TASK_SPECIFICATION_FAILURE": 2, "GRAPH_COMPILATION_FAILURE": 0, "OBJECT_DISCOVERY_FAILURE": 3, "FUNCTIONAL_ASSIGNMENT_FAILURE": 2, "PLANNING_FAILURE": 0},
+    "workshop": {"SUCCESS": 1, "TASK_SPECIFICATION_FAILURE": 0, "GRAPH_COMPILATION_FAILURE": 1, "OBJECT_DISCOVERY_FAILURE": 0, "FUNCTIONAL_ASSIGNMENT_FAILURE": 8, "PLANNING_FAILURE": 0},
+    "overall": {"SUCCESS": 5, "TASK_SPECIFICATION_FAILURE": 2, "GRAPH_COMPILATION_FAILURE": 1, "OBJECT_DISCOVERY_FAILURE": 14, "FUNCTIONAL_ASSIGNMENT_FAILURE": 10, "PLANNING_FAILURE": 0}
+  },
+  "graph_compilation": {
+    "task_specification_valid_contracts": 30,
+    "compiled_contracts": 29,
+    "success_rate": 0.9666666667
+  },
+  "semantic_resolution": {
+    "direct_function_matches": 110,
+    "relation_assisted_role_resolutions": 1,
+    "operation_assisted_role_resolutions": 9,
+    "unresolved_role_declarations": 18,
+    "unresolved_ambiguous_collisions": 6
+  },
+  "scene_grounding": {
+    "relation_assisted_bindings": 34,
+    "semantic_unknown_bindings_verified_by_relations": 1
+  },
+  "planner_invocations": 6,
+  "cases": {
+    "K1": "SUCCESS",
+    "K2": "OBJECT_DISCOVERY_FAILURE",
+    "K3": "OBJECT_DISCOVERY_FAILURE",
+    "K4": "OBJECT_DISCOVERY_FAILURE",
+    "K5": "OBJECT_DISCOVERY_FAILURE",
+    "K6": "OBJECT_DISCOVERY_FAILURE",
+    "K7": "OBJECT_DISCOVERY_FAILURE",
+    "K8": "OBJECT_DISCOVERY_FAILURE",
+    "K9": "OBJECT_DISCOVERY_FAILURE",
+    "K10": "OBJECT_DISCOVERY_FAILURE",
+    "K11": "OBJECT_DISCOVERY_FAILURE",
+    "K12": "OBJECT_DISCOVERY_FAILURE",
+    "L1": "SUCCESS",
+    "L2": "OBJECT_DISCOVERY_FAILURE",
+    "L3": "SUCCESS",
+    "L4": "TASK_SPECIFICATION_FAILURE",
+    "L5": "SUCCESS",
+    "L6": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+    "L7": "TASK_SPECIFICATION_FAILURE",
+    "L8": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+    "L9": "OBJECT_DISCOVERY_FAILURE",
+    "L10": "OBJECT_DISCOVERY_FAILURE",
+    "W1": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+    "W2": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+    "W3": "SUCCESS",
+    "W4": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+    "W5": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+    "W6": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+    "W7": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+    "W8": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+    "W9": "GRAPH_COMPILATION_FAILURE",
+    "W10": "FUNCTIONAL_ASSIGNMENT_FAILURE"
+  },
+  "remaining_failures": {
+    "TASK_SPECIFICATION_FAILURE": {
+      "L4": "ACCESSIBLE_FROM_BOTH_SEATS requires SEATING_PAIR, but the FM bound SEATING_POSITION",
+      "L7": "ACCESSIBLE_FROM_BOTH_SEATS requires SEATING_PAIR, but the FM bound SEATING_POSITION"
+    },
+    "GRAPH_COMPILATION_FAILURE": {
+      "W9": "No executable role could be typed"
+    },
+    "OBJECT_DISCOVERY_FAILURE": {
+      "K2": ["coffee_container"],
+      "K3": ["soup_container", "coffee_source", "water_source"],
+      "K4": ["soup_container"],
+      "K5": ["water_source", "soup_eating_utensil"],
+      "K6": ["soup_container", "coffee_stirrer", "soup_eating_utensil"],
+      "K7": ["coffee_container", "soup_container", "coffee_source", "water_source"],
+      "K8": ["coffee_container", "soup_container"],
+      "K9": ["coffee_container", "soup_container", "coffee_source", "water_source", "coffee_stirrer", "soup_eating_utensil"],
+      "K10": ["coffee_stirrer", "soup_container", "soup_eating_utensil"],
+      "K11": ["coffee_container", "soup_container", "soup_eating_utensil", "coffee_stirrer", "water_source"],
+      "K12": ["coffee_source", "coffee_stirrer", "water_source"],
+      "L2": ["SEATING_POSITION", "CUP_SAUCER_SET"],
+      "L9": ["PERSONAL_CUP_SAUCER_REGION"],
+      "L10": ["SEATING_POSITION", "SHARED_REMOTE_REGION"]
+    },
+    "FUNCTIONAL_ASSIGNMENT_FAILURE": {
+      "L6": "No expressed verified placement requirement",
+      "L8": "No expressed verified placement requirement",
+      "W1": "No joint assignment for driver",
+      "W2": "No joint assignment for fastener",
+      "W4": "No joint assignment for driver",
+      "W5": "No joint assignment for driver",
+      "W6": "No joint assignment for driver",
+      "W7": "No joint assignment for driver/fastener",
+      "W8": "No joint assignment for driver/fastener",
+      "W10": "No joint assignment for driver/fastener"
+    },
+    "PLANNING_FAILURE": {}
+  }
+}
