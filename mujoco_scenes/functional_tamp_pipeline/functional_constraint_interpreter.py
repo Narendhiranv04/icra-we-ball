@@ -29,7 +29,10 @@ class FunctionalConstraintInterpreter:
         r"\b(initial|current(?:ly)?|starting|staging|storage|source location|holds? the (?:items?|payload))\b",
         re.I,
     )
-    _BEVERAGE_MACRO = re.compile(r"\b(prepare|make|mix|combine)\b.*\b(beverage|coffee|drink|mixture)\b", re.I)
+    _BEVERAGE_MACRO = re.compile(
+        r"\b(?:prepare|make|mix|combine)\b.*\b(?:beverage|coffee|drink|mixture)\b|\bfill\b.*\bmix\b",
+        re.I,
+    )
 
     def __init__(
         self,

@@ -19,7 +19,7 @@ import jsonschema
 from .errors import MalformedVLMSpecificationError, TaskSpecificationValidationError
 from .fm_schema_v2 import RESPONSE_SCHEMA_V2
 from .relation_interpreter import extract_relation_semantic_candidates, interpret_task_effect_predicate
-from .robot_capability_registry import extract_operation_semantic_candidates
+from .robot_capability_registry import extract_operation_semantic_candidates, is_non_physical_operation_phrase
 from .semantic_typing import build_role_type_hypotheses, relation_canonical_role_pairs
 
 
@@ -37,9 +37,9 @@ Reason silently in this order:
 3. Function audit: distinguish material sources, receiving containers, reusable instruments, manipulated joining components, fixed receiving targets, personal supports, shared supports, and seating/context anchors. Roles with different causal functions remain distinct even if they share a broad object category.
 4. Operation audit: for every operation silently make a matrix of its required causal participant functions, selected role IDs, and function-consistency PASS/FAIL. Every participant must play a causal function compatible with its declared role.function. If a required function has no role, declare a separate role before output; never silently reuse a differently functioning role. A beverage-stirring instrument differs from a meal-eating utensil even when both might be spoons; likewise driver differs from joining component, personal support from shared support, support from seating reference, and fixed receiving target from manipulated component. Use one atomic operation per transformation and list only its directly participating roles. Array order has no source/target/anchor meaning. Do not combine multiple material sources into one transfer. Placement relative to seating needs payload, support, and the declared seating roles. Fastening needs an implement, joining component, and fixed receiving target; never substitute the robot or an undeclared collection.
 5. Count audit: required_count counts physical instances; operation_count counts applications. Repeated use requires REUSABLE or enough DISTINCT instances. Distributing counted payloads to distinct destinations requires one operation per pairing or one unambiguous repeated pattern; never combine alternative destinations.
-6. Consistency audit: every participant is an exact declared role ID—never a count, field name, placeholder, or undeclared plural. Every clause is represented; interchangeable instances use a counted role; personal and shared supports remain distinct; robot components are not task objects unless targeted. Inspection/search belongs in observation guidance. For both, all, pair, each, or between, include every declared role defining that set; do not invent a synthetic pair role. Example: shared support accessible from both seats lists support, left seat, and right seat.
+6. Consistency audit: every participant is an exact declared role ID—not a count, field, placeholder, or undeclared plural. Represent every clause; use counted roles for interchangeable instances; keep personal and shared supports distinct. Robot components are not task objects unless targeted. Required relations describe task results or compatibility, never incidental initial locations. Inspection/search and initial storage belong only in observation guidance. For both, all, pair, each, or between, include all declared set roles; do not invent a synthetic pair role. Shared support accessible from both seats lists support, left seat, and right seat.
 
-Declare material sources or preparation processes only when explicitly specified; an end product never implies hidden ingredients or containers. A quantity-only person/user is not a physical role or serve target. Include people or seats only for required geometric relations. Serve, provide, or prepare is physical only when it expresses a transformation or placement. A payload's current surface is observation context, not normally a placement participant. Placement uses the payload, destination support, and required spatial anchors.
+Declare material sources or preparation processes only when explicitly specified; an end product never implies hidden ingredients or containers. A quantity-only person/user is not a physical role or serve target and must not duplicate an explicit seat role. Include people or seats only for required geometry. Serve, provide, or prepare is physical only when it expresses a transformation or placement. A payload's current surface is observation context, not normally a placement participant. Every placement operation includes its payload and destination support plus required spatial anchors; never replace the destination with anchors.
 
 Use short atomic natural-language role functions, relations, operations, and unary properties, not uppercase backend-style predicate names. Relation participant order is not directional. Initial-location statements such as currently on, located initially, or stored on are observation context, not automatically required final relations. Required relations express compatibility, functional dependency, final state, or a physical relation needed by an operation. Do not add operations merely to describe an already satisfied state unless the instruction requires the transformation. Do not estimate numeric geometry. Observation candidates are visible evidence only. Inspectable regions must be visible closed/storage structures; inspection_order must contain every exact declared region id once and nothing else. Region reasons may say they could be inspected for task-relevant candidates but must not claim hidden contents."""
 
@@ -536,6 +536,19 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
         pair = set(relation["participant_roles"])
         role_texts = [" ".join(str(roles_by_id[p].get(key, "")) for key in ("function", "description")) for p in pair]
         is_current = bool(re.search(r"\b(currently|initially|initial|starts?|stored|located at)\b", phrase_norm))
+        if not is_current and re.fullmatch(r"\s*(?:is\s+)?(?:on|at)\s*", phrase_norm):
+            pair_has_physical_placement = any(
+                pair <= set(operation.get("participant_roles", ()))
+                and re.search(r"\b(place|move|transfer|relocate|position|deposit|return)\w*\b",
+                              re.sub(r"[_-]+", " ", str(operation.get("operation", ""))), re.I)
+                for operation in normalized_operations
+            )
+            context_endpoint = any(
+                re.search(r"\b(initial|current|storage|source container|tray|workbench|table|support surface)\b",
+                          text.replace("_", " "), re.I)
+                for text in role_texts
+            )
+            is_current = context_endpoint and not pair_has_physical_placement
         if not is_current and re.search(r"\bsupported by\b", phrase_norm) and pair not in operation_pairs:
             is_current = any(re.search(r"\b(support|surface|workbench|context)\b", text, re.I) for text in role_texts)
         if is_current:
@@ -567,7 +580,6 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
 
     groups = []
     for operation in normalized_operations:
-        from .robot_capability_registry import is_non_physical_operation_phrase
         operation_norm = re.sub(r"[_-]+", " ", str(operation["operation"])).lower().strip()
         if is_non_physical_operation_phrase(str(operation["operation"])) or operation_norm.split(maxsplit=1)[0] in {
             "associate", "associates", "associating", "associated",
@@ -615,6 +627,30 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
             "v3_explicit_context_set_id": operation.get("explicit_context_set_id"),
         })
     canonical["interaction_groups"] = groups
+    primitive_participants = {
+        participant
+        for operation in normalized_operations
+        if not is_non_physical_operation_phrase(str(operation.get("operation", "")))
+        for participant in operation.get("participant_roles", ())
+    }
+    relation_only_context = {
+        participant
+        for relation in current_state_relations
+        for participant in relation.get("participant_roles", ())
+        if participant not in primitive_participants
+        and re.search(
+            r"\b(storage|source container|tray|support|surface|table|workbench|location|region)\b",
+            " ".join((
+                str(roles_by_id.get(participant, {}).get("function", "")),
+                str(roles_by_id.get(participant, {}).get("description", "")),
+                " ".join(roles_by_id.get(participant, {}).get("candidate_categories", ())),
+            )).replace("_", " "),
+            re.I,
+        )
+    }
+    canonical["current_state_operation_context_roles"] = sorted(
+        set(canonical.get("current_state_operation_context_roles", ())) | relation_only_context
+    )
     for role in contract["functional_roles"]:
         is_current_context = role["id"] in set(canonical.get("current_state_operation_context_roles", ()))
         canonical["fm_semantic_accounting"].append({

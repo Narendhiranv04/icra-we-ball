@@ -81,6 +81,30 @@ def test_current_location_relation_is_preserved_outside_required_gf_relations():
     assert canonical["current_state_relations"][0]["category"] == "CURRENT_STATE_CONTEXT"
 
 
+def test_plain_is_on_without_destination_operation_is_current_state_context():
+    raw = document([
+        role("tool", "fastening instrument"),
+        role("tray", "current source container", kind="REGION", policy="SHARED"),
+    ], relations=[relation("initial", "is_on", ["tool", "tray"])], operations=[
+        operation("inspect", "identify components", ["tool", "tray"]),
+    ])
+    canonical = convert_v3_to_canonical_document(raw, domain="workshop")
+    assert canonical["functional_relations"] == []
+    assert canonical["current_state_relations"][0]["id"] == "initial"
+
+
+def test_plain_is_on_with_explicit_placement_remains_task_effect():
+    raw = document([
+        role("payload", "personal refreshment payload", categories=["CUP"]),
+        role("support", "personal support", kind="REGION", policy="SHARED"),
+    ], relations=[relation("goal", "is_on", ["payload", "support"])], operations=[
+        operation("place", "place payload", ["payload", "support"]),
+    ])
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    assert canonical["current_state_relations"] == []
+    assert canonical["functional_relations"][0]["id"] == "goal"
+
+
 def test_equivalent_payload_instances_consolidate_as_two_distinct_objects():
     raw = document([
         role("cup_1", "refreshment payload", categories=["CUP"]),
@@ -350,6 +374,30 @@ def test_beverage_macro_has_unique_two_transfer_lowering_and_accounting():
     assert len(canonical["interaction_groups"]) == 2
     assert {g["v3_slot_assignments"][0]["capability_id"] for g in canonical["interaction_groups"]} == {"TRANSFER_CONTENT_TO_CONTAINER"}
     assert canonical["fm_semantic_accounting"][0]["disposition"] == "DETERMINISTIC_COMPOSITE_OPERATION_LOWERING"
+
+
+def test_fill_and_mix_macro_is_lowered_from_participant_functions():
+    raw = document([
+        role("source_a", "source of coffee material", policy="SHARED"),
+        role("source_b", "source of water", policy="SHARED"),
+        role("container", "receiving vessel for coffee"),
+    ], operations=[operation("macro", "fill_and_mix", ["source_a", "source_b", "container"])])
+    canonical = convert_v3_to_canonical_document(raw, domain="kitchen")
+    assert len(canonical["interaction_groups"]) == 2
+    assert all(group["v3_slot_assignments"][0]["capability_id"] == "TRANSFER_CONTENT_TO_CONTAINER"
+               for group in canonical["interaction_groups"])
+
+
+def test_object_used_only_as_current_state_container_is_context_not_groundable_role():
+    raw = document([
+        role("tool", "fastening instrument"),
+        role("tray", "source container", categories=["TRAY"]),
+    ], relations=[relation("initial", "is_on", ["tool", "tray"])], operations=[
+        operation("inspect", "identify components", ["tool", "tray"]),
+    ])
+    graph = compile_candidate_graph("workshop", "identify components", raw)
+    assert "tray" not in graph.nodes
+    assert graph.metadata["current_state_operation_context_roles"] == ["tray"]
 
 
 def test_beverage_macro_with_incompatible_participant_does_not_lower():

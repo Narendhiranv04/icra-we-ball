@@ -35,7 +35,7 @@ def _text(role: dict[str, Any]) -> str:
         ("DESCRIPTION_TEXT", str(role.get("description", ""))),
     )
     signal = re.compile(
-        r"\b(source|provider|ingredient|receiv|destination|tool|implement|instrument|utensil|driver|"
+        r"\b(source|provider|ingredient|receiv|destination|holds?|tool|implement|instrument|utensil|driver|"
         r"table|surface|support|platform|seat|chair|component|fastener|target|fixture|refreshment|"
         r"drinkware|refreshment|payload|remote|control|television|display|cup|plate|saucer)\w*\b", re.I
     )
@@ -106,11 +106,11 @@ def function_semantic_evidence(
     # water source and the legacy coffee alias.
     preferred: set[str] = set()
 
-    if re.search(r"\b(source|suppl(?:y|ies)|provider|ingredient|raw material|holding (?:dry|drinking|raw))\b", text):
+    if re.search(r"\b(source|suppl(?:y|ies)|provider|ingredient|raw material|holding (?:dry|drinking|raw)|contains? (?:dry )?(?:coffee|water|material|ingredient|liquid))\b", text):
         families.add("SOURCE")
-    if re.search(r"\b(receiv(?:e|es|ing)|destination|prepared (?:coffee|soup)|served soup)\b", text):
+    if re.search(r"\b(receiv(?:e|es|ing)|destination|prepared (?:coffee|soup)|served soup|holds? (?:coffee|soup) for)\b", text):
         families.add("DESTINATION")
-    if re.search(r"\b(tool|implement|instrument|utensil|driver|wrench|drill|applicator|drive|tighten)\b", text):
+    if re.search(r"\b(tool|implement|instrument|utensil|driver|wrench|drill|applicator|drive|tighten|stir|mix)\w*\b", text):
         families.add("INSTRUMENT")
     if re.search(r"\b(table|tabletop|surface|platform|support|placement area|central area|staging area|storage area|storage region)\b", text):
         families.add("SUPPORT")
