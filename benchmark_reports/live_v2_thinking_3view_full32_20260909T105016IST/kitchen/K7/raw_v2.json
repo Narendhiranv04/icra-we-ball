@@ -1,0 +1,246 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "region_drawer_bottom_left",
+        "label": "lower_drawer_front_side",
+        "reason": "Likely contains additional serving vessels (cups/bowls) and possibly additional utensils.",
+        "visual_description": "A white drawer with a silver handle located on the front face of the table leg assembly on the bottom left corner."
+      },
+      {
+        "id": "region_drawer_bottom_right",
+        "label": "lower_drawer_front_side",
+        "reason": "Likely contains additional serving vessels.",
+        "visual_description": "A white drawer with a silver handle located on the front face of the table leg assembly on the bottom right corner."
+      },
+      {
+        "id": "region_wall_unit_left",
+        "label": "filing_cabinet_hanging_wallside",
+        "reason": "Could store bulk containers for coffee powder or other ingredients.",
+        "visual_description": "A beige cubic filing cabinet suspended against the left blue wall background."
+      },
+      {
+        "id": "region_wall_unit_right",
+        "label": "filing_cabinet_hanging_wallside",
+        "reason": "Could store bulk containers or kitchen supplies.",
+        "visual_description": "A beige cubic filing cabinet suspended against the background behind the table on the right."
+      }
+    ],
+    "inspection_order": [
+      "region_drawer_bottom_left",
+      "region_drawer_bottom_right",
+      "region_wall_unit_left",
+      "region_wall_unit_right"
+    ],
+    "visible_candidates_per_role": {
+      "coffee_flavor_source": [
+        {
+          "label": "small_cylindrical_jar",
+          "visual_description": "A dark colored cylindrical jar standing upright on the table near the right edge."
+        }
+      ],
+      "coffee_serving_vessel": [],
+      "eating_utensil_spoon": [
+        {
+          "label": "silver_spoon_left",
+          "visual_description": "A metal spoon lying horizontally on the left side of the table surface."
+        },
+        {
+          "label": "silver_spoon_center",
+          "visual_description": "A metal spoon lying horizontally on the central part of the table surface."
+        }
+      ],
+      "soup_ingredient_container": [
+        {
+          "label": "large_brown_box",
+          "visual_description": "A rectangular cardboard box situated on the right side of the table."
+        }
+      ],
+      "soup_serving_bowl": [
+        {
+          "label": "red_rimmed_ceramic_bowl",
+          "visual_description": "A round bowl with red rim sitting on the table surface."
+        }
+      ],
+      "water_source_vessel": [
+        {
+          "label": "metal_pitcher_kettle",
+          "visual_description": "A silver metallic jug or pitcher located on the table near the center right."
+        },
+        {
+          "label": "white_pot",
+          "visual_description": "A white ceramic pot with a handle located on the table."
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_001",
+        "object_role": "water_source_vessel",
+        "relation": "receives_transfer_from",
+        "required": true,
+        "subject_role": "coffee_serving_vessel"
+      },
+      {
+        "id": "rel_002",
+        "object_role": "coffee_flavor_source",
+        "relation": "receives_transfer_from",
+        "required": true,
+        "subject_role": "coffee_serving_vessel"
+      },
+      {
+        "id": "rel_003",
+        "object_role": "soup_ingredient_container",
+        "relation": "receives_transfer_from",
+        "required": true,
+        "subject_role": "soup_serving_bowl"
+      },
+      {
+        "id": "rel_004",
+        "object_role": "eating_utensil_spoon",
+        "relation": "associated_with_placement",
+        "required": true,
+        "subject_role": "soup_serving_bowl"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "glass",
+          "travel mug",
+          "tea cup",
+          "small ceramic dish"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "container for prepared coffee beverage",
+        "id": "coffee_serving_vessel",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "soup bowl",
+          "ceramic dish",
+          "porcelain plate",
+          "bowl"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "container for prepared soup dish",
+        "id": "soup_serving_bowl",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "coffee tin",
+          "jar",
+          "box",
+          "pouch",
+          "bag"
+        ],
+        "entity_kind": "REGION",
+        "function": "storage holding dry coffee ingredient",
+        "id": "coffee_flavor_source",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "kettle",
+          "jug",
+          "pitcher",
+          "sink faucet"
+        ],
+        "entity_kind": "REGION",
+        "function": "storage holding potable water liquid",
+        "id": "water_source_vessel",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "pot",
+          "cauldron",
+          "pan",
+          "cooking pot"
+        ],
+        "entity_kind": "REGION",
+        "function": "storage holding prepared soup stock or solids",
+        "id": "soup_ingredient_container",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "ladle",
+          "tablespoon"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "hand-holding implement for eating or stirring",
+        "id": "eating_utensil_spoon",
+        "required_count": 2,
+        "required_properties": []
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "coffee_serving_vessel",
+        "id": "op_001",
+        "operation": "transfer_water_to_coffee_cup",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "water_source_vessel",
+        "target_role": "coffee_serving_vessel"
+      },
+      {
+        "anchor_role": "coffee_serving_vessel",
+        "id": "op_002",
+        "operation": "transfer_coffee_powder_to_cup",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "coffee_flavor_source",
+        "target_role": "coffee_serving_vessel"
+      },
+      {
+        "anchor_role": "coffee_serving_vessel",
+        "id": "op_003",
+        "operation": "stir_coffee_mixture",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "eating_utensil_spoon",
+        "target_role": "coffee_serving_vessel"
+      },
+      {
+        "anchor_role": "soup_serving_bowl",
+        "id": "op_004",
+        "operation": "transfer_soup_to_bowl",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "soup_ingredient_container",
+        "target_role": "soup_serving_bowl"
+      },
+      {
+        "anchor_role": "soup_serving_bowl",
+        "id": "op_005",
+        "operation": "place_utensil_near_soup",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "eating_utensil_spoon",
+        "target_role": "soup_serving_bowl"
+      }
+    ]
+  },
+  "task_summary": "A complete task contract was derived identifying six distinct physical roles and five atomic operations required to fulfill the request for serving two sets of coffee and soup with utensils.",
+  "unsupported_reason": ""
+}

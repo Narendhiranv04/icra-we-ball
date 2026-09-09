@@ -1,0 +1,207 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "region_drawer_foreground_desk",
+        "label": "Storage Drawer",
+        "reason": "Remote control may be stored here during inspection of storage areas",
+        "visual_description": "Closed drawer compartment on the bottom wooden desk containing the remote"
+      },
+      {
+        "id": "region_cabinet_side_table",
+        "label": "Side Cabinet Shelf",
+        "reason": "Potential alternative surface or storage for refreshment items",
+        "visual_description": "Lower shelf of the left side table partially obscured"
+      }
+    ],
+    "inspection_order": [
+      "region_drawer_foreground_desk",
+      "region_cabinet_side_table"
+    ],
+    "visible_candidates_per_role": {
+      "access_point": [
+        {
+          "label": "Central Coffee Table",
+          "visual_description": "Primary horizontal surface accessible from both chairs"
+        },
+        {
+          "label": "Central Rug Area",
+          "visual_description": "Open carpeted space between seating and desk"
+        }
+      ],
+      "beverage_container": [
+        {
+          "label": "Red Cup",
+          "visual_description": "Red ceramic cup visible on the central coffee table"
+        },
+        {
+          "label": "White Plate",
+          "visual_description": "Round white dish visible on the left side table"
+        }
+      ],
+      "entertainment_controller": [
+        {
+          "label": "Black Remote",
+          "visual_description": "Black handheld remote lying on the foreground wooden desk"
+        }
+      ],
+      "refreshment_table": [
+        {
+          "label": "Side Table",
+          "visual_description": "Wooden end table adjacent to left armchair"
+        },
+        {
+          "label": "Side Table",
+          "visual_description": "Wooden end table adjacent to right armchair"
+        },
+        {
+          "label": "Coffee Table",
+          "visual_description": "Low rectangular table in center of seating arrangement"
+        }
+      ],
+      "television_screen": [],
+      "viewer_seat": [
+        {
+          "label": "Black Armchair",
+          "visual_description": "Upholstered chair located center-left and center-right"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_1",
+        "object_role": "television_screen",
+        "relation": "Faced toward television area",
+        "required": true,
+        "subject_role": "viewer_seat"
+      },
+      {
+        "id": "rel_2",
+        "object_role": "refreshment_table",
+        "relation": "Adjacent to personal refreshment surface",
+        "required": true,
+        "subject_role": "viewer_seat"
+      },
+      {
+        "id": "rel_3",
+        "object_role": "refreshment_table",
+        "relation": "Resting upon designated surface",
+        "required": true,
+        "subject_role": "beverage_container"
+      },
+      {
+        "id": "rel_4",
+        "object_role": "access_point",
+        "relation": "Located within access point reach",
+        "required": true,
+        "subject_role": "entertainment_controller"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "Armchair",
+          "Recliner",
+          "Sofa section"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Seating for viewer",
+        "id": "viewer_seat",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "Side table",
+          "End table",
+          "Coffee table"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Surface for personal refreshment setting",
+        "id": "refreshment_table",
+        "required_count": 2,
+        "required_properties": [
+          "Flat horizontal surface"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "Cup",
+          "Mug",
+          "Glass"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Vessel holding liquid refreshment",
+        "id": "beverage_container",
+        "required_count": 2,
+        "required_properties": [
+          "Holds liquid"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "Remote control",
+          "Wireless receiver"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Device for controlling media playback",
+        "id": "entertainment_controller",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "Coffee table top",
+          "Floor mat",
+          "Side table surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "Shared zone for control retrieval",
+        "id": "access_point",
+        "required_count": 1,
+        "required_properties": [
+          "Reachable while seated"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "television_screen",
+        "id": "op_1",
+        "operation": "Arrange seating fixtures toward viewing direction",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "viewer_seat",
+        "target_role": "room_floor"
+      },
+      {
+        "anchor_role": "viewer_seat",
+        "id": "op_2",
+        "operation": "Transfer beverage container to refreshment surface",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "beverage_container",
+        "target_role": "refreshment_table"
+      },
+      {
+        "anchor_role": "access_point",
+        "id": "op_3",
+        "operation": "Position controller at accessible access point",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "entertainment_controller",
+        "target_role": "access_point"
+      }
+    ]
+  },
+  "task_summary": "Prepare living room for two viewers with seating, refreshments, and accessible controls.",
+  "unsupported_reason": ""
+}

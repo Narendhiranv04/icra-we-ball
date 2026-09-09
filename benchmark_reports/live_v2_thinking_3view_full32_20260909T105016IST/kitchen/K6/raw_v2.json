@@ -1,0 +1,292 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "region_drawer_1",
+        "label": "underneath_left_drawer",
+        "reason": "Potentially holds additional cups, spoons, or lids required for task.",
+        "visual_description": "Slotted front panel of open drawer below table left leg"
+      },
+      {
+        "id": "region_drawer_2",
+        "label": "underneath_right_drawer",
+        "reason": "Potential source for eating utensils or additional cups.",
+        "visual_description": "Slotted front panel of open drawer below table right side"
+      },
+      {
+        "id": "region_cabinet_left",
+        "label": "background_hanging_storage_1",
+        "reason": "Could contain reserve food items or additional cookware.",
+        "visual_description": "Metal cabinet unit attached to wall behind table left"
+      },
+      {
+        "id": "region_cabinet_right",
+        "label": "background_hanging_storage_2",
+        "reason": "Could contain reserve food items or additional cookware.",
+        "visual_description": "Metal cabinet unit attached to wall behind table right"
+      }
+    ],
+    "inspection_order": [
+      "region_drawer_1",
+      "region_drawer_2",
+      "region_cabinet_left",
+      "region_cabinet_right"
+    ],
+    "visible_candidates_per_role": {
+      "coffee_cup": [
+        {
+          "label": "beige_cylinder",
+          "visual_description": "Tall narrow beige container on the left edge"
+        }
+      ],
+      "coffee_source": [
+        {
+          "label": "green_tin",
+          "visual_description": "Small cylindrical green metal container standing upright"
+        },
+        {
+          "label": "brown_box",
+          "visual_description": "Rectangular cardboard box with handle"
+        }
+      ],
+      "eating_utensil": [
+        {
+          "label": "unknown_potential",
+          "visual_description": "Likely stored in drawer beneath table surface"
+        }
+      ],
+      "service_surface": [
+        {
+          "label": "wooden_table_top",
+          "visual_description": "Large flat horizontal surface supporting items"
+        }
+      ],
+      "soup_bowl": [
+        {
+          "label": "red_dish",
+          "visual_description": "Round shallow bowl with red center"
+        }
+      ],
+      "stirring_utensil": [
+        {
+          "label": "unknown_potential",
+          "visual_description": "Possibly inside drawer or obscured by table items"
+        }
+      ],
+      "water_source": [
+        {
+          "label": "white_teapot",
+          "visual_description": "Small rounded metallic or ceramic vessel with spout"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_1",
+        "object_role": "coffee_cup",
+        "relation": "provides_coffee_for_blend",
+        "required": true,
+        "subject_role": "coffee_source"
+      },
+      {
+        "id": "rel_2",
+        "object_role": "coffee_cup",
+        "relation": "provides_water_for_blend",
+        "required": true,
+        "subject_role": "water_source"
+      },
+      {
+        "id": "rel_3",
+        "object_role": "coffee_cup",
+        "relation": "fits_in_contained_volume",
+        "required": true,
+        "subject_role": "stirring_utensil"
+      },
+      {
+        "id": "rel_4",
+        "object_role": "soup_bowl",
+        "relation": "fits_in_open_container",
+        "required": true,
+        "subject_role": "eating_utensil"
+      },
+      {
+        "id": "rel_5",
+        "object_role": "service_surface",
+        "relation": "supported_by_flat_plane",
+        "required": true,
+        "subject_role": "soup_bowl"
+      },
+      {
+        "id": "rel_6",
+        "object_role": "service_surface",
+        "relation": "placed_upon",
+        "required": true,
+        "subject_role": "coffee_cup"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "coffee bean container",
+          "tea bag packet",
+          "coffee grinder",
+          "jar of instant coffee"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Source containing coffee ingredients",
+        "id": "coffee_source",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "kettle",
+          "water pitcher",
+          "mug with tap fill",
+          "bottle of water"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Source containing water for coffee",
+        "id": "water_source",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mug",
+          "coffee cup",
+          "small glass",
+          "ceramic bowl"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Container for prepared coffee",
+        "id": "coffee_cup",
+        "required_count": 2,
+        "required_properties": [
+          "capacity for liquid"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "soup bowl",
+          "dining bowl",
+          "deep dish"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Container for served soup",
+        "id": "soup_bowl",
+        "required_count": 2,
+        "required_properties": [
+          "open top surface",
+          "rim for stability"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "metal spoon",
+          "plastic spoon",
+          "coffee stirrer",
+          "rod"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Tool for stirring coffee liquid",
+        "id": "stirring_utensil",
+        "required_count": 1,
+        "required_properties": [
+          "rigid shaft",
+          "fitting diameter"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "soup spoon",
+          "fork",
+          "ladle",
+          "eating knife"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Utensil for consuming soup",
+        "id": "eating_utensil",
+        "required_count": 2,
+        "required_properties": [
+          "tined end",
+          "bowl shape end"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "tabletop",
+          "counter area",
+          "flat bench"
+        ],
+        "entity_kind": "REGION",
+        "function": "Flat surface for placing food items",
+        "id": "service_surface",
+        "required_count": 1,
+        "required_properties": [
+          "horizontal plane",
+          "stable base"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "coffee_cup",
+        "id": "op_1",
+        "operation": "blend_coffee_and_water_in_cup",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "coffee_source",
+        "target_role": "coffee_cup"
+      },
+      {
+        "anchor_role": "coffee_cup",
+        "id": "op_2",
+        "operation": "pour_water_to_mix_with_coffee",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "water_source",
+        "target_role": "coffee_cup"
+      },
+      {
+        "anchor_role": "coffee_cup",
+        "id": "op_3",
+        "operation": "stir_coffee_with_spool",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "stirring_utensil",
+        "target_role": "coffee_cup"
+      },
+      {
+        "anchor_role": "service_surface",
+        "id": "op_4",
+        "operation": "place_soup_on_table",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "soup_bowl",
+        "target_role": "service_surface"
+      },
+      {
+        "anchor_role": "soup_bowl",
+        "id": "op_5",
+        "operation": "rest_utensil_with_soup_bowl",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "eating_utensil",
+        "target_role": "soup_bowl"
+      }
+    ]
+  },
+  "task_summary": "Prepare coffee and soup for two people on the table.",
+  "unsupported_reason": ""
+}

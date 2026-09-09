@@ -1,0 +1,60 @@
+{
+  "canonicalization_status": "PARTIAL",
+  "domain": "kitchen",
+  "enable_thinking": true,
+  "finish_reason": "stop",
+  "live_contract_valid": true,
+  "live_validation_error": null,
+  "max_tokens": 24000,
+  "model": "Qwen/Qwen3.5-9B",
+  "model_alias": "qwen35-9b",
+  "online_executable_contract_complete": false,
+  "presence_penalty": 1.5,
+  "prompt_schema_hash": "766a9fcb4d3248d542ea543a2474c6078cb8528632fc8467e7a294fe5aacea01",
+  "raw_json_available": true,
+  "rendered_image_count": 5,
+  "rendered_image_paths": [
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K12/vlm_inputs/left_shoulder_camera.png",
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K12/vlm_inputs/right_shoulder_camera.png",
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K12/vlm_inputs/overhead_camera.png",
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K12/vlm_inputs/side_camera.png",
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K12/vlm_inputs/front_camera.png"
+  ],
+  "schema_version": 2,
+  "semantic_fm_calls": 1,
+  "source_commit": "7b0543cf194826a54eb565ba8927c02a3a3874c2",
+  "temperature": 1.0,
+  "top_k": 20,
+  "top_p": 0.95,
+  "usage": {
+    "completion_tokens": 6913,
+    "completion_tokens_details": {
+      "reasoning_tokens": 5243
+    },
+    "prompt_tokens": 5962,
+    "prompt_tokens_details": null,
+    "total_tokens": 12875
+  },
+  "variant": "K12",
+  "vlm_image_count": 3,
+  "vlm_images": [
+    {
+      "bytes": 287069,
+      "mime_type": "image/png",
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K12/vlm_inputs/left_shoulder_camera.png",
+      "sha256": "36e3430d9fbf41ff2acc3516d89f7e29a2a0dd7eaf3126a141f477c3eded367a"
+    },
+    {
+      "bytes": 286637,
+      "mime_type": "image/png",
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K12/vlm_inputs/right_shoulder_camera.png",
+      "sha256": "0a6903a298d54fed5cee8f7bfcb79a16006a966674dd54356a92d7e32c3d010e"
+    },
+    {
+      "bytes": 226704,
+      "mime_type": "image/png",
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K12/vlm_inputs/overhead_camera.png",
+      "sha256": "1137207f9fa16654e204aedc9177605bc7ae121576d4847829427006c128644a"
+    }
+  ]
+}

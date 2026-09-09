@@ -1,0 +1,316 @@
+{
+  "canonical_physical_relations": [],
+  "canonical_roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "SEATING_POSITION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "armchair",
+        "chair",
+        "sofa",
+        "seating_position"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'binding_policy': 'DISTINCT', 'candidate_categories': ['cup', 'mug', 'glass', 'bowl', 'plate', 'tray'], 'entity_kind': 'OBJECT', 'function': 'Container for fluid or food for one occupant', 'id': 'refreshment_container_item', 'required_count': 4, 'required_properties': [], 'visible_candidates': [{'label': 'WhiteBowl_Left', 'visual_description': 'White bowl or plate on the left side table'}, {'label': 'RedCup_Right', 'visual_description': 'Red cup on the right side table'}, {'label': 'WhitePlate_Right', 'visual_description': 'White plate on the right side table'}, {'label': 'BlackRemote_Foreground', 'visual_description': 'Rectangular black object mistaken for a container on foreground table'}], 'description': ''}, 'collision_with': 'armchair_seat_anchor'}]",
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op1', 'function': 'Place_refreshment_on_adjacent_table', 'tool_role': 'refreshment_container_item', 'target_role': 'adjacent_surface_area', 'required_target_count': 4, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'armchair_seat_anchor', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+    "Unresolved required relations: [{'raw_subject': 'adjacent_surface_area', 'raw_phrase': 'is_adjacent_to', 'raw_object': 'armchair_seat_anchor', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'is_adjacent_to' provides no semantic evidence for valid predicates ['NEAR_SEAT'] or task causal semantics\"}, {'raw_subject': 'entertainment_controller', 'raw_phrase': 'is_accessible_by', 'raw_object': 'armchair_seat_anchor', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'is_accessible_by' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'entertainment_controller', 'raw_phrase': 'is_accessible_by', 'raw_object': 'armchair_seat_anchor', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'is_accessible_by' provides no semantic evidence for valid predicates [] or task causal semantics\"}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "armchair_seat_anchor",
+        "function": "Place_refreshment_on_adjacent_table",
+        "id": "op1",
+        "required_relations": [],
+        "required_target_count": 4,
+        "target_role": "adjacent_surface_area",
+        "tool_role": "refreshment_container_item",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "living_room",
+  "live_contract_valid": true,
+  "live_validation_error": null,
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": "armchair_seat_anchor",
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "armchair_seat_anchor",
+          "function": "Place_refreshment_on_adjacent_table",
+          "id": "op1",
+          "required_relations": [],
+          "required_target_count": 4,
+          "target_role": "adjacent_surface_area",
+          "tool_role": "refreshment_container_item",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op1",
+      "raw_phrase": "Place_refreshment_on_adjacent_table",
+      "source_role": "refreshment_container_item",
+      "target_role": "adjacent_surface_area"
+    },
+    {
+      "anchor_role": null,
+      "compiler": {
+        "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+        "context_relations": [],
+        "interp_status": "LEXICAL_SEMANTIC_MATCH",
+        "planner_operation": "SUPPORT_ENTERTAINMENT_CONTROL",
+        "preconditions_provenance": [
+          {
+            "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+            "predicate": "FITS_ON",
+            "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+            "source_operation_id": "op2"
+          }
+        ],
+        "raw_group": {
+          "context_relations": [],
+          "context_role": null,
+          "function": "Relocate_controller_to_central_spot",
+          "id": "op2",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "central_access_surface",
+          "tool_role": "entertainment_controller",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "required_relations": [
+          "FITS_ON"
+        ],
+        "status": "CANONICAL_OPERATION_GROUP"
+      },
+      "id": "op2",
+      "raw_phrase": "Relocate_controller_to_central_spot",
+      "source_role": "entertainment_controller",
+      "target_role": "central_access_surface"
+    }
+  ],
+  "operation_groups": [
+    {
+      "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": true,
+      "function": "SUPPORT_ENTERTAINMENT_CONTROL",
+      "id": "shared_entertainment_group",
+      "preconditions_provenance": [
+        {
+          "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+          "predicate": "FITS_ON",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op2"
+        }
+      ],
+      "required_relations": [
+        "FITS_ON"
+      ],
+      "required_target_count": 1,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": null,
+      "target_role": "REMOTE",
+      "tool_role": "SHARED_REMOTE_REGION",
+      "usage_policy": "DEDICATED_PER_TARGET"
+    }
+  ],
+  "relation_audit": [
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "armchair_seat_anchor",
+        "raw_phrase": "is_adjacent_to",
+        "raw_subject": "adjacent_surface_area",
+        "reason": "Relation text 'is_adjacent_to' provides no semantic evidence for valid predicates ['NEAR_SEAT'] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "r1",
+      "raw_object": "armchair_seat_anchor",
+      "raw_phrase": "is_adjacent_to",
+      "raw_subject": "adjacent_surface_area"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "armchair_seat_anchor",
+        "raw_phrase": "is_accessible_by",
+        "raw_subject": "entertainment_controller",
+        "reason": "Relation text 'is_accessible_by' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "r2",
+      "raw_object": "armchair_seat_anchor",
+      "raw_phrase": "is_accessible_by",
+      "raw_subject": "entertainment_controller"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "armchair_seat_anchor",
+        "raw_phrase": "is_accessible_by",
+        "raw_subject": "entertainment_controller",
+        "reason": "Relation text 'is_accessible_by' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "r3",
+      "raw_object": "armchair_seat_anchor",
+      "raw_phrase": "is_accessible_by",
+      "raw_subject": "entertainment_controller"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [
+    {
+      "raw_object": "armchair_seat_anchor",
+      "raw_phrase": "is_adjacent_to",
+      "raw_subject": "adjacent_surface_area",
+      "reason": "Relation text 'is_adjacent_to' provides no semantic evidence for valid predicates ['NEAR_SEAT'] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "armchair_seat_anchor",
+      "raw_phrase": "is_accessible_by",
+      "raw_subject": "entertainment_controller",
+      "reason": "Relation text 'is_accessible_by' provides no semantic evidence for valid predicates [] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "armchair_seat_anchor",
+      "raw_phrase": "is_accessible_by",
+      "raw_subject": "entertainment_controller",
+      "reason": "Relation text 'is_accessible_by' provides no semantic evidence for valid predicates [] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [
+    {
+      "code": "AMBIGUOUS_ROLE_MAPPING",
+      "collision_with": "armchair_seat_anchor",
+      "raw_role": {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "mug",
+          "glass",
+          "bowl",
+          "plate",
+          "tray"
+        ],
+        "description": "",
+        "entity_kind": "OBJECT",
+        "function": "Container for fluid or food for one occupant",
+        "id": "refreshment_container_item",
+        "required_count": 4,
+        "required_properties": [],
+        "visible_candidates": [
+          {
+            "label": "WhiteBowl_Left",
+            "visual_description": "White bowl or plate on the left side table"
+          },
+          {
+            "label": "RedCup_Right",
+            "visual_description": "Red cup on the right side table"
+          },
+          {
+            "label": "WhitePlate_Right",
+            "visual_description": "White plate on the right side table"
+          },
+          {
+            "label": "BlackRemote_Foreground",
+            "visual_description": "Rectangular black object mistaken for a container on foreground table"
+          }
+        ]
+      }
+    }
+  ],
+  "variant": "L2"
+}

@@ -1,0 +1,130 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "left_drawer",
+        "label": "Left desk drawer",
+        "reason": "Potential storage location for fastening tool if not in hand",
+        "visual_description": "Blue drawer box with handle beneath table left leg"
+      },
+      {
+        "id": "monitor_cabinet",
+        "label": "Wall storage unit",
+        "reason": "Enclosed space may contain spare tools or hardware",
+        "visual_description": "Blue cabinet positioned against wall beside monitor"
+      }
+    ],
+    "inspection_order": [
+      "left_drawer",
+      "monitor_cabinet"
+    ],
+    "visible_candidates_per_role": {
+      "fastening_tool": [],
+      "workbench_surface": [
+        {
+          "label": "Wooden table top",
+          "visual_description": "Light brown wooden slab supporting the workpiece"
+        }
+      ],
+      "workpiece_unit": [
+        {
+          "label": "Yellow assembly component",
+          "visual_description": "Rectangular yellow bars mounted on grey base pad on table"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_001",
+        "object_role": "workpiece_unit",
+        "relation": "Physically engages with fastening interface",
+        "required": true,
+        "subject_role": "fastening_tool"
+      },
+      {
+        "id": "rel_002",
+        "object_role": "workbench_surface",
+        "relation": "Spatially associated with",
+        "required": true,
+        "subject_role": "workpiece_unit"
+      },
+      {
+        "id": "rel_003",
+        "object_role": "workbench_surface",
+        "relation": "Resting on for storage",
+        "required": true,
+        "subject_role": "fastening_tool"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "wrench",
+          "screwdriver",
+          "socket_tool",
+          "spanner"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Wrench or driver implement",
+        "id": "fastening_tool",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "assembly_base",
+          "bracket",
+          "connector",
+          "plate"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Mechanical part to be assembled",
+        "id": "workpiece_unit",
+        "required_count": 1,
+        "required_properties": [
+          "Located on work surface"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table_top",
+          "desk_surface",
+          "workstation_plane"
+        ],
+        "entity_kind": "REGION",
+        "function": "Workspace anchor and support",
+        "id": "workbench_surface",
+        "required_count": 1,
+        "required_properties": [
+          "Flat stable surface"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_001",
+        "operation": "Apply tightening action to unit",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "fastening_tool",
+        "target_role": "workpiece_unit"
+      },
+      {
+        "id": "op_002",
+        "operation": "Deposit tool on workbench surface",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "fastening_tool",
+        "target_role": "workbench_surface"
+      }
+    ]
+  },
+  "task_summary": "Locate and inspect environment for a fastening tool and a workpiece, then apply a fastening action to the workpiece at the workbench, finally placing the tool back on the bench.",
+  "unsupported_reason": ""
+}

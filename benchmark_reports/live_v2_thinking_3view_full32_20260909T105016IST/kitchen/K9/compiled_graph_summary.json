@@ -1,0 +1,563 @@
+{
+  "canonical_physical_relations": [],
+  "canonical_roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "coffee_container",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup",
+        "mug"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "soup_container",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "bowl"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "coffee_source",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "coffee_source",
+        "coffee_jar",
+        "coffee_container",
+        "coffee_tin",
+        "jar"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "water_source",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "kettle",
+        "water_source",
+        "water_container",
+        "teapot"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "coffee_stirrer",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "spoon"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "soup_eating_utensil",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "spoon"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Unresolved roles: [{'raw_role': {'binding_policy': 'REUSABLE', 'candidate_categories': ['stockpot', 'large pot', 'container', 'food warmer'], 'entity_kind': 'REGION', 'function': 'Physical storage of pre-prepared soup', 'id': 'soup_stock_pot', 'required_count': 1, 'required_properties': [], 'visible_candidates': [{'label': 'Silver Teapot', 'visual_description': 'White or silver metal pot located centrally on the table.'}, {'label': 'Right Cabinet Door', 'visual_description': 'Grey rectangular storage unit floating or mounted on the wall background.'}], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}]",
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_ladle_soup_portions', 'function': 'Fill soup bowl from stockpot', 'tool_role': 'soup_stock_pot', 'target_role': 'soup_bowl_role', 'required_target_count': 2, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': 'soup_bowl_role', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+    "Unresolved required relations: [{'raw_subject': 'coffee_cup_role', 'raw_phrase': 'requires access to coffee ingredients', 'raw_object': 'coffee_ingredient_container', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'requires access to coffee ingredients' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'coffee_cup_role', 'raw_phrase': 'requires access to water source', 'raw_object': 'water_source_container', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'requires access to water source' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'stirring_utensil_role', 'raw_phrase': 'used to mix contents of', 'raw_object': 'coffee_cup_role', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'used to mix contents of' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics\"}, {'raw_subject': 'soup_stock_pot', 'raw_phrase': 'transfers contents to', 'raw_object': 'soup_bowl_role', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'soup_eating_utensil_role', 'raw_phrase': 'placed adjacent to serving of', 'raw_object': 'soup_bowl_role', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'placed adjacent to serving of' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics\"}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "soup_bowl_role",
+        "function": "Fill soup bowl from stockpot",
+        "id": "op_ladle_soup_portions",
+        "required_relations": [],
+        "required_target_count": 2,
+        "target_role": "soup_bowl_role",
+        "tool_role": "soup_stock_pot",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "kitchen",
+  "live_contract_valid": false,
+  "live_validation_error": "DUPLICATE_OPERATION_ENDPOINT: operation_pairings[0].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[1].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[2].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[3].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[4].anchor_role equals target_role",
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": "coffee_cup_role",
+      "compiler": {
+        "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+        "context_relations": [],
+        "interp_status": "LEXICAL_SEMANTIC_MATCH",
+        "planner_operation": "POUR",
+        "preconditions_provenance": [],
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "coffee_cup_role",
+          "function": "Transfer dry coffee to cup",
+          "id": "op_fill_coffee_with_powder",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "coffee_cup_role",
+          "tool_role": "coffee_ingredient_container",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "required_relations": [],
+        "status": "CANONICAL_OPERATION_GROUP"
+      },
+      "id": "op_fill_coffee_with_powder",
+      "raw_phrase": "Transfer dry coffee to cup",
+      "source_role": "coffee_ingredient_container",
+      "target_role": "coffee_cup_role"
+    },
+    {
+      "anchor_role": "coffee_cup_role",
+      "compiler": {
+        "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+        "context_relations": [],
+        "interp_status": "LEXICAL_SEMANTIC_MATCH",
+        "planner_operation": "POUR",
+        "preconditions_provenance": [],
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "coffee_cup_role",
+          "function": "Pour water into coffee cup",
+          "id": "op_add_water_to_coffee",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "coffee_cup_role",
+          "tool_role": "water_source_container",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "required_relations": [],
+        "status": "CANONICAL_OPERATION_GROUP"
+      },
+      "id": "op_add_water_to_coffee",
+      "raw_phrase": "Pour water into coffee cup",
+      "source_role": "water_source_container",
+      "target_role": "coffee_cup_role"
+    },
+    {
+      "anchor_role": "coffee_cup_role",
+      "compiler": {
+        "capability_id": "STIR_COFFEE",
+        "context_relations": [],
+        "interp_status": "LEXICAL_SEMANTIC_MATCH",
+        "planner_operation": "STIR_COFFEE",
+        "preconditions_provenance": [
+          {
+            "capability_id": "STIR_COFFEE",
+            "predicate": "INSERTABLE_IN",
+            "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+            "source_operation_id": "op_stir_coffee_mixtures"
+          },
+          {
+            "capability_id": "STIR_COFFEE",
+            "predicate": "REACHES_BOTTOM",
+            "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+            "source_operation_id": "op_stir_coffee_mixtures"
+          }
+        ],
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "coffee_cup_role",
+          "function": "Stir coffee mixture in cup",
+          "id": "op_stir_coffee_mixtures",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "coffee_cup_role",
+          "tool_role": "stirring_utensil_role",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "required_relations": [
+          "INSERTABLE_IN",
+          "REACHES_BOTTOM"
+        ],
+        "status": "CANONICAL_OPERATION_GROUP"
+      },
+      "id": "op_stir_coffee_mixtures",
+      "raw_phrase": "Stir coffee mixture in cup",
+      "source_role": "stirring_utensil_role",
+      "target_role": "coffee_cup_role"
+    },
+    {
+      "anchor_role": "soup_bowl_role",
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "soup_bowl_role",
+          "function": "Fill soup bowl from stockpot",
+          "id": "op_ladle_soup_portions",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "soup_bowl_role",
+          "tool_role": "soup_stock_pot",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op_ladle_soup_portions",
+      "raw_phrase": "Fill soup bowl from stockpot",
+      "source_role": "soup_stock_pot",
+      "target_role": "soup_bowl_role"
+    },
+    {
+      "anchor_role": "soup_bowl_role",
+      "compiler": {
+        "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+        "context_relations": [],
+        "interp_status": "LEXICAL_SEMANTIC_MATCH",
+        "planner_operation": "PROVIDE_SOUP_EATING_UTENSIL",
+        "preconditions_provenance": [
+          {
+            "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+            "predicate": "INSERTABLE_IN",
+            "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+            "source_operation_id": "op_assign_eating_utensils"
+          },
+          {
+            "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+            "predicate": "REACHES_BOTTOM",
+            "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+            "source_operation_id": "op_assign_eating_utensils"
+          }
+        ],
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "soup_bowl_role",
+          "function": "Place eating utensil with soup",
+          "id": "op_assign_eating_utensils",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "soup_bowl_role",
+          "tool_role": "soup_eating_utensil_role",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "required_relations": [
+          "INSERTABLE_IN",
+          "REACHES_BOTTOM"
+        ],
+        "status": "CANONICAL_OPERATION_GROUP"
+      },
+      "id": "op_assign_eating_utensils",
+      "raw_phrase": "Place eating utensil with soup",
+      "source_role": "soup_eating_utensil_role",
+      "target_role": "soup_bowl_role"
+    }
+  ],
+  "operation_groups": [
+    {
+      "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": true,
+      "function": "POUR",
+      "id": "material_transfer",
+      "preconditions_provenance": [],
+      "required_relations": [],
+      "required_target_count": 2,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": "deterministic_rank",
+      "target_role": "coffee_container",
+      "tool_role": "coffee_source",
+      "usage_policy": "DEDICATED_PER_TARGET"
+    },
+    {
+      "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": true,
+      "function": "POUR",
+      "id": "op_add_water_to_coffee",
+      "preconditions_provenance": [],
+      "required_relations": [],
+      "required_target_count": 2,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": "deterministic_rank",
+      "target_role": "coffee_container",
+      "tool_role": "water_source",
+      "usage_policy": "DEDICATED_PER_TARGET"
+    },
+    {
+      "capability_id": "STIR_COFFEE",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": false,
+      "function": "STIR_COFFEE",
+      "id": "coffee_stirring",
+      "preconditions_provenance": [
+        {
+          "capability_id": "STIR_COFFEE",
+          "predicate": "INSERTABLE_IN",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_stir_coffee_mixtures"
+        },
+        {
+          "capability_id": "STIR_COFFEE",
+          "predicate": "REACHES_BOTTOM",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_stir_coffee_mixtures"
+        }
+      ],
+      "required_relations": [
+        "INSERTABLE_IN",
+        "REACHES_BOTTOM"
+      ],
+      "required_target_count": 2,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": "minimize_distinct_tools",
+      "target_role": "coffee_container",
+      "tool_role": "coffee_stirrer",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": true,
+      "function": "PROVIDE_SOUP_EATING_UTENSIL",
+      "id": "soup_serving",
+      "preconditions_provenance": [
+        {
+          "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+          "predicate": "INSERTABLE_IN",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_assign_eating_utensils"
+        },
+        {
+          "capability_id": "PROVIDE_SOUP_EATING_UTENSIL",
+          "predicate": "REACHES_BOTTOM",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_assign_eating_utensils"
+        }
+      ],
+      "required_relations": [
+        "INSERTABLE_IN",
+        "REACHES_BOTTOM"
+      ],
+      "required_target_count": 2,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": "deterministic_rank",
+      "target_role": "soup_container",
+      "tool_role": "soup_eating_utensil",
+      "usage_policy": "DEDICATED_PER_TARGET"
+    }
+  ],
+  "relation_audit": [
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "coffee_ingredient_container",
+        "raw_phrase": "requires access to coffee ingredients",
+        "raw_subject": "coffee_cup_role",
+        "reason": "Relation text 'requires access to coffee ingredients' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_coffee_access_ingredients",
+      "raw_object": "coffee_ingredient_container",
+      "raw_phrase": "requires access to coffee ingredients",
+      "raw_subject": "coffee_cup_role"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "water_source_container",
+        "raw_phrase": "requires access to water source",
+        "raw_subject": "coffee_cup_role",
+        "reason": "Relation text 'requires access to water source' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_coffee_access_water",
+      "raw_object": "water_source_container",
+      "raw_phrase": "requires access to water source",
+      "raw_subject": "coffee_cup_role"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "coffee_cup_role",
+        "raw_phrase": "used to mix contents of",
+        "raw_subject": "stirring_utensil_role",
+        "reason": "Relation text 'used to mix contents of' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_coffee_preparation_tool",
+      "raw_object": "coffee_cup_role",
+      "raw_phrase": "used to mix contents of",
+      "raw_subject": "stirring_utensil_role"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "soup_bowl_role",
+        "raw_phrase": "transfers contents to",
+        "raw_subject": "soup_stock_pot",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_soup_transfer_source",
+      "raw_object": "soup_bowl_role",
+      "raw_phrase": "transfers contents to",
+      "raw_subject": "soup_stock_pot"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "soup_bowl_role",
+        "raw_phrase": "placed adjacent to serving of",
+        "raw_subject": "soup_eating_utensil_role",
+        "reason": "Relation text 'placed adjacent to serving of' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_serving_adjacency",
+      "raw_object": "soup_bowl_role",
+      "raw_phrase": "placed adjacent to serving of",
+      "raw_subject": "soup_eating_utensil_role"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [
+    {
+      "raw_object": "coffee_ingredient_container",
+      "raw_phrase": "requires access to coffee ingredients",
+      "raw_subject": "coffee_cup_role",
+      "reason": "Relation text 'requires access to coffee ingredients' provides no semantic evidence for valid predicates [] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "water_source_container",
+      "raw_phrase": "requires access to water source",
+      "raw_subject": "coffee_cup_role",
+      "reason": "Relation text 'requires access to water source' provides no semantic evidence for valid predicates [] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "coffee_cup_role",
+      "raw_phrase": "used to mix contents of",
+      "raw_subject": "stirring_utensil_role",
+      "reason": "Relation text 'used to mix contents of' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "soup_bowl_role",
+      "raw_phrase": "transfers contents to",
+      "raw_subject": "soup_stock_pot",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "soup_bowl_role",
+      "raw_phrase": "placed adjacent to serving of",
+      "raw_subject": "soup_eating_utensil_role",
+      "reason": "Relation text 'placed adjacent to serving of' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [
+    {
+      "raw_role": {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "stockpot",
+          "large pot",
+          "container",
+          "food warmer"
+        ],
+        "description": "",
+        "entity_kind": "REGION",
+        "function": "Physical storage of pre-prepared soup",
+        "id": "soup_stock_pot",
+        "required_count": 1,
+        "required_properties": [],
+        "visible_candidates": [
+          {
+            "label": "Silver Teapot",
+            "visual_description": "White or silver metal pot located centrally on the table."
+          },
+          {
+            "label": "Right Cabinet Door",
+            "visual_description": "Grey rectangular storage unit floating or mounted on the wall background."
+          }
+        ]
+      },
+      "status": "UNRESOLVED_SEMANTIC"
+    }
+  ],
+  "variant": "K9"
+}

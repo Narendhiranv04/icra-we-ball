@@ -1,0 +1,60 @@
+{
+  "canonicalization_status": "PARTIAL",
+  "domain": "living_room",
+  "enable_thinking": true,
+  "finish_reason": "stop",
+  "live_contract_valid": true,
+  "live_validation_error": null,
+  "max_tokens": 24000,
+  "model": "Qwen/Qwen3.5-9B",
+  "model_alias": "qwen35-9b",
+  "online_executable_contract_complete": false,
+  "presence_penalty": 1.5,
+  "prompt_schema_hash": "766a9fcb4d3248d542ea543a2474c6078cb8528632fc8467e7a294fe5aacea01",
+  "raw_json_available": true,
+  "rendered_image_count": 5,
+  "rendered_image_paths": [
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L4/vlm_inputs/l2_camera_left.png",
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L4/vlm_inputs/l2_camera_right.png",
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L4/vlm_inputs/l2_camera_top.png",
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L4/vlm_inputs/l2_camera_front.png",
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L4/vlm_inputs/l2_camera_close.png"
+  ],
+  "schema_version": 2,
+  "semantic_fm_calls": 1,
+  "source_commit": "7b0543cf194826a54eb565ba8927c02a3a3874c2",
+  "temperature": 1.0,
+  "top_k": 20,
+  "top_p": 0.95,
+  "usage": {
+    "completion_tokens": 7803,
+    "completion_tokens_details": {
+      "reasoning_tokens": 6641
+    },
+    "prompt_tokens": 5962,
+    "prompt_tokens_details": null,
+    "total_tokens": 13765
+  },
+  "variant": "L4",
+  "vlm_image_count": 3,
+  "vlm_images": [
+    {
+      "bytes": 213719,
+      "mime_type": "image/png",
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L4/vlm_inputs/l2_camera_left.png",
+      "sha256": "94ac96eca50804713ba36142912ed511d8d231b8c5d4a412c723dc71cc530cd4"
+    },
+    {
+      "bytes": 209196,
+      "mime_type": "image/png",
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L4/vlm_inputs/l2_camera_right.png",
+      "sha256": "04619f66ab440c16aa5dc9f2a7128e9bb5b4a7dee5e9a29f09438f648a6b469e"
+    },
+    {
+      "bytes": 229432,
+      "mime_type": "image/png",
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L4/vlm_inputs/l2_camera_top.png",
+      "sha256": "9b973aef24a021dd0d5740b6b27e8f61e0df878b604cd6f0fcc5956b94e8fcbf"
+    }
+  ]
+}

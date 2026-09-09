@@ -1,0 +1,305 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "reg_cabinet_left",
+        "label": "Left Wall Cabinet",
+        "reason": "Potential storage for second eating utensil or additional containers",
+        "visual_description": "Grey rectangular cabinet suspended above floor to the left"
+      },
+      {
+        "id": "reg_cabinet_right",
+        "label": "Right Wall Cabinet",
+        "reason": "Potential storage for second eating utensil",
+        "visual_description": "Grey rectangular cabinet suspended above floor to the right"
+      },
+      {
+        "id": "reg_drawer_front",
+        "label": "Front Table Drawer",
+        "reason": "Likely location for extra silverware such as forks or spoons",
+        "visual_description": "White drawer front visible at bottom center of table"
+      }
+    ],
+    "inspection_order": [
+      "reg_drawer_front",
+      "reg_cabinet_left",
+      "reg_cabinet_right"
+    ],
+    "visible_candidates_per_role": {
+      "coffee_source": [
+        {
+          "label": "dark_canister",
+          "visual_description": "Dark cylindrical container standing on table"
+        }
+      ],
+      "coffee_target_cup": [
+        {
+          "label": "blue_mug",
+          "visual_description": "Blue plastic or ceramic mug on table"
+        },
+        {
+          "label": "beige_mug",
+          "visual_description": "Beige paper-like mug next to blue one"
+        }
+      ],
+      "cooking_spoon": [
+        {
+          "label": "metal_spoon",
+          "visual_description": "Metal spoon lying on the table surface"
+        }
+      ],
+      "eating_utensil": [
+        {
+          "label": "metal_spoon",
+          "visual_description": "Metal spoon lying on the table surface"
+        }
+      ],
+      "serving_surface": [
+        {
+          "label": "table_top",
+          "visual_description": "Checkered tabletop floor plane extending below furniture"
+        }
+      ],
+      "soup_target_bowl": [
+        {
+          "label": "red_bowl",
+          "visual_description": "Small red bowl containing orange liquid"
+        },
+        {
+          "label": "blue_bowl",
+          "visual_description": "Blue bowl containing white/yellow substance"
+        }
+      ],
+      "water_source": [
+        {
+          "label": "teapot",
+          "visual_description": "White teapot on table surface"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "r1",
+        "object_role": "coffee_target_cup",
+        "relation": "supplies_fluid_to",
+        "required": true,
+        "subject_role": "water_source"
+      },
+      {
+        "id": "r2",
+        "object_role": "coffee_target_cup",
+        "relation": "supplies_solid_to",
+        "required": true,
+        "subject_role": "coffee_source"
+      },
+      {
+        "id": "r3",
+        "object_role": "coffee_target_cup",
+        "relation": "mixed_with",
+        "required": true,
+        "subject_role": "cooking_spoon"
+      },
+      {
+        "id": "r4",
+        "object_role": "soup_target_bowl",
+        "relation": "placed_near",
+        "required": true,
+        "subject_role": "eating_utensil"
+      },
+      {
+        "id": "r5",
+        "object_role": "serving_surface",
+        "relation": "positioned_on",
+        "required": true,
+        "subject_role": "coffee_target_cup"
+      },
+      {
+        "id": "r6",
+        "object_role": "serving_surface",
+        "relation": "positioned_on",
+        "required": true,
+        "subject_role": "soup_target_bowl"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mug",
+          "glass",
+          "ceramic cup"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Container for prepared coffee beverage",
+        "id": "coffee_target_cup",
+        "required_count": 2,
+        "required_properties": [
+          "rigid container shape"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bowl",
+          "pot",
+          "deep dish"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Container for prepared soup portion",
+        "id": "soup_target_bowl",
+        "required_count": 2,
+        "required_properties": [
+          "open top surface",
+          "receptacle shape"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "tap",
+          "jug",
+          "teapot",
+          "disposable water bottle"
+        ],
+        "entity_kind": "REGION",
+        "function": "Supply point for beverage water",
+        "id": "water_source",
+        "required_count": 1,
+        "required_properties": [
+          "holds liquid",
+          "dispensing mechanism"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "jar",
+          "canister",
+          "bag",
+          "coffee grounds container"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Supply point for dry coffee ingredient",
+        "id": "coffee_source",
+        "required_count": 1,
+        "required_properties": [
+          "sealable lid",
+          "contains powder/grains"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "spoon",
+          "ladle",
+          "whisk"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Tool for stirring liquid ingredients",
+        "id": "cooking_spoon",
+        "required_count": 1,
+        "required_properties": [
+          "long handle",
+          "flat blade or scoop"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "fork",
+          "spoon",
+          "chopsticks"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Utensil for consuming solid/semi-solid food",
+        "id": "eating_utensil",
+        "required_count": 2,
+        "required_properties": [
+          "tapered tip",
+          "scooping edge",
+          "hand-held grip"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "tabletop",
+          "counter",
+          "plate"
+        ],
+        "entity_kind": "REGION",
+        "function": "Location for placing completed dishes",
+        "id": "serving_surface",
+        "required_count": 1,
+        "required_properties": [
+          "stable flat plane"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "serving_surface",
+        "id": "op_1",
+        "operation": "fill_cup_with_water_and_add_coffee",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "water_source",
+        "target_role": "coffee_target_cup"
+      },
+      {
+        "anchor_role": "serving_surface",
+        "id": "op_2",
+        "operation": "fill_cup_with_water_and_add_coffee",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "coffee_source",
+        "target_role": "coffee_target_cup"
+      },
+      {
+        "id": "op_3",
+        "operation": "stir_coffee_content",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "cooking_spoon",
+        "target_role": "coffee_target_cup"
+      },
+      {
+        "id": "op_4",
+        "operation": "fill_soup_bowl",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "soup_source",
+        "target_role": "soup_target_bowl"
+      },
+      {
+        "id": "op_5",
+        "operation": "place_eating_utensil",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "eating_utensil",
+        "target_role": "soup_target_bowl"
+      },
+      {
+        "id": "op_6",
+        "operation": "arrange_food_on_surface",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "coffee_target_cup",
+        "target_role": "serving_surface"
+      },
+      {
+        "id": "op_7",
+        "operation": "arrange_food_on_surface",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "soup_target_bowl",
+        "target_role": "serving_surface"
+      }
+    ]
+  },
+  "task_summary": "Provide complete physical and functional specifications for preparing coffee, preparing soup, and distributing utensils to two recipients based on the visual context.",
+  "unsupported_reason": ""
+}

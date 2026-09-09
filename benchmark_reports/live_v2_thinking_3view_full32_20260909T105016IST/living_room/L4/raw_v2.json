@@ -1,0 +1,176 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "CONTROLLER_DEVICE": [
+        {
+          "label": "Remote on Desk",
+          "visual_description": "Black rectangular remote on the large wooden desk"
+        }
+      ],
+      "REFRESHMENT_ITEM": [
+        {
+          "label": "Cup on Coffee Table",
+          "visual_description": "Red ceramic mug resting on light blue table surface"
+        }
+      ],
+      "REFRESHMENT_SURFACE_1": [
+        {
+          "label": "Left End Table",
+          "visual_description": "Small wooden side table next to left armchair"
+        },
+        {
+          "label": "Right End Table",
+          "visual_description": "Small wooden side table next to right armchair"
+        }
+      ],
+      "SEATING_UNIT": [
+        {
+          "label": "Left Armchair",
+          "visual_description": "Wooden armchair with black cushion"
+        },
+        {
+          "label": "Right Armchair",
+          "visual_description": "Wooden armchair with black cushion"
+        }
+      ],
+      "SHARED_SURFACE": [
+        {
+          "label": "Coffee Table",
+          "visual_description": "Low rectangular table with greenish fabric base"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "REL_01",
+        "object_role": "SEATING_UNIT",
+        "relation": "physically_adjacent_to",
+        "required": true,
+        "subject_role": "REFRESHMENT_SURFACE_1"
+      },
+      {
+        "id": "REL_02",
+        "object_role": "SEATING_UNIT",
+        "relation": "reachable_from",
+        "required": true,
+        "subject_role": "CONTROLLER_DEVICE"
+      },
+      {
+        "id": "REL_03",
+        "object_role": "SHARED_SURFACE",
+        "relation": "placed_on",
+        "required": true,
+        "subject_role": "CONTROLLER_DEVICE"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "side table",
+          "end table",
+          "small wooden table"
+        ],
+        "entity_kind": "REGION",
+        "function": "Personal refreshment serving area",
+        "id": "REFRESHMENT_SURFACE_1",
+        "required_count": 2,
+        "required_properties": [
+          "solid_horizontal_surface",
+          "capacity_for_single_portion"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "armchair",
+          "sofa section",
+          "lounge chair"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Individual seating for occupant",
+        "id": "SEATING_UNIT",
+        "required_count": 2,
+        "required_properties": [
+          "upright_position",
+          "occupied_sitting_area"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "mug",
+          "bowl",
+          "plate"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Consumable portion for occupant",
+        "id": "REFRESHMENT_ITEM",
+        "required_count": 2,
+        "required_properties": [
+          "food_or_beverage_containment"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote control",
+          "wireless handheld",
+          "control pad"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Entertainment interface device",
+        "id": "CONTROLLER_DEVICE",
+        "required_count": 1,
+        "required_properties": [
+          "button_interface",
+          "portable_size"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "center table",
+          "ottoman"
+        ],
+        "entity_kind": "REGION",
+        "function": "Central accessible interaction point",
+        "id": "SHARED_SURFACE",
+        "required_count": 1,
+        "required_properties": [
+          "open_top_surface",
+          "central_room_location"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "SEATING_UNIT",
+        "id": "OP_REFRESHMENT_SETUP",
+        "operation": "place_refreshment_item_on_surface",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "REFRESHMENT_ITEM",
+        "target_role": "REFRESHMENT_SURFACE_1"
+      },
+      {
+        "anchor_role": "SEATING_UNIT",
+        "id": "OP_REMOTE_RELAY",
+        "operation": "relocate_device_to_shared_spot",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "CONTROLLER_DEVICE",
+        "target_role": "SHARED_SURFACE"
+      }
+    ]
+  },
+  "task_summary": "Configure refreshment surfaces for two occupants and relocate a remote control to a centrally accessible location.",
+  "unsupported_reason": ""
+}

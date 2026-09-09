@@ -1,0 +1,285 @@
+{
+  "canonical_physical_relations": [],
+  "canonical_roles": [
+    {
+      "binding_policy": "SHARED",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "SEATING_POSITION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "armchair",
+        "chair",
+        "sofa",
+        "seating_position"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Unresolved roles: [{'raw_role': {'binding_policy': 'DISTINCT', 'candidate_categories': ['cup', 'glass', 'plate', 'bowl', 'dish'], 'entity_kind': 'OBJECT', 'function': 'Receptacle for holding beverages or food', 'id': 'refreshment_item_container', 'required_count': 2, 'required_properties': [], 'visible_candidates': [{'label': 'red_cup_on_table', 'visual_description': 'Cylindrical red drinking vessel on surface'}, {'label': 'white_plate_on_table', 'visual_description': 'Round white ceramic plate on surface'}], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}]",
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'place_refreshment_items', 'function': 'place refreshment items near seating', 'tool_role': 'refreshment_item_container', 'target_role': 'seating_object', 'required_target_count': 2, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': None, 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+    "Unresolved required relations: [{'raw_subject': 'refreshment_item_container', 'raw_phrase': 'positioned adjacent to', 'raw_object': 'seating_object', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'support_surface', 'raw_phrase': 'accessible from', 'raw_object': 'seating_object', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'accessible from' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'entertainment_control_device', 'raw_phrase': 'located upon', 'raw_object': 'support_surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'located upon' provides no semantic evidence for valid predicates [] or task causal semantics\"}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "place refreshment items near seating",
+        "id": "place_refreshment_items",
+        "required_relations": [],
+        "required_target_count": 2,
+        "target_role": "seating_object",
+        "tool_role": "refreshment_item_container",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "living_room",
+  "live_contract_valid": true,
+  "live_validation_error": null,
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": null,
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": null,
+          "function": "place refreshment items near seating",
+          "id": "place_refreshment_items",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "seating_object",
+          "tool_role": "refreshment_item_container",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "place_refreshment_items",
+      "raw_phrase": "place refreshment items near seating",
+      "source_role": "refreshment_item_container",
+      "target_role": "seating_object"
+    },
+    {
+      "anchor_role": null,
+      "compiler": {
+        "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+        "context_relations": [],
+        "interp_status": "LEXICAL_SEMANTIC_MATCH",
+        "planner_operation": "SUPPORT_ENTERTAINMENT_CONTROL",
+        "preconditions_provenance": [
+          {
+            "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+            "predicate": "FITS_ON",
+            "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+            "source_operation_id": "relocate_control_device"
+          }
+        ],
+        "raw_group": {
+          "context_relations": [],
+          "context_role": null,
+          "function": "move entertainment control to surface",
+          "id": "relocate_control_device",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "support_surface",
+          "tool_role": "entertainment_control_device",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "required_relations": [
+          "FITS_ON"
+        ],
+        "status": "CANONICAL_OPERATION_GROUP"
+      },
+      "id": "relocate_control_device",
+      "raw_phrase": "move entertainment control to surface",
+      "source_role": "entertainment_control_device",
+      "target_role": "support_surface"
+    }
+  ],
+  "operation_groups": [
+    {
+      "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": false,
+      "function": "SUPPORT_ENTERTAINMENT_CONTROL",
+      "id": "shared_entertainment_group",
+      "preconditions_provenance": [
+        {
+          "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+          "predicate": "FITS_ON",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "relocate_control_device"
+        }
+      ],
+      "required_relations": [
+        "FITS_ON"
+      ],
+      "required_target_count": 1,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": null,
+      "target_role": "REMOTE",
+      "tool_role": "SHARED_REMOTE_REGION",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  ],
+  "relation_audit": [
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "seating_object",
+        "raw_phrase": "positioned adjacent to",
+        "raw_subject": "refreshment_item_container",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "refreshment_proximity_relation",
+      "raw_object": "seating_object",
+      "raw_phrase": "positioned adjacent to",
+      "raw_subject": "refreshment_item_container"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "seating_object",
+        "raw_phrase": "accessible from",
+        "raw_subject": "support_surface",
+        "reason": "Relation text 'accessible from' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "device_accessibility_relation",
+      "raw_object": "seating_object",
+      "raw_phrase": "accessible from",
+      "raw_subject": "support_surface"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "support_surface",
+        "raw_phrase": "located upon",
+        "raw_subject": "entertainment_control_device",
+        "reason": "Relation text 'located upon' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "device_placement_relation",
+      "raw_object": "support_surface",
+      "raw_phrase": "located upon",
+      "raw_subject": "entertainment_control_device"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [
+    {
+      "raw_object": "seating_object",
+      "raw_phrase": "positioned adjacent to",
+      "raw_subject": "refreshment_item_container",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "seating_object",
+      "raw_phrase": "accessible from",
+      "raw_subject": "support_surface",
+      "reason": "Relation text 'accessible from' provides no semantic evidence for valid predicates [] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "support_surface",
+      "raw_phrase": "located upon",
+      "raw_subject": "entertainment_control_device",
+      "reason": "Relation text 'located upon' provides no semantic evidence for valid predicates [] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [
+    {
+      "raw_role": {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "glass",
+          "plate",
+          "bowl",
+          "dish"
+        ],
+        "description": "",
+        "entity_kind": "OBJECT",
+        "function": "Receptacle for holding beverages or food",
+        "id": "refreshment_item_container",
+        "required_count": 2,
+        "required_properties": [],
+        "visible_candidates": [
+          {
+            "label": "red_cup_on_table",
+            "visual_description": "Cylindrical red drinking vessel on surface"
+          },
+          {
+            "label": "white_plate_on_table",
+            "visual_description": "Round white ceramic plate on surface"
+          }
+        ]
+      },
+      "status": "UNRESOLVED_SEMANTIC"
+    }
+  ],
+  "variant": "L10"
+}

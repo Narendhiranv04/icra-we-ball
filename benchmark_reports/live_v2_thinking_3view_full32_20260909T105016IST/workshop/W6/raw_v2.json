@@ -1,0 +1,136 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "compatible_component": [
+        {
+          "label": "yellow_connector_bar",
+          "visual_description": "Long yellow cylindrical or prismatic object on the dark mat next to the blue plate"
+        },
+        {
+          "label": "handheld_yellow_part",
+          "visual_description": "Yellow blocky object currently held in the robotic gripper"
+        }
+      ],
+      "fastening_target": [
+        {
+          "label": "blue_base_plate",
+          "visual_description": "Blue rectangular flat object lying on the dark mat on the desk"
+        }
+      ],
+      "fastening_tool": [
+        {
+          "label": "robotic_arm",
+          "visual_description": "White articulated manipulator occupying foreground and interacting with objects"
+        }
+      ],
+      "workbench_surface": [
+        {
+          "label": "wooden_desk_top",
+          "visual_description": "Large wooden rectangular surface supporting the black mat and cabinet base"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_1",
+        "object_role": "fastening_target",
+        "relation": "physically_attached_to_during_fastening",
+        "required": true,
+        "subject_role": "compatible_component"
+      },
+      {
+        "id": "rel_2",
+        "object_role": "fastening_target",
+        "relation": "actuates_connection_between",
+        "required": true,
+        "subject_role": "fastening_tool"
+      },
+      {
+        "id": "rel_3",
+        "object_role": "workbench_surface",
+        "relation": "rests_on_top_of",
+        "required": true,
+        "subject_role": "fastening_tool"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "mechanical assembly",
+          "fixture part",
+          "base plate"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "physical object receiving fastening",
+        "id": "fastening_target",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw bolt nut washer connector pin bracket"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "part to be attached to target",
+        "id": "compatible_component",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver wrench plier hammer drill"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "device applying fastening force",
+        "id": "fastening_tool",
+        "required_count": 1,
+        "required_properties": [
+          "suitable_gripper_geometry"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "desk table platform floor"
+        ],
+        "entity_kind": "REGION",
+        "function": "stable horizontal surface for tool placement",
+        "id": "workbench_surface",
+        "required_count": 1,
+        "required_properties": [
+          "flat_horizontal_contact_area"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "compatible_component",
+        "id": "op_1",
+        "operation": "apply_fastening_force",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "fastening_tool",
+        "target_role": "fastening_target"
+      },
+      {
+        "anchor_role": "fastening_tool",
+        "id": "op_2",
+        "operation": "place_tool_down",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "fastening_tool",
+        "target_role": "workbench_surface"
+      }
+    ]
+  },
+  "task_summary": "Complete fastening on workbench using components, then return tool.",
+  "unsupported_reason": ""
+}

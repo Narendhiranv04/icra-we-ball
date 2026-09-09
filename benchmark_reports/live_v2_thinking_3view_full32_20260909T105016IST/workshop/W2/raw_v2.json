@@ -1,0 +1,111 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "active_tool": [
+        {
+          "label": "yellow_handled_object",
+          "visual_description": "A yellow rigid object held in the robot gripper, resembling a tool or component."
+        }
+      ],
+      "marked_assembly_site": [],
+      "workbench_surface": [
+        {
+          "label": "wooden_desk_surface",
+          "visual_description": "A wooden table surface with drawers and a monitor on it."
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "relation_001",
+        "object_role": "workbench_surface",
+        "relation": "is_part_of",
+        "required": true,
+        "subject_role": "marked_assembly_site"
+      },
+      {
+        "id": "relation_002",
+        "object_role": "marked_assembly_site",
+        "relation": "interacts_at_location",
+        "required": true,
+        "subject_role": "active_tool"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "hand-held tool",
+          "fastener",
+          "mechanical instrument"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "A reusable instrument used to perform the fastening.",
+        "id": "active_tool",
+        "required_count": 1,
+        "required_properties": [
+          "is_manipulable",
+          "rigid_structure"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "marked surface",
+          "marked point",
+          "assembly location"
+        ],
+        "entity_kind": "FIXED_TARGET",
+        "function": "The specific location on the workbench designated for assembly.",
+        "id": "marked_assembly_site",
+        "required_count": 1,
+        "required_properties": [
+          "surface_acceptance",
+          "static_position"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "desk",
+          "table",
+          "workbench top"
+        ],
+        "entity_kind": "REGION",
+        "function": "The support plane providing space for the assembly and tool storage.",
+        "id": "workbench_surface",
+        "required_count": 1,
+        "required_properties": [
+          "horizontal_plane",
+          "stable_support"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "workbench_surface",
+        "id": "op_001",
+        "operation": "complete_fastening",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "active_tool",
+        "target_role": "marked_assembly_site"
+      },
+      {
+        "id": "op_002",
+        "operation": "place_reusable_equipment",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "active_tool",
+        "target_role": "workbench_surface"
+      }
+    ]
+  },
+  "task_summary": "Identify compatible components, complete fastening at a marked workbench location, and place reusable tool back on the workbench.",
+  "unsupported_reason": ""
+}

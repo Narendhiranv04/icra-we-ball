@@ -1,0 +1,199 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "coffee_source": [
+        {
+          "label": "Green jar",
+          "visual_description": "Dark green cylindrical container on the table."
+        },
+        {
+          "label": "Brown box",
+          "visual_description": "Rectangular cardboard box on the back right of the table."
+        }
+      ],
+      "drinking_vessel": [
+        {
+          "label": "Blue mug",
+          "visual_description": "Blue ceramic mug located on the left side of the table."
+        },
+        {
+          "label": "Beige cylindrical container",
+          "visual_description": "Small beige jar or cup located near the blue mug."
+        }
+      ],
+      "eating_utensil": [
+        {
+          "label": "Silver spoon",
+          "visual_description": "Metal spoon lying on the table surface."
+        },
+        {
+          "label": "Silver fork/ladle",
+          "visual_description": "Metal eating utensil handle visible on the far left."
+        }
+      ],
+      "food_vessel": [
+        {
+          "label": "Blue bowl",
+          "visual_description": "Blue bowl containing red liquid on the table."
+        },
+        {
+          "label": "Reddish bowl",
+          "visual_description": "Small reddish bowl located near the center-right of the table."
+        }
+      ],
+      "stirring_tool": [
+        {
+          "label": "Metal spoon",
+          "visual_description": "Shiny metal spoon lying flat on the table."
+        }
+      ],
+      "water_source": [
+        {
+          "label": "Teapot",
+          "visual_description": "Silver teapot located on the right side of the table."
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "vessel_food_eating",
+        "object_role": "eating_utensil",
+        "relation": "accommodates eating utensil",
+        "required": true,
+        "subject_role": "food_vessel"
+      },
+      {
+        "id": "source_target_fill",
+        "object_role": "drinking_vessel",
+        "relation": "provides fillable fluid to",
+        "required": true,
+        "subject_role": "water_source"
+      },
+      {
+        "id": "tool_target_stir",
+        "object_role": "drinking_vessel",
+        "relation": "performs mixing action in",
+        "required": true,
+        "subject_role": "stirring_tool"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mug",
+          "cup"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Contain prepared beverage for consumption",
+        "id": "drinking_vessel",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bowl",
+          "dish"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Contain prepared soup for consumption",
+        "id": "food_vessel",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "fork",
+          "ladle"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Consume solid food",
+        "id": "eating_utensil",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "spoon",
+          "whisk"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Mix liquid contents in vessel",
+        "id": "stirring_tool",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "jug",
+          "bottle",
+          "kettle"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Provide liquid volume",
+        "id": "water_source",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "jar",
+          "bag",
+          "canister"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Provide caffeine additive",
+        "id": "coffee_source",
+        "required_count": 1,
+        "required_properties": []
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_01",
+        "operation": "pour water into vessel",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "water_source",
+        "target_role": "drinking_vessel"
+      },
+      {
+        "id": "op_02",
+        "operation": "add coffee powder to vessel",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "coffee_source",
+        "target_role": "drinking_vessel"
+      },
+      {
+        "id": "op_03",
+        "operation": "stir beverage with tool",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "stirring_tool",
+        "target_role": "drinking_vessel"
+      },
+      {
+        "id": "op_04",
+        "operation": "pair utensil with food bowl",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "eating_utensil",
+        "target_role": "food_vessel"
+      }
+    ]
+  },
+  "task_summary": "Prepare two servings of coffee (mixed with water and stirred) and two servings of soup, ensuring each soup bowl is paired with a dedicated utensil.",
+  "unsupported_reason": ""
+}

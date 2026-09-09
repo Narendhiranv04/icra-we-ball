@@ -1,0 +1,179 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "adjacent_surface_area": [
+        {
+          "label": "SideTable_Left",
+          "visual_description": "Small wooden table to the left of the left armchair"
+        },
+        {
+          "label": "SideTable_Right",
+          "visual_description": "Small wooden table to the right of the right armchair"
+        }
+      ],
+      "armchair_seat_anchor": [
+        {
+          "label": "Armchair_Left",
+          "visual_description": "Dark padded armchair situated near left side table"
+        },
+        {
+          "label": "Armchair_Right",
+          "visual_description": "Dark padded armchair situated near right side table"
+        }
+      ],
+      "central_access_surface": [
+        {
+          "label": "CoffeeTable_Center",
+          "visual_description": "Low rectangular table with light green top in center of room"
+        },
+        {
+          "label": "ForegroundDesk_Large",
+          "visual_description": "Large wooden desk/table currently occupied by remote"
+        }
+      ],
+      "entertainment_controller": [
+        {
+          "label": "BlackRemote",
+          "visual_description": "Black remote control resting on the large wooden desk in foreground"
+        }
+      ],
+      "refreshment_container_item": [
+        {
+          "label": "WhiteBowl_Left",
+          "visual_description": "White bowl or plate on the left side table"
+        },
+        {
+          "label": "RedCup_Right",
+          "visual_description": "Red cup on the right side table"
+        },
+        {
+          "label": "WhitePlate_Right",
+          "visual_description": "White plate on the right side table"
+        },
+        {
+          "label": "BlackRemote_Foreground",
+          "visual_description": "Rectangular black object mistaken for a container on foreground table"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "r1",
+        "object_role": "armchair_seat_anchor",
+        "relation": "is_adjacent_to",
+        "required": true,
+        "subject_role": "adjacent_surface_area"
+      },
+      {
+        "id": "r2",
+        "object_role": "armchair_seat_anchor",
+        "relation": "is_accessible_by",
+        "required": true,
+        "subject_role": "entertainment_controller"
+      },
+      {
+        "id": "r3",
+        "object_role": "armchair_seat_anchor",
+        "relation": "is_accessible_by",
+        "required": true,
+        "subject_role": "entertainment_controller"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "armchair",
+          "sofa section",
+          "seat"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Furniture for two distinct seated occupants",
+        "id": "armchair_seat_anchor",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "side table",
+          "end table",
+          "coffee table"
+        ],
+        "entity_kind": "REGION",
+        "function": "Support surface for personal refreshment items near a seat",
+        "id": "adjacent_surface_area",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "mug",
+          "glass",
+          "bowl",
+          "plate",
+          "tray"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Container for fluid or food for one occupant",
+        "id": "refreshment_container_item",
+        "required_count": 4,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote",
+          "clicker",
+          "control pad"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Remote control for the television display",
+        "id": "entertainment_controller",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "center table",
+          "console table"
+        ],
+        "entity_kind": "REGION",
+        "function": "Central support surface for shared controls",
+        "id": "central_access_surface",
+        "required_count": 1,
+        "required_properties": []
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "armchair_seat_anchor",
+        "id": "op1",
+        "operation": "Place_refreshment_on_adjacent_table",
+        "operation_count": 4,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "refreshment_container_item",
+        "target_role": "adjacent_surface_area"
+      },
+      {
+        "id": "op2",
+        "operation": "Relocate_controller_to_central_spot",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "entertainment_controller",
+        "target_role": "central_access_surface"
+      }
+    ]
+  },
+  "task_summary": "Prepare living room for two viewers: arrange refreshment settings on two distinct tables adjacent to two armchairs, and relocate the remote control to a central surface accessible to both.",
+  "unsupported_reason": ""
+}

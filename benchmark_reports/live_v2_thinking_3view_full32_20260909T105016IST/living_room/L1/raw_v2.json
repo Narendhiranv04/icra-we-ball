@@ -1,0 +1,162 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "central_surface": [
+        {
+          "label": "ottoman_table",
+          "visual_description": "green cushioned low table in center"
+        }
+      ],
+      "entertainment_controller": [
+        {
+          "label": "remote_control",
+          "visual_description": "black remote on dark table"
+        }
+      ],
+      "person_seating_spot": [
+        {
+          "label": "left_armchair",
+          "visual_description": "black padded armchair on left side"
+        },
+        {
+          "label": "right_armchair",
+          "visual_description": "black padded armchair on right side"
+        }
+      ],
+      "refreshment_item_pair": [
+        {
+          "label": "pile_of_cups_plates",
+          "visual_description": "stack of dishes and remote on dark table"
+        }
+      ],
+      "refreshment_table": [
+        {
+          "label": "left_side_table",
+          "visual_description": "light wood table next to left chair"
+        },
+        {
+          "label": "right_side_table",
+          "visual_description": "light wood table next to right chair"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_01",
+        "object_role": "refreshment_table",
+        "relation": "located_adjacent",
+        "required": true,
+        "subject_role": "person_seating_spot"
+      },
+      {
+        "id": "rel_02",
+        "object_role": "refreshment_table",
+        "relation": "supported_on",
+        "required": true,
+        "subject_role": "refreshment_item_pair"
+      },
+      {
+        "id": "rel_03",
+        "object_role": "central_surface",
+        "relation": "placed_on",
+        "required": true,
+        "subject_role": "entertainment_controller"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "armchair",
+          "sofa corner"
+        ],
+        "entity_kind": "REGION",
+        "function": "designated spot for individual person",
+        "id": "person_seating_spot",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "side table",
+          "nightstand",
+          "stool"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "small table for personal refreshment items",
+        "id": "refreshment_table",
+        "required_count": 2,
+        "required_properties": [
+          "has_flat_top"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "dinnerware set",
+          "drinking vessel with dish"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "single cup and plate for one person",
+        "id": "refreshment_item_pair",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote control",
+          "wireless mouse"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "device for controlling television functions",
+        "id": "entertainment_controller",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "ottoman",
+          "low table"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "accessible table for shared items",
+        "id": "central_surface",
+        "required_count": 1,
+        "required_properties": [
+          "positioned_nearly_center"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "",
+        "id": "op_01",
+        "operation": "transfer_refreshment_pair_to_table",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "refreshment_item_pair",
+        "target_role": "refreshment_table"
+      },
+      {
+        "anchor_role": "",
+        "id": "op_02",
+        "operation": "transport_control_device_to_central_area",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "entertainment_controller",
+        "target_role": "central_surface"
+      }
+    ]
+  },
+  "task_summary": "Distribute refreshment items to two side tables near armchairs and move the remote control to the central ottoman.",
+  "unsupported_reason": ""
+}

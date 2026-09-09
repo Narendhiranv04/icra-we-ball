@@ -1,0 +1,206 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "accessible_central_zone": [
+        {
+          "label": "large_coffee_table",
+          "visual_description": "Long wooden table holding items in foreground"
+        }
+      ],
+      "entertainment_controller": [
+        {
+          "label": "black_remote",
+          "visual_description": "Black rectangular remote on large table"
+        }
+      ],
+      "initial_storage_surface": [
+        {
+          "label": "large_coffee_table",
+          "visual_description": "Long wooden table holding items in foreground"
+        }
+      ],
+      "refreshment_set": [
+        {
+          "label": "plate_cup_pair_left",
+          "visual_description": "White plate and red cup on large table"
+        },
+        {
+          "label": "plate_cup_pair_right",
+          "visual_description": "Second white plate and red cup on large table"
+        }
+      ],
+      "seating_station": [
+        {
+          "label": "left_armchair",
+          "visual_description": "Dark upholstered armchair with black cushion"
+        },
+        {
+          "label": "right_armchair",
+          "visual_description": "Dark upholstered armchair with black cushion"
+        }
+      ],
+      "side_table": [
+        {
+          "label": "left_side_table",
+          "visual_description": "Wooden side table left of left armchair"
+        },
+        {
+          "label": "right_side_table",
+          "visual_description": "Wooden side table right of right armchair"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_001",
+        "object_role": "seating_station",
+        "relation": "located_adjacent_to",
+        "required": true,
+        "subject_role": "side_table"
+      },
+      {
+        "id": "rel_002",
+        "object_role": "side_table",
+        "relation": "must_be_placed_on",
+        "required": true,
+        "subject_role": "refreshment_set"
+      },
+      {
+        "id": "rel_003",
+        "object_role": "accessible_central_zone",
+        "relation": "must_be_placed_on",
+        "required": true,
+        "subject_role": "entertainment_controller"
+      },
+      {
+        "id": "rel_004",
+        "object_role": "initial_storage_surface",
+        "relation": "currently_resides_on",
+        "required": false,
+        "subject_role": "refreshment_set"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup and plate pair",
+          "bowl and napkin set",
+          "food and beverage unit"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Carries drink and food for one user",
+        "id": "refreshment_set",
+        "required_count": 2,
+        "required_properties": [
+          "contains vessel",
+          "contains edible substance"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "chair end table",
+          "small side table",
+          "wooden console"
+        ],
+        "entity_kind": "REGION",
+        "function": "Supports personal items near seating",
+        "id": "side_table",
+        "required_count": 2,
+        "required_properties": [
+          "flat horizontal surface",
+          "height compatible with seated users"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote control",
+          "clicker device"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Operates media playback device",
+        "id": "entertainment_controller",
+        "required_count": 1,
+        "required_properties": [
+          "infrared transmitter",
+          "button array"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "central coffee table",
+          "space between users",
+          "shared ottoman"
+        ],
+        "entity_kind": "REGION",
+        "function": "Provides shared access to media control",
+        "id": "accessible_central_zone",
+        "required_count": 1,
+        "required_properties": [
+          "within easy reach of multiple users",
+          "unobstructed surface"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "large coffee table",
+          "cluttered surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "Current storage location for items",
+        "id": "initial_storage_surface",
+        "required_count": 1,
+        "required_properties": [
+          "currently holds scattered items",
+          "larger than required for individuals"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "armchair",
+          "recliner"
+        ],
+        "entity_kind": "FIXED_TARGET",
+        "function": "Anchors 'nearby' location for refreshment",
+        "id": "seating_station",
+        "required_count": 2,
+        "required_properties": [
+          "occupied seat",
+          "human height scale"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "seating_station",
+        "id": "op_001",
+        "operation": "distribute_refreshment_sets",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "refreshment_set",
+        "target_role": "side_table"
+      },
+      {
+        "anchor_role": "seating_station",
+        "id": "op_002",
+        "operation": "relocate_entertainment_control",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "entertainment_controller",
+        "target_role": "accessible_central_zone"
+      }
+    ]
+  },
+  "task_summary": "Distribute refreshment sets to individual seating areas and position entertainment control centrally.",
+  "unsupported_reason": ""
+}

@@ -1,0 +1,244 @@
+{
+  "canonical_physical_relations": [],
+  "canonical_roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "CUP_SAUCER_SET",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup_saucer_set",
+        "cup",
+        "saucer"
+      ],
+      "semantic_hints": [
+        "holds_consumable"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "SEATING_POSITION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "armchair",
+        "chair",
+        "sofa",
+        "seating_position"
+      ],
+      "semantic_hints": [
+        "stable_support",
+        "flat_top"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [
+        "central_position"
+      ],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'binding_policy': 'REUSABLE', 'candidate_categories': ['remote_control'], 'entity_kind': 'OBJECT', 'function': 'user_input_interface', 'id': 'entertainment_device', 'required_count': 1, 'required_properties': ['has_button_interface'], 'visible_candidates': [{'label': 'remote_control', 'visual_description': 'Black rectangular remote on the large wooden desk'}], 'description': ''}, 'collision_with': 'side_table'}]",
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_set_refreshment', 'function': 'transfer_container_to_surface', 'tool_role': 'refreshment_container', 'target_role': 'side_table', 'required_target_count': 2, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': None, 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"No semantic evidence supporting any robot capability in domain 'living_room' for phrase 'transfer_container_to_surface'\", 'interp_status': 'UNMAPPABLE_OPERATION'}, {'raw_group': {'id': 'op_set_remote', 'function': 'transfer_device_to_surface', 'tool_role': 'entertainment_device', 'target_role': 'central_access_point', 'required_target_count': 1, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': None, 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+    "Unresolved required relations: [{'raw_subject': 'refreshment_container', 'raw_phrase': 'placed_on', 'raw_object': 'side_table', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Semantic candidates ['FITS_ON', 'FITS_SET_ON'] incompatible with endpoints (CUP_SAUCER_SET, SEATING_POSITION)\"}, {'raw_subject': 'entertainment_device', 'raw_phrase': 'placed_on', 'raw_object': 'central_access_point', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "interp_status": "UNMAPPABLE_OPERATION",
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "transfer_container_to_surface",
+        "id": "op_set_refreshment",
+        "required_relations": [],
+        "required_target_count": 2,
+        "target_role": "side_table",
+        "tool_role": "refreshment_container",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "reason": "No semantic evidence supporting any robot capability in domain 'living_room' for phrase 'transfer_container_to_surface'",
+      "status": "UNSUPPORTED_OPERATOR"
+    },
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "transfer_device_to_surface",
+        "id": "op_set_remote",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "central_access_point",
+        "tool_role": "entertainment_device",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "living_room",
+  "live_contract_valid": true,
+  "live_validation_error": null,
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": null,
+      "compiler": {
+        "interp_status": "UNMAPPABLE_OPERATION",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": null,
+          "function": "transfer_container_to_surface",
+          "id": "op_set_refreshment",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "side_table",
+          "tool_role": "refreshment_container",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "reason": "No semantic evidence supporting any robot capability in domain 'living_room' for phrase 'transfer_container_to_surface'",
+        "status": "UNSUPPORTED_OPERATOR"
+      },
+      "id": "op_set_refreshment",
+      "raw_phrase": "transfer_container_to_surface",
+      "source_role": "refreshment_container",
+      "target_role": "side_table"
+    },
+    {
+      "anchor_role": null,
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": null,
+          "function": "transfer_device_to_surface",
+          "id": "op_set_remote",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "central_access_point",
+          "tool_role": "entertainment_device",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op_set_remote",
+      "raw_phrase": "transfer_device_to_surface",
+      "source_role": "entertainment_device",
+      "target_role": "central_access_point"
+    }
+  ],
+  "operation_groups": [],
+  "relation_audit": [
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "side_table",
+        "raw_phrase": "placed_on",
+        "raw_subject": "refreshment_container",
+        "reason": "Semantic candidates ['FITS_ON', 'FITS_SET_ON'] incompatible with endpoints (CUP_SAUCER_SET, SEATING_POSITION)",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_place_refreshment",
+      "raw_object": "side_table",
+      "raw_phrase": "placed_on",
+      "raw_subject": "refreshment_container"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "central_access_point",
+        "raw_phrase": "placed_on",
+        "raw_subject": "entertainment_device",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_place_remote",
+      "raw_object": "central_access_point",
+      "raw_phrase": "placed_on",
+      "raw_subject": "entertainment_device"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [
+    {
+      "raw_object": "side_table",
+      "raw_phrase": "placed_on",
+      "raw_subject": "refreshment_container",
+      "reason": "Semantic candidates ['FITS_ON', 'FITS_SET_ON'] incompatible with endpoints (CUP_SAUCER_SET, SEATING_POSITION)",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "central_access_point",
+      "raw_phrase": "placed_on",
+      "raw_subject": "entertainment_device",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [
+    {
+      "code": "AMBIGUOUS_ROLE_MAPPING",
+      "collision_with": "side_table",
+      "raw_role": {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote_control"
+        ],
+        "description": "",
+        "entity_kind": "OBJECT",
+        "function": "user_input_interface",
+        "id": "entertainment_device",
+        "required_count": 1,
+        "required_properties": [
+          "has_button_interface"
+        ],
+        "visible_candidates": [
+          {
+            "label": "remote_control",
+            "visual_description": "Black rectangular remote on the large wooden desk"
+          }
+        ]
+      }
+    }
+  ],
+  "variant": "L3"
+}

@@ -1,0 +1,58 @@
+{
+  "canonicalization_status": "PARTIAL",
+  "domain": "workshop",
+  "enable_thinking": true,
+  "finish_reason": "stop",
+  "live_contract_valid": false,
+  "live_validation_error": "DUPLICATE_OPERATION_ENDPOINT: operation_pairings[0].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[1].anchor_role equals target_role",
+  "max_tokens": 24000,
+  "model": "Qwen/Qwen3.5-9B",
+  "model_alias": "qwen35-9b",
+  "online_executable_contract_complete": false,
+  "presence_penalty": 1.5,
+  "prompt_schema_hash": "766a9fcb4d3248d542ea543a2474c6078cb8528632fc8467e7a294fe5aacea01",
+  "raw_json_available": true,
+  "rendered_image_count": 3,
+  "rendered_image_paths": [
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W5/vlm_inputs/initial_iso_left.png",
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W5/vlm_inputs/initial_iso_right.png",
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W5/vlm_inputs/initial_detail.png"
+  ],
+  "schema_version": 2,
+  "semantic_fm_calls": 1,
+  "source_commit": "7b0543cf194826a54eb565ba8927c02a3a3874c2",
+  "temperature": 1.0,
+  "top_k": 20,
+  "top_p": 0.95,
+  "usage": {
+    "completion_tokens": 5857,
+    "completion_tokens_details": {
+      "reasoning_tokens": 4939
+    },
+    "prompt_tokens": 5001,
+    "prompt_tokens_details": null,
+    "total_tokens": 10858
+  },
+  "variant": "W5",
+  "vlm_image_count": 3,
+  "vlm_images": [
+    {
+      "bytes": 326644,
+      "mime_type": "image/png",
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W5/vlm_inputs/initial_iso_left.png",
+      "sha256": "dc8da8ab17c031dddbef5745653c626ff383a8f728b87522ac4a444a546ed486"
+    },
+    {
+      "bytes": 359117,
+      "mime_type": "image/png",
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W5/vlm_inputs/initial_iso_right.png",
+      "sha256": "9909cb44bcb4397cb23aad5365402ef1f6cb766cb129f64f53df336ceaf1d0af"
+    },
+    {
+      "bytes": 327603,
+      "mime_type": "image/png",
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W5/vlm_inputs/initial_detail.png",
+      "sha256": "054b165ce0391245a8094d5794346e1b67b1b88f62057d6970c752bd57d64bfa"
+    }
+  ]
+}

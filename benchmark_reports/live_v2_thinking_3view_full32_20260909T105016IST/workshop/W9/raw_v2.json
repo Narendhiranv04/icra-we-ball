@@ -1,0 +1,132 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "right_drawer",
+        "label": "Right Under-desk Drawer",
+        "reason": "May contain additional compatible tools or fasteners if the visible candidate is incompatible.",
+        "visual_description": "A closed blue drawer positioned underneath the right leg of the workbench."
+      },
+      {
+        "id": "left_drawer",
+        "label": "Left Under-desk Drawer",
+        "reason": "May contain alternative tools or components for the fastening task.",
+        "visual_description": "A closed blue drawer positioned underneath the left leg of the workbench."
+      },
+      {
+        "id": "wall_cabinet",
+        "label": "Background Storage Cabinet",
+        "reason": "Likely a storage source for secondary equipment if the initial candidates are unsuitable.",
+        "visual_description": "A tall, dark blue/grey cabinet standing vertically against the back wall."
+      }
+    ],
+    "inspection_order": [
+      "right_drawer",
+      "left_drawer",
+      "wall_cabinet"
+    ],
+    "visible_candidates_per_role": {
+      "compatible_fastening_tool": [
+        {
+          "label": "Yellow Handle Object",
+          "visual_description": "A yellow, rectangular, handle-like object situated on a dark mat on the center of the workbench."
+        }
+      ],
+      "marked_fastening_site": [],
+      "workbench_return_zone": [
+        {
+          "label": "Workbench Tabletop",
+          "visual_description": "The light brown wooden surface of the workbench, occupying the central foreground."
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_01",
+        "object_role": "marked_fastening_site",
+        "relation": "acts_upon_during_fastening_operation",
+        "required": true,
+        "subject_role": "compatible_fastening_tool"
+      },
+      {
+        "id": "rel_02",
+        "object_role": "workbench_return_zone",
+        "relation": "rests_finally_on",
+        "required": true,
+        "subject_role": "compatible_fastening_tool"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "manual or powered screwdriver",
+          "hammer",
+          "wrench"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "The compatible component used for fastening",
+        "id": "compatible_fastening_tool",
+        "required_count": 1,
+        "required_properties": [
+          "mechanically_capable_of_applying_fastening",
+          "durable_enough_for_reuse"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "designated assembly point",
+          "fixture base",
+          "table surface zone"
+        ],
+        "entity_kind": "REGION",
+        "function": "The specific location on the workbench requiring fastening",
+        "id": "marked_fastening_site",
+        "required_count": 1,
+        "required_properties": [
+          "suitable_for_tool_application"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "open tabletop area",
+          "stable flat surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "The workbench surface serving as the safe equipment landing area",
+        "id": "workbench_return_zone",
+        "required_count": 1,
+        "required_properties": [
+          "able_to_support_tool_safely"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "marked_fastening_site",
+        "id": "op_01",
+        "operation": "execute_fastening_manipulation",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "compatible_fastening_tool",
+        "target_role": "marked_fastening_site"
+      },
+      {
+        "anchor_role": "workbench_return_zone",
+        "id": "op_02",
+        "operation": "place_equipment_onto_workbench",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "compatible_fastening_tool",
+        "target_role": "workbench_return_zone"
+      }
+    ]
+  },
+  "task_summary": "The task requires identifying a compatible fastening tool, performing a fastening operation at a designated workbench location, and then returning the tool to the workbench surface. The 'identify' phase establishes the necessary physical relationship between the tool and the target without requiring an explicit 'search' operation, while the remaining clauses map directly to physical transformations.",
+  "unsupported_reason": ""
+}

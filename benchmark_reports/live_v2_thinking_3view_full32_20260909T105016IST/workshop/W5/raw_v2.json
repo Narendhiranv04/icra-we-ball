@@ -1,0 +1,126 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "region_blue_cabinet",
+        "label": "blue_cabinet_compartment",
+        "reason": "Additional compatible fastening tools may be stored within this cabinet.",
+        "visual_description": "Tall dark blue storage unit adjacent to the work table"
+      }
+    ],
+    "inspection_order": [
+      "region_blue_cabinet"
+    ],
+    "visible_candidates_per_role": {
+      "fastening_target": [
+        {
+          "label": "black_mat_assembly",
+          "visual_description": "Black textured surface under the tool, possibly holding the workpiece"
+        }
+      ],
+      "fastening_tool": [
+        {
+          "label": "yellow_screwdriver",
+          "visual_description": "Yellow-handled tool resting on black mat on table"
+        }
+      ],
+      "workbench_surface": [
+        {
+          "label": "wooden_table_top",
+          "visual_description": "Brown wooden surface supporting the tool and other items"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_fastening_apply",
+        "object_role": "fastening_target",
+        "relation": "performs_securement_action_on",
+        "required": true,
+        "subject_role": "fastening_tool"
+      },
+      {
+        "id": "rel_support_placement",
+        "object_role": "fastening_tool",
+        "relation": "physically_holds_and_stabilizes",
+        "required": true,
+        "subject_role": "workbench_surface"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "hand_tool"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "device used to secure or tighten components",
+        "id": "fastening_tool",
+        "required_count": 1,
+        "required_properties": [
+          "mechanical_drive_interface",
+          "torque_transfer_capability"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "metal_plate",
+          "wood_block",
+          "fixture_base"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "workpiece or component requiring secure fixation",
+        "id": "fastening_target",
+        "required_count": 1,
+        "required_properties": [
+          "has_connectors",
+          "receives_fastening_force"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "desk_top",
+          "table_surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "supported area for placing tools and materials",
+        "id": "workbench_surface",
+        "required_count": 1,
+        "required_properties": [
+          "horizontal",
+          "load_bearing",
+          "flat"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "fastening_target",
+        "id": "op_fasten",
+        "operation": "tighten_connection_using_tool",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "fastening_tool",
+        "target_role": "fastening_target"
+      },
+      {
+        "anchor_role": "workbench_surface",
+        "id": "op_place_back",
+        "operation": "release_tool_and_settle_on_surface",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "fastening_tool",
+        "target_role": "workbench_surface"
+      }
+    ]
+  },
+  "task_summary": "Locate a fastening tool, apply it to a specific target, and return the tool to the table.",
+  "unsupported_reason": ""
+}

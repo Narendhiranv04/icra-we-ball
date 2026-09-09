@@ -1,0 +1,60 @@
+{
+  "canonicalization_status": "PARTIAL",
+  "domain": "kitchen",
+  "enable_thinking": true,
+  "finish_reason": "stop",
+  "live_contract_valid": false,
+  "live_validation_error": "Operation source_role 'soup_source' not in declared roles",
+  "max_tokens": 24000,
+  "model": "Qwen/Qwen3.5-9B",
+  "model_alias": "qwen35-9b",
+  "online_executable_contract_complete": false,
+  "presence_penalty": 1.5,
+  "prompt_schema_hash": "766a9fcb4d3248d542ea543a2474c6078cb8528632fc8467e7a294fe5aacea01",
+  "raw_json_available": true,
+  "rendered_image_count": 5,
+  "rendered_image_paths": [
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K5/vlm_inputs/left_shoulder_camera.png",
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K5/vlm_inputs/right_shoulder_camera.png",
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K5/vlm_inputs/overhead_camera.png",
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K5/vlm_inputs/side_camera.png",
+    "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K5/vlm_inputs/front_camera.png"
+  ],
+  "schema_version": 2,
+  "semantic_fm_calls": 1,
+  "source_commit": "7b0543cf194826a54eb565ba8927c02a3a3874c2",
+  "temperature": 1.0,
+  "top_k": 20,
+  "top_p": 0.95,
+  "usage": {
+    "completion_tokens": 6986,
+    "completion_tokens_details": {
+      "reasoning_tokens": 4841
+    },
+    "prompt_tokens": 5962,
+    "prompt_tokens_details": null,
+    "total_tokens": 12948
+  },
+  "variant": "K5",
+  "vlm_image_count": 3,
+  "vlm_images": [
+    {
+      "bytes": 295411,
+      "mime_type": "image/png",
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K5/vlm_inputs/left_shoulder_camera.png",
+      "sha256": "92d6beabfbc662e54b706f98a912b913e2f7cbb69ec3a9eddf2ae0e087202852"
+    },
+    {
+      "bytes": 293414,
+      "mime_type": "image/png",
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K5/vlm_inputs/right_shoulder_camera.png",
+      "sha256": "93b8fd2ce8caf3bbc7e207ce32c09486e7142e950d94e921169d95d8c3a4ee20"
+    },
+    {
+      "bytes": 239044,
+      "mime_type": "image/png",
+      "path": "/home/naren/RA_iiith/benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K5/vlm_inputs/overhead_camera.png",
+      "sha256": "4bf53266f797096a69c9512a28930dc366397def821bb0475ac62fbac11455cb"
+    }
+  ]
+}

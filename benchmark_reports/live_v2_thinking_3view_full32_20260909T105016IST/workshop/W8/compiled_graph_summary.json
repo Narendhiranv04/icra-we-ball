@@ -1,0 +1,317 @@
+{
+  "canonical_physical_relations": [],
+  "canonical_roles": [
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "driver",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "fastener",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "screw",
+        "Phillips screw",
+        "Phillips head screw"
+      ],
+      "semantic_hints": [
+        "threaded surface present",
+        "machined head geometry"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'binding_policy': 'SHARED', 'candidate_categories': ['assembly bracket', 'fixture plate', 'machine housing', 'structural component'], 'entity_kind': 'OBJECT', 'function': 'Object receiving the fastening operation', 'id': 'target_workpiece', 'required_count': 1, 'required_properties': [], 'visible_candidates': [{'label': 'Desk Assembly Base', 'visual_description': 'The wooden workbench surface itself, specifically the central area where a fixture or base plate would be installed and the yellow blocks are currently resting.'}], 'description': ''}, 'collision_with': 'fastener_component'}]",
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_1', 'function': 'Retrieve Fastening Tool from Storage', 'tool_role': 'fastening_tool', 'target_role': 'target_workpiece', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'storage_zone', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}, {'raw_group': {'id': 'op_2', 'function': 'Retrieve Fastener from Storage', 'tool_role': 'fastener_component', 'target_role': 'target_workpiece', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'storage_zone', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}, {'raw_group': {'id': 'op_3', 'function': 'Secure Fastener to Workpiece', 'tool_role': 'fastening_tool', 'target_role': 'target_workpiece', 'required_target_count': 1, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': 'target_workpiece', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+    "Unresolved required relations: [{'raw_subject': 'fastening_tool', 'raw_phrase': 'physically acts upon', 'raw_object': 'target_workpiece', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'fastener_component', 'raw_phrase': 'mechanically attaches_to', 'raw_object': 'target_workpiece', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "storage_zone",
+        "function": "Retrieve Fastening Tool from Storage",
+        "id": "op_1",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "target_workpiece",
+        "tool_role": "fastening_tool",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    },
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "storage_zone",
+        "function": "Retrieve Fastener from Storage",
+        "id": "op_2",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "target_workpiece",
+        "tool_role": "fastener_component",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    },
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "target_workpiece",
+        "function": "Secure Fastener to Workpiece",
+        "id": "op_3",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "target_workpiece",
+        "tool_role": "fastening_tool",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "workshop",
+  "live_contract_valid": false,
+  "live_validation_error": "DUPLICATE_OPERATION_ENDPOINT: operation_pairings[2].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[3].anchor_role equals target_role",
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": "Storage_Zone",
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "storage_zone",
+          "function": "Retrieve Fastening Tool from Storage",
+          "id": "op_1",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "target_workpiece",
+          "tool_role": "fastening_tool",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op_1",
+      "raw_phrase": "Retrieve Fastening Tool from Storage",
+      "source_role": "Fastening_Tool",
+      "target_role": "Target_Workpiece"
+    },
+    {
+      "anchor_role": "Storage_Zone",
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "storage_zone",
+          "function": "Retrieve Fastener from Storage",
+          "id": "op_2",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "target_workpiece",
+          "tool_role": "fastener_component",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op_2",
+      "raw_phrase": "Retrieve Fastener from Storage",
+      "source_role": "Fastener_Component",
+      "target_role": "Target_Workpiece"
+    },
+    {
+      "anchor_role": "Target_Workpiece",
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "target_workpiece",
+          "function": "Secure Fastener to Workpiece",
+          "id": "op_3",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "target_workpiece",
+          "tool_role": "fastening_tool",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op_3",
+      "raw_phrase": "Secure Fastener to Workpiece",
+      "source_role": "Fastening_Tool",
+      "target_role": "Target_Workpiece"
+    },
+    {
+      "anchor_role": "Workbench_Surface",
+      "compiler": {
+        "planner_context": "MAIN_WORKBENCH_ZONE",
+        "provenance": "PLANNER_CONTEXT_CONSTANT",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "workbench_surface",
+          "function": "Return Fastening Tool to Workbench",
+          "id": "op_4",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "workbench_surface",
+          "tool_role": "fastening_tool",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "status": "ABSORBED_INTO_PLANNER_CONTEXT"
+      },
+      "id": "op_4",
+      "raw_phrase": "Return Fastening Tool to Workbench",
+      "source_role": "Fastening_Tool",
+      "target_role": "Workbench_Surface"
+    }
+  ],
+  "operation_groups": [],
+  "relation_audit": [
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "target_workpiece",
+        "raw_phrase": "physically acts upon",
+        "raw_subject": "fastening_tool",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "relation_1",
+      "raw_object": "Target_Workpiece",
+      "raw_phrase": "physically acts upon",
+      "raw_subject": "Fastening_Tool"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "target_workpiece",
+        "raw_phrase": "mechanically attaches_to",
+        "raw_subject": "fastener_component",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "relation_2",
+      "raw_object": "Target_Workpiece",
+      "raw_phrase": "mechanically attaches_to",
+      "raw_subject": "Fastener_Component"
+    },
+    {
+      "classification": "SOFT_CONTEXT",
+      "compiler": {
+        "raw_object": "storage_zone",
+        "raw_phrase": "originally contained_in",
+        "raw_subject": "fastener_component",
+        "reason": "Context-only support endpoint",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      "id": "relation_3",
+      "raw_object": "Storage_Zone",
+      "raw_phrase": "originally contained_in",
+      "raw_subject": "Fastener_Component"
+    },
+    {
+      "classification": "SOFT_CONTEXT",
+      "compiler": {
+        "planner_context": "MAIN_WORKBENCH_ZONE",
+        "provenance": "PLANNER_CONTEXT_CONSTANT",
+        "raw_object": "workbench_surface",
+        "raw_phrase": "rests_on",
+        "raw_subject": "fastening_tool",
+        "status": "ABSORBED_INTO_PLANNER_CONTEXT"
+      },
+      "id": "relation_4",
+      "raw_object": "Workbench_Surface",
+      "raw_phrase": "rests_on",
+      "raw_subject": "Fastening_Tool"
+    },
+    {
+      "classification": "SOFT_CONTEXT",
+      "compiler": {
+        "raw_object": "storage_zone",
+        "raw_phrase": "transferred_from",
+        "raw_subject": "fastening_tool",
+        "reason": "Context-only support endpoint",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      "id": "relation_5",
+      "raw_object": "Storage_Zone",
+      "raw_phrase": "transferred_from",
+      "raw_subject": "Fastening_Tool"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [
+    {
+      "raw_object": "target_workpiece",
+      "raw_phrase": "physically acts upon",
+      "raw_subject": "fastening_tool",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "target_workpiece",
+      "raw_phrase": "mechanically attaches_to",
+      "raw_subject": "fastener_component",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [
+    {
+      "code": "AMBIGUOUS_ROLE_MAPPING",
+      "collision_with": "fastener_component",
+      "raw_role": {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "assembly bracket",
+          "fixture plate",
+          "machine housing",
+          "structural component"
+        ],
+        "description": "",
+        "entity_kind": "OBJECT",
+        "function": "Object receiving the fastening operation",
+        "id": "target_workpiece",
+        "required_count": 1,
+        "required_properties": [],
+        "visible_candidates": [
+          {
+            "label": "Desk Assembly Base",
+            "visual_description": "The wooden workbench surface itself, specifically the central area where a fixture or base plate would be installed and the yellow blocks are currently resting."
+          }
+        ]
+      }
+    }
+  ],
+  "variant": "W8"
+}

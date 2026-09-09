@@ -1,0 +1,152 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "COMPATIBLE_FASTENER": [
+        {
+          "label": "Yellow Block On Tray",
+          "visual_description": "A bright yellow rectangular object resting on a black tray or platform on the left side of the table."
+        },
+        {
+          "label": "Yellow Block In Hand",
+          "visual_description": "A bright yellow rectangular object held within the end-effector of the robotic arm in the bottom right corner."
+        }
+      ],
+      "FASTENING_TOOL": [
+        {
+          "label": "End Effector Mechanism",
+          "visual_description": "The white robotic gripper/hand structure currently grasping a yellow object."
+        }
+      ],
+      "MARKED_FASTENING_SITE": [],
+      "WORKBENCH_SURFACE": [
+        {
+          "label": "Tabletop",
+          "visual_description": "The main light-colored wooden surface supporting the trays and cabinet."
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "REL_1",
+        "object_role": "MARKED_FASTENING_SITE",
+        "relation": "physically compatible with site geometry",
+        "required": true,
+        "subject_role": "COMPATIBLE_FASTENER"
+      },
+      {
+        "id": "REL_2",
+        "object_role": "COMPATIBLE_FASTENER",
+        "relation": "interact mechanically with fastener",
+        "required": true,
+        "subject_role": "FASTENING_TOOL"
+      },
+      {
+        "id": "REL_3",
+        "object_role": "MARKED_FASTENING_SITE",
+        "relation": "operate over assembly location",
+        "required": true,
+        "subject_role": "FASTENING_TOOL"
+      },
+      {
+        "id": "REL_4",
+        "object_role": "FASTENING_TOOL",
+        "relation": "provides resting support for tool",
+        "required": true,
+        "subject_role": "WORKBENCH_SURFACE"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "small patch of wood surface",
+          "marked circle",
+          "geometric indicator"
+        ],
+        "entity_kind": "REGION",
+        "function": "Designated geometric zone on workbench for attachment",
+        "id": "MARKED_FASTENING_SITE",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut",
+          "washer",
+          "metal pin",
+          "yellow rectangular block"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Small mechanical part designed to join surfaces",
+        "id": "COMPATIBLE_FASTENER",
+        "required_count": 1,
+        "required_properties": [
+          "rigid solid",
+          "mechanically connectable"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "manual screwdriver",
+          "drill bit",
+          "power driver",
+          "adjustable wrench"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Instrument used to apply torque or force for joining",
+        "id": "FASTENING_TOOL",
+        "required_count": 1,
+        "required_properties": [
+          "grippable handle",
+          "mechanical engagement surface"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wood tabletop",
+          "desk surface",
+          "large flat wooden area"
+        ],
+        "entity_kind": "REGION",
+        "function": "Primary horizontal planar surface of the furniture",
+        "id": "WORKBENCH_SURFACE",
+        "required_count": 1,
+        "required_properties": [
+          "horizontal support plane",
+          "larger than tool footprint"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "MARKED_FASTENING_SITE",
+        "id": "OP_1",
+        "operation": "Fasten Component To Site",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "FASTENING_TOOL",
+        "target_role": "MARKED_FASTENING_SITE"
+      },
+      {
+        "id": "OP_2",
+        "operation": "Place Tool On Bench",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "FASTENING_TOOL",
+        "target_role": "WORKBENCH_SURFACE"
+      }
+    ]
+  },
+  "task_summary": "Identify fastener components, perform fastening at marked site, return tool.",
+  "unsupported_reason": ""
+}

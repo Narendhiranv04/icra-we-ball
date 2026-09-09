@@ -1,0 +1,141 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "central_access_point": [
+        {
+          "label": "coffee_table",
+          "visual_description": "Green-top rectangular table in the center of the seating arrangement"
+        }
+      ],
+      "entertainment_device": [
+        {
+          "label": "remote_control",
+          "visual_description": "Black rectangular remote on the large wooden desk"
+        }
+      ],
+      "refreshment_container": [
+        {
+          "label": "red_mug",
+          "visual_description": "Red cylindrical cup on the desk"
+        },
+        {
+          "label": "red_mug",
+          "visual_description": "Second red cylindrical cup on the desk"
+        },
+        {
+          "label": "white_bowl",
+          "visual_description": "White shallow dish on the desk"
+        }
+      ],
+      "side_table": [
+        {
+          "label": "left_side_table",
+          "visual_description": "Small wooden table to the left of the left armchair"
+        },
+        {
+          "label": "right_side_table",
+          "visual_description": "Small wooden table to the right of the right armchair"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_place_refreshment",
+        "object_role": "side_table",
+        "relation": "placed_on",
+        "required": true,
+        "subject_role": "refreshment_container"
+      },
+      {
+        "id": "rel_place_remote",
+        "object_role": "central_access_point",
+        "relation": "placed_on",
+        "required": true,
+        "subject_role": "entertainment_device"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "mug",
+          "glass"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "vessel_holding_refreshment",
+        "id": "refreshment_container",
+        "required_count": 2,
+        "required_properties": [
+          "holds_consumable"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "end_table",
+          "side_table"
+        ],
+        "entity_kind": "REGION",
+        "function": "support_surface_near_chair",
+        "id": "side_table",
+        "required_count": 2,
+        "required_properties": [
+          "stable_support",
+          "flat_top"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote_control"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "user_input_interface",
+        "id": "entertainment_device",
+        "required_count": 1,
+        "required_properties": [
+          "has_button_interface"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee_table"
+        ],
+        "entity_kind": "REGION",
+        "function": "common_access_location",
+        "id": "central_access_point",
+        "required_count": 1,
+        "required_properties": [
+          "central_position"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_set_refreshment",
+        "operation": "transfer_container_to_surface",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "refreshment_container",
+        "target_role": "side_table"
+      },
+      {
+        "id": "op_set_remote",
+        "operation": "transfer_device_to_surface",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "entertainment_device",
+        "target_role": "central_access_point"
+      }
+    ]
+  },
+  "task_summary": "Prepare two refreshment stations on side tables and move the remote to the central coffee table.",
+  "unsupported_reason": ""
+}

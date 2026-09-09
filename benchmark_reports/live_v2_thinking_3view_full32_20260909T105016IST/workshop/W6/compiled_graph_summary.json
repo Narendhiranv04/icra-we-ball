@@ -1,0 +1,247 @@
+{
+  "canonical_physical_relations": [
+    {
+      "capability_id": "FASTEN_JOINT",
+      "category": "PHYSICAL_VERIFIER",
+      "expected": true,
+      "object_role": "fastener",
+      "predicate": "COMPATIBLE_WITH",
+      "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+      "source_operation_id": "op_1",
+      "subject_role": "driver"
+    }
+  ],
+  "canonical_roles": [
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "fastener",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "screw",
+        "Phillips screw",
+        "Phillips head screw"
+      ],
+      "semantic_hints": [],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "driver",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "semantic_hints": [
+        "suitable_gripper_geometry"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Unresolved roles: [{'raw_role': {'binding_policy': 'DISTINCT', 'candidate_categories': ['screw bolt nut washer connector pin bracket'], 'entity_kind': 'OBJECT', 'function': 'part to be attached to target', 'id': 'compatible_component', 'required_count': 1, 'required_properties': [], 'visible_candidates': [{'label': 'yellow_connector_bar', 'visual_description': 'Long yellow cylindrical or prismatic object on the dark mat next to the blue plate'}, {'label': 'handheld_yellow_part', 'visual_description': 'Yellow blocky object currently held in the robotic gripper'}], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}]",
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_2', 'function': 'place_tool_down', 'tool_role': 'fastening_tool', 'target_role': 'workbench_surface', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'fastening_tool', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+    "Unresolved required relations: [{'raw_subject': 'compatible_component', 'raw_phrase': 'physically_attached_to_during_fastening', 'raw_object': 'fastening_target', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'fastening_tool', 'raw_phrase': 'actuates_connection_between', 'raw_object': 'fastening_target', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'actuates_connection_between' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics\"}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "fastening_tool",
+        "function": "place_tool_down",
+        "id": "op_2",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "workbench_surface",
+        "tool_role": "fastening_tool",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "workshop",
+  "live_contract_valid": false,
+  "live_validation_error": "DUPLICATE_OPERATION_ENDPOINT: operation_pairings[1].anchor_role equals source_role",
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": "compatible_component",
+      "compiler": {
+        "capability_id": "FASTEN_JOINT",
+        "physical_preconditions": [
+          [
+            "driver",
+            "COMPATIBLE_WITH",
+            "fastener"
+          ]
+        ],
+        "planner_operation": "DRIVE_FASTENER_INTO_TARGET",
+        "preconditions_provenance": [
+          {
+            "capability_id": "FASTEN_JOINT",
+            "object_role": "fastener",
+            "predicate": "COMPATIBLE_WITH",
+            "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+            "source_operation_id": "op_1",
+            "subject_role": "driver"
+          }
+        ],
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "compatible_component",
+          "function": "apply_fastening_force",
+          "id": "op_1",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "fastening_target",
+          "tool_role": "fastening_tool",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "representation": "SINGLETON_RELATIONS",
+        "status": "STATIC_ALREADY_SATISFIED"
+      },
+      "id": "op_1",
+      "raw_phrase": "apply_fastening_force",
+      "source_role": "fastening_tool",
+      "target_role": "fastening_target"
+    },
+    {
+      "anchor_role": "fastening_tool",
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "fastening_tool",
+          "function": "place_tool_down",
+          "id": "op_2",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "workbench_surface",
+          "tool_role": "fastening_tool",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op_2",
+      "raw_phrase": "place_tool_down",
+      "source_role": "fastening_tool",
+      "target_role": "workbench_surface"
+    }
+  ],
+  "operation_groups": [],
+  "relation_audit": [
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "fastening_target",
+        "raw_phrase": "physically_attached_to_during_fastening",
+        "raw_subject": "compatible_component",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_1",
+      "raw_object": "fastening_target",
+      "raw_phrase": "physically_attached_to_during_fastening",
+      "raw_subject": "compatible_component"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "fastening_target",
+        "raw_phrase": "actuates_connection_between",
+        "raw_subject": "fastening_tool",
+        "reason": "Relation text 'actuates_connection_between' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_2",
+      "raw_object": "fastening_target",
+      "raw_phrase": "actuates_connection_between",
+      "raw_subject": "fastening_tool"
+    },
+    {
+      "classification": "SOFT_CONTEXT",
+      "compiler": {
+        "planner_context": "MAIN_WORKBENCH_ZONE",
+        "provenance": "PLANNER_CONTEXT_CONSTANT",
+        "raw_object": "workbench_surface",
+        "raw_phrase": "rests_on_top_of",
+        "raw_subject": "fastening_tool",
+        "status": "ABSORBED_INTO_PLANNER_CONTEXT"
+      },
+      "id": "rel_3",
+      "raw_object": "workbench_surface",
+      "raw_phrase": "rests_on_top_of",
+      "raw_subject": "fastening_tool"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [
+    {
+      "raw_object": "fastening_target",
+      "raw_phrase": "physically_attached_to_during_fastening",
+      "raw_subject": "compatible_component",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "fastening_target",
+      "raw_phrase": "actuates_connection_between",
+      "raw_subject": "fastening_tool",
+      "reason": "Relation text 'actuates_connection_between' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [
+    {
+      "raw_role": {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw bolt nut washer connector pin bracket"
+        ],
+        "description": "",
+        "entity_kind": "OBJECT",
+        "function": "part to be attached to target",
+        "id": "compatible_component",
+        "required_count": 1,
+        "required_properties": [],
+        "visible_candidates": [
+          {
+            "label": "yellow_connector_bar",
+            "visual_description": "Long yellow cylindrical or prismatic object on the dark mat next to the blue plate"
+          },
+          {
+            "label": "handheld_yellow_part",
+            "visual_description": "Yellow blocky object currently held in the robotic gripper"
+          }
+        ]
+      },
+      "status": "UNRESOLVED_SEMANTIC"
+    }
+  ],
+  "variant": "W6"
+}

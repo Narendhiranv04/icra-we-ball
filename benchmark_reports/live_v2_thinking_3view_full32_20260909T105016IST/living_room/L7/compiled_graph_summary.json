@@ -1,0 +1,337 @@
+{
+  "canonical_physical_relations": [],
+  "canonical_roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "SEATING_POSITION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "armchair",
+        "chair",
+        "sofa",
+        "seating_position"
+      ],
+      "semantic_hints": [
+        "flat horizontal surface",
+        "height compatible with seated users"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "semantic_hints": [
+        "infrared transmitter",
+        "button array"
+      ],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [
+        "within easy reach of multiple users",
+        "unobstructed surface"
+      ],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Unresolved roles: [{'raw_role': {'binding_policy': 'DISTINCT', 'candidate_categories': ['cup and plate pair', 'bowl and napkin set', 'food and beverage unit'], 'entity_kind': 'OBJECT', 'function': 'Carries drink and food for one user', 'id': 'refreshment_set', 'required_count': 2, 'required_properties': ['contains vessel', 'contains edible substance'], 'visible_candidates': [{'label': 'plate_cup_pair_left', 'visual_description': 'White plate and red cup on large table'}, {'label': 'plate_cup_pair_right', 'visual_description': 'Second white plate and red cup on large table'}], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}, {'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'binding_policy': 'SHARED', 'candidate_categories': ['large coffee table', 'cluttered surface'], 'entity_kind': 'REGION', 'function': 'Current storage location for items', 'id': 'initial_storage_surface', 'required_count': 1, 'required_properties': ['currently holds scattered items', 'larger than required for individuals'], 'visible_candidates': [{'label': 'large_coffee_table', 'visual_description': 'Long wooden table holding items in foreground'}], 'description': ''}, 'collision_with': 'accessible_central_zone'}]",
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_001', 'function': 'distribute_refreshment_sets', 'tool_role': 'refreshment_set', 'target_role': 'side_table', 'required_target_count': 2, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': 'seating_station', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+    "Unresolved required relations: [{'raw_subject': 'refreshment_set', 'raw_phrase': 'must_be_placed_on', 'raw_object': 'side_table', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'refreshment_set', 'raw_phrase': 'currently_resides_on', 'raw_object': 'initial_storage_surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "seating_station",
+        "function": "distribute_refreshment_sets",
+        "id": "op_001",
+        "required_relations": [],
+        "required_target_count": 2,
+        "target_role": "side_table",
+        "tool_role": "refreshment_set",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "living_room",
+  "live_contract_valid": true,
+  "live_validation_error": null,
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": "seating_station",
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "seating_station",
+          "function": "distribute_refreshment_sets",
+          "id": "op_001",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "side_table",
+          "tool_role": "refreshment_set",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op_001",
+      "raw_phrase": "distribute_refreshment_sets",
+      "source_role": "refreshment_set",
+      "target_role": "side_table"
+    },
+    {
+      "anchor_role": "seating_station",
+      "compiler": {
+        "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+        "context_relations": [],
+        "interp_status": "LEXICAL_SEMANTIC_MATCH",
+        "planner_operation": "SUPPORT_ENTERTAINMENT_CONTROL",
+        "preconditions_provenance": [
+          {
+            "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+            "predicate": "FITS_ON",
+            "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+            "source_operation_id": "op_002"
+          }
+        ],
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "seating_station",
+          "function": "relocate_entertainment_control",
+          "id": "op_002",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "accessible_central_zone",
+          "tool_role": "entertainment_controller",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "required_relations": [
+          "FITS_ON"
+        ],
+        "status": "CANONICAL_OPERATION_GROUP"
+      },
+      "id": "op_002",
+      "raw_phrase": "relocate_entertainment_control",
+      "source_role": "entertainment_controller",
+      "target_role": "accessible_central_zone"
+    }
+  ],
+  "operation_groups": [
+    {
+      "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": true,
+      "function": "SUPPORT_ENTERTAINMENT_CONTROL",
+      "id": "shared_entertainment_group",
+      "preconditions_provenance": [
+        {
+          "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+          "predicate": "FITS_ON",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_002"
+        }
+      ],
+      "required_relations": [
+        "FITS_ON"
+      ],
+      "required_target_count": 1,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": null,
+      "target_role": "REMOTE",
+      "tool_role": "SHARED_REMOTE_REGION",
+      "usage_policy": "DEDICATED_PER_TARGET"
+    }
+  ],
+  "relation_audit": [
+    {
+      "classification": "SOFT_CONTEXT",
+      "compiler": {
+        "raw_object": "seating_station",
+        "raw_phrase": "located_adjacent_to",
+        "raw_subject": "side_table",
+        "reason": "Context-only support endpoint",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      "id": "rel_001",
+      "raw_object": "seating_station",
+      "raw_phrase": "located_adjacent_to",
+      "raw_subject": "side_table"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "side_table",
+        "raw_phrase": "must_be_placed_on",
+        "raw_subject": "refreshment_set",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_002",
+      "raw_object": "side_table",
+      "raw_phrase": "must_be_placed_on",
+      "raw_subject": "refreshment_set"
+    },
+    {
+      "classification": "PHYSICAL_VERIFIER",
+      "compiler": {
+        "canonical": [
+          [
+            "SHARED_REMOTE_REGION",
+            "FITS_ON",
+            "REMOTE"
+          ]
+        ],
+        "category": "PHYSICAL_VERIFIER",
+        "direction_normalized": true,
+        "interp_status": "DIRECTION_NORMALIZED",
+        "raw_object": "accessible_central_zone",
+        "raw_phrase": "must_be_placed_on",
+        "raw_subject": "entertainment_controller",
+        "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+      },
+      "id": "rel_003",
+      "raw_object": "accessible_central_zone",
+      "raw_phrase": "must_be_placed_on",
+      "raw_subject": "entertainment_controller"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "initial_storage_surface",
+        "raw_phrase": "currently_resides_on",
+        "raw_subject": "refreshment_set",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_004",
+      "raw_object": "initial_storage_surface",
+      "raw_phrase": "currently_resides_on",
+      "raw_subject": "refreshment_set"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [
+    {
+      "raw_object": "side_table",
+      "raw_phrase": "must_be_placed_on",
+      "raw_subject": "refreshment_set",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "initial_storage_surface",
+      "raw_phrase": "currently_resides_on",
+      "raw_subject": "refreshment_set",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [
+    {
+      "raw_role": {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup and plate pair",
+          "bowl and napkin set",
+          "food and beverage unit"
+        ],
+        "description": "",
+        "entity_kind": "OBJECT",
+        "function": "Carries drink and food for one user",
+        "id": "refreshment_set",
+        "required_count": 2,
+        "required_properties": [
+          "contains vessel",
+          "contains edible substance"
+        ],
+        "visible_candidates": [
+          {
+            "label": "plate_cup_pair_left",
+            "visual_description": "White plate and red cup on large table"
+          },
+          {
+            "label": "plate_cup_pair_right",
+            "visual_description": "Second white plate and red cup on large table"
+          }
+        ]
+      },
+      "status": "UNRESOLVED_SEMANTIC"
+    },
+    {
+      "code": "AMBIGUOUS_ROLE_MAPPING",
+      "collision_with": "accessible_central_zone",
+      "raw_role": {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "large coffee table",
+          "cluttered surface"
+        ],
+        "description": "",
+        "entity_kind": "REGION",
+        "function": "Current storage location for items",
+        "id": "initial_storage_surface",
+        "required_count": 1,
+        "required_properties": [
+          "currently holds scattered items",
+          "larger than required for individuals"
+        ],
+        "visible_candidates": [
+          {
+            "label": "large_coffee_table",
+            "visual_description": "Long wooden table holding items in foreground"
+          }
+        ]
+      }
+    }
+  ],
+  "variant": "L7"
+}

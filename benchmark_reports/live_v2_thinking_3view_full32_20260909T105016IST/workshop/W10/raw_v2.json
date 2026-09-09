@@ -1,0 +1,201 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "DRAWER_1",
+        "label": "Left Under-Desk Drawer",
+        "reason": "Potential storage for tools or replacement fasteners.",
+        "visual_description": "Closed blue drawer under left side of workbench"
+      },
+      {
+        "id": "DRAWER_2",
+        "label": "Right Under-Desk Drawer",
+        "reason": "Potential storage for tools or replacement fasteners.",
+        "visual_description": "Closed blue drawer under right side of workbench"
+      }
+    ],
+    "inspection_order": [
+      "DRAWER_1",
+      "DRAWER_2"
+    ],
+    "visible_candidates_per_role": {
+      "R01": [
+        {
+          "label": "Workbench Top",
+          "visual_description": "Wooden surface with grain texture, supports tray and monitors"
+        }
+      ],
+      "R02": [],
+      "R03": [
+        {
+          "label": "Base Fixture Area",
+          "visual_description": "Area beneath monitor/monitor stand or cabinet, potentially having mounting features"
+        }
+      ],
+      "R04": [
+        {
+          "label": "Yellow Rectangular Block",
+          "visual_description": "Component inside the black tray on the table surface, possibly a specialized fastener or handle"
+        }
+      ],
+      "R05": [
+        {
+          "label": "Tool Inside Tray",
+          "visual_description": "Long object next to yellow block in tray, possibly a screwdriver or alignment tool"
+        },
+        {
+          "label": "Robot Arm Tip",
+          "visual_description": "End effector appearing in foreground, capable of holding tools or parts"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "REL01",
+        "object_role": "R01",
+        "relation": "is located on",
+        "required": true,
+        "subject_role": "R02"
+      },
+      {
+        "id": "REL02",
+        "object_role": "R02",
+        "relation": "is adjacent to",
+        "required": true,
+        "subject_role": "R03"
+      },
+      {
+        "id": "REL03",
+        "object_role": "R03",
+        "relation": "compatible with",
+        "required": true,
+        "subject_role": "R04"
+      },
+      {
+        "id": "REL04",
+        "object_role": "R04",
+        "relation": "applies force to",
+        "required": true,
+        "subject_role": "R05"
+      },
+      {
+        "id": "REL05",
+        "object_role": "R03",
+        "relation": "secures to",
+        "required": true,
+        "subject_role": "R04"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "wooden desk surface",
+          "table top",
+          "workbench area"
+        ],
+        "entity_kind": "REGION",
+        "function": "workspace surface",
+        "id": "R01",
+        "required_count": 1,
+        "required_properties": [
+          "flat horizontal surface",
+          "receives returned items"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "marked point",
+          "bolt hole",
+          "fastening location"
+        ],
+        "entity_kind": "FIXED_TARGET",
+        "function": "specified mount position",
+        "id": "R02",
+        "required_count": 1,
+        "required_properties": [
+          "localizes attachment site",
+          "aligned with base"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "metal plate",
+          "fixture base",
+          "assembly part"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "part receiving fastener",
+        "id": "R03",
+        "required_count": 1,
+        "required_properties": [
+          "has mounting interface",
+          "receives fastening force"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "nut",
+          "bolt",
+          "pin",
+          "compatible fastener"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "mechanical joining part",
+        "id": "R04",
+        "required_count": 1,
+        "required_properties": [
+          "matches hole geometry",
+          "allows tightening mechanism"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "electric driver",
+          "manual tool"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "driving tool instrument",
+        "id": "R05",
+        "required_count": 1,
+        "required_properties": [
+          "transmits torque",
+          "engages fastener head",
+          "reusable device"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "R02",
+        "id": "OP01",
+        "operation": "insert_and_secure_fastener",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "R05",
+        "target_role": "R03"
+      },
+      {
+        "anchor_role": "R01",
+        "id": "OP02",
+        "operation": "return_tool_to_workspace",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "R05",
+        "target_role": "R01"
+      }
+    ]
+  },
+  "task_summary": "Complete the fastening of a component to a base at a specified workbench location, returning reusable tools to the surface afterward.",
+  "unsupported_reason": ""
+}

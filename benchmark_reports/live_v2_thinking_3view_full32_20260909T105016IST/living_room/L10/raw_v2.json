@@ -1,0 +1,144 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "entertainment_control_device": [
+        {
+          "label": "black_remote_on_table",
+          "visual_description": "Small black rectangular electronic device on surface"
+        }
+      ],
+      "refreshment_item_container": [
+        {
+          "label": "red_cup_on_table",
+          "visual_description": "Cylindrical red drinking vessel on surface"
+        },
+        {
+          "label": "white_plate_on_table",
+          "visual_description": "Round white ceramic plate on surface"
+        }
+      ],
+      "seating_object": [
+        {
+          "label": "wooden_armchair_left",
+          "visual_description": "Wooden frame chair with dark upholstery facing screen"
+        },
+        {
+          "label": "wooden_armchair_right",
+          "visual_description": "Wooden frame chair with dark upholstery facing screen"
+        }
+      ],
+      "support_surface": [
+        {
+          "label": "narrow_table_under_tv",
+          "visual_description": "Low wooden console table situated beneath wall-mounted television"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "refreshment_proximity_relation",
+        "object_role": "seating_object",
+        "relation": "positioned adjacent to",
+        "required": true,
+        "subject_role": "refreshment_item_container"
+      },
+      {
+        "id": "device_accessibility_relation",
+        "object_role": "seating_object",
+        "relation": "accessible from",
+        "required": true,
+        "subject_role": "support_surface"
+      },
+      {
+        "id": "device_placement_relation",
+        "object_role": "support_surface",
+        "relation": "located upon",
+        "required": true,
+        "subject_role": "entertainment_control_device"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "armchair",
+          "office chair",
+          "recliner",
+          "chair"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Furniture supporting seated user position",
+        "id": "seating_object",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "glass",
+          "plate",
+          "bowl",
+          "dish"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Receptacle for holding beverages or food",
+        "id": "refreshment_item_container",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote control",
+          "universal remote",
+          "media keypad"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Input mechanism for controlling media playback",
+        "id": "entertainment_control_device",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "shelf",
+          "ledge"
+        ],
+        "entity_kind": "REGION",
+        "function": "Horizontal platform suitable for item placement",
+        "id": "support_surface",
+        "required_count": 1,
+        "required_properties": []
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "place_refreshment_items",
+        "operation": "place refreshment items near seating",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "refreshment_item_container",
+        "target_role": "seating_object"
+      },
+      {
+        "id": "relocate_control_device",
+        "operation": "move entertainment control to surface",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "entertainment_control_device",
+        "target_role": "support_surface"
+      }
+    ]
+  },
+  "task_summary": "Distribute two refreshment containers adjacent to two chairs and relocate the remote control to a central surface accessible to both.",
+  "unsupported_reason": ""
+}

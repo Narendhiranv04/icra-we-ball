@@ -1,0 +1,298 @@
+{
+  "canonical_physical_relations": [],
+  "canonical_roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "SEATING_POSITION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "armchair",
+        "chair",
+        "sofa",
+        "seating_position"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "CUP_SAUCER_SET",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup_saucer_set",
+        "cup",
+        "saucer"
+      ],
+      "semantic_hints": [
+        "Flat horizontal surface"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_ONLY"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "SHARED_REMOTE_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "semantic_hints": [
+        "Reachable while seated"
+      ],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Sanitizer reported semantic incompleteness",
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'binding_policy': 'DISTINCT', 'candidate_categories': ['Cup', 'Mug', 'Glass'], 'entity_kind': 'OBJECT', 'function': 'Vessel holding liquid refreshment', 'id': 'beverage_container', 'required_count': 2, 'required_properties': ['Holds liquid'], 'visible_candidates': [{'label': 'Red Cup', 'visual_description': 'Red ceramic cup visible on the central coffee table'}, {'label': 'White Plate', 'visual_description': 'Round white dish visible on the left side table'}], 'description': ''}, 'collision_with': 'refreshment_table'}]",
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_2', 'function': 'Transfer beverage container to refreshment surface', 'tool_role': 'beverage_container', 'target_role': 'refreshment_table', 'required_target_count': 2, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'viewer_seat', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}, {'raw_group': {'id': 'op_3', 'function': 'Position controller at accessible access point', 'tool_role': 'entertainment_controller', 'target_role': 'access_point', 'required_target_count': 1, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': 'access_point', 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"Operation semantic evidence ['SUPPORT_ENTERTAINMENT_CONTROL'] is incompatible with endpoints (SHARED_REMOTE_REGION, REMOTE, SHARED_REMOTE_REGION)\", 'interp_status': 'UNMAPPABLE_OPERATION'}]",
+    "Unresolved required relations: [{'raw_subject': 'viewer_seat', 'raw_phrase': 'Adjacent to personal refreshment surface', 'raw_object': 'refreshment_table', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'Adjacent to personal refreshment surface' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'beverage_container', 'raw_phrase': 'Resting upon designated surface', 'raw_object': 'refreshment_table', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'entertainment_controller', 'raw_phrase': 'Located within access point reach', 'raw_object': 'access_point', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'Located within access point reach' provides no semantic evidence for valid predicates [] or task causal semantics\"}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "viewer_seat",
+        "function": "Transfer beverage container to refreshment surface",
+        "id": "op_2",
+        "required_relations": [],
+        "required_target_count": 2,
+        "target_role": "refreshment_table",
+        "tool_role": "beverage_container",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    },
+    {
+      "interp_status": "UNMAPPABLE_OPERATION",
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "access_point",
+        "function": "Position controller at accessible access point",
+        "id": "op_3",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "access_point",
+        "tool_role": "entertainment_controller",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "reason": "Operation semantic evidence ['SUPPORT_ENTERTAINMENT_CONTROL'] is incompatible with endpoints (SHARED_REMOTE_REGION, REMOTE, SHARED_REMOTE_REGION)",
+      "status": "UNSUPPORTED_OPERATOR"
+    }
+  ],
+  "domain": "living_room",
+  "live_contract_valid": false,
+  "live_validation_error": "Relation object_role 'television_screen' not in declared roles",
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": "television_screen",
+      "compiler": {},
+      "id": "op_1",
+      "raw_phrase": "Arrange seating fixtures toward viewing direction",
+      "source_role": "viewer_seat",
+      "target_role": "room_floor"
+    },
+    {
+      "anchor_role": "viewer_seat",
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "viewer_seat",
+          "function": "Transfer beverage container to refreshment surface",
+          "id": "op_2",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "refreshment_table",
+          "tool_role": "beverage_container",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op_2",
+      "raw_phrase": "Transfer beverage container to refreshment surface",
+      "source_role": "beverage_container",
+      "target_role": "refreshment_table"
+    },
+    {
+      "anchor_role": "access_point",
+      "compiler": {
+        "interp_status": "UNMAPPABLE_OPERATION",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "access_point",
+          "function": "Position controller at accessible access point",
+          "id": "op_3",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "access_point",
+          "tool_role": "entertainment_controller",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "reason": "Operation semantic evidence ['SUPPORT_ENTERTAINMENT_CONTROL'] is incompatible with endpoints (SHARED_REMOTE_REGION, REMOTE, SHARED_REMOTE_REGION)",
+        "status": "UNSUPPORTED_OPERATOR"
+      },
+      "id": "op_3",
+      "raw_phrase": "Position controller at accessible access point",
+      "source_role": "entertainment_controller",
+      "target_role": "access_point"
+    }
+  ],
+  "operation_groups": [],
+  "relation_audit": [
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "refreshment_table",
+        "raw_phrase": "Adjacent to personal refreshment surface",
+        "raw_subject": "viewer_seat",
+        "reason": "Relation text 'Adjacent to personal refreshment surface' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_1",
+      "raw_object": "television_screen",
+      "raw_phrase": "Faced toward television area",
+      "raw_subject": "viewer_seat"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "refreshment_table",
+        "raw_phrase": "Resting upon designated surface",
+        "raw_subject": "beverage_container",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_2",
+      "raw_object": "refreshment_table",
+      "raw_phrase": "Adjacent to personal refreshment surface",
+      "raw_subject": "viewer_seat"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "access_point",
+        "raw_phrase": "Located within access point reach",
+        "raw_subject": "entertainment_controller",
+        "reason": "Relation text 'Located within access point reach' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_3",
+      "raw_object": "refreshment_table",
+      "raw_phrase": "Resting upon designated surface",
+      "raw_subject": "beverage_container"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [
+    {
+      "raw_object": "refreshment_table",
+      "raw_phrase": "Adjacent to personal refreshment surface",
+      "raw_subject": "viewer_seat",
+      "reason": "Relation text 'Adjacent to personal refreshment surface' provides no semantic evidence for valid predicates [] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "refreshment_table",
+      "raw_phrase": "Resting upon designated surface",
+      "raw_subject": "beverage_container",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "access_point",
+      "raw_phrase": "Located within access point reach",
+      "raw_subject": "entertainment_controller",
+      "reason": "Relation text 'Located within access point reach' provides no semantic evidence for valid predicates [] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [
+    {
+      "code": "AMBIGUOUS_ROLE_MAPPING",
+      "collision_with": "refreshment_table",
+      "raw_role": {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "Cup",
+          "Mug",
+          "Glass"
+        ],
+        "description": "",
+        "entity_kind": "OBJECT",
+        "function": "Vessel holding liquid refreshment",
+        "id": "beverage_container",
+        "required_count": 2,
+        "required_properties": [
+          "Holds liquid"
+        ],
+        "visible_candidates": [
+          {
+            "label": "Red Cup",
+            "visual_description": "Red ceramic cup visible on the central coffee table"
+          },
+          {
+            "label": "White Plate",
+            "visual_description": "Round white dish visible on the left side table"
+          }
+        ]
+      }
+    }
+  ],
+  "variant": "L5"
+}

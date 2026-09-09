@@ -1,0 +1,273 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "region_hanging_storage_left",
+        "label": "Left Hanging Cabinet",
+        "reason": "Closed storage region that may contain hidden cooking ingredients or vessels required for the task.",
+        "visual_description": "A grey cabinet mounted on the wall above the table surface on the left."
+      },
+      {
+        "id": "region_hanging_storage_right",
+        "label": "Right Hanging Cabinet",
+        "reason": "Closed storage region that may contain hidden cooking ingredients or vessels required for the task.",
+        "visual_description": "A grey cabinet mounted on the wall above the table surface on the right."
+      },
+      {
+        "id": "region_drawer_under_table",
+        "label": "Under-table Drawer",
+        "reason": "Accessible storage compartment that may hold additional supplies such as cups or bowls.",
+        "visual_description": "A drawer integrated into the side of the table beneath the tabletop."
+      }
+    ],
+    "inspection_order": [
+      "region_hanging_storage_left",
+      "region_hanging_storage_right",
+      "region_drawer_under_table"
+    ],
+    "visible_candidates_per_role": {
+      "coffee_liquid_source": [
+        {
+          "label": "Teapot-like object",
+          "visual_description": "A white ceramic teapot with a handle located on the right side of the table."
+        }
+      ],
+      "coffee_vessel": [
+        {
+          "label": "Small beige cylinder",
+          "visual_description": "A small cylindrical object located on the left side of the table surface."
+        }
+      ],
+      "eating_utensil": [
+        {
+          "label": "Silver utensil 1",
+          "visual_description": "A long silver spoon or fork lying horizontally on the left side of the table."
+        },
+        {
+          "label": "Silver utensil 2",
+          "visual_description": "Another silver utensil lying parallel to the first one nearby."
+        }
+      ],
+      "soup_food_source": [
+        {
+          "label": "Brown bag/container",
+          "visual_description": "A brown package lying flat on the table near the center."
+        }
+      ],
+      "soup_vessel": [
+        {
+          "label": "Bowl with red interior",
+          "visual_description": "A bowl containing red liquid situated centrally on the table."
+        }
+      ],
+      "table_surface": [],
+      "water_liquid_source": [
+        {
+          "label": "Brown rectangular box",
+          "visual_description": "A cardboard box standing upright on the far right of the table."
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_01",
+        "object_role": "coffee_liquid_source",
+        "relation": "contains_coffee_liquid",
+        "required": true,
+        "subject_role": "coffee_vessel"
+      },
+      {
+        "id": "rel_02",
+        "object_role": "water_liquid_source",
+        "relation": "contains_water_liquid",
+        "required": true,
+        "subject_role": "coffee_vessel"
+      },
+      {
+        "id": "rel_03",
+        "object_role": "soup_vessel",
+        "relation": "associated_with_soup",
+        "required": true,
+        "subject_role": "eating_utensil"
+      },
+      {
+        "id": "rel_04",
+        "object_role": "table_surface",
+        "relation": "placed_on_surface",
+        "required": true,
+        "subject_role": "coffee_vessel"
+      },
+      {
+        "id": "rel_05",
+        "object_role": "table_surface",
+        "relation": "placed_on_surface",
+        "required": true,
+        "subject_role": "soup_vessel"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "coffee cup",
+          "mug",
+          "small glass"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Container for prepared coffee beverage",
+        "id": "coffee_vessel",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bowl",
+          "soup dish",
+          "ceramic pot"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Container for served soup",
+        "id": "soup_vessel",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "coffee pot",
+          "jar",
+          "tea pot",
+          "powder tin"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Source of coffee concentrate or grounds",
+        "id": "coffee_liquid_source",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "jug",
+          "water bottle",
+          "kettle"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Source of drinking water",
+        "id": "water_liquid_source",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "stock pot",
+          "can",
+          "large bowl"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Source of raw soup or cooked stock",
+        "id": "soup_food_source",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "fork",
+          "eating utensil"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Tool for stirring coffee or eating soup",
+        "id": "eating_utensil",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "desk",
+          "table",
+          "countertop"
+        ],
+        "entity_kind": "FIXED_TARGET",
+        "function": "Surface for placing finished dishes",
+        "id": "table_surface",
+        "required_count": 1,
+        "required_properties": []
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "",
+        "id": "op_01",
+        "operation": "transfer_coffee_to_cup",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "coffee_liquid_source",
+        "target_role": "coffee_vessel"
+      },
+      {
+        "anchor_role": "",
+        "id": "op_02",
+        "operation": "transfer_water_to_cup",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "water_liquid_source",
+        "target_role": "coffee_vessel"
+      },
+      {
+        "anchor_role": "",
+        "id": "op_03",
+        "operation": "stir_coffee_beverage",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "eating_utensil",
+        "target_role": "coffee_vessel"
+      },
+      {
+        "anchor_role": "",
+        "id": "op_04",
+        "operation": "fill_soup_vessel_with_soup",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "soup_food_source",
+        "target_role": "soup_vessel"
+      },
+      {
+        "anchor_role": "table_surface",
+        "id": "op_05",
+        "operation": "place_coffee_on_table",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "coffee_vessel",
+        "target_role": "table_surface"
+      },
+      {
+        "anchor_role": "table_surface",
+        "id": "op_06",
+        "operation": "place_soup_on_table",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "soup_vessel",
+        "target_role": "table_surface"
+      },
+      {
+        "anchor_role": "",
+        "id": "op_07",
+        "operation": "position_eating_utensil_next_to_soup",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "eating_utensil",
+        "target_role": "soup_vessel"
+      }
+    ]
+  },
+  "task_summary": "Prepare two servings of coffee (mix coffee and water, stir) and two servings of soup on a table, ensuring each soup has its own utensil.",
+  "unsupported_reason": ""
+}

@@ -1,0 +1,348 @@
+{
+  "canonical_physical_relations": [],
+  "canonical_roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "CUP_SAUCER_SET",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup_saucer_set",
+        "cup",
+        "saucer"
+      ],
+      "semantic_hints": [
+        "holds_refreshment_content",
+        "fits_in_hand"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "semantic_hints": [
+        "operates_tv_or_audio"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "SEATING_POSITION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "armchair",
+        "chair",
+        "sofa",
+        "seating_position"
+      ],
+      "semantic_hints": [
+        "supports_sitting",
+        "has_leg_space"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [
+        "is_horizontal",
+        "is_sturdy_enough_for_items"
+      ],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_002', 'function': 'place_entertainment_control_in_central_access_spot', 'tool_role': 'entertainment_control', 'target_role': 'surface_platform', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'viewing_seat', 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"Operation semantic evidence ['SUPPORT_ENTERTAINMENT_CONTROL'] is incompatible with endpoints (PERSONAL_CUP_SAUCER_REGION, REMOTE, SEATING_POSITION)\", 'interp_status': 'UNMAPPABLE_OPERATION'}]",
+    "Unresolved required relations: [{'raw_subject': 'refreshment_setting', 'raw_phrase': 'assigned_to_person_seating_area', 'raw_object': 'viewing_seat', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'assigned_to_person_seating_area' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'refreshment_setting', 'raw_phrase': 'located_at_proximity_of', 'raw_object': 'viewing_seat', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'located_at_proximity_of' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'entertainment_control', 'raw_phrase': 'accessible_by_all_viewers', 'raw_object': 'viewing_seat', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'accessible_by_all_viewers' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'refreshment_setting', 'raw_phrase': 'supported_by', 'raw_object': 'surface_platform', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'supported_by' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'entertainment_control', 'raw_phrase': 'supported_by', 'raw_object': 'surface_platform', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'supported_by' provides no semantic evidence for valid predicates [] or task causal semantics\"}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "interp_status": "UNMAPPABLE_OPERATION",
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "viewing_seat",
+        "function": "place_entertainment_control_in_central_access_spot",
+        "id": "op_002",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "surface_platform",
+        "tool_role": "entertainment_control",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "reason": "Operation semantic evidence ['SUPPORT_ENTERTAINMENT_CONTROL'] is incompatible with endpoints (PERSONAL_CUP_SAUCER_REGION, REMOTE, SEATING_POSITION)",
+      "status": "UNSUPPORTED_OPERATOR"
+    }
+  ],
+  "domain": "living_room",
+  "live_contract_valid": true,
+  "live_validation_error": null,
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": "viewing_seat",
+      "compiler": {
+        "capability_id": "SUPPORT_DRINKWARE",
+        "context_relations": [
+          "NEAR_SEAT"
+        ],
+        "interp_status": "LEXICAL_SEMANTIC_MATCH",
+        "planner_operation": "SUPPORT_DRINKWARE",
+        "preconditions_provenance": [
+          {
+            "capability_id": "SUPPORT_DRINKWARE",
+            "predicate": "FITS_SET_ON",
+            "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+            "source_operation_id": "op_001"
+          },
+          {
+            "capability_id": "SUPPORT_DRINKWARE",
+            "predicate": "NEAR_SEAT",
+            "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+            "source_operation_id": "op_001"
+          }
+        ],
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "viewing_seat",
+          "function": "place_refreshment_setting_on_nearby_surface",
+          "id": "op_001",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "surface_platform",
+          "tool_role": "refreshment_setting",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "required_relations": [
+          "FITS_SET_ON"
+        ],
+        "status": "CANONICAL_OPERATION_GROUP"
+      },
+      "id": "op_001",
+      "raw_phrase": "place_refreshment_setting_on_nearby_surface",
+      "source_role": "refreshment_setting",
+      "target_role": "surface_platform"
+    },
+    {
+      "anchor_role": "viewing_seat",
+      "compiler": {
+        "interp_status": "UNMAPPABLE_OPERATION",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "viewing_seat",
+          "function": "place_entertainment_control_in_central_access_spot",
+          "id": "op_002",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "surface_platform",
+          "tool_role": "entertainment_control",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "reason": "Operation semantic evidence ['SUPPORT_ENTERTAINMENT_CONTROL'] is incompatible with endpoints (PERSONAL_CUP_SAUCER_REGION, REMOTE, SEATING_POSITION)",
+        "status": "UNSUPPORTED_OPERATOR"
+      },
+      "id": "op_002",
+      "raw_phrase": "place_entertainment_control_in_central_access_spot",
+      "source_role": "entertainment_control",
+      "target_role": "surface_platform"
+    }
+  ],
+  "operation_groups": [
+    {
+      "capability_id": "SUPPORT_DRINKWARE",
+      "context_relations": [
+        "NEAR_SEAT"
+      ],
+      "context_role": "SEATING_POSITION",
+      "distinct_within_group": true,
+      "function": "SUPPORT_DRINKWARE",
+      "id": "personal_support_group",
+      "preconditions_provenance": [
+        {
+          "capability_id": "SUPPORT_DRINKWARE",
+          "predicate": "FITS_SET_ON",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_001"
+        },
+        {
+          "capability_id": "SUPPORT_DRINKWARE",
+          "predicate": "NEAR_SEAT",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_001"
+        }
+      ],
+      "required_relations": [
+        "FITS_SET_ON"
+      ],
+      "required_target_count": 2,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": null,
+      "target_role": "CUP_SAUCER_SET",
+      "tool_role": "PERSONAL_CUP_SAUCER_REGION",
+      "usage_policy": "DEDICATED_PER_TARGET"
+    }
+  ],
+  "relation_audit": [
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "viewing_seat",
+        "raw_phrase": "assigned_to_person_seating_area",
+        "raw_subject": "refreshment_setting",
+        "reason": "Relation text 'assigned_to_person_seating_area' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_001",
+      "raw_object": "viewing_seat",
+      "raw_phrase": "assigned_to_person_seating_area",
+      "raw_subject": "refreshment_setting"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "viewing_seat",
+        "raw_phrase": "located_at_proximity_of",
+        "raw_subject": "refreshment_setting",
+        "reason": "Relation text 'located_at_proximity_of' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_002",
+      "raw_object": "viewing_seat",
+      "raw_phrase": "located_at_proximity_of",
+      "raw_subject": "refreshment_setting"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "viewing_seat",
+        "raw_phrase": "accessible_by_all_viewers",
+        "raw_subject": "entertainment_control",
+        "reason": "Relation text 'accessible_by_all_viewers' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_003",
+      "raw_object": "viewing_seat",
+      "raw_phrase": "accessible_by_all_viewers",
+      "raw_subject": "entertainment_control"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "surface_platform",
+        "raw_phrase": "supported_by",
+        "raw_subject": "refreshment_setting",
+        "reason": "Relation text 'supported_by' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_004",
+      "raw_object": "surface_platform",
+      "raw_phrase": "supported_by",
+      "raw_subject": "refreshment_setting"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "surface_platform",
+        "raw_phrase": "supported_by",
+        "raw_subject": "entertainment_control",
+        "reason": "Relation text 'supported_by' provides no semantic evidence for valid predicates [] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_005",
+      "raw_object": "surface_platform",
+      "raw_phrase": "supported_by",
+      "raw_subject": "entertainment_control"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [
+    {
+      "raw_object": "viewing_seat",
+      "raw_phrase": "assigned_to_person_seating_area",
+      "raw_subject": "refreshment_setting",
+      "reason": "Relation text 'assigned_to_person_seating_area' provides no semantic evidence for valid predicates [] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "viewing_seat",
+      "raw_phrase": "located_at_proximity_of",
+      "raw_subject": "refreshment_setting",
+      "reason": "Relation text 'located_at_proximity_of' provides no semantic evidence for valid predicates [] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "viewing_seat",
+      "raw_phrase": "accessible_by_all_viewers",
+      "raw_subject": "entertainment_control",
+      "reason": "Relation text 'accessible_by_all_viewers' provides no semantic evidence for valid predicates [] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "surface_platform",
+      "raw_phrase": "supported_by",
+      "raw_subject": "refreshment_setting",
+      "reason": "Relation text 'supported_by' provides no semantic evidence for valid predicates [] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "surface_platform",
+      "raw_phrase": "supported_by",
+      "raw_subject": "entertainment_control",
+      "reason": "Relation text 'supported_by' provides no semantic evidence for valid predicates [] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [],
+  "variant": "L9"
+}

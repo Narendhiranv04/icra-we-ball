@@ -1,0 +1,243 @@
+{
+  "canonical_physical_relations": [],
+  "canonical_roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "CUP_SAUCER_SET",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup_saucer_set",
+        "cup",
+        "saucer"
+      ],
+      "semantic_hints": [
+        "holds_food_or_liquid"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "semantic_hints": [
+        "has_buttons_for_television"
+      ],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Sanitizer reported semantic incompleteness",
+    "Unresolved roles: [{'raw_role': {'binding_policy': 'SHARED', 'candidate_categories': ['wooden console table', 'credenza', 'sideboard'], 'entity_kind': 'OBJECT', 'function': 'Storage surface for original items', 'id': 'source_console_surface', 'required_count': 1, 'required_properties': [], 'visible_candidates': [{'label': 'Foreground Console Table', 'visual_description': 'Large wooden cabinet console in foreground with remote, cups, and plates on top.'}], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}, {'raw_role': {'binding_policy': 'REUSABLE', 'candidate_categories': ['coffee table', 'end table', 'low table', 'bench'], 'entity_kind': 'REGION', 'function': 'Support surface for relocated items', 'id': 'destination_surface', 'required_count': 1, 'required_properties': ['supports_horizontal_load'], 'visible_candidates': [{'label': 'Glass-top Coffee Table', 'visual_description': 'Central low table with light-colored glass top positioned between armchairs.'}, {'label': 'Wooden Side Table', 'visual_description': 'Small square side table next to the right-facing armchair.'}], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}]",
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_move_refreshments', 'function': 'transfer_refreshment_setting', 'tool_role': 'refreshment_setting', 'target_role': 'destination_surface', 'required_target_count': 2, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'destination_surface', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}, {'raw_group': {'id': 'op_move_controller', 'function': 'transfer_entertainment_controller', 'tool_role': 'entertainment_controller', 'target_role': 'destination_surface', 'required_target_count': 1, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': 'destination_surface', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+    "Unresolved required relations: [{'raw_subject': 'refreshment_setting', 'raw_phrase': 'initially_rests_above', 'raw_object': 'source_console_surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'entertainment_controller', 'raw_phrase': 'initially_rests_above', 'raw_object': 'source_console_surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "destination_surface",
+        "function": "transfer_refreshment_setting",
+        "id": "op_move_refreshments",
+        "required_relations": [],
+        "required_target_count": 2,
+        "target_role": "destination_surface",
+        "tool_role": "refreshment_setting",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    },
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "destination_surface",
+        "function": "transfer_entertainment_controller",
+        "id": "op_move_controller",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "destination_surface",
+        "tool_role": "entertainment_controller",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "living_room",
+  "live_contract_valid": false,
+  "live_validation_error": "Relation object_role 'living_room_floor' not in declared roles",
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": "destination_surface",
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "destination_surface",
+          "function": "transfer_refreshment_setting",
+          "id": "op_move_refreshments",
+          "required_relations": [],
+          "required_target_count": 2,
+          "target_role": "destination_surface",
+          "tool_role": "refreshment_setting",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op_move_refreshments",
+      "raw_phrase": "transfer_refreshment_setting",
+      "source_role": "refreshment_setting",
+      "target_role": "destination_surface"
+    },
+    {
+      "anchor_role": "destination_surface",
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "destination_surface",
+          "function": "transfer_entertainment_controller",
+          "id": "op_move_controller",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "destination_surface",
+          "tool_role": "entertainment_controller",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op_move_controller",
+      "raw_phrase": "transfer_entertainment_controller",
+      "source_role": "entertainment_controller",
+      "target_role": "destination_surface"
+    }
+  ],
+  "operation_groups": [],
+  "relation_audit": [
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "source_console_surface",
+        "raw_phrase": "initially_rests_above",
+        "raw_subject": "refreshment_setting",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_items_on_source",
+      "raw_object": "source_console_surface",
+      "raw_phrase": "initially_rests_above",
+      "raw_subject": "refreshment_setting"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "source_console_surface",
+        "raw_phrase": "initially_rests_above",
+        "raw_subject": "entertainment_controller",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_remote_on_source",
+      "raw_object": "source_console_surface",
+      "raw_phrase": "initially_rests_above",
+      "raw_subject": "entertainment_controller"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [
+    {
+      "raw_object": "source_console_surface",
+      "raw_phrase": "initially_rests_above",
+      "raw_subject": "refreshment_setting",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "source_console_surface",
+      "raw_phrase": "initially_rests_above",
+      "raw_subject": "entertainment_controller",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [
+    {
+      "raw_role": {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wooden console table",
+          "credenza",
+          "sideboard"
+        ],
+        "description": "",
+        "entity_kind": "OBJECT",
+        "function": "Storage surface for original items",
+        "id": "source_console_surface",
+        "required_count": 1,
+        "required_properties": [],
+        "visible_candidates": [
+          {
+            "label": "Foreground Console Table",
+            "visual_description": "Large wooden cabinet console in foreground with remote, cups, and plates on top."
+          }
+        ]
+      },
+      "status": "UNRESOLVED_SEMANTIC"
+    },
+    {
+      "raw_role": {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "coffee table",
+          "end table",
+          "low table",
+          "bench"
+        ],
+        "description": "",
+        "entity_kind": "REGION",
+        "function": "Support surface for relocated items",
+        "id": "destination_surface",
+        "required_count": 1,
+        "required_properties": [
+          "supports_horizontal_load"
+        ],
+        "visible_candidates": [
+          {
+            "label": "Glass-top Coffee Table",
+            "visual_description": "Central low table with light-colored glass top positioned between armchairs."
+          },
+          {
+            "label": "Wooden Side Table",
+            "visual_description": "Small square side table next to the right-facing armchair."
+          }
+        ]
+      },
+      "status": "UNRESOLVED_SEMANTIC"
+    }
+  ],
+  "variant": "L8"
+}

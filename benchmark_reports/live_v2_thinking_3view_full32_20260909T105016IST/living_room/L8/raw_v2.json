@@ -1,0 +1,149 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "destination_surface": [
+        {
+          "label": "Glass-top Coffee Table",
+          "visual_description": "Central low table with light-colored glass top positioned between armchairs."
+        },
+        {
+          "label": "Wooden Side Table",
+          "visual_description": "Small square side table next to the right-facing armchair."
+        }
+      ],
+      "entertainment_controller": [
+        {
+          "label": "Black Remote Control",
+          "visual_description": "Black rectangular remote control situated on the source console among dishes."
+        }
+      ],
+      "refreshment_setting": [
+        {
+          "label": "Red Cup and White Plate",
+          "visual_description": "Set of red mug and white plate visible on the source console."
+        },
+        {
+          "label": "Second Red Cup and Plate",
+          "visual_description": "Duplicate second set of red mug and white plate on source console."
+        }
+      ],
+      "source_console_surface": [
+        {
+          "label": "Foreground Console Table",
+          "visual_description": "Large wooden cabinet console in foreground with remote, cups, and plates on top."
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_items_on_source",
+        "object_role": "source_console_surface",
+        "relation": "initially_rests_above",
+        "required": true,
+        "subject_role": "refreshment_setting"
+      },
+      {
+        "id": "rel_remote_on_source",
+        "object_role": "source_console_surface",
+        "relation": "initially_rests_above",
+        "required": true,
+        "subject_role": "entertainment_controller"
+      },
+      {
+        "id": "rel_destination_proximity",
+        "object_role": "living_room_floor",
+        "relation": "located_adjacent_to_seating_zone",
+        "required": true,
+        "subject_role": "destination_surface"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wooden console table",
+          "credenza",
+          "sideboard"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Storage surface for original items",
+        "id": "source_console_surface",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "coffee table",
+          "end table",
+          "low table",
+          "bench"
+        ],
+        "entity_kind": "REGION",
+        "function": "Support surface for relocated items",
+        "id": "destination_surface",
+        "required_count": 1,
+        "required_properties": [
+          "supports_horizontal_load"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup with plate",
+          "drinkware set",
+          "bowl and fork"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Group of drinkware and plates for one person",
+        "id": "refreshment_setting",
+        "required_count": 2,
+        "required_properties": [
+          "holds_food_or_liquid"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote control",
+          "media button",
+          "device interface"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Device to control media display",
+        "id": "entertainment_controller",
+        "required_count": 1,
+        "required_properties": [
+          "has_buttons_for_television"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "destination_surface",
+        "id": "op_move_refreshments",
+        "operation": "transfer_refreshment_setting",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "refreshment_setting",
+        "target_role": "destination_surface"
+      },
+      {
+        "anchor_role": "destination_surface",
+        "id": "op_move_controller",
+        "operation": "transfer_entertainment_controller",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "entertainment_controller",
+        "target_role": "destination_surface"
+      }
+    ]
+  },
+  "task_summary": "Relocate refreshment items and remote control from the foreground console to accessible surfaces within the seating area.",
+  "unsupported_reason": ""
+}

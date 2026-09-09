@@ -1,0 +1,149 @@
+{
+  "canonical_physical_relations": [
+    {
+      "capability_id": null,
+      "category": "PHYSICAL_VERIFIER",
+      "expected": true,
+      "object_role": "CUP_SAUCER_SET",
+      "predicate": "FITS_SET_ON",
+      "provenance": "EXPLICIT_REQUIREMENT",
+      "source_operation_id": null,
+      "subject_role": "PERSONAL_CUP_SAUCER_REGION"
+    }
+  ],
+  "canonical_roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "CUP_SAUCER_SET",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "cup_saucer_set",
+        "cup",
+        "saucer"
+      ],
+      "semantic_hints": [
+        "holds liquid or solids"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 2,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "REGION",
+      "max_count": null,
+      "min_count": null,
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "semantic_hints": [
+        "flat horizontal surface",
+        "within reach of chair"
+      ],
+      "shared": false,
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "REMOTE",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "semantic_hints": [
+        "small rectangular shape",
+        "buttons interface"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Sanitizer reported semantic incompleteness"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [],
+  "domain": "living_room",
+  "live_contract_valid": false,
+  "live_validation_error": "Relation object_role 'seating_area' not in declared roles",
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": "seating_area",
+      "compiler": {},
+      "id": "op_1",
+      "raw_phrase": "distribute_refreshment_settings",
+      "source_role": "refreshment_item",
+      "target_role": "placement_surface"
+    },
+    {
+      "anchor_role": "seating_area",
+      "compiler": {},
+      "id": "op_2",
+      "raw_phrase": "relocate_entertainment_control",
+      "source_role": "entertainment_control",
+      "target_role": "placement_surface"
+    }
+  ],
+  "operation_groups": [],
+  "relation_audit": [
+    {
+      "classification": "PHYSICAL_VERIFIER",
+      "compiler": {
+        "canonical": [
+          [
+            "PERSONAL_CUP_SAUCER_REGION",
+            "FITS_SET_ON",
+            "CUP_SAUCER_SET"
+          ]
+        ],
+        "category": "PHYSICAL_VERIFIER",
+        "direction_normalized": true,
+        "interp_status": "DIRECTION_NORMALIZED",
+        "raw_object": "placement_surface",
+        "raw_phrase": "placed_on_for_access",
+        "raw_subject": "refreshment_item",
+        "status": "CANONICAL_EXECUTABLE_SEMANTIC"
+      },
+      "id": "relation_1",
+      "raw_object": "placement_surface",
+      "raw_phrase": "placed_on_for_access",
+      "raw_subject": "refreshment_item"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [],
+  "unresolved_roles": [],
+  "variant": "L6"
+}

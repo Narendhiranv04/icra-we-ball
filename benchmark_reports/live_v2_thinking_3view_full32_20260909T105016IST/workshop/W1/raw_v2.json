@@ -1,0 +1,138 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "region_drawer_left",
+        "label": "Left Drawer",
+        "reason": "Likely contains fastening tools or parts required by the task.",
+        "visual_description": "Blue drawer on left side under desk, handle visible."
+      },
+      {
+        "id": "region_drawer_right",
+        "label": "Right Drawer",
+        "reason": "Likely contains fastening tools or parts required by the task.",
+        "visual_description": "Blue drawer on right side under desk, handle visible."
+      },
+      {
+        "id": "region_cabinet_top",
+        "label": "Wardrobe Cabinet",
+        "reason": "May contain larger tools or materials.",
+        "visual_description": "Tall blue cabinet standing next to the desk against the wall."
+      }
+    ],
+    "inspection_order": [
+      "region_drawer_left",
+      "region_drawer_right",
+      "region_cabinet_top"
+    ],
+    "visible_candidates_per_role": {
+      "fastening_equipment": [
+        {
+          "label": "Yellow/Blue Assembly on Tray",
+          "visual_description": "Rectangular yellow and blue object sitting on a black mat on the desk."
+        }
+      ],
+      "markedin_workbench_target": [
+        {
+          "label": "Desk Area with Assembly",
+          "visual_description": "Blue object resting on a wooden desk surface, potentially the target."
+        }
+      ],
+      "workbench_storage_surface": [
+        {
+          "label": "Wooden Desk Surface",
+          "visual_description": "Smooth brown wooden tabletop extending to edges of frame."
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_001",
+        "object_role": "markedin_workbench_target",
+        "relation": "physically_connected_to",
+        "required": true,
+        "subject_role": "fastening_equipment"
+      },
+      {
+        "id": "rel_002",
+        "object_role": "fastening_equipment",
+        "relation": "supports_stably",
+        "required": true,
+        "subject_role": "workbench_storage_surface"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "Screwdriver",
+          "Adjustable wrench",
+          "Fastener kit",
+          "Power drill"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Reusable equipment for completing fastening",
+        "id": "fastening_equipment",
+        "required_count": 1,
+        "required_properties": [
+          "Compatible with target joint type"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "Assembly on blue tray",
+          "Fixture on mat",
+          "Marked surface area"
+        ],
+        "entity_kind": "REGION",
+        "function": "Marked workbench location requiring fastening",
+        "id": "markedin_workbench_target",
+        "required_count": 1,
+        "required_properties": [
+          "Located on workbench",
+          "Requires fastening attachment"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "Wooden desk top",
+          "Clear work surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "Safe flat surface for storing equipment",
+        "id": "workbench_storage_surface",
+        "required_count": 1,
+        "required_properties": [
+          "Flat",
+          "Stable",
+          "Large enough to hold tool"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_001",
+        "operation": "Apply fastening action",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "fastening_equipment",
+        "target_role": "markedin_workbench_target"
+      },
+      {
+        "id": "op_002",
+        "operation": "Store equipment on surface",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "fastening_equipment",
+        "target_role": "workbench_storage_surface"
+      }
+    ]
+  },
+  "task_summary": "Task involves identifying a fastening component, applying it to a target on a workbench, and placing the tool back.",
+  "unsupported_reason": ""
+}

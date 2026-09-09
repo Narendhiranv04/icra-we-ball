@@ -1,0 +1,135 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "entertainment_control": [
+        {
+          "label": "Remote control",
+          "visual_description": "Black rectangular remote resting on the wooden desk surface."
+        }
+      ],
+      "placement_surface": [
+        {
+          "label": "Left side table",
+          "visual_description": "Small wooden table to the left of the leftmost armchair."
+        },
+        {
+          "label": "Right side table",
+          "visual_description": "Small wooden table to the right of the rightmost armchair."
+        },
+        {
+          "label": "Coffee table",
+          "visual_description": "Rectangular green-topped table between the armchairs."
+        }
+      ],
+      "refreshment_item": [
+        {
+          "label": "Red cup on desk",
+          "visual_description": "Dark red mug visible on the large wooden desk."
+        },
+        {
+          "label": "Red cup on coffee table",
+          "visual_description": "Small red cup sitting on the green-topped coffee table."
+        },
+        {
+          "label": "White plate on desk",
+          "visual_description": "Round white dish next to the remote on the desk."
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "relation_1",
+        "object_role": "placement_surface",
+        "relation": "placed_on_for_access",
+        "required": true,
+        "subject_role": "refreshment_item"
+      },
+      {
+        "id": "relation_2",
+        "object_role": "seating_area",
+        "relation": "located_near_seating_zone",
+        "required": true,
+        "subject_role": "entertainment_control"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "red cup",
+          "white saucer",
+          "coffee cup",
+          "tea set",
+          "mug"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Container or dish holding refreshment",
+        "id": "refreshment_item",
+        "required_count": 2,
+        "required_properties": [
+          "holds liquid or solids"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "side table",
+          "armrest table",
+          "nightstand",
+          "chair sideboard"
+        ],
+        "entity_kind": "REGION",
+        "function": "Small surface for individual refreshment",
+        "id": "placement_surface",
+        "required_count": 2,
+        "required_properties": [
+          "flat horizontal surface",
+          "within reach of chair"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "remote control",
+          "media clicker",
+          "TV guide"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Device controlling television or media",
+        "id": "entertainment_control",
+        "required_count": 1,
+        "required_properties": [
+          "small rectangular shape",
+          "buttons interface"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "seating_area",
+        "id": "op_1",
+        "operation": "distribute_refreshment_settings",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "refreshment_item",
+        "target_role": "placement_surface"
+      },
+      {
+        "anchor_role": "seating_area",
+        "id": "op_2",
+        "operation": "relocate_entertainment_control",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "entertainment_control",
+        "target_role": "placement_surface"
+      }
+    ]
+  },
+  "task_summary": "Arrange refreshment settings for two people and relocate entertainment control.",
+  "unsupported_reason": ""
+}

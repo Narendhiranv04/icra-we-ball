@@ -1,0 +1,200 @@
+{
+  "canonical_physical_relations": [],
+  "canonical_roles": [
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "driver",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "semantic_hints": [
+        "Compatible with target joint type"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "SHARED",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "repair_target",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "repair_target",
+        "workshop_frame_joint",
+        "recess"
+      ],
+      "semantic_hints": [
+        "Located on workbench",
+        "Requires fastening attachment"
+      ],
+      "shared": true,
+      "unary_predicates": [],
+      "verification_mode": "GEOMETRIC_ONLY"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_001', 'function': 'Apply fastening action', 'tool_role': 'fastening_equipment', 'target_role': 'markedin_workbench_target', 'required_target_count': 1, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': None, 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, repair_target)\", 'interp_status': 'UNMAPPABLE_OPERATION'}, {'raw_group': {'id': 'op_002', 'function': 'Store equipment on surface', 'tool_role': 'fastening_equipment', 'target_role': 'workbench_storage_surface', 'required_target_count': 1, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': None, 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "interp_status": "UNMAPPABLE_OPERATION",
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "Apply fastening action",
+        "id": "op_001",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "markedin_workbench_target",
+        "tool_role": "fastening_equipment",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "reason": "Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, repair_target)",
+      "status": "UNSUPPORTED_OPERATOR"
+    },
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "Store equipment on surface",
+        "id": "op_002",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "workbench_storage_surface",
+        "tool_role": "fastening_equipment",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "workshop",
+  "live_contract_valid": true,
+  "live_validation_error": null,
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": null,
+      "compiler": {
+        "interp_status": "UNMAPPABLE_OPERATION",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": null,
+          "function": "Apply fastening action",
+          "id": "op_001",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "markedin_workbench_target",
+          "tool_role": "fastening_equipment",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "reason": "Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, repair_target)",
+        "status": "UNSUPPORTED_OPERATOR"
+      },
+      "id": "op_001",
+      "raw_phrase": "Apply fastening action",
+      "source_role": "fastening_equipment",
+      "target_role": "markedin_workbench_target"
+    },
+    {
+      "anchor_role": null,
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": null,
+          "function": "Store equipment on surface",
+          "id": "op_002",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "workbench_storage_surface",
+          "tool_role": "fastening_equipment",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op_002",
+      "raw_phrase": "Store equipment on surface",
+      "source_role": "fastening_equipment",
+      "target_role": "workbench_storage_surface"
+    }
+  ],
+  "operation_groups": [],
+  "relation_audit": [
+    {
+      "classification": "TASK_CAUSAL_SEMANTICS",
+      "compiler": {
+        "canonical": [
+          [
+            "driver",
+            "CONNECTED_TO",
+            "repair_target"
+          ]
+        ],
+        "category": "TASK_CAUSAL_SEMANTICS",
+        "direction_normalized": false,
+        "interp_status": "TASK_CAUSAL_SEMANTIC_MATCH",
+        "raw_object": "markedin_workbench_target",
+        "raw_phrase": "physically_connected_to",
+        "raw_subject": "fastening_equipment",
+        "status": "TASK_CAUSAL_SEMANTICS"
+      },
+      "id": "rel_001",
+      "raw_object": "markedin_workbench_target",
+      "raw_phrase": "physically_connected_to",
+      "raw_subject": "fastening_equipment"
+    },
+    {
+      "classification": "SOFT_CONTEXT",
+      "compiler": {
+        "planner_context": "MAIN_WORKBENCH_ZONE",
+        "provenance": "PLANNER_CONTEXT_CONSTANT",
+        "raw_object": "fastening_equipment",
+        "raw_phrase": "supports_stably",
+        "raw_subject": "workbench_storage_surface",
+        "status": "ABSORBED_INTO_PLANNER_CONTEXT"
+      },
+      "id": "rel_002",
+      "raw_object": "fastening_equipment",
+      "raw_phrase": "supports_stably",
+      "raw_subject": "workbench_storage_surface"
+    }
+  ],
+  "task_causal_relations": [
+    {
+      "capability_id": null,
+      "category": "TASK_CAUSAL_SEMANTICS",
+      "expected": true,
+      "object_role": "repair_target",
+      "predicate": "CONNECTED_TO",
+      "provenance": "TASK_CAUSAL_SEMANTICS",
+      "source_operation_id": null,
+      "subject_role": "driver"
+    }
+  ],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [],
+  "unresolved_roles": [],
+  "variant": "W1"
+}

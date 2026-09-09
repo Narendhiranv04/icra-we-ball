@@ -1,0 +1,292 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "cabinet_left",
+        "label": "Left Wall Cabinet",
+        "reason": "Holds hidden second coffee mug or soup bowl.",
+        "visual_description": "Grey storage box with handle on the left side."
+      },
+      {
+        "id": "cabinet_right",
+        "label": "Right Wall Cabinet",
+        "reason": "Holds hidden second coffee mug or soup bowl.",
+        "visual_description": "Grey storage box with handle on the right side."
+      },
+      {
+        "id": "drawer_front",
+        "label": "Front Table Drawer",
+        "reason": "Potential location for extra utensils or hidden mugs.",
+        "visual_description": "Openable compartment under the table surface."
+      }
+    ],
+    "inspection_order": [
+      "cabinet_left",
+      "cabinet_right",
+      "drawer_front"
+    ],
+    "visible_candidates_per_role": {
+      "coffee_mug": [
+        {
+          "label": "Blue Mug",
+          "visual_description": "Blue cylindrical cup with handle located on left side of table."
+        }
+      ],
+      "coffee_powder_source": [
+        {
+          "label": "Green Canister",
+          "visual_description": "Small cylindrical container with green labeling on table."
+        }
+      ],
+      "cupboard_storage": [
+        {
+          "label": "Left Cabinet",
+          "visual_description": "Grey rectangular storage unit mounted on back wall."
+        },
+        {
+          "label": "Right Cabinet",
+          "visual_description": "Grey rectangular storage unit mounted on back wall."
+        }
+      ],
+      "soup_bowl": [
+        {
+          "label": "Reddish Bowl",
+          "visual_description": "White bowl with red inner lining containing red liquid."
+        }
+      ],
+      "spoon_utensil": [
+        {
+          "label": "Spoon 1",
+          "visual_description": "Metal spoon lying horizontally near left edge."
+        },
+        {
+          "label": "Spoon 2",
+          "visual_description": "Metal spoon lying horizontally next to first spoon."
+        },
+        {
+          "label": "Spoon 3",
+          "visual_description": "Small handle attached to spoon-like object near teapot."
+        }
+      ],
+      "table_surface": [
+        {
+          "label": "Table Top",
+          "visual_description": "Large white horizontal plane with wooden legs and drawers."
+        }
+      ],
+      "water_vessel": [
+        {
+          "label": "Silver Teapot",
+          "visual_description": "Metal teapot with spout on table near bowl."
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "supp_01",
+        "object_role": "table_surface",
+        "relation": "supported_on_by_gravity",
+        "required": true,
+        "subject_role": "coffee_mug"
+      },
+      {
+        "id": "supp_02",
+        "object_role": "table_surface",
+        "relation": "supported_on_by_gravity",
+        "required": true,
+        "subject_role": "soup_bowl"
+      },
+      {
+        "id": "supp_03",
+        "object_role": "cupboard_storage",
+        "relation": "contained_within",
+        "required": true,
+        "subject_role": "coffee_powder_source"
+      },
+      {
+        "id": "supp_04",
+        "object_role": "table_surface",
+        "relation": "placed_adjacent_to",
+        "required": true,
+        "subject_role": "water_vessel"
+      },
+      {
+        "id": "rel_01",
+        "object_role": "soup_bowl",
+        "relation": "assigned_to_serve",
+        "required": true,
+        "subject_role": "spoon_utensil"
+      },
+      {
+        "id": "rel_02",
+        "object_role": "coffee_mug",
+        "relation": "used_for_stirring",
+        "required": true,
+        "subject_role": "spoon_utensil"
+      },
+      {
+        "id": "rel_03",
+        "object_role": "coffee_powder_source",
+        "relation": "receiving_from",
+        "required": true,
+        "subject_role": "coffee_mug"
+      },
+      {
+        "id": "rel_04",
+        "object_role": "water_vessel",
+        "relation": "receiving_from",
+        "required": true,
+        "subject_role": "coffee_mug"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "blue ceramic cup",
+          "metal travel mug",
+          "white porcelain cup"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Coffee beverage container",
+        "id": "coffee_mug",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "ceramic soup bowl",
+          "porcelain ramekin",
+          "deep serving plate"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Soup serving dish",
+        "id": "soup_bowl",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "green tin",
+          "brown canister",
+          "glass jar with powder"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Dry coffee ingredient container",
+        "id": "coffee_powder_source",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "silver teapot",
+          "metal carafe",
+          "plastic bottle"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Hot water supply container",
+        "id": "water_vessel",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "metal teaspoon",
+          "plastic stirrer",
+          "wooden scoop"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Small hand-held eating or stirring tool",
+        "id": "spoon_utensil",
+        "required_count": 3,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wall cabinet",
+          "locked locker"
+        ],
+        "entity_kind": "REGION",
+        "function": "Closed storage volume for hidden items",
+        "id": "cupboard_storage",
+        "required_count": 2,
+        "required_properties": [
+          "has_handle",
+          "is_closed"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "dining table",
+          "workbench"
+        ],
+        "entity_kind": "REGION",
+        "function": "Horizontal work and service plane",
+        "id": "table_surface",
+        "required_count": 1,
+        "required_properties": [
+          "is_horizontal",
+          "has_drawers"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "table_surface",
+        "id": "op_01",
+        "operation": "pour_water_into_mug",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "water_vessel",
+        "target_role": "coffee_mug"
+      },
+      {
+        "anchor_role": "table_surface",
+        "id": "op_02",
+        "operation": "pour_coffee_powder_into_mug",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "coffee_powder_source",
+        "target_role": "coffee_mug"
+      },
+      {
+        "anchor_role": "table_surface",
+        "id": "op_03",
+        "operation": "stir_coffee_beverage",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "spoon_utensil",
+        "target_role": "coffee_mug"
+      },
+      {
+        "anchor_role": "table_surface",
+        "id": "op_04",
+        "operation": "place_soup_on_table",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "soup_bowl",
+        "target_role": "table_surface"
+      },
+      {
+        "anchor_role": "soup_bowl",
+        "id": "op_05",
+        "operation": "arrange_eating_utensil_on_bowl",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "spoon_utensil",
+        "target_role": "soup_bowl"
+      }
+    ]
+  },
+  "task_summary": "Prepare two servings of coffee and soup, including specific ingredient mixing and utensil pairing.",
+  "unsupported_reason": ""
+}

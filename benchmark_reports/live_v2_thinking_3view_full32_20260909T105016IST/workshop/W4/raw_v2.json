@@ -1,0 +1,132 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "fastening_tool": [
+        {
+          "label": "yellow handheld component",
+          "visual_description": "Yellow rectangular object partially occluded by robot arm in bottom right view, possibly a battery or tool"
+        },
+        {
+          "label": "black tray component",
+          "visual_description": "Black rectangular base with yellow object on top located on the left side of the workbench"
+        }
+      ],
+      "fixture_assembly": [
+        {
+          "label": "black tray assembly",
+          "visual_description": "Black tray containing a yellow sub-component sitting on the wooden table surface"
+        }
+      ],
+      "workbench_surface": [
+        {
+          "label": "wooden table top",
+          "visual_description": "Rectangular wooden surface with blue drawers underneath and items placed on it"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_001",
+        "object_role": "fixture_assembly",
+        "relation": "capable of securing",
+        "required": true,
+        "subject_role": "fastening_tool"
+      },
+      {
+        "id": "rel_002",
+        "object_role": "workbench_surface",
+        "relation": "resting on",
+        "required": true,
+        "subject_role": "fixture_assembly"
+      },
+      {
+        "id": "rel_003",
+        "object_role": "workbench_surface",
+        "relation": "placed upon",
+        "required": true,
+        "subject_role": "fastening_tool"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "hand tool",
+          "clamping device"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Manual instrument for applying mechanical force",
+        "id": "fastening_tool",
+        "required_count": 1,
+        "required_properties": [
+          "rigid structure",
+          "handle grip",
+          "force transmission interface"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bracket assembly",
+          "electronic chassis",
+          "mechanical link",
+          "circuit card"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Physical object or joint to be fastened together",
+        "id": "fixture_assembly",
+        "required_count": 1,
+        "required_properties": [
+          "mounting interfaces",
+          "structural rigidity",
+          "alignment features"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wooden table top",
+          "metal workbench",
+          "flat desk surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "Flat horizontal workspace area for placement and access",
+        "id": "workbench_surface",
+        "required_count": 1,
+        "required_properties": [
+          "horizontal orientation",
+          "load bearing capacity",
+          "stable platform"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "workbench_surface",
+        "id": "op_001",
+        "operation": "secure fastener to fixture",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "fastening_tool",
+        "target_role": "fixture_assembly"
+      },
+      {
+        "id": "op_002",
+        "operation": "deposit tool on surface",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "fastening_tool",
+        "target_role": "workbench_surface"
+      }
+    ]
+  },
+  "task_summary": "Identify compatible fastening tool/part, execute fastening at specified workbench location, then place tool on workbench.",
+  "unsupported_reason": ""
+}

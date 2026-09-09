@@ -1,0 +1,297 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "region_wall_cabinet_left",
+        "label": "Wall-mounted cabinet",
+        "reason": "Could contain additional soup source or coffee components",
+        "visual_description": "Grey floating rectangular box attached to wall on left"
+      },
+      {
+        "id": "region_wall_cabinet_right",
+        "label": "Wall-mounted cabinet",
+        "reason": "Could contain additional soup source or coffee components",
+        "visual_description": "Grey floating rectangular box attached to wall on right"
+      },
+      {
+        "id": "region_drawers",
+        "label": "Table drawers",
+        "reason": "Could hold additional utensils or cups",
+        "visual_description": "Openable rectangular compartments under tabletop edge"
+      }
+    ],
+    "inspection_order": [
+      "region_drawers",
+      "region_wall_cabinet_left",
+      "region_wall_cabinet_right"
+    ],
+    "visible_candidates_per_role": {
+      "coffee_cups": [
+        {
+          "label": "Small cylindrical container",
+          "visual_description": "Small beige cylinder standing on left side of table"
+        }
+      ],
+      "coffee_powder": [
+        {
+          "label": "Green tin",
+          "visual_description": "Dark green cylindrical container behind teapot"
+        },
+        {
+          "label": "Brown box",
+          "visual_description": "Rectangular cardboard box located far right on table"
+        }
+      ],
+      "eating_utensils": [
+        {
+          "label": "Silver utensils",
+          "visual_description": "Two long spoon-like implements lying horizontally on table"
+        }
+      ],
+      "hot_water_source": [
+        {
+          "label": "Teapot",
+          "visual_description": "Metal pot with spout and handle located center-right on table"
+        }
+      ],
+      "soup_bowls": [
+        {
+          "label": "Red liquid bowl",
+          "visual_description": "Small bowl containing red substance on table"
+        }
+      ],
+      "soup_source": [],
+      "stirring_tool": [],
+      "table_surface": [
+        {
+          "label": "Main table",
+          "visual_description": "Large flat light-colored rectangular object with legs and drawers"
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_001",
+        "object_role": "table_surface",
+        "relation": "placed_on_top_of",
+        "required": true,
+        "subject_role": "soup_bowls"
+      },
+      {
+        "id": "rel_002",
+        "object_role": "table_surface",
+        "relation": "placed_on_top_of",
+        "required": true,
+        "subject_role": "coffee_cups"
+      },
+      {
+        "id": "rel_003",
+        "object_role": "soup_bowls",
+        "relation": "placed_adjacent_to",
+        "required": true,
+        "subject_role": "eating_utensils"
+      },
+      {
+        "id": "rel_004",
+        "object_role": "soup_bowls",
+        "relation": "provides_content_for",
+        "required": true,
+        "subject_role": "soup_source"
+      },
+      {
+        "id": "rel_005",
+        "object_role": "coffee_cups",
+        "relation": "provides_content_for",
+        "required": true,
+        "subject_role": "hot_water_source"
+      },
+      {
+        "id": "rel_006",
+        "object_role": "coffee_cups",
+        "relation": "provides_content_for",
+        "required": true,
+        "subject_role": "coffee_powder"
+      },
+      {
+        "id": "rel_007",
+        "object_role": "coffee_cups",
+        "relation": "actives_stirring_within",
+        "required": true,
+        "subject_role": "stirring_tool"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "ceramic bowl",
+          "soup bowl",
+          "serving dish"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Dishes holding soup portions",
+        "id": "soup_bowls",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mug",
+          "coffee cup",
+          "tumbler"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Vessels holding coffee portions",
+        "id": "coffee_cups",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "fork",
+          "chopsticks"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Tools for consuming soup",
+        "id": "eating_utensils",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "dining table",
+          "countertop"
+        ],
+        "entity_kind": "REGION",
+        "function": "Area for presenting final dishes",
+        "id": "table_surface",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "soup pot",
+          "stock container"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Vessel containing bulk soup stock",
+        "id": "soup_source",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "kettle",
+          "teapot",
+          "pitcher"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Vessel providing hot water for coffee",
+        "id": "hot_water_source",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "coffee jar",
+          "powder container"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Container of instant or ground coffee",
+        "id": "coffee_powder",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "spoon",
+          "whisk",
+          "stirrer"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Implement for mixing coffee",
+        "id": "stirring_tool",
+        "required_count": 1,
+        "required_properties": []
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "",
+        "id": "op_001",
+        "operation": "Pour soup into bowls",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "soup_source",
+        "target_role": "soup_bowls"
+      },
+      {
+        "anchor_role": "",
+        "id": "op_002",
+        "operation": "Pour water into cups",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "hot_water_source",
+        "target_role": "coffee_cups"
+      },
+      {
+        "anchor_role": "",
+        "id": "op_003",
+        "operation": "Dispense coffee powder",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "coffee_powder",
+        "target_role": "coffee_cups"
+      },
+      {
+        "anchor_role": "",
+        "id": "op_004",
+        "operation": "Stir coffee mixture",
+        "operation_count": 2,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "stirring_tool",
+        "target_role": "coffee_cups"
+      },
+      {
+        "anchor_role": "table_surface",
+        "id": "op_005",
+        "operation": "Place soup bowls on table",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "soup_bowls",
+        "target_role": "table_surface"
+      },
+      {
+        "anchor_role": "table_surface",
+        "id": "op_006",
+        "operation": "Place coffee cups on table",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "coffee_cups",
+        "target_role": "table_surface"
+      },
+      {
+        "anchor_role": "table_surface",
+        "id": "op_007",
+        "operation": "Place utensils near bowls",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "eating_utensils",
+        "target_role": "soup_bowls"
+      }
+    ]
+  },
+  "task_summary": "",
+  "unsupported_reason": ""
+}

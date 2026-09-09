@@ -1,0 +1,244 @@
+{
+  "canonical_physical_relations": [
+    {
+      "capability_id": "FASTEN_JOINT",
+      "category": "PHYSICAL_VERIFIER",
+      "expected": true,
+      "object_role": "fastener",
+      "predicate": "COMPATIBLE_WITH",
+      "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+      "source_operation_id": "op01",
+      "subject_role": "driver"
+    }
+  ],
+  "canonical_roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "fastener",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "screw",
+        "Phillips screw",
+        "Phillips head screw"
+      ],
+      "semantic_hints": [
+        "has mounting interface",
+        "receives fastening force"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "driver",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "semantic_hints": [
+        "transmits torque",
+        "engages fastener head",
+        "reusable device"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'binding_policy': 'DISTINCT', 'candidate_categories': ['screw', 'nut', 'bolt', 'pin', 'compatible fastener'], 'entity_kind': 'OBJECT', 'function': 'mechanical joining part', 'id': 'r04', 'required_count': 1, 'required_properties': ['matches hole geometry', 'allows tightening mechanism'], 'visible_candidates': [{'label': 'Yellow Rectangular Block', 'visual_description': 'Component inside the black tray on the table surface, possibly a specialized fastener or handle'}], 'description': ''}, 'collision_with': 'r03'}]",
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op02', 'function': 'return_tool_to_workspace', 'tool_role': 'r05', 'target_role': 'r01', 'required_target_count': 1, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': 'r01', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+    "Unresolved required relations: [{'raw_subject': 'r04', 'raw_phrase': 'compatible with', 'raw_object': 'r03', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'r05', 'raw_phrase': 'applies force to', 'raw_object': 'r04', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'r04', 'raw_phrase': 'secures to', 'raw_object': 'r03', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "r01",
+        "function": "return_tool_to_workspace",
+        "id": "op02",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "r01",
+        "tool_role": "r05",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "workshop",
+  "live_contract_valid": false,
+  "live_validation_error": "DUPLICATE_OPERATION_ENDPOINT: operation_pairings[1].anchor_role equals target_role",
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": "R02",
+      "compiler": {},
+      "id": "OP01",
+      "raw_phrase": "insert_and_secure_fastener",
+      "source_role": "R05",
+      "target_role": "R03"
+    },
+    {
+      "anchor_role": "R01",
+      "compiler": {},
+      "id": "OP02",
+      "raw_phrase": "return_tool_to_workspace",
+      "source_role": "R05",
+      "target_role": "R01"
+    }
+  ],
+  "operation_groups": [],
+  "relation_audit": [
+    {
+      "classification": "SOFT_CONTEXT",
+      "compiler": {
+        "raw_object": "r01",
+        "raw_phrase": "is located on",
+        "raw_subject": "r02",
+        "reason": "Context-only support endpoint",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      "id": "REL01",
+      "raw_object": "R01",
+      "raw_phrase": "is located on",
+      "raw_subject": "R02"
+    },
+    {
+      "classification": "SOFT_CONTEXT",
+      "compiler": {
+        "raw_object": "r02",
+        "raw_phrase": "is adjacent to",
+        "raw_subject": "r03",
+        "reason": "Context-only support endpoint",
+        "status": "SOFT_SEMANTIC_EVIDENCE"
+      },
+      "id": "REL02",
+      "raw_object": "R02",
+      "raw_phrase": "is adjacent to",
+      "raw_subject": "R03"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "r03",
+        "raw_phrase": "compatible with",
+        "raw_subject": "r04",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "REL03",
+      "raw_object": "R03",
+      "raw_phrase": "compatible with",
+      "raw_subject": "R04"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "r04",
+        "raw_phrase": "applies force to",
+        "raw_subject": "r05",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "REL04",
+      "raw_object": "R04",
+      "raw_phrase": "applies force to",
+      "raw_subject": "R05"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "r03",
+        "raw_phrase": "secures to",
+        "raw_subject": "r04",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "REL05",
+      "raw_object": "R03",
+      "raw_phrase": "secures to",
+      "raw_subject": "R04"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [
+    {
+      "raw_object": "r03",
+      "raw_phrase": "compatible with",
+      "raw_subject": "r04",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "r04",
+      "raw_phrase": "applies force to",
+      "raw_subject": "r05",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "r03",
+      "raw_phrase": "secures to",
+      "raw_subject": "r04",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [
+    {
+      "code": "AMBIGUOUS_ROLE_MAPPING",
+      "collision_with": "r03",
+      "raw_role": {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "nut",
+          "bolt",
+          "pin",
+          "compatible fastener"
+        ],
+        "description": "",
+        "entity_kind": "OBJECT",
+        "function": "mechanical joining part",
+        "id": "r04",
+        "required_count": 1,
+        "required_properties": [
+          "matches hole geometry",
+          "allows tightening mechanism"
+        ],
+        "visible_candidates": [
+          {
+            "label": "Yellow Rectangular Block",
+            "visual_description": "Component inside the black tray on the table surface, possibly a specialized fastener or handle"
+          }
+        ]
+      }
+    }
+  ],
+  "variant": "W10"
+}

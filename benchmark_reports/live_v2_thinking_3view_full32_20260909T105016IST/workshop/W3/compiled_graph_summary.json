@@ -1,0 +1,207 @@
+{
+  "canonical_physical_relations": [],
+  "canonical_roles": [
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "driver",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "semantic_hints": [],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Unresolved roles: [{'raw_role': {'binding_policy': 'DISTINCT', 'candidate_categories': ['assembly_base', 'bracket', 'connector', 'plate'], 'entity_kind': 'OBJECT', 'function': 'Mechanical part to be assembled', 'id': 'workpiece_unit', 'required_count': 1, 'required_properties': ['Located on work surface'], 'visible_candidates': [{'label': 'Yellow assembly component', 'visual_description': 'Rectangular yellow bars mounted on grey base pad on table'}], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}]",
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_001', 'function': 'Apply tightening action to unit', 'tool_role': 'fastening_tool', 'target_role': 'workpiece_unit', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': None, 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}, {'raw_group': {'id': 'op_002', 'function': 'Deposit tool on workbench surface', 'tool_role': 'fastening_tool', 'target_role': 'workbench_surface', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': None, 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+    "Unresolved required relations: [{'raw_subject': 'fastening_tool', 'raw_phrase': 'Physically engages with fastening interface', 'raw_object': 'workpiece_unit', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'workpiece_unit', 'raw_phrase': 'Spatially associated with', 'raw_object': 'workbench_surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "Apply tightening action to unit",
+        "id": "op_001",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "workpiece_unit",
+        "tool_role": "fastening_tool",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    },
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "Deposit tool on workbench surface",
+        "id": "op_002",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "workbench_surface",
+        "tool_role": "fastening_tool",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "workshop",
+  "live_contract_valid": true,
+  "live_validation_error": null,
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": null,
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": null,
+          "function": "Apply tightening action to unit",
+          "id": "op_001",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "workpiece_unit",
+          "tool_role": "fastening_tool",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op_001",
+      "raw_phrase": "Apply tightening action to unit",
+      "source_role": "fastening_tool",
+      "target_role": "workpiece_unit"
+    },
+    {
+      "anchor_role": null,
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": null,
+          "function": "Deposit tool on workbench surface",
+          "id": "op_002",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "workbench_surface",
+          "tool_role": "fastening_tool",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op_002",
+      "raw_phrase": "Deposit tool on workbench surface",
+      "source_role": "fastening_tool",
+      "target_role": "workbench_surface"
+    }
+  ],
+  "operation_groups": [],
+  "relation_audit": [
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "workpiece_unit",
+        "raw_phrase": "Physically engages with fastening interface",
+        "raw_subject": "fastening_tool",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_001",
+      "raw_object": "workpiece_unit",
+      "raw_phrase": "Physically engages with fastening interface",
+      "raw_subject": "fastening_tool"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "workbench_surface",
+        "raw_phrase": "Spatially associated with",
+        "raw_subject": "workpiece_unit",
+        "reason": "Unresolved or context-only endpoint",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_002",
+      "raw_object": "workbench_surface",
+      "raw_phrase": "Spatially associated with",
+      "raw_subject": "workpiece_unit"
+    },
+    {
+      "classification": "SOFT_CONTEXT",
+      "compiler": {
+        "planner_context": "MAIN_WORKBENCH_ZONE",
+        "provenance": "PLANNER_CONTEXT_CONSTANT",
+        "raw_object": "workbench_surface",
+        "raw_phrase": "Resting on for storage",
+        "raw_subject": "fastening_tool",
+        "status": "ABSORBED_INTO_PLANNER_CONTEXT"
+      },
+      "id": "rel_003",
+      "raw_object": "workbench_surface",
+      "raw_phrase": "Resting on for storage",
+      "raw_subject": "fastening_tool"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [
+    {
+      "raw_object": "workpiece_unit",
+      "raw_phrase": "Physically engages with fastening interface",
+      "raw_subject": "fastening_tool",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "workbench_surface",
+      "raw_phrase": "Spatially associated with",
+      "raw_subject": "workpiece_unit",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [
+    {
+      "raw_role": {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "assembly_base",
+          "bracket",
+          "connector",
+          "plate"
+        ],
+        "description": "",
+        "entity_kind": "OBJECT",
+        "function": "Mechanical part to be assembled",
+        "id": "workpiece_unit",
+        "required_count": 1,
+        "required_properties": [
+          "Located on work surface"
+        ],
+        "visible_candidates": [
+          {
+            "label": "Yellow assembly component",
+            "visual_description": "Rectangular yellow bars mounted on grey base pad on table"
+          }
+        ]
+      },
+      "status": "UNRESOLVED_SEMANTIC"
+    }
+  ],
+  "variant": "W3"
+}

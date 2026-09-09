@@ -1,0 +1,171 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "entertainment_control": [
+        {
+          "label": "Black remote control",
+          "visual_description": "A black rectangular object lying flat on the wooden table surface."
+        }
+      ],
+      "refreshment_setting": [
+        {
+          "label": "White cup and plate pair",
+          "visual_description": "Two white round plates and two red cups sitting together on a wooden table."
+        }
+      ],
+      "surface_platform": [
+        {
+          "label": "Console Table Surface",
+          "visual_description": "The horizontal top surface of the wooden console table on the right holding the items."
+        },
+        {
+          "label": "Coffee Table Surface",
+          "visual_description": "The light green-topped rectangular coffee table in the center of the seating arrangement."
+        },
+        {
+          "label": "Side Table Surface",
+          "visual_description": "The dark wooden table surface mounted against the wall under the TV."
+        }
+      ],
+      "viewing_seat": [
+        {
+          "label": "Left Armchair",
+          "visual_description": "A wooden frame armchair with black upholstery on the left side of the room."
+        },
+        {
+          "label": "Right Armchair",
+          "visual_description": "A matching wooden frame armchair with black upholstery opposite the first."
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_001",
+        "object_role": "viewing_seat",
+        "relation": "assigned_to_person_seating_area",
+        "required": true,
+        "subject_role": "refreshment_setting"
+      },
+      {
+        "id": "rel_002",
+        "object_role": "viewing_seat",
+        "relation": "located_at_proximity_of",
+        "required": true,
+        "subject_role": "refreshment_setting"
+      },
+      {
+        "id": "rel_003",
+        "object_role": "viewing_seat",
+        "relation": "accessible_by_all_viewers",
+        "required": true,
+        "subject_role": "entertainment_control"
+      },
+      {
+        "id": "rel_004",
+        "object_role": "surface_platform",
+        "relation": "supported_by",
+        "required": true,
+        "subject_role": "refreshment_setting"
+      },
+      {
+        "id": "rel_005",
+        "object_role": "surface_platform",
+        "relation": "supported_by",
+        "required": true,
+        "subject_role": "entertainment_control"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "plate",
+          "napkin"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Set of drinkware and dish for one person",
+        "id": "refreshment_setting",
+        "required_count": 2,
+        "required_properties": [
+          "holds_refreshment_content",
+          "fits_in_hand"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote",
+          "controller",
+          "mobile_device"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Device for operating media equipment",
+        "id": "entertainment_control",
+        "required_count": 1,
+        "required_properties": [
+          "operates_tv_or_audio"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "armchair",
+          "sofa",
+          "bench"
+        ],
+        "entity_kind": "FIXED_TARGET",
+        "function": "Stationary seating location for a viewer",
+        "id": "viewing_seat",
+        "required_count": 2,
+        "required_properties": [
+          "supports_sitting",
+          "has_leg_space"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "desk"
+        ],
+        "entity_kind": "REGION",
+        "function": "Flat planar area for supporting objects",
+        "id": "surface_platform",
+        "required_count": 2,
+        "required_properties": [
+          "is_horizontal",
+          "is_sturdy_enough_for_items"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "viewing_seat",
+        "id": "op_001",
+        "operation": "place_refreshment_setting_on_nearby_surface",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "refreshment_setting",
+        "target_role": "surface_platform"
+      },
+      {
+        "anchor_role": "viewing_seat",
+        "id": "op_002",
+        "operation": "place_entertainment_control_in_central_access_spot",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "entertainment_control",
+        "target_role": "surface_platform"
+      }
+    ]
+  },
+  "task_summary": "Distribute refreshment settings to two seating positions and place a remote control in a central accessible location.",
+  "unsupported_reason": ""
+}

@@ -1,0 +1,207 @@
+{
+  "canonical_physical_relations": [],
+  "canonical_roles": [
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "driver",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "semantic_hints": [
+        "rigid structure",
+        "handle grip",
+        "force transmission interface"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "FIXED_TARGET",
+      "max_count": null,
+      "min_count": null,
+      "name": "repair_target",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "repair_target",
+        "workshop_frame_joint",
+        "recess"
+      ],
+      "semantic_hints": [
+        "mounting interfaces",
+        "structural rigidity",
+        "alignment features"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "GEOMETRIC_ONLY"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_001', 'function': 'secure fastener to fixture', 'tool_role': 'fastening_tool', 'target_role': 'fixture_assembly', 'required_target_count': 1, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': 'workbench_surface', 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, repair_target)\", 'interp_status': 'UNMAPPABLE_OPERATION'}, {'raw_group': {'id': 'op_002', 'function': 'deposit tool on surface', 'tool_role': 'fastening_tool', 'target_role': 'workbench_surface', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': None, 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+    "Unresolved required relations: [{'raw_subject': 'fastening_tool', 'raw_phrase': 'capable of securing', 'raw_object': 'fixture_assembly', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'capable of securing' provides no semantic evidence for valid predicates ['REACHES_TARGET'] or task causal semantics\"}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "interp_status": "UNMAPPABLE_OPERATION",
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "workbench_surface",
+        "function": "secure fastener to fixture",
+        "id": "op_001",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "fixture_assembly",
+        "tool_role": "fastening_tool",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "reason": "Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, repair_target)",
+      "status": "UNSUPPORTED_OPERATOR"
+    },
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "deposit tool on surface",
+        "id": "op_002",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "workbench_surface",
+        "tool_role": "fastening_tool",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "workshop",
+  "live_contract_valid": true,
+  "live_validation_error": null,
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": "workbench_surface",
+      "compiler": {
+        "interp_status": "UNMAPPABLE_OPERATION",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "workbench_surface",
+          "function": "secure fastener to fixture",
+          "id": "op_001",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "fixture_assembly",
+          "tool_role": "fastening_tool",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "reason": "Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, repair_target)",
+        "status": "UNSUPPORTED_OPERATOR"
+      },
+      "id": "op_001",
+      "raw_phrase": "secure fastener to fixture",
+      "source_role": "fastening_tool",
+      "target_role": "fixture_assembly"
+    },
+    {
+      "anchor_role": null,
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": null,
+          "function": "deposit tool on surface",
+          "id": "op_002",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "workbench_surface",
+          "tool_role": "fastening_tool",
+          "usage_policy": "DEDICATED_PER_TARGET"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op_002",
+      "raw_phrase": "deposit tool on surface",
+      "source_role": "fastening_tool",
+      "target_role": "workbench_surface"
+    }
+  ],
+  "operation_groups": [],
+  "relation_audit": [
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "fixture_assembly",
+        "raw_phrase": "capable of securing",
+        "raw_subject": "fastening_tool",
+        "reason": "Relation text 'capable of securing' provides no semantic evidence for valid predicates ['REACHES_TARGET'] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_001",
+      "raw_object": "fixture_assembly",
+      "raw_phrase": "capable of securing",
+      "raw_subject": "fastening_tool"
+    },
+    {
+      "classification": "SOFT_CONTEXT",
+      "compiler": {
+        "planner_context": "MAIN_WORKBENCH_ZONE",
+        "provenance": "PLANNER_CONTEXT_CONSTANT",
+        "raw_object": "workbench_surface",
+        "raw_phrase": "resting on",
+        "raw_subject": "fixture_assembly",
+        "status": "ABSORBED_INTO_PLANNER_CONTEXT"
+      },
+      "id": "rel_002",
+      "raw_object": "workbench_surface",
+      "raw_phrase": "resting on",
+      "raw_subject": "fixture_assembly"
+    },
+    {
+      "classification": "SOFT_CONTEXT",
+      "compiler": {
+        "planner_context": "MAIN_WORKBENCH_ZONE",
+        "provenance": "PLANNER_CONTEXT_CONSTANT",
+        "raw_object": "workbench_surface",
+        "raw_phrase": "placed upon",
+        "raw_subject": "fastening_tool",
+        "status": "ABSORBED_INTO_PLANNER_CONTEXT"
+      },
+      "id": "rel_003",
+      "raw_object": "workbench_surface",
+      "raw_phrase": "placed upon",
+      "raw_subject": "fastening_tool"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [
+    {
+      "raw_object": "fixture_assembly",
+      "raw_phrase": "capable of securing",
+      "raw_subject": "fastening_tool",
+      "reason": "Relation text 'capable of securing' provides no semantic evidence for valid predicates ['REACHES_TARGET'] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [],
+  "variant": "W4"
+}

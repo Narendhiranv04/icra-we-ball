@@ -1,0 +1,225 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "reg_cabinet_interior",
+        "label": "Cabinet Interior Shelves",
+        "reason": "Likely candidate for storing the mechanical Fastening_Tool or spare Fastener_Component units as indicated by its proximity to the workbench.",
+        "visual_description": "Closed dark interior volume of the wall-mounted cabinet on the right. Contains indistinguishable contents behind opaque door panels."
+      },
+      {
+        "id": "reg_drawer_interior_1",
+        "label": "Left Drawer Interior",
+        "reason": "Standard organizational storage region potentially housing Fastener_Component kits or small Fastening_Tools.",
+        "visual_description": "Hidden compartment space within the front-left drawer of the workbench legs."
+      },
+      {
+        "id": "reg_drawer_interior_2",
+        "label": "Right Drawer Interior",
+        "reason": "Secondary organizational storage region potentially housing Fastener_Component kits or small Fastening_Tools.",
+        "visual_description": "Hidden compartment space within the front-right drawer of the workbench legs."
+      }
+    ],
+    "inspection_order": [
+      "reg_cabinet_interior",
+      "reg_drawer_interior_1",
+      "reg_drawer_interior_2"
+    ],
+    "visible_candidates_per_role": {
+      "Fastener_Component": [
+        {
+          "label": "Yellow Block Tray",
+          "visual_description": "Dark rectangular tray with yellow rectangular blocks containing potential fasteners or components situated on the left side of the wooden workbench surface."
+        }
+      ],
+      "Fastening_Tool": [],
+      "Storage_Zone": [
+        {
+          "label": "Wall-Mounted Cabinet",
+          "visual_description": "Blue-grey storage cabinet positioned against the back wall on the right side of the image, standing next to a framed board."
+        },
+        {
+          "label": "Desk Drawer Fronts",
+          "visual_description": "Two blue-grey drawers integrated into the legs of the wooden workbench, each featuring white rectangular handles."
+        },
+        {
+          "label": "Black Framer Board",
+          "visual_description": "Flat black rectangular object mounted on the wall behind the workbench, appearing to be a monitor or technical display frame."
+        }
+      ],
+      "Target_Workpiece": [
+        {
+          "label": "Desk Assembly Base",
+          "visual_description": "The wooden workbench surface itself, specifically the central area where a fixture or base plate would be installed and the yellow blocks are currently resting."
+        }
+      ],
+      "Workbench_Surface": [
+        {
+          "label": "Wooden Table Top",
+          "visual_description": "Large flat brown wooden surface of the workbench, occupying the central lower portion of the view, with visible grain texture and four legs."
+        }
+      ]
+    }
+  },
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "relation_1",
+        "object_role": "Target_Workpiece",
+        "relation": "physically acts upon",
+        "required": true,
+        "subject_role": "Fastening_Tool"
+      },
+      {
+        "id": "relation_2",
+        "object_role": "Target_Workpiece",
+        "relation": "mechanically attaches_to",
+        "required": true,
+        "subject_role": "Fastener_Component"
+      },
+      {
+        "id": "relation_3",
+        "object_role": "Storage_Zone",
+        "relation": "originally contained_in",
+        "required": true,
+        "subject_role": "Fastener_Component"
+      },
+      {
+        "id": "relation_4",
+        "object_role": "Workbench_Surface",
+        "relation": "rests_on",
+        "required": true,
+        "subject_role": "Fastening_Tool"
+      },
+      {
+        "id": "relation_5",
+        "object_role": "Storage_Zone",
+        "relation": "transferred_from",
+        "required": true,
+        "subject_role": "Fastening_Tool"
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "power driver",
+          "hand wrench",
+          "manual tool"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Mechanical instrument for driving fasteners",
+        "id": "Fastening_Tool",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut",
+          "rivet",
+          "anchor pin"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Physical connector joining components",
+        "id": "Fastener_Component",
+        "required_count": 1,
+        "required_properties": [
+          "threaded surface present",
+          "machined head geometry"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "assembly bracket",
+          "fixture plate",
+          "machine housing",
+          "structural component"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Object receiving the fastening operation",
+        "id": "Target_Workpiece",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "tool cabinet",
+          "parts tray",
+          "storage drawer",
+          "open rack"
+        ],
+        "entity_kind": "REGION",
+        "function": "Container for locating required parts",
+        "id": "Storage_Zone",
+        "required_count": 1,
+        "required_properties": [
+          "enclosed or defined boundaries",
+          "accessible to manipulator"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wooden table top",
+          "metal workbench",
+          "flat support surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "Designated location for tool deposition",
+        "id": "Workbench_Surface",
+        "required_count": 1,
+        "required_properties": [
+          "stable horizontal plane",
+          "horizontal alignment"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "anchor_role": "Storage_Zone",
+        "id": "op_1",
+        "operation": "Retrieve Fastening Tool from Storage",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "Fastening_Tool",
+        "target_role": "Target_Workpiece"
+      },
+      {
+        "anchor_role": "Storage_Zone",
+        "id": "op_2",
+        "operation": "Retrieve Fastener from Storage",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "source_role": "Fastener_Component",
+        "target_role": "Target_Workpiece"
+      },
+      {
+        "anchor_role": "Target_Workpiece",
+        "id": "op_3",
+        "operation": "Secure Fastener to Workpiece",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "Fastening_Tool",
+        "target_role": "Target_Workpiece"
+      },
+      {
+        "anchor_role": "Workbench_Surface",
+        "id": "op_4",
+        "operation": "Return Fastening Tool to Workbench",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "source_role": "Fastening_Tool",
+        "target_role": "Workbench_Surface"
+      }
+    ]
+  },
+  "task_summary": "A physical task requiring retrieval of a fastening tool and fastener components from the environment to secure a workpiece at a designated location, followed by tool return.",
+  "unsupported_reason": ""
+}

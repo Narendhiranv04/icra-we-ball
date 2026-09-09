@@ -1,0 +1,176 @@
+{
+  "canonical_physical_relations": [],
+  "canonical_roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "fastener",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "screw",
+        "Phillips screw",
+        "Phillips head screw"
+      ],
+      "semantic_hints": [
+        "rigid solid",
+        "mechanically connectable"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "REUSABLE",
+      "count": 1,
+      "description": "",
+      "distinct": false,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "driver",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": true,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "semantic_hints": [
+        "grippable handle",
+        "mechanical engagement surface"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_1', 'function': 'Fasten Component To Site', 'tool_role': 'fastening_tool', 'target_role': 'marked_fastening_site', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'marked_fastening_site', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+    "Unresolved required relations: [{'raw_subject': 'fastening_tool', 'raw_phrase': 'interact mechanically with fastener', 'raw_object': 'compatible_fastener', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'interact mechanically with fastener' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics\"}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "marked_fastening_site",
+        "function": "Fasten Component To Site",
+        "id": "op_1",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "marked_fastening_site",
+        "tool_role": "fastening_tool",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "workshop",
+  "live_contract_valid": false,
+  "live_validation_error": "DUPLICATE_OPERATION_ENDPOINT: operation_pairings[0].anchor_role equals target_role",
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": "MARKED_FASTENING_SITE",
+      "compiler": {},
+      "id": "OP_1",
+      "raw_phrase": "Fasten Component To Site",
+      "source_role": "FASTENING_TOOL",
+      "target_role": "MARKED_FASTENING_SITE"
+    },
+    {
+      "anchor_role": null,
+      "compiler": {},
+      "id": "OP_2",
+      "raw_phrase": "Place Tool On Bench",
+      "source_role": "FASTENING_TOOL",
+      "target_role": "WORKBENCH_SURFACE"
+    }
+  ],
+  "operation_groups": [],
+  "relation_audit": [
+    {
+      "classification": "SOFT_CONTEXT",
+      "compiler": {
+        "planner_context": "MAIN_WORKBENCH_ZONE",
+        "provenance": "PLANNER_CONTEXT_CONSTANT",
+        "raw_object": "marked_fastening_site",
+        "raw_phrase": "physically compatible with site geometry",
+        "raw_subject": "compatible_fastener",
+        "status": "ABSORBED_INTO_PLANNER_CONTEXT"
+      },
+      "id": "REL_1",
+      "raw_object": "MARKED_FASTENING_SITE",
+      "raw_phrase": "physically compatible with site geometry",
+      "raw_subject": "COMPATIBLE_FASTENER"
+    },
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "compatible_fastener",
+        "raw_phrase": "interact mechanically with fastener",
+        "raw_subject": "fastening_tool",
+        "reason": "Relation text 'interact mechanically with fastener' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "REL_2",
+      "raw_object": "COMPATIBLE_FASTENER",
+      "raw_phrase": "interact mechanically with fastener",
+      "raw_subject": "FASTENING_TOOL"
+    },
+    {
+      "classification": "SOFT_CONTEXT",
+      "compiler": {
+        "planner_context": "MAIN_WORKBENCH_ZONE",
+        "provenance": "PLANNER_CONTEXT_CONSTANT",
+        "raw_object": "marked_fastening_site",
+        "raw_phrase": "operate over assembly location",
+        "raw_subject": "fastening_tool",
+        "status": "ABSORBED_INTO_PLANNER_CONTEXT"
+      },
+      "id": "REL_3",
+      "raw_object": "MARKED_FASTENING_SITE",
+      "raw_phrase": "operate over assembly location",
+      "raw_subject": "FASTENING_TOOL"
+    },
+    {
+      "classification": "SOFT_CONTEXT",
+      "compiler": {
+        "planner_context": "MAIN_WORKBENCH_ZONE",
+        "provenance": "PLANNER_CONTEXT_CONSTANT",
+        "raw_object": "fastening_tool",
+        "raw_phrase": "provides resting support for tool",
+        "raw_subject": "workbench_surface",
+        "status": "ABSORBED_INTO_PLANNER_CONTEXT"
+      },
+      "id": "REL_4",
+      "raw_object": "FASTENING_TOOL",
+      "raw_phrase": "provides resting support for tool",
+      "raw_subject": "WORKBENCH_SURFACE"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [
+    {
+      "raw_object": "compatible_fastener",
+      "raw_phrase": "interact mechanically with fastener",
+      "raw_subject": "fastening_tool",
+      "reason": "Relation text 'interact mechanically with fastener' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [],
+  "variant": "W7"
+}

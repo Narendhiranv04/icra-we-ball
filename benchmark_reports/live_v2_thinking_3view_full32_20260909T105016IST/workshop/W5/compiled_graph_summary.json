@@ -1,0 +1,190 @@
+{
+  "canonical_physical_relations": [],
+  "canonical_roles": [
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "driver",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "semantic_hints": [
+        "mechanical_drive_interface",
+        "torque_transfer_capability"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    },
+    {
+      "binding_policy": "DISTINCT",
+      "count": 1,
+      "description": "",
+      "distinct": true,
+      "entity_kind": "OBJECT",
+      "max_count": null,
+      "min_count": null,
+      "name": "fastener",
+      "numeric_constraints": [],
+      "preference": null,
+      "reusable": false,
+      "semantic_categories": [
+        "screw",
+        "Phillips screw",
+        "Phillips head screw"
+      ],
+      "semantic_hints": [
+        "has_connectors",
+        "receives_fastening_force"
+      ],
+      "shared": false,
+      "unary_predicates": [],
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+    }
+  ],
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_fasten', 'function': 'tighten_connection_using_tool', 'tool_role': 'fastening_tool', 'target_role': 'fastening_target', 'required_target_count': 1, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': 'fastening_target', 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"No semantic evidence supporting any robot capability in domain 'workshop' for phrase 'tighten_connection_using_tool'\", 'interp_status': 'UNMAPPABLE_OPERATION'}, {'raw_group': {'id': 'op_place_back', 'function': 'release_tool_and_settle_on_surface', 'tool_role': 'fastening_tool', 'target_role': 'workbench_surface', 'required_target_count': 1, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': 'workbench_surface', 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+    "Unresolved required relations: [{'raw_subject': 'fastening_tool', 'raw_phrase': 'performs_securement_action_on', 'raw_object': 'fastening_target', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'performs_securement_action_on' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics\"}]"
+  ],
+  "dangling_endpoints": [],
+  "disabled_operations": [
+    {
+      "interp_status": "UNMAPPABLE_OPERATION",
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "fastening_target",
+        "function": "tighten_connection_using_tool",
+        "id": "op_fasten",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "fastening_target",
+        "tool_role": "fastening_tool",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "reason": "No semantic evidence supporting any robot capability in domain 'workshop' for phrase 'tighten_connection_using_tool'",
+      "status": "UNSUPPORTED_OPERATOR"
+    },
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "workbench_surface",
+        "function": "release_tool_and_settle_on_surface",
+        "id": "op_place_back",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "workbench_surface",
+        "tool_role": "fastening_tool",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "workshop",
+  "live_contract_valid": false,
+  "live_validation_error": "DUPLICATE_OPERATION_ENDPOINT: operation_pairings[0].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[1].anchor_role equals target_role",
+  "online_executable_contract_complete": false,
+  "operation_audit": [
+    {
+      "anchor_role": "fastening_target",
+      "compiler": {
+        "interp_status": "UNMAPPABLE_OPERATION",
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "fastening_target",
+          "function": "tighten_connection_using_tool",
+          "id": "op_fasten",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "fastening_target",
+          "tool_role": "fastening_tool",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "reason": "No semantic evidence supporting any robot capability in domain 'workshop' for phrase 'tighten_connection_using_tool'",
+        "status": "UNSUPPORTED_OPERATOR"
+      },
+      "id": "op_fasten",
+      "raw_phrase": "tighten_connection_using_tool",
+      "source_role": "fastening_tool",
+      "target_role": "fastening_target"
+    },
+    {
+      "anchor_role": "workbench_surface",
+      "compiler": {
+        "raw_group": {
+          "context_relations": [],
+          "context_role": "workbench_surface",
+          "function": "release_tool_and_settle_on_surface",
+          "id": "op_place_back",
+          "required_relations": [],
+          "required_target_count": 1,
+          "target_role": "workbench_surface",
+          "tool_role": "fastening_tool",
+          "usage_policy": "REUSABLE_ACROSS_TARGETS"
+        },
+        "status": "UNINSTANTIABLE_MISSING_ROLE"
+      },
+      "id": "op_place_back",
+      "raw_phrase": "release_tool_and_settle_on_surface",
+      "source_role": "fastening_tool",
+      "target_role": "workbench_surface"
+    }
+  ],
+  "operation_groups": [],
+  "relation_audit": [
+    {
+      "classification": "UNMAPPED",
+      "compiler": {
+        "raw_object": "fastening_target",
+        "raw_phrase": "performs_securement_action_on",
+        "raw_subject": "fastening_tool",
+        "reason": "Relation text 'performs_securement_action_on' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics",
+        "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+      },
+      "id": "rel_fastening_apply",
+      "raw_object": "fastening_target",
+      "raw_phrase": "performs_securement_action_on",
+      "raw_subject": "fastening_tool"
+    },
+    {
+      "classification": "SOFT_CONTEXT",
+      "compiler": {
+        "planner_context": "MAIN_WORKBENCH_ZONE",
+        "provenance": "PLANNER_CONTEXT_CONSTANT",
+        "raw_object": "fastening_tool",
+        "raw_phrase": "physically_holds_and_stabilizes",
+        "raw_subject": "workbench_surface",
+        "status": "ABSORBED_INTO_PLANNER_CONTEXT"
+      },
+      "id": "rel_support_placement",
+      "raw_object": "fastening_tool",
+      "raw_phrase": "physically_holds_and_stabilizes",
+      "raw_subject": "workbench_surface"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unmappable_required_relations": [
+    {
+      "raw_object": "fastening_target",
+      "raw_phrase": "performs_securement_action_on",
+      "raw_subject": "fastening_tool",
+      "reason": "Relation text 'performs_securement_action_on' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [],
+  "variant": "W5"
+}
