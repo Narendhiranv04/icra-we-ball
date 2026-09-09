@@ -202,6 +202,18 @@ def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
             )
 
         tool_node = graph.nodes[grp.tool_role]
+        if grp.physical_preconditions:
+            for subject_role, predicate, object_role in grp.physical_preconditions:
+                if subject_role not in graph.nodes or object_role not in graph.nodes:
+                    raise MalformedVLMSpecificationError(
+                        f"Operation group {grp.id!r} physical precondition references missing role"
+                    )
+                validate_predicate_signature(
+                    domain=domain_norm, predicate=predicate,
+                    subject_kind=graph.nodes[subject_role].entity_kind,
+                    object_kind=graph.nodes[object_role].entity_kind,
+                    subject_role=subject_role, object_role=object_role,
+                )
         for req_rel in cleaned_req_rels:
             validate_predicate_signature(
                 domain=domain_norm,
@@ -239,7 +251,7 @@ def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
                 )
 
             context_node = graph.nodes[grp.context_role]
-            for ctx_rel in cleaned_ctx_rels:
+            for ctx_rel in (() if grp.physical_preconditions else cleaned_ctx_rels):
                 validate_predicate_signature(
                     domain=domain_norm,
                     predicate=ctx_rel,

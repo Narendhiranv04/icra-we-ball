@@ -344,8 +344,6 @@ def evaluate_node_for_role(node: ObservedNode, role: FunctionalRole) -> tuple[st
         }
         if sem_status == "FALSE":
             return "FALSE", details
-        if sem_status == "UNKNOWN":
-            return "UNKNOWN", details
 
     # 3. Unary predicates check
     for pred in role.unary_predicates:
@@ -403,35 +401,39 @@ def _evaluate_operation_group(
     # Helper to check if tool u satisfies all required relations with target t and optional context c
     def check_pair(u_id: str, t_id: str, c_id: str | None = None) -> tuple[str, dict[str, Any]]:
         statuses = []
-        for pred in required_relations:
-            rel = graph_o.get_relation(pred, u_id, t_id)
+        relation_evidence = []
+        checks: list[tuple[str, str, str]] = []
+        if grp.physical_preconditions:
+            role_to_instance = {grp.tool_role: u_id, grp.target_role: t_id}
+            if grp.context_role and c_id is not None:
+                role_to_instance[grp.context_role] = c_id
+            checks.extend(
+                (role_to_instance[s_role], pred, role_to_instance[o_role])
+                for s_role, pred, o_role in grp.physical_preconditions
+                if s_role in role_to_instance and o_role in role_to_instance
+            )
+        else:
+            checks.extend((u_id, pred, t_id) for pred in required_relations)
+            if grp.context_role and c_id is not None:
+                checks.extend((u_id, pred, c_id) for pred in grp.context_relations)
+
+        for subject_id, pred, object_id in checks:
+            rel = graph_o.get_relation(pred, subject_id, object_id)
             rel_status = rel.status if rel else "UNKNOWN"
             statuses.append(rel_status)
+            relation_evidence.append({"predicate": pred, "subject_id": subject_id, "object_id": object_id, "status": rel_status})
             if rel_status != "TRUE":
                 diagnostics.append({
                     "group": grp.id,
-                    "tool": u_id,
-                    "target": t_id,
+                    "tool": u_id, "target": t_id,
+                    "subject_id": subject_id, "object_id": object_id,
                     "predicate": pred,
                     "status": rel_status,
                 })
 
-        if grp.context_role and c_id is not None:
-            for pred in grp.context_relations:
-                rel = graph_o.get_relation(pred, u_id, c_id)
-                rel_status = rel.status if rel else "UNKNOWN"
-                statuses.append(rel_status)
-                if rel_status != "TRUE":
-                    diagnostics.append({
-                        "group": grp.id,
-                        "tool": u_id,
-                        "context_id": c_id,
-                        "predicate": pred,
-                        "status": rel_status,
-                    })
-
         context_dict = {grp.context_role: c_id} if (grp.context_role and c_id is not None) else {}
-        binding = {"tool_id": u_id, "target_id": t_id, "context": context_dict}
+        binding = {"tool_id": u_id, "target_id": t_id, "context": context_dict,
+                   "relation_evidence": relation_evidence}
 
         if "FALSE" in statuses:
             return "FALSE", binding
@@ -585,6 +587,7 @@ def ground_graph(
             unsatisfied_relations=(),
             unresolved_constraints=tuple(missing_roles_definitive),
             evidence={"candidate_evaluations": {f"{k[0]}:{k[1]}": v for k, v in evaluations.items()}},
+            failure_kind="OBJECT_DISCOVERY_FAILURE" if search_exhausted else None,
         )
 
     # Pigeonhole principle capacity check for distinct objects
@@ -607,6 +610,7 @@ def ground_graph(
             unsatisfied_relations=(),
             unresolved_constraints=("INSUFFICIENT_SCENE_OBJECTS_FOR_ROLES",),
             evidence={"candidate_evaluations": {f"{k[0]}:{k[1]}": v for k, v in evaluations.items()}},
+            failure_kind="OBJECT_DISCOVERY_FAILURE" if search_exhausted else None,
         )
 
     # Collect operation-managed relation signatures to avoid double-enforcing with Cartesian semantics
@@ -636,7 +640,7 @@ def ground_graph(
 
     unsatisfied_relations_recorded: list[dict[str, Any]] = []
     unresolved_relations_recorded: list[dict[str, Any]] = []
-    valid_assignments: list[tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]] = []
+    valid_assignments: list[tuple[dict[str, Any], dict[str, list[dict[str, Any]]], dict[str, Any]]] = []
     valid_unknown_assignments: list[tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]] = []
     has_unknown_combination = bool(missing_roles_potential)
 
@@ -663,14 +667,14 @@ def ground_graph(
             assignment_map: dict[str, Any] = {}
             used_instances: set[str] = set()
             conflict = False
-            combo_has_unknown_node = False
+            selected_unknown_nodes: list[tuple[str, str]] = []
 
             for r_idx, r_name in enumerate(role_names):
                 role = roles[r_name]
                 selected_tagged = combo[r_idx]
                 selected_ids = [item[0] for item in selected_tagged]
                 if any(not item[1] for item in selected_tagged):
-                    combo_has_unknown_node = True
+                    selected_unknown_nodes.extend((r_name, item[0]) for item in selected_tagged if not item[1])
 
                 if role.entity_kind == "OBJECT" and not role.shared:
                     for inst_id in selected_ids:
@@ -706,8 +710,9 @@ def ground_graph(
                     continue
 
             # Evaluate Operation Groups
-            combo_status = "UNKNOWN" if combo_has_unknown_node else "TRUE"
+            combo_status = "TRUE"
             combo_op_bindings: dict[str, list[dict[str, Any]]] = {}
+            incident_evidence: dict[tuple[str, str], list[dict[str, Any]]] = {}
             for grp in graph_f.operation_groups:
                 tools = assignment_map.get(grp.tool_role, [])
                 targets = assignment_map.get(grp.target_role, [])
@@ -735,6 +740,20 @@ def ground_graph(
                         combo_status = "UNKNOWN"
                     unresolved_relations_recorded.extend(grp_diags)
                 else:
+                    for binding in grp_matching:
+                        binding["capability_id"] = grp.capability_id
+                        binding["source_operation_id"] = grp.id
+                        binding["planner_operation"] = grp.function
+                        for relation_evidence in binding.get("relation_evidence", []):
+                            s_id = relation_evidence["subject_id"]
+                            o_id = relation_evidence["object_id"]
+                            role_instances = [(grp.tool_role, tool_list), (grp.target_role, target_list)]
+                            if grp.context_role and context_list:
+                                role_instances.append((grp.context_role, context_list))
+                            for endpoint_role, endpoint_ids in role_instances:
+                                for endpoint_id in endpoint_ids:
+                                    if endpoint_id in {s_id, o_id}:
+                                        incident_evidence.setdefault((endpoint_role, endpoint_id), []).append(relation_evidence)
                     combo_op_bindings[grp.id] = grp_matching
 
             if combo_status == "FALSE":
@@ -769,6 +788,13 @@ def ground_graph(
                             continue
                         obs_rel = graph_o.get_relation(predicate, s_id, o_id)
                         rel_status = obs_rel.status if obs_rel else "UNKNOWN"
+                        rel_evidence = {
+                            "predicate": predicate, "subject_id": s_id,
+                            "object_id": o_id, "status": rel_status,
+                            "provenance": relation.provenance,
+                        }
+                        incident_evidence.setdefault((subj_role, s_id), []).append(rel_evidence)
+                        incident_evidence.setdefault((obj_role, o_id), []).append(rel_evidence)
 
                         # Determine satisfaction based on relation.expected
                         if rel_status == "UNKNOWN":
@@ -807,10 +833,62 @@ def ground_graph(
                 if combo_status == "FALSE":
                     break
 
+            binding_provenance: dict[str, Any] = {}
+            if combo_status != "FALSE":
+                for role_name, instance_id in selected_unknown_nodes:
+                    detail = evaluations[(role_name, instance_id)]
+                    unknown_checks = [name for name, check in detail["checks"].items() if check["status"] == "UNKNOWN"]
+                    relation_evidence = incident_evidence.get((role_name, instance_id), [])
+                    recoverable = (
+                        unknown_checks == ["semantic_categories"]
+                        and bool(relation_evidence)
+                        and all(item["status"] == "TRUE" for item in relation_evidence)
+                    )
+                    if not recoverable:
+                        combo_status = "UNKNOWN"
+                    binding_provenance[f"{role_name}:{instance_id}"] = {
+                        "role": role_name,
+                        "observed_instance": instance_id,
+                        "role_resolution": roles[role_name].role_resolution_status,
+                        "grounding_mode": "RELATIONALLY_VERIFIED_GROUNDING" if recoverable else "UNRESOLVED_SEMANTIC_UNKNOWN",
+                        "semantic_status": "UNKNOWN",
+                        "relation_evidence": relation_evidence,
+                        "operation_evidence": [
+                            {"capability": grp.capability_id, "source_operation_id": grp.id}
+                            for grp in graph_f.operation_groups
+                            if grp.tool_role == role_name or grp.target_role == role_name or grp.context_role == role_name
+                        ],
+                    }
+                for role_name, assigned in assignment_map.items():
+                    instance_ids = [assigned] if isinstance(assigned, str) else assigned
+                    for instance_id in instance_ids:
+                        key = f"{role_name}:{instance_id}"
+                        binding_provenance.setdefault(key, {
+                            "role": role_name,
+                            "observed_instance": instance_id,
+                            "role_resolution": roles[role_name].role_resolution_status,
+                            "grounding_mode": "FUNCTION_AND_RELATION",
+                            "semantic_status": evaluations[(role_name, instance_id)]["checks"].get("semantic_categories", {}).get("status", "TRUE"),
+                            "relation_evidence": incident_evidence.get((role_name, instance_id), []),
+                            "operation_evidence": [
+                                {"capability": grp.capability_id, "source_operation_id": grp.id}
+                                for grp in graph_f.operation_groups
+                                if grp.tool_role == role_name or grp.target_role == role_name or grp.context_role == role_name
+                            ],
+                        })
+
             if combo_status == "TRUE":
-                valid_assignments.append((assignment_map, combo_op_bindings))
-                break
-            elif combo_status == "UNKNOWN":
+                operations_complete = all(
+                    grp.id in combo_op_bindings
+                    and len(combo_op_bindings[grp.id]) >= grp.required_target_count
+                    for grp in graph_f.operation_groups
+                )
+                if operations_complete:
+                    valid_assignments.append((assignment_map, combo_op_bindings, binding_provenance))
+                    break
+                else:
+                    combo_status = "UNKNOWN"
+            if combo_status == "UNKNOWN":
                 has_unknown_combination = True
                 valid_unknown_assignments.append((assignment_map, combo_op_bindings))
 
@@ -818,8 +896,11 @@ def ground_graph(
             break
 
     if valid_assignments:
-        valid_assignments.sort(key=lambda a: sorted(str(v) for v in a[0].values()))
-        chosen_assignment, chosen_bindings = valid_assignments[0]
+        valid_assignments.sort(key=lambda a: (
+            sum(item.get("semantic_status") == "UNKNOWN" for item in a[2].values()),
+            tuple(sorted(str(v) for v in a[0].values())),
+        ))
+        chosen_assignment, chosen_bindings, chosen_provenance = valid_assignments[0]
         return GraphGroundingResult(
             status="COMPLETE",
             complete=True,
@@ -828,7 +909,8 @@ def ground_graph(
             missing_roles=(),
             unsatisfied_relations=(),
             unresolved_constraints=(),
-            evidence={"valid_assignment_count": len(valid_assignments)},
+            evidence={"valid_assignment_count": len(valid_assignments), "binding_provenance": chosen_provenance,
+                      "operation_binding_complete": True},
         )
 
     if not search_exhausted:
@@ -849,6 +931,7 @@ def ground_graph(
                 "unresolved_relations": unresolved_relations_recorded,
                 "unsatisfied_relations": unsatisfied_relations_recorded,
             },
+            failure_kind=None,
         )
 
     # Search is exhausted: check if failure was due to unresolved UNKNOWN evidence vs definitive FALSE
@@ -867,6 +950,7 @@ def ground_graph(
                 "search_exhausted": True,
                 "unresolved_relations": unresolved_relations_recorded,
             },
+            failure_kind="FUNCTIONAL_ASSIGNMENT_FAILURE",
         )
 
     return GraphGroundingResult(
@@ -886,6 +970,7 @@ def ground_graph(
             "search_exhausted": True,
             "unsatisfied_relations": unsatisfied_relations_recorded,
         },
+        failure_kind="FUNCTIONAL_ASSIGNMENT_FAILURE",
     )
 
 

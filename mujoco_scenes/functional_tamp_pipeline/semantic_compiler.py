@@ -940,16 +940,6 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                     "source_operation_id": source_op_id,
                     "capability_id": cap_id,
                 })
-            trace['groups'].append({
-                'raw_group': group,
-                'status': 'STATIC_ALREADY_SATISFIED',
-                'representation': 'SINGLETON_RELATIONS',
-                'capability_id': op_interp.capability.capability_id if op_interp.capability else None,
-                'planner_operation': op_interp.planner_operation,
-                'physical_preconditions': [list(t) for t in op_interp.physical_preconditions],
-                'preconditions_provenance': preconditions_provenance,
-            })
-            continue
 
         runtime_function = op_interp.planner_operation
         canonical_group_id = {
@@ -1026,6 +1016,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             selection_preference=group.get('selection_preference', ('minimize_distinct_tools' if usage_policy == 'SEQUENTIAL_REUSE_ALLOWED' else 'deterministic_rank') if domain == 'kitchen' else None),
             capability_id=cap_id,
             preconditions_provenance=tuple(grp_precond_provenance),
+            physical_preconditions=op_interp.physical_preconditions,
         ))
         trace['groups'].append({
             'raw_group': group,

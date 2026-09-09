@@ -258,6 +258,7 @@ class OperationGroup:
     selection_preference: str | None = None
     capability_id: str | None = None
     preconditions_provenance: tuple[dict[str, Any], ...] = ()
+    physical_preconditions: tuple[tuple[str, str, str], ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -279,6 +280,7 @@ class OperationGroup:
             selection_preference=str(data["selection_preference"]) if data.get("selection_preference") else None,
             capability_id=str(data["capability_id"]) if data.get("capability_id") else None,
             preconditions_provenance=tuple(data.get("preconditions_provenance", ())),
+            physical_preconditions=tuple(tuple(map(str, item)) for item in data.get("physical_preconditions", ())),
         )
 
 
@@ -513,6 +515,7 @@ class GraphGroundingResult:
     unsatisfied_relations: tuple[dict[str, Any], ...] = ()
     unresolved_constraints: tuple[str, ...] = ()
     evidence: dict[str, Any] = field(default_factory=dict)
+    failure_kind: str | None = None
 
     # Backward compatibility properties
     @property
@@ -542,6 +545,7 @@ class GraphGroundingResult:
             "unsatisfied_relations": list(self.unsatisfied_relations),
             "unresolved_constraints": list(self.unresolved_constraints),
             "evidence": self.evidence,
+            "failure_kind": self.failure_kind,
         }
 
     @classmethod
@@ -555,6 +559,7 @@ class GraphGroundingResult:
             unsatisfied_relations=tuple(dict(r) for r in data.get("unsatisfied_relations", ())),
             unresolved_constraints=tuple(map(str, data.get("unresolved_constraints", ()))),
             evidence=dict(data.get("evidence", {})),
+            failure_kind=str(data["failure_kind"]) if data.get("failure_kind") else None,
         )
 
 
