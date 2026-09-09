@@ -23,37 +23,38 @@ from .robot_capability_registry import extract_operation_semantic_candidates, is
 from .semantic_typing import build_role_type_hypotheses, relation_canonical_role_pairs
 
 
-SYSTEM_PROMPT_V3 = """You generate one open-ended functional task contract from an instruction and initial RGB views. Return only JSON matching the schema. Do not output an action sequence or backend predicate names.
+SYSTEM_PROMPT_V3 = """You turn one instruction and three photographs of the starting scene into a single functional task contract. Return only JSON matching the schema. Never output an action sequence, a plan, or backend predicate names.
 
-SUPPORTED means the task can be represented as roles, relations, and operations. Hidden objects, missing visibility, unknown inventory, closed storage, or required inspection/search are not reasons for UNSUPPORTED. Use UNSUPPORTED only when the task itself cannot be represented by this abstraction; then emit an empty contract and explain why. A supported contract is non-empty and unsupported_reason is empty.
+Do the work in two passes and keep them apart.
 
-Entity kinds: OBJECT is an independently selectable/manipulable item; REGION is a spatial area, support surface, or selectable destination; FIXED_TARGET is a non-manipulated contextual reference or fixed interaction target. Cups, plates, remotes, tools, and fasteners are normally OBJECT. Support areas are normally REGION. Marked workpiece features and seating references may be FIXED_TARGET.
+PASS 1 - THE TASK, WITHOUT LOOKING. Read the instruction alone. List every physical participant the task needs to be finished, and describe each by the job it does, in plain words. Two participants whose jobs differ are separate roles even when they could be the same kind of object: something that supplies material is not the thing that receives it, something used as an implement is not the thing being worked on, and a support belonging to one individual is not a support deliberately shared. Declare a role once with a count rather than repeating it. A participant the instruction needs stays required even when nothing in the photographs could serve it.
 
-Binding policies: DISTINCT requires different physical instances; REUSABLE permits an instance to participate in multiple operation applications; SHARED denotes one intentionally common object, context, or region. Multiple independent payloads with required_count greater than one are normally DISTINCT, not SHARED. required_count never means operation count.
+Only the instruction creates requirements. Do not invent a material, a supply, or a preparation step because a finished result implies one might exist.
 
-Reason silently in this order:
-1. Clause audit: identify every clause's physical participants, required relations, and operations.
-2. Participant ledger: declare every independently groundable object, support region, or fixed anchor before considering visibility. Hidden participants remain required.
-3. Function audit: distinguish material sources, receiving containers, reusable instruments, manipulated joining components, fixed receiving targets, personal supports, shared supports, and seating/context anchors. Roles with different causal functions remain distinct even if they share a broad object category.
-4. Operation audit: audit every operation's causal functions against selected role IDs. Every participant must play a causal function compatible with its declared role.function. If a required function has no role, declare a separate role before output; never reuse a differently functioning role. Never substitute meal utensil for stirrer, component for driver, shared for personal support, seat for support, or component for fixed target. Use one atomic operation per transformation and list only its directly participating roles. Array order has no source/target/anchor meaning. Each transfer has exactly one material source and one receiver; emit separate transfers for multiple sources. Placement relative to seating needs payload, support, and required seating anchors. Fastening needs an implement, joining component, and one fixed receiving target.
-5. Count audit: required_count counts physical instances; operation_count counts applications. Repeated use requires REUSABLE or enough DISTINCT instances. Distributing counted payloads to distinct destinations requires one operation per pairing or one unambiguous repeated pattern; never combine alternative destinations.
-6. Consistency audit: every participant is an exact declared role ID—not a count, placeholder, or undeclared plural. Represent every clause; use counted roles for interchangeable instances; keep personal and shared supports distinct. Robot components are not task objects unless targeted. Required relations describe task results or compatibility, never incidental initial locations. Inspection/search and initial storage belong only in observation guidance. For both, all, pair, each, or between, include all declared set roles; do not invent a synthetic pair role.
+PASS 2 - THE SCENE. Now use the three photographs, and only for guidance: what appears to be present, where things currently sit, and which closed or storage structures could be opened and searched. Being visible never makes something required. Where something currently sits is present state, not a goal, unless the instruction asks for it to go there or stay there.
 
-Declare material sources or preparation processes only when explicitly specified; an end product never implies ingredients or source containers. Serving count changes receiver count and operation_count, not source count: one named material source is normally REUSABLE unless distinct sources are required. A quantity-only person/user is neither a role nor a serve target. Include seats only for required geometry, and never put seating anchors into serving/preparation operations. Serve or prepare is physical only when it specifies a transformation or destination. A payload's current surface is observation context, not a placement participant. Every placement includes payload and destination support plus required spatial anchors.
+ROLES. entity_kind is OBJECT for an independently movable item, REGION for an area or surface that can be a destination, FIXED_TARGET for a fixed reference or interaction point that is not carried around. required_count is how many physical instances the task needs. binding_policy is DISTINCT when separate instances are needed, REUSABLE when one instance can serve repeatedly, SHARED for a single thing deliberately common to several. candidate_categories are ordinary names the thing might go by; required_properties are qualities it must have.
 
-Final audit: no source from an end product, quantity-only recipients, or seats in non-placement operations. Express two-seat accessibility as one both-seat relation or one relation per seat. Use one fixed receiving-target role. Omit incidental viewing context.
+RELATIONS say what must hold for the task to count as done: one thing must suit or fit another, one must depend on another, or things must end up in a particular arrangement. Do not state a relation that merely reports how the scene already looks. When the instruction says both, all, each, between, or a pair, name every declared role the phrase covers instead of inventing one combined role.
 
-Use short atomic natural-language role functions, relations, operations, and unary properties, not uppercase backend-style predicate names. Relation participant order is not directional. Initial-location statements such as currently on, located initially, or stored on are observation context, not automatically required final relations. Required relations express compatibility, functional dependency, final state, or a physical relation needed by an operation. Do not add operations merely to describe an already satisfied state unless the instruction requires the transformation. Do not estimate numeric geometry. Observation candidates are visible evidence only. Inspectable regions must be visible closed/storage structures; inspection_order must contain every exact declared region id once and nothing else. Region reasons may say they could be inspected for task-relevant candidates but must not claim hidden contents."""
+OPERATIONS are the physical changes the instruction demands. Give one operation for each distinct change and list only the roles directly taking part in it. Participant order carries no meaning: the runtime decides which one is acted on, which receives, and which is a reference. Do not add an operation to describe something already true. operation_count is how many times the change happens, and is independent of required_count.
+
+People who only determine how many portions are needed change counts. They are not roles and not things to be handled, unless the task genuinely requires placing something relative to where someone is.
+
+Do not guess measurements, distances, or coordinates. Write roles, relations and operations as short everyday phrases, not capitalised code-like names.
+
+Observation guidance: list visible candidates under the role ids you declared; list only genuinely closed or storage structures as inspectable regions, saying why each could be worth searching without claiming to know its contents; let inspection_order name every region you declared exactly once and nothing else.
+
+Use UNSUPPORTED only when the task itself cannot be described as roles, relations and operations, and then leave the contract empty and say why. Things being hidden, unknown, stored away, or needing a search are never grounds for UNSUPPORTED."""
 
 
 USER_REQUEST_V3 = (
-    "Derive the complete functional task contract from the instruction, then use the "
-    "three initial views only for observation guidance. Declare all physical participants "
-    "before visibility analysis. For each relation provide two to four unordered declared "
-    "participant roles, including every declared member named by both/all/pair/each/between. "
-    "For each physical operation provide every directly involved declared "
-    "role as an unordered participant set. Keep physical-instance counts separate from "
-    "operation-application counts. Output only the final JSON."
+    "Build the task contract from the instruction first, then use the three views only "
+    "to describe what is present and what could be searched. Declare every required "
+    "participant, including any that is not currently visible. Give each relation two to "
+    "four declared roles, naming every member the instruction groups together. Give each "
+    "operation the declared roles that directly take part. Keep instance counts and "
+    "operation counts separate. Output only the final JSON."
 )
 
 
