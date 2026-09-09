@@ -1,0 +1,48 @@
+{
+  "source_matrix": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST",
+  "source_contract_count": 32,
+  "semantic_fm_calls": 0,
+  "validation_mode": "LIVE_V2_EQUIVALENT",
+  "outcome_counts": {
+    "kitchen": {"SUCCESS": 0, "TASK_SPECIFICATION_FAILURE": 11, "GRAPH_COMPILATION_FAILURE": 0, "OBJECT_DISCOVERY_FAILURE": 1, "FUNCTIONAL_ASSIGNMENT_FAILURE": 0, "PLANNING_FAILURE": 0},
+    "living_room": {"SUCCESS": 2, "TASK_SPECIFICATION_FAILURE": 7, "GRAPH_COMPILATION_FAILURE": 0, "OBJECT_DISCOVERY_FAILURE": 1, "FUNCTIONAL_ASSIGNMENT_FAILURE": 0, "PLANNING_FAILURE": 0},
+    "workshop": {"SUCCESS": 1, "TASK_SPECIFICATION_FAILURE": 9, "GRAPH_COMPILATION_FAILURE": 0, "OBJECT_DISCOVERY_FAILURE": 0, "FUNCTIONAL_ASSIGNMENT_FAILURE": 0, "PLANNING_FAILURE": 0},
+    "overall": {"SUCCESS": 3, "TASK_SPECIFICATION_FAILURE": 27, "GRAPH_COMPILATION_FAILURE": 0, "OBJECT_DISCOVERY_FAILURE": 2, "FUNCTIONAL_ASSIGNMENT_FAILURE": 0, "PLANNING_FAILURE": 0}
+  },
+  "graph_compilation": {
+    "task_specification_valid_contracts": 5,
+    "compiled_contracts": 5,
+    "success_rate": 1.0
+  },
+  "provisional_resolution": {
+    "roles_entering_grounding": 0,
+    "roles_resolved_using_g_o": 0,
+    "relation_assisted_canonical_type_resolutions": 0,
+    "operation_assisted_canonical_type_resolutions": 0,
+    "semantic_unknown_scene_recoveries": 0,
+    "remaining_ambiguous_roles": 0,
+    "ambiguous_functional_assignments": 0
+  },
+  "a_star_calls": 4,
+  "stage_corrections": {
+    "K1": {"before": "SUCCESS", "after": "TASK_SPECIFICATION_FAILURE", "reason": "INCONSISTENT_OPERATION_REUSE_CARDINALITY"},
+    "K2": {"before": "OBJECT_DISCOVERY_FAILURE", "after": "TASK_SPECIFICATION_FAILURE", "reason": "Relation object_role 'serving_surface' not in declared roles"},
+    "W9": {"before": "GRAPH_COMPILATION_FAILURE", "after": "TASK_SPECIFICATION_FAILURE", "reason": "INCOMPLETE_OPERATION_PARTICIPANT_STRUCTURE"}
+  },
+  "cases": {
+    "K1": "TASK_SPECIFICATION_FAILURE", "K2": "TASK_SPECIFICATION_FAILURE", "K3": "TASK_SPECIFICATION_FAILURE", "K4": "TASK_SPECIFICATION_FAILURE", "K5": "TASK_SPECIFICATION_FAILURE", "K6": "TASK_SPECIFICATION_FAILURE", "K7": "TASK_SPECIFICATION_FAILURE", "K8": "TASK_SPECIFICATION_FAILURE", "K9": "TASK_SPECIFICATION_FAILURE", "K10": "TASK_SPECIFICATION_FAILURE", "K11": "TASK_SPECIFICATION_FAILURE", "K12": "OBJECT_DISCOVERY_FAILURE",
+    "L1": "SUCCESS", "L2": "OBJECT_DISCOVERY_FAILURE", "L3": "SUCCESS", "L4": "TASK_SPECIFICATION_FAILURE", "L5": "TASK_SPECIFICATION_FAILURE", "L6": "TASK_SPECIFICATION_FAILURE", "L7": "TASK_SPECIFICATION_FAILURE", "L8": "TASK_SPECIFICATION_FAILURE", "L9": "TASK_SPECIFICATION_FAILURE", "L10": "TASK_SPECIFICATION_FAILURE",
+    "W1": "TASK_SPECIFICATION_FAILURE", "W2": "TASK_SPECIFICATION_FAILURE", "W3": "SUCCESS", "W4": "TASK_SPECIFICATION_FAILURE", "W5": "TASK_SPECIFICATION_FAILURE", "W6": "TASK_SPECIFICATION_FAILURE", "W7": "TASK_SPECIFICATION_FAILURE", "W8": "TASK_SPECIFICATION_FAILURE", "W9": "TASK_SPECIFICATION_FAILURE", "W10": "TASK_SPECIFICATION_FAILURE"
+  },
+  "successful_cases": {
+    "L1": {"status": "ACTION_SEQUENCE_READY", "action_count": 10},
+    "L3": {"status": "ACTION_SEQUENCE_READY", "action_count": 10},
+    "W3": {"status": "ACTION_SEQUENCE_READY", "action_count": 5}
+  },
+  "remaining_failures": {
+    "OBJECT_DISCOVERY_FAILURE": {
+      "K12": "Required source/stirrer observations remain incomplete; retained candidate plan is not reported as success",
+      "L2": "No joint observed assignment for SEATING_POSITION and CUP_SAUCER_SET"
+    }
+  }
+}
