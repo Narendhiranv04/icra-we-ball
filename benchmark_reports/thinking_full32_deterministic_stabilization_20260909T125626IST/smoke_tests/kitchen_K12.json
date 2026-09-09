@@ -1,0 +1,38 @@
+{
+  "astar_invocations": 1,
+  "candidate_plan_length": 8,
+  "domain": "kitchen",
+  "failure_reason": null,
+  "high_level_replans": 0,
+  "independent_plan_validation": {
+    "grounding_complete": false,
+    "plan_replay_valid": true,
+    "violations": []
+  },
+  "inspected_regions": [
+    "D1",
+    "D2",
+    "C2",
+    "B1",
+    "C1"
+  ],
+  "next_blocker": "NONE_AT_PIPELINE_BOUNDARY; independent audit notes grounding_complete=false despite ACTION_SEQUENCE_READY",
+  "saved_raw_sha256": "63926f969f1d99a03ff95d42b35084752ad490e02cc41ab94c10e8af642df6f0",
+  "search_statistics": {
+    "algorithm": "deterministic_astar_symbolic_state_search",
+    "expanded_states": 80,
+    "frontier_peak": 30,
+    "generated_states": 222,
+    "is_partial": false,
+    "plan_cost": 8,
+    "plan_length": 8,
+    "satisfied_goals": 5,
+    "search_time_ms": 0.30920899007469416,
+    "total_goals": 5,
+    "visited_states": 94
+  },
+  "semantic_fm_calls": 0,
+  "spec_acquisition": "archived raw response after safe deterministic normalization",
+  "terminal_status": "ACTION_SEQUENCE_READY",
+  "variant": "K12"
+}

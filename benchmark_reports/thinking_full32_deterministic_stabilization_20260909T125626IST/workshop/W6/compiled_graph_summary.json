@@ -1,0 +1,74 @@
+{
+  "canonicalization_status": "PARTIAL",
+  "compiled": true,
+  "contract_missing_reasons": [
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_1', 'function': 'apply_fastening_force', 'tool_role': 'fastening_tool', 'target_role': 'fastening_target', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'compatible_component', 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, fastener)\", 'interp_status': 'UNMAPPABLE_OPERATION'}, {'raw_group': {'id': 'op_2', 'function': 'place_tool_down', 'tool_role': 'fastening_tool', 'target_role': 'workbench_surface', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': None, 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]"
+  ],
+  "disabled_operations": [
+    {
+      "interp_status": "UNMAPPABLE_OPERATION",
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "compatible_component",
+        "function": "apply_fastening_force",
+        "id": "op_1",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "fastening_target",
+        "tool_role": "fastening_tool",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "reason": "Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, fastener)",
+      "status": "UNSUPPORTED_OPERATOR"
+    },
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "place_tool_down",
+        "id": "op_2",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "workbench_surface",
+        "tool_role": "fastening_tool",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "workshop",
+  "graph_node_names": [
+    "driver",
+    "fastener",
+    "repair_target"
+  ],
+  "online_executable_contract_complete": false,
+  "operation_groups": [],
+  "physical_verifier_relations": [],
+  "task_causal_relations": [
+    {
+      "capability_id": null,
+      "category": "TASK_CAUSAL_SEMANTICS",
+      "expected": true,
+      "object_role": "repair_target",
+      "predicate": "INSTALLED_AT",
+      "provenance": "TASK_CAUSAL_SEMANTICS",
+      "source_operation_id": null,
+      "subject_role": "fastener"
+    },
+    {
+      "capability_id": null,
+      "category": "TASK_CAUSAL_SEMANTICS",
+      "expected": true,
+      "object_role": "repair_target",
+      "predicate": "ACTS_ON",
+      "provenance": "TASK_CAUSAL_SEMANTICS",
+      "source_operation_id": null,
+      "subject_role": "driver"
+    }
+  ],
+  "task_effect_relations": [],
+  "unresolved_required_relations": [],
+  "unresolved_roles": [],
+  "variant": "W6"
+}

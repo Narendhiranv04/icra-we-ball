@@ -1,0 +1,211 @@
+{
+  "canonicalization_status": "PARTIAL",
+  "compiled": true,
+  "contract_missing_reasons": [
+    "Unresolved roles: [{'raw_role': {'binding_policy': 'SHARED', 'candidate_categories': ['dining table', 'workbench'], 'entity_kind': 'REGION', 'function': 'Horizontal work and service plane', 'id': 'table_surface', 'required_count': 1, 'required_properties': ['is_horizontal', 'has_drawers'], 'visible_candidates': [{'label': 'Table Top', 'visual_description': 'Large white horizontal plane with wooden legs and drawers.'}], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}]",
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_04', 'function': 'place_soup_on_table', 'tool_role': 'soup_bowl', 'target_role': 'table_surface', 'required_target_count': 2, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': None, 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}, {'raw_group': {'id': 'op_05', 'function': 'arrange_eating_utensil_on_bowl', 'tool_role': 'spoon_utensil', 'target_role': 'soup_bowl', 'required_target_count': 2, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': None, 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"Operation semantic evidence ['PROVIDE_SOUP_EATING_UTENSIL'] is incompatible with endpoints (coffee_stirrer, soup_container, None)\", 'interp_status': 'UNMAPPABLE_OPERATION'}]",
+    "Unresolved required relations: [{'raw_subject': 'coffee_mug', 'raw_phrase': 'supported_on_by_gravity', 'raw_object': 'table_surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'soup_bowl', 'raw_phrase': 'supported_on_by_gravity', 'raw_object': 'table_surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'water_vessel', 'raw_phrase': 'placed_adjacent_to', 'raw_object': 'table_surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]"
+  ],
+  "disabled_operations": [
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "place_soup_on_table",
+        "id": "op_04",
+        "required_relations": [],
+        "required_target_count": 2,
+        "target_role": "table_surface",
+        "tool_role": "soup_bowl",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    },
+    {
+      "interp_status": "UNMAPPABLE_OPERATION",
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "arrange_eating_utensil_on_bowl",
+        "id": "op_05",
+        "required_relations": [],
+        "required_target_count": 2,
+        "target_role": "soup_bowl",
+        "tool_role": "spoon_utensil",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "reason": "Operation semantic evidence ['PROVIDE_SOUP_EATING_UTENSIL'] is incompatible with endpoints (coffee_stirrer, soup_container, None)",
+      "status": "UNSUPPORTED_OPERATOR"
+    }
+  ],
+  "domain": "kitchen",
+  "graph_node_names": [
+    "coffee_container",
+    "coffee_source",
+    "coffee_stirrer",
+    "soup_container",
+    "water_source"
+  ],
+  "online_executable_contract_complete": false,
+  "operation_groups": [
+    {
+      "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": false,
+      "function": "POUR",
+      "id": "material_transfer",
+      "preconditions_provenance": [],
+      "required_relations": [],
+      "required_target_count": 2,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": "minimize_distinct_tools",
+      "target_role": "coffee_container",
+      "tool_role": "water_source",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": false,
+      "function": "POUR",
+      "id": "op_02",
+      "preconditions_provenance": [],
+      "required_relations": [],
+      "required_target_count": 2,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": "minimize_distinct_tools",
+      "target_role": "coffee_container",
+      "tool_role": "coffee_source",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "capability_id": "STIR_COFFEE",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": false,
+      "function": "STIR_COFFEE",
+      "id": "coffee_stirring",
+      "preconditions_provenance": [
+        {
+          "capability_id": "STIR_COFFEE",
+          "predicate": "INSERTABLE_IN",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_03"
+        },
+        {
+          "capability_id": "STIR_COFFEE",
+          "predicate": "REACHES_BOTTOM",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_03"
+        }
+      ],
+      "required_relations": [
+        "INSERTABLE_IN",
+        "REACHES_BOTTOM"
+      ],
+      "required_target_count": 2,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": "minimize_distinct_tools",
+      "target_role": "coffee_container",
+      "tool_role": "coffee_stirrer",
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  ],
+  "physical_verifier_relations": [],
+  "task_causal_relations": [
+    {
+      "capability_id": null,
+      "category": "TASK_CAUSAL_SEMANTICS",
+      "expected": true,
+      "object_role": "soup_container",
+      "predicate": "PAIRED_WITH",
+      "provenance": "TASK_CAUSAL_SEMANTICS",
+      "source_operation_id": null,
+      "subject_role": "coffee_stirrer"
+    },
+    {
+      "capability_id": null,
+      "category": "TASK_CAUSAL_SEMANTICS",
+      "expected": true,
+      "object_role": "coffee_container",
+      "predicate": "ACTS_ON",
+      "provenance": "TASK_CAUSAL_SEMANTICS",
+      "source_operation_id": null,
+      "subject_role": "coffee_stirrer"
+    },
+    {
+      "capability_id": null,
+      "category": "TASK_CAUSAL_SEMANTICS",
+      "expected": true,
+      "object_role": "coffee_container",
+      "predicate": "PROVIDES_MATERIAL_TO",
+      "provenance": "TASK_CAUSAL_SEMANTICS",
+      "source_operation_id": null,
+      "subject_role": "coffee_source"
+    },
+    {
+      "capability_id": null,
+      "category": "TASK_CAUSAL_SEMANTICS",
+      "expected": true,
+      "object_role": "coffee_container",
+      "predicate": "PROVIDES_MATERIAL_TO",
+      "provenance": "TASK_CAUSAL_SEMANTICS",
+      "source_operation_id": null,
+      "subject_role": "water_source"
+    }
+  ],
+  "task_effect_relations": [],
+  "unresolved_required_relations": [
+    {
+      "raw_object": "table_surface",
+      "raw_phrase": "supported_on_by_gravity",
+      "raw_subject": "coffee_mug",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "table_surface",
+      "raw_phrase": "supported_on_by_gravity",
+      "raw_subject": "soup_bowl",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "table_surface",
+      "raw_phrase": "placed_adjacent_to",
+      "raw_subject": "water_vessel",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [
+    {
+      "raw_role": {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "dining table",
+          "workbench"
+        ],
+        "description": "",
+        "entity_kind": "REGION",
+        "function": "Horizontal work and service plane",
+        "id": "table_surface",
+        "required_count": 1,
+        "required_properties": [
+          "is_horizontal",
+          "has_drawers"
+        ],
+        "visible_candidates": [
+          {
+            "label": "Table Top",
+            "visual_description": "Large white horizontal plane with wooden legs and drawers."
+          }
+        ]
+      },
+      "status": "UNRESOLVED_SEMANTIC"
+    }
+  ],
+  "variant": "K3"
+}

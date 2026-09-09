@@ -1,0 +1,135 @@
+{
+  "canonicalization_status": "PARTIAL",
+  "compiled": true,
+  "contract_missing_reasons": [
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'binding_policy': 'SHARED', 'candidate_categories': ['large coffee table', 'cluttered surface'], 'entity_kind': 'REGION', 'function': 'Current storage location for items', 'id': 'initial_storage_surface', 'required_count': 1, 'required_properties': ['currently holds scattered items', 'larger than required for individuals'], 'visible_candidates': [{'label': 'large_coffee_table', 'visual_description': 'Long wooden table holding items in foreground'}], 'description': ''}, 'collision_with': 'accessible_central_zone'}]",
+    "Unresolved required relations: [{'raw_subject': 'refreshment_set', 'raw_phrase': 'currently_resides_on', 'raw_object': 'initial_storage_surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]"
+  ],
+  "disabled_operations": [],
+  "domain": "living_room",
+  "graph_node_names": [
+    "CUP_SAUCER_SET",
+    "PERSONAL_CUP_SAUCER_REGION",
+    "REMOTE",
+    "SHARED_REMOTE_REGION"
+  ],
+  "online_executable_contract_complete": false,
+  "operation_groups": [
+    {
+      "capability_id": "SUPPORT_DRINKWARE",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": true,
+      "function": "SUPPORT_DRINKWARE",
+      "id": "personal_support_group",
+      "preconditions_provenance": [
+        {
+          "capability_id": "SUPPORT_DRINKWARE",
+          "predicate": "FITS_SET_ON",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_001"
+        }
+      ],
+      "required_relations": [
+        "FITS_SET_ON"
+      ],
+      "required_target_count": 2,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": null,
+      "target_role": "CUP_SAUCER_SET",
+      "tool_role": "PERSONAL_CUP_SAUCER_REGION",
+      "usage_policy": "DEDICATED_PER_TARGET"
+    },
+    {
+      "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": true,
+      "function": "SUPPORT_ENTERTAINMENT_CONTROL",
+      "id": "shared_entertainment_group",
+      "preconditions_provenance": [
+        {
+          "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+          "predicate": "FITS_ON",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_002"
+        }
+      ],
+      "required_relations": [
+        "FITS_ON"
+      ],
+      "required_target_count": 1,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": null,
+      "target_role": "REMOTE",
+      "tool_role": "SHARED_REMOTE_REGION",
+      "usage_policy": "DEDICATED_PER_TARGET"
+    }
+  ],
+  "physical_verifier_relations": [],
+  "task_causal_relations": [],
+  "task_effect_relations": [
+    {
+      "category": "TASK_EFFECT_SEMANTICS",
+      "object_is_literal": false,
+      "object_value": "PERSONAL_CUP_SAUCER_REGION",
+      "predicate": "PLACED_ON",
+      "provenance": "FM_EXPLICIT_SEMANTIC",
+      "raw_object": "side_table",
+      "raw_phrase": "must_be_placed_on",
+      "raw_subject": "refreshment_set",
+      "source_operation_id": "op_001",
+      "subject_role": "CUP_SAUCER_SET"
+    },
+    {
+      "category": "TASK_EFFECT_SEMANTICS",
+      "object_is_literal": false,
+      "object_value": "SHARED_REMOTE_REGION",
+      "predicate": "PLACED_ON",
+      "provenance": "FM_EXPLICIT_SEMANTIC",
+      "raw_object": "accessible_central_zone",
+      "raw_phrase": "must_be_placed_on",
+      "raw_subject": "entertainment_controller",
+      "source_operation_id": "op_002",
+      "subject_role": "REMOTE"
+    }
+  ],
+  "unresolved_required_relations": [
+    {
+      "raw_object": "initial_storage_surface",
+      "raw_phrase": "currently_resides_on",
+      "raw_subject": "refreshment_set",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [
+    {
+      "code": "AMBIGUOUS_ROLE_MAPPING",
+      "collision_with": "accessible_central_zone",
+      "raw_role": {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "large coffee table",
+          "cluttered surface"
+        ],
+        "description": "",
+        "entity_kind": "REGION",
+        "function": "Current storage location for items",
+        "id": "initial_storage_surface",
+        "required_count": 1,
+        "required_properties": [
+          "currently holds scattered items",
+          "larger than required for individuals"
+        ],
+        "visible_candidates": [
+          {
+            "label": "large_coffee_table",
+            "visual_description": "Long wooden table holding items in foreground"
+          }
+        ]
+      }
+    }
+  ],
+  "variant": "L7"
+}

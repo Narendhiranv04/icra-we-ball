@@ -1,0 +1,49 @@
+{
+  "canonicalization_status": "PARTIAL",
+  "compiled": true,
+  "contract_missing_reasons": [
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_001', 'function': 'secure fastener to fixture', 'tool_role': 'fastening_tool', 'target_role': 'fixture_assembly', 'required_target_count': 1, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': 'workbench_surface', 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, repair_target)\", 'interp_status': 'UNMAPPABLE_OPERATION'}]"
+  ],
+  "disabled_operations": [
+    {
+      "interp_status": "UNMAPPABLE_OPERATION",
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "workbench_surface",
+        "function": "secure fastener to fixture",
+        "id": "op_001",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "fixture_assembly",
+        "tool_role": "fastening_tool",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "reason": "Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, repair_target)",
+      "status": "UNSUPPORTED_OPERATOR"
+    }
+  ],
+  "domain": "workshop",
+  "graph_node_names": [
+    "driver",
+    "repair_target"
+  ],
+  "online_executable_contract_complete": false,
+  "operation_groups": [],
+  "physical_verifier_relations": [],
+  "task_causal_relations": [
+    {
+      "capability_id": null,
+      "category": "TASK_CAUSAL_SEMANTICS",
+      "expected": true,
+      "object_role": "repair_target",
+      "predicate": "ACTS_ON",
+      "provenance": "TASK_CAUSAL_SEMANTICS",
+      "source_operation_id": null,
+      "subject_role": "driver"
+    }
+  ],
+  "task_effect_relations": [],
+  "unresolved_required_relations": [],
+  "unresolved_roles": [],
+  "variant": "W4"
+}

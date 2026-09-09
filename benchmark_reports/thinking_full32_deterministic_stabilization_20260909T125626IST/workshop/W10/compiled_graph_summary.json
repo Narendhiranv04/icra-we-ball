@@ -1,0 +1,85 @@
+{
+  "canonicalization_status": "PARTIAL",
+  "compiled": true,
+  "contract_missing_reasons": [
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op01', 'function': 'insert_and_secure_fastener', 'tool_role': 'r05', 'target_role': 'r03', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'r02', 'context_relations': []}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, repair_target)\", 'interp_status': 'UNMAPPABLE_OPERATION'}, {'raw_group': {'id': 'op02', 'function': 'return_tool_to_workspace', 'tool_role': 'r05', 'target_role': 'r01', 'required_target_count': 1, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': None, 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]"
+  ],
+  "disabled_operations": [
+    {
+      "interp_status": "UNMAPPABLE_OPERATION",
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "r02",
+        "function": "insert_and_secure_fastener",
+        "id": "op01",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "r03",
+        "tool_role": "r05",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "reason": "Operation semantic evidence ['FASTEN_JOINT'] is incompatible with endpoints (driver, repair_target, repair_target)",
+      "status": "UNSUPPORTED_OPERATOR"
+    },
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "return_tool_to_workspace",
+        "id": "op02",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "r01",
+        "tool_role": "r05",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "workshop",
+  "graph_node_names": [
+    "driver",
+    "fastener",
+    "repair_target"
+  ],
+  "online_executable_contract_complete": false,
+  "operation_groups": [],
+  "physical_verifier_relations": [
+    {
+      "capability_id": null,
+      "category": "PHYSICAL_VERIFIER",
+      "expected": true,
+      "object_role": "repair_target",
+      "predicate": "COMPATIBLE_WITH_TARGET",
+      "provenance": "EXPLICIT_REQUIREMENT",
+      "source_operation_id": null,
+      "subject_role": "fastener"
+    }
+  ],
+  "task_causal_relations": [
+    {
+      "capability_id": null,
+      "category": "TASK_CAUSAL_SEMANTICS",
+      "expected": true,
+      "object_role": "fastener",
+      "predicate": "ACTS_ON",
+      "provenance": "TASK_CAUSAL_SEMANTICS",
+      "source_operation_id": null,
+      "subject_role": "driver"
+    },
+    {
+      "capability_id": null,
+      "category": "TASK_CAUSAL_SEMANTICS",
+      "expected": true,
+      "object_role": "repair_target",
+      "predicate": "INSTALLED_AT",
+      "provenance": "TASK_CAUSAL_SEMANTICS",
+      "source_operation_id": null,
+      "subject_role": "fastener"
+    }
+  ],
+  "task_effect_relations": [],
+  "unresolved_required_relations": [],
+  "unresolved_roles": [],
+  "variant": "W10"
+}

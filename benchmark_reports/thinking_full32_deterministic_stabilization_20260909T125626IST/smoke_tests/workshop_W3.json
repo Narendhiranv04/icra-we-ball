@@ -1,0 +1,34 @@
+{
+  "astar_invocations": 1,
+  "candidate_plan_length": 2,
+  "domain": "workshop",
+  "failure_reason": null,
+  "high_level_replans": 0,
+  "independent_plan_validation": {
+    "grounding_complete": true,
+    "plan_replay_valid": true,
+    "violations": []
+  },
+  "inspected_regions": [
+    "LEFT_DRAWER"
+  ],
+  "next_blocker": "A* satisfied 2/3 goals and returned an independently valid partial sequence",
+  "saved_raw_sha256": "fc1ee425f159590d21d21a65b6d681e5b0c2c93aa257cdf8ce96d0d3e0ae76dc",
+  "search_statistics": {
+    "algorithm": "deterministic_astar_symbolic_state_search",
+    "expanded_states": 5,
+    "frontier_peak": 2,
+    "generated_states": 4,
+    "is_partial": true,
+    "plan_cost": 2,
+    "plan_length": 2,
+    "satisfied_goals": 2,
+    "search_time_ms": 0.02317401231266558,
+    "total_goals": 3,
+    "visited_states": 5
+  },
+  "semantic_fm_calls": 0,
+  "spec_acquisition": "archived raw response after safe deterministic normalization",
+  "terminal_status": "PARTIAL_ACTION_SEQUENCE_READY",
+  "variant": "W3"
+}

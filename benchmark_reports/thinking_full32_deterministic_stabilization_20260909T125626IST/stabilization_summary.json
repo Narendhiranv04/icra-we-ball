@@ -1,0 +1,2836 @@
+{
+  "astar_invocations_total": 2,
+  "by_domain": {
+    "kitchen": {
+      "canonical_full": 1,
+      "cases": 12,
+      "g_f_ready": 1,
+      "normalized_strict_live_valid": 5,
+      "online_executable_contract_complete": 1,
+      "original_strict_live_valid": 1
+    },
+    "living_room": {
+      "canonical_full": 1,
+      "cases": 10,
+      "g_f_ready": 1,
+      "normalized_strict_live_valid": 7,
+      "online_executable_contract_complete": 1,
+      "original_strict_live_valid": 6
+    },
+    "workshop": {
+      "canonical_full": 1,
+      "cases": 10,
+      "g_f_ready": 1,
+      "normalized_strict_live_valid": 9,
+      "online_executable_contract_complete": 1,
+      "original_strict_live_valid": 3
+    }
+  },
+  "cases": [
+    {
+      "canonicalization_status": "NOT_COMPILED",
+      "compile_error": null,
+      "disabled_operation_count": 0,
+      "domain": "kitchen",
+      "g_f_ready": false,
+      "normalization_trace": [],
+      "normalized_strict_live_valid": false,
+      "normalized_validation_error": "INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[0] requires 2 distinct source instances but role 'water_source' declares required_count=1 and binding_policy='REUSABLE'; INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[1] requires 2 distinct source instances but role 'coffee_source' declares required_count=1 and binding_policy='REUSABLE'",
+      "online_executable_contract_complete": false,
+      "original_strict_live_valid": false,
+      "original_validation_error": "INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[0] requires 2 distinct source instances but role 'water_source' declares required_count=1 and binding_policy='REUSABLE'; INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[1] requires 2 distinct source instances but role 'coffee_source' declares required_count=1 and binding_policy='REUSABLE'",
+      "raw_operation_phrases": [
+        "pour water into vessel",
+        "add coffee powder to vessel",
+        "stir beverage with tool",
+        "pair utensil with food bowl"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K1/raw_v2.json",
+      "raw_relation_phrases": [
+        "accommodates eating utensil",
+        "provides fillable fluid to",
+        "performs mixing action in"
+      ],
+      "raw_role_function_phrases": [
+        "Contain prepared beverage for consumption",
+        "Contain prepared soup for consumption",
+        "Consume solid food",
+        "Mix liquid contents in vessel",
+        "Provide liquid volume",
+        "Provide caffeine additive"
+      ],
+      "task_effect_count": 0,
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "variant": "K1"
+    },
+    {
+      "canonicalization_status": "NOT_COMPILED",
+      "compile_error": null,
+      "disabled_operation_count": 0,
+      "domain": "kitchen",
+      "g_f_ready": false,
+      "normalization_trace": [
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[4].anchor_role",
+          "operation_id": "op_05"
+        }
+      ],
+      "normalized_strict_live_valid": false,
+      "normalized_validation_error": "Operation anchor_role 'table_surface' not in declared roles",
+      "online_executable_contract_complete": false,
+      "original_strict_live_valid": false,
+      "original_validation_error": "Operation anchor_role 'table_surface' not in declared roles",
+      "raw_operation_phrases": [
+        "transfer_powder_into_cup",
+        "pour_water_into_cup",
+        "stir_coffee_contents",
+        "pour_soup_into_bowl",
+        "place_eating_utensil_next_to_soup",
+        "place_coffee_cup_on_table"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K10/raw_v2.json",
+      "raw_relation_phrases": [
+        "receives_content_from",
+        "receives_content_from",
+        "manipulates_contents_of",
+        "provides_content_to",
+        "accompanied_by"
+      ],
+      "raw_role_function_phrases": [
+        "Container for the final coffee beverage",
+        "Packaging containing dry coffee extract",
+        "Vessel providing water for brewing",
+        "Tool used to mix coffee ingredients",
+        "Shallow vessel holding the soup portion",
+        "Container or stockpot holding raw soup liquid",
+        "Instrument provided for eating the soup"
+      ],
+      "task_effect_count": 0,
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "variant": "K10"
+    },
+    {
+      "canonicalization_status": "NOT_COMPILED",
+      "compile_error": null,
+      "disabled_operation_count": 0,
+      "domain": "kitchen",
+      "g_f_ready": false,
+      "normalization_trace": [],
+      "normalized_strict_live_valid": false,
+      "normalized_validation_error": "Operation source_role 'soup_content' not in declared roles",
+      "online_executable_contract_complete": false,
+      "original_strict_live_valid": false,
+      "original_validation_error": "Operation source_role 'soup_content' not in declared roles",
+      "raw_operation_phrases": [
+        "Pour water into cup",
+        "Add coffee ingredient to cup",
+        "Stir liquid in cup",
+        "Fill bowl with soup",
+        "Place eating utensil beside bowl"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K11/raw_v2.json",
+      "raw_relation_phrases": [
+        "must accompany",
+        "contents poured into",
+        "contents mixed in",
+        "located within or accessible from"
+      ],
+      "raw_role_function_phrases": [
+        "Coffee container vessel",
+        "Soup serving vessel",
+        "Soup accompaniment tool",
+        "Liquidity mixing implement",
+        "Liquid content supply",
+        "Dry soluble coffee source",
+        "Ingredient containment space",
+        "Work and serving support"
+      ],
+      "task_effect_count": 0,
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "variant": "K11"
+    },
+    {
+      "canonicalization_status": "FULL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 0,
+      "domain": "kitchen",
+      "g_f_ready": true,
+      "graph_node_names": [
+        "coffee_container",
+        "coffee_source",
+        "coffee_stirrer",
+        "soup_container",
+        "soup_eating_utensil",
+        "water_source"
+      ],
+      "normalization_trace": [],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": true,
+      "operation_group_ids": [
+        "material_transfer",
+        "op_002",
+        "coffee_stirring",
+        "soup_serving"
+      ],
+      "original_strict_live_valid": true,
+      "original_validation_error": null,
+      "raw_operation_phrases": [
+        "pour_coffee_into_container",
+        "pour_water_into_container",
+        "stir_mixture_with_tool",
+        "place_utensil_at_bowl"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K12/raw_v2.json",
+      "raw_relation_phrases": [
+        "receives_transfer_from",
+        "receives_transfer_from",
+        "associated_with_serving"
+      ],
+      "raw_role_function_phrases": [
+        "Vessel for holding prepared coffee drink",
+        "Bowl or vessel for holding hot soup",
+        "Utensil provided for eating soup",
+        "Tool used to mix the coffee ingredients",
+        "Supply point for coffee concentrate or grounds",
+        "Supply point for liquid water",
+        "Enclosed space containing missing objects"
+      ],
+      "task_effect_count": 0,
+      "unmapped_relation_diagnostics": [],
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "unresolved_role_diagnostics": [],
+      "variant": "K12"
+    },
+    {
+      "canonicalization_status": "NOT_COMPILED",
+      "compile_error": null,
+      "disabled_operation_count": 0,
+      "domain": "kitchen",
+      "g_f_ready": false,
+      "normalization_trace": [],
+      "normalized_strict_live_valid": false,
+      "normalized_validation_error": "Relation object_role 'serving_surface' not in declared roles",
+      "online_executable_contract_complete": false,
+      "original_strict_live_valid": false,
+      "original_validation_error": "Relation object_role 'serving_surface' not in declared roles",
+      "raw_operation_phrases": [
+        "pour_coffee_ingredient_into_cup",
+        "pour_water_into_cup",
+        "stir_coffee_mix",
+        "position_soup_bowl_at_table",
+        "place_eating_utensil_near_bowl"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K2/raw_v2.json",
+      "raw_relation_phrases": [
+        "requires_contents_from",
+        "contains_and_is_filled_by",
+        "mechanically_agitates",
+        "is_served_with",
+        "rests_upon",
+        "rests_upon"
+      ],
+      "raw_role_function_phrases": [
+        "Receptacle for prepared coffee beverage",
+        "Receptacle for serving liquid soup",
+        "Instrument for consuming food from soup bowl",
+        "Container holding dry coffee powder or grounds",
+        "Container holding potable water for beverage preparation",
+        "Instrument used to agitate the coffee mixture"
+      ],
+      "task_effect_count": 0,
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "variant": "K2"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 2,
+      "domain": "kitchen",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "coffee_container",
+        "coffee_source",
+        "coffee_stirrer",
+        "soup_container",
+        "water_source"
+      ],
+      "normalization_trace": [
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[3].anchor_role",
+          "operation_id": "op_04"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[4].anchor_role",
+          "operation_id": "op_05"
+        }
+      ],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [
+        "material_transfer",
+        "op_02",
+        "coffee_stirring"
+      ],
+      "original_strict_live_valid": false,
+      "original_validation_error": "DUPLICATE_OPERATION_ENDPOINT: operation_pairings[3].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[4].anchor_role equals target_role",
+      "raw_operation_phrases": [
+        "pour_water_into_mug",
+        "pour_coffee_powder_into_mug",
+        "stir_coffee_beverage",
+        "place_soup_on_table",
+        "arrange_eating_utensil_on_bowl"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K3/raw_v2.json",
+      "raw_relation_phrases": [
+        "supported_on_by_gravity",
+        "supported_on_by_gravity",
+        "contained_within",
+        "placed_adjacent_to",
+        "assigned_to_serve",
+        "used_for_stirring",
+        "receiving_from",
+        "receiving_from"
+      ],
+      "raw_role_function_phrases": [
+        "Coffee beverage container",
+        "Soup serving dish",
+        "Dry coffee ingredient container",
+        "Hot water supply container",
+        "Small hand-held eating or stirring tool",
+        "Closed storage volume for hidden items",
+        "Horizontal work and service plane"
+      ],
+      "task_effect_count": 0,
+      "unmapped_relation_diagnostics": [
+        {
+          "raw_object": "table_surface",
+          "raw_phrase": "supported_on_by_gravity",
+          "raw_subject": "coffee_mug",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "table_surface",
+          "raw_phrase": "supported_on_by_gravity",
+          "raw_subject": "soup_bowl",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "table_surface",
+          "raw_phrase": "placed_adjacent_to",
+          "raw_subject": "water_vessel",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "unmapped_required_relation_count": 3,
+      "unresolved_role_count": 1,
+      "unresolved_role_diagnostics": [
+        {
+          "raw_role": {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "dining table",
+              "workbench"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "Horizontal work and service plane",
+            "id": "table_surface",
+            "required_count": 1,
+            "required_properties": [
+              "is_horizontal",
+              "has_drawers"
+            ],
+            "visible_candidates": [
+              {
+                "label": "Table Top",
+                "visual_description": "Large white horizontal plane with wooden legs and drawers."
+              }
+            ]
+          },
+          "status": "UNRESOLVED_SEMANTIC"
+        }
+      ],
+      "variant": "K3"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 2,
+      "domain": "kitchen",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "coffee_container",
+        "coffee_stirrer",
+        "soup_container",
+        "soup_eating_utensil",
+        "water_source"
+      ],
+      "normalization_trace": [
+        {
+          "code": "EMPTY_OPTIONAL_ANCHOR_REMOVED",
+          "location": "task_contract.operation_pairings[0].anchor_role",
+          "operation_id": "op_001"
+        },
+        {
+          "code": "EMPTY_OPTIONAL_ANCHOR_REMOVED",
+          "location": "task_contract.operation_pairings[1].anchor_role",
+          "operation_id": "op_002"
+        },
+        {
+          "code": "EMPTY_OPTIONAL_ANCHOR_REMOVED",
+          "location": "task_contract.operation_pairings[2].anchor_role",
+          "operation_id": "op_003"
+        },
+        {
+          "code": "EMPTY_OPTIONAL_ANCHOR_REMOVED",
+          "location": "task_contract.operation_pairings[3].anchor_role",
+          "operation_id": "op_004"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[4].anchor_role",
+          "operation_id": "op_005"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[5].anchor_role",
+          "operation_id": "op_006"
+        }
+      ],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [
+        "material_transfer",
+        "coffee_stirring",
+        "soup_serving"
+      ],
+      "original_strict_live_valid": false,
+      "original_validation_error": "Live V2 schema validation failed: '' should be non-empty",
+      "raw_operation_phrases": [
+        "Pour soup into bowls",
+        "Pour water into cups",
+        "Dispense coffee powder",
+        "Stir coffee mixture",
+        "Place soup bowls on table",
+        "Place coffee cups on table",
+        "Place utensils near bowls"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K4/raw_v2.json",
+      "raw_relation_phrases": [
+        "placed_on_top_of",
+        "placed_on_top_of",
+        "placed_adjacent_to",
+        "provides_content_for",
+        "provides_content_for",
+        "provides_content_for",
+        "actives_stirring_within"
+      ],
+      "raw_role_function_phrases": [
+        "Dishes holding soup portions",
+        "Vessels holding coffee portions",
+        "Tools for consuming soup",
+        "Area for presenting final dishes",
+        "Vessel containing bulk soup stock",
+        "Vessel providing hot water for coffee",
+        "Container of instant or ground coffee",
+        "Implement for mixing coffee"
+      ],
+      "task_effect_count": 0,
+      "unmapped_relation_diagnostics": [
+        {
+          "raw_object": "soup_bowls",
+          "raw_phrase": "placed_adjacent_to",
+          "raw_subject": "eating_utensils",
+          "reason": "Relation text 'placed_adjacent_to' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "soup_bowls",
+          "raw_phrase": "provides_content_for",
+          "raw_subject": "soup_source",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "coffee_cups",
+          "raw_phrase": "provides_content_for",
+          "raw_subject": "coffee_powder",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "coffee_cups",
+          "raw_phrase": "actives_stirring_within",
+          "raw_subject": "stirring_tool",
+          "reason": "Relation text 'actives_stirring_within' provides no semantic evidence for valid predicates ['INSERTABLE_IN', 'REACHES_BOTTOM'] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "unmapped_required_relation_count": 4,
+      "unresolved_role_count": 2,
+      "unresolved_role_diagnostics": [
+        {
+          "code": "AMBIGUOUS_ROLE_MAPPING",
+          "collision_with": "soup_bowls",
+          "raw_role": {
+            "binding_policy": "REUSABLE",
+            "candidate_categories": [
+              "soup pot",
+              "stock container"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "Vessel containing bulk soup stock",
+            "id": "soup_source",
+            "required_count": 1,
+            "required_properties": [],
+            "visible_candidates": []
+          }
+        },
+        {
+          "code": "AMBIGUOUS_ROLE_MAPPING",
+          "collision_with": "coffee_cups",
+          "raw_role": {
+            "binding_policy": "REUSABLE",
+            "candidate_categories": [
+              "coffee jar",
+              "powder container"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "Container of instant or ground coffee",
+            "id": "coffee_powder",
+            "required_count": 1,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "Green tin",
+                "visual_description": "Dark green cylindrical container behind teapot"
+              },
+              {
+                "label": "Brown box",
+                "visual_description": "Rectangular cardboard box located far right on table"
+              }
+            ]
+          }
+        }
+      ],
+      "variant": "K4"
+    },
+    {
+      "canonicalization_status": "NOT_COMPILED",
+      "compile_error": null,
+      "disabled_operation_count": 0,
+      "domain": "kitchen",
+      "g_f_ready": false,
+      "normalization_trace": [],
+      "normalized_strict_live_valid": false,
+      "normalized_validation_error": "Operation source_role 'soup_source' not in declared roles",
+      "online_executable_contract_complete": false,
+      "original_strict_live_valid": false,
+      "original_validation_error": "Operation source_role 'soup_source' not in declared roles",
+      "raw_operation_phrases": [
+        "fill_cup_with_water_and_add_coffee",
+        "fill_cup_with_water_and_add_coffee",
+        "stir_coffee_content",
+        "fill_soup_bowl",
+        "place_eating_utensil",
+        "arrange_food_on_surface",
+        "arrange_food_on_surface"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K5/raw_v2.json",
+      "raw_relation_phrases": [
+        "supplies_fluid_to",
+        "supplies_solid_to",
+        "mixed_with",
+        "placed_near",
+        "positioned_on",
+        "positioned_on"
+      ],
+      "raw_role_function_phrases": [
+        "Container for prepared coffee beverage",
+        "Container for prepared soup portion",
+        "Supply point for beverage water",
+        "Supply point for dry coffee ingredient",
+        "Tool for stirring liquid ingredients",
+        "Utensil for consuming solid/semi-solid food",
+        "Location for placing completed dishes"
+      ],
+      "task_effect_count": 0,
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "variant": "K5"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 2,
+      "domain": "kitchen",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "coffee_container",
+        "coffee_source",
+        "coffee_stirrer",
+        "soup_container",
+        "soup_eating_utensil",
+        "water_source"
+      ],
+      "normalization_trace": [
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[0].anchor_role",
+          "operation_id": "op_1"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[1].anchor_role",
+          "operation_id": "op_2"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[2].anchor_role",
+          "operation_id": "op_3"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[3].anchor_role",
+          "operation_id": "op_4"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[4].anchor_role",
+          "operation_id": "op_5"
+        }
+      ],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [
+        "material_transfer",
+        "coffee_stirring",
+        "soup_serving"
+      ],
+      "original_strict_live_valid": false,
+      "original_validation_error": "DUPLICATE_OPERATION_ENDPOINT: operation_pairings[0].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[1].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[2].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[3].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[4].anchor_role equals target_role",
+      "raw_operation_phrases": [
+        "blend_coffee_and_water_in_cup",
+        "pour_water_to_mix_with_coffee",
+        "stir_coffee_with_spool",
+        "place_soup_on_table",
+        "rest_utensil_with_soup_bowl"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K6/raw_v2.json",
+      "raw_relation_phrases": [
+        "provides_coffee_for_blend",
+        "provides_water_for_blend",
+        "fits_in_contained_volume",
+        "fits_in_open_container",
+        "supported_by_flat_plane",
+        "placed_upon"
+      ],
+      "raw_role_function_phrases": [
+        "Source containing coffee ingredients",
+        "Source containing water for coffee",
+        "Container for prepared coffee",
+        "Container for served soup",
+        "Tool for stirring coffee liquid",
+        "Utensil for consuming soup",
+        "Flat surface for placing food items"
+      ],
+      "task_effect_count": 0,
+      "unmapped_relation_diagnostics": [
+        {
+          "raw_object": "service_surface",
+          "raw_phrase": "supported_by_flat_plane",
+          "raw_subject": "soup_bowl",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "service_surface",
+          "raw_phrase": "placed_upon",
+          "raw_subject": "coffee_cup",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "unmapped_required_relation_count": 2,
+      "unresolved_role_count": 1,
+      "unresolved_role_diagnostics": [
+        {
+          "raw_role": {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "tabletop",
+              "counter area",
+              "flat bench"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "Flat surface for placing food items",
+            "id": "service_surface",
+            "required_count": 1,
+            "required_properties": [
+              "horizontal plane",
+              "stable base"
+            ],
+            "visible_candidates": [
+              {
+                "label": "wooden_table_top",
+                "visual_description": "Large flat horizontal surface supporting items"
+              }
+            ]
+          },
+          "status": "UNRESOLVED_SEMANTIC"
+        }
+      ],
+      "variant": "K6"
+    },
+    {
+      "canonicalization_status": "NOT_COMPILED",
+      "compile_error": null,
+      "disabled_operation_count": 0,
+      "domain": "kitchen",
+      "g_f_ready": false,
+      "normalization_trace": [
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[0].anchor_role",
+          "operation_id": "op_001"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[1].anchor_role",
+          "operation_id": "op_002"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[2].anchor_role",
+          "operation_id": "op_003"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[3].anchor_role",
+          "operation_id": "op_004"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[4].anchor_role",
+          "operation_id": "op_005"
+        }
+      ],
+      "normalized_strict_live_valid": false,
+      "normalized_validation_error": "INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[0] requires 2 distinct source instances but role 'water_source_vessel' declares required_count=1 and binding_policy='REUSABLE'; INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[1] requires 2 distinct source instances but role 'coffee_flavor_source' declares required_count=1 and binding_policy='REUSABLE'; INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[3] requires 2 distinct source instances but role 'soup_ingredient_container' declares required_count=1 and binding_policy='REUSABLE'",
+      "online_executable_contract_complete": false,
+      "original_strict_live_valid": false,
+      "original_validation_error": "INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[0] requires 2 distinct source instances but role 'water_source_vessel' declares required_count=1 and binding_policy='REUSABLE'; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[0].anchor_role equals target_role; INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[1] requires 2 distinct source instances but role 'coffee_flavor_source' declares required_count=1 and binding_policy='REUSABLE'; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[1].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[2].anchor_role equals target_role; INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[3] requires 2 distinct source instances but role 'soup_ingredient_container' declares required_count=1 and binding_policy='REUSABLE'; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[3].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[4].anchor_role equals target_role",
+      "raw_operation_phrases": [
+        "transfer_water_to_coffee_cup",
+        "transfer_coffee_powder_to_cup",
+        "stir_coffee_mixture",
+        "transfer_soup_to_bowl",
+        "place_utensil_near_soup"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K7/raw_v2.json",
+      "raw_relation_phrases": [
+        "receives_transfer_from",
+        "receives_transfer_from",
+        "receives_transfer_from",
+        "associated_with_placement"
+      ],
+      "raw_role_function_phrases": [
+        "container for prepared coffee beverage",
+        "container for prepared soup dish",
+        "storage holding dry coffee ingredient",
+        "storage holding potable water liquid",
+        "storage holding prepared soup stock or solids",
+        "hand-holding implement for eating or stirring"
+      ],
+      "task_effect_count": 0,
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "variant": "K7"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 4,
+      "domain": "kitchen",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "coffee_container",
+        "coffee_source",
+        "coffee_stirrer",
+        "soup_container",
+        "water_source"
+      ],
+      "normalization_trace": [
+        {
+          "code": "EMPTY_OPTIONAL_ANCHOR_REMOVED",
+          "location": "task_contract.operation_pairings[0].anchor_role",
+          "operation_id": "op_01"
+        },
+        {
+          "code": "EMPTY_OPTIONAL_ANCHOR_REMOVED",
+          "location": "task_contract.operation_pairings[1].anchor_role",
+          "operation_id": "op_02"
+        },
+        {
+          "code": "EMPTY_OPTIONAL_ANCHOR_REMOVED",
+          "location": "task_contract.operation_pairings[2].anchor_role",
+          "operation_id": "op_03"
+        },
+        {
+          "code": "EMPTY_OPTIONAL_ANCHOR_REMOVED",
+          "location": "task_contract.operation_pairings[3].anchor_role",
+          "operation_id": "op_04"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[4].anchor_role",
+          "operation_id": "op_05"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[5].anchor_role",
+          "operation_id": "op_06"
+        },
+        {
+          "code": "EMPTY_OPTIONAL_ANCHOR_REMOVED",
+          "location": "task_contract.operation_pairings[6].anchor_role",
+          "operation_id": "op_07"
+        }
+      ],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [
+        "material_transfer",
+        "op_02",
+        "coffee_stirring"
+      ],
+      "original_strict_live_valid": false,
+      "original_validation_error": "Live V2 schema validation failed: '' should be non-empty",
+      "raw_operation_phrases": [
+        "transfer_coffee_to_cup",
+        "transfer_water_to_cup",
+        "stir_coffee_beverage",
+        "fill_soup_vessel_with_soup",
+        "place_coffee_on_table",
+        "place_soup_on_table",
+        "position_eating_utensil_next_to_soup"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K8/raw_v2.json",
+      "raw_relation_phrases": [
+        "contains_coffee_liquid",
+        "contains_water_liquid",
+        "associated_with_soup",
+        "placed_on_surface",
+        "placed_on_surface"
+      ],
+      "raw_role_function_phrases": [
+        "Container for prepared coffee beverage",
+        "Container for served soup",
+        "Source of coffee concentrate or grounds",
+        "Source of drinking water",
+        "Source of raw soup or cooked stock",
+        "Tool for stirring coffee or eating soup",
+        "Surface for placing finished dishes"
+      ],
+      "task_effect_count": 2,
+      "unmapped_relation_diagnostics": [],
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 1,
+      "unresolved_role_diagnostics": [
+        {
+          "raw_role": {
+            "binding_policy": "REUSABLE",
+            "candidate_categories": [
+              "stock pot",
+              "can",
+              "large bowl"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "Source of raw soup or cooked stock",
+            "id": "soup_food_source",
+            "required_count": 1,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "Brown bag/container",
+                "visual_description": "A brown package lying flat on the table near the center."
+              }
+            ]
+          },
+          "status": "UNRESOLVED_SEMANTIC"
+        }
+      ],
+      "variant": "K8"
+    },
+    {
+      "canonicalization_status": "NOT_COMPILED",
+      "compile_error": null,
+      "disabled_operation_count": 0,
+      "domain": "kitchen",
+      "g_f_ready": false,
+      "normalization_trace": [
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[0].anchor_role",
+          "operation_id": "op_fill_coffee_with_powder"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[1].anchor_role",
+          "operation_id": "op_add_water_to_coffee"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[2].anchor_role",
+          "operation_id": "op_stir_coffee_mixtures"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[3].anchor_role",
+          "operation_id": "op_ladle_soup_portions"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[4].anchor_role",
+          "operation_id": "op_assign_eating_utensils"
+        }
+      ],
+      "normalized_strict_live_valid": false,
+      "normalized_validation_error": "INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[0] requires 2 distinct source instances but role 'coffee_ingredient_container' declares required_count=1 and binding_policy='REUSABLE'; INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[1] requires 2 distinct source instances but role 'water_source_container' declares required_count=1 and binding_policy='REUSABLE'",
+      "online_executable_contract_complete": false,
+      "original_strict_live_valid": false,
+      "original_validation_error": "INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[0] requires 2 distinct source instances but role 'coffee_ingredient_container' declares required_count=1 and binding_policy='REUSABLE'; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[0].anchor_role equals target_role; INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[1] requires 2 distinct source instances but role 'water_source_container' declares required_count=1 and binding_policy='REUSABLE'; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[1].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[2].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[3].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[4].anchor_role equals target_role",
+      "raw_operation_phrases": [
+        "Transfer dry coffee to cup",
+        "Pour water into coffee cup",
+        "Stir coffee mixture in cup",
+        "Fill soup bowl from stockpot",
+        "Place eating utensil with soup"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/kitchen/K9/raw_v2.json",
+      "raw_relation_phrases": [
+        "requires access to coffee ingredients",
+        "requires access to water source",
+        "used to mix contents of",
+        "transfers contents to",
+        "placed adjacent to serving of"
+      ],
+      "raw_role_function_phrases": [
+        "Receiving vessel for prepared coffee",
+        "Receiving vessel for served soup",
+        "Physical storage of coffee granules",
+        "Physical storage of drinking water",
+        "Physical storage of pre-prepared soup",
+        "Tool for mixing coffee contents",
+        "Tool for consuming soup"
+      ],
+      "task_effect_count": 0,
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "variant": "K9"
+    },
+    {
+      "canonicalization_status": "FULL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 0,
+      "domain": "living_room",
+      "g_f_ready": true,
+      "graph_node_names": [
+        "CUP_SAUCER_SET",
+        "PERSONAL_CUP_SAUCER_REGION",
+        "REMOTE",
+        "SEATING_POSITION",
+        "SHARED_REMOTE_REGION"
+      ],
+      "normalization_trace": [
+        {
+          "code": "EMPTY_OPTIONAL_ANCHOR_REMOVED",
+          "location": "task_contract.operation_pairings[0].anchor_role",
+          "operation_id": "op_01"
+        },
+        {
+          "code": "EMPTY_OPTIONAL_ANCHOR_REMOVED",
+          "location": "task_contract.operation_pairings[1].anchor_role",
+          "operation_id": "op_02"
+        }
+      ],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": true,
+      "operation_group_ids": [
+        "personal_support_group",
+        "shared_entertainment_group"
+      ],
+      "original_strict_live_valid": false,
+      "original_validation_error": "Live V2 schema validation failed: '' should be non-empty",
+      "raw_operation_phrases": [
+        "transfer_refreshment_pair_to_table",
+        "transport_control_device_to_central_area"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L1/raw_v2.json",
+      "raw_relation_phrases": [
+        "located_adjacent",
+        "supported_on",
+        "placed_on"
+      ],
+      "raw_role_function_phrases": [
+        "designated spot for individual person",
+        "small table for personal refreshment items",
+        "single cup and plate for one person",
+        "device for controlling television functions",
+        "accessible table for shared items"
+      ],
+      "task_effect_count": 1,
+      "unmapped_relation_diagnostics": [],
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "unresolved_role_diagnostics": [],
+      "variant": "L1"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 1,
+      "domain": "living_room",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "REMOTE",
+        "SEATING_POSITION",
+        "SHARED_REMOTE_REGION"
+      ],
+      "normalization_trace": [],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [
+        "shared_entertainment_group"
+      ],
+      "original_strict_live_valid": true,
+      "original_validation_error": null,
+      "raw_operation_phrases": [
+        "place refreshment items near seating",
+        "move entertainment control to surface"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L10/raw_v2.json",
+      "raw_relation_phrases": [
+        "positioned adjacent to",
+        "accessible from",
+        "located upon"
+      ],
+      "raw_role_function_phrases": [
+        "Furniture supporting seated user position",
+        "Receptacle for holding beverages or food",
+        "Input mechanism for controlling media playback",
+        "Horizontal platform suitable for item placement"
+      ],
+      "task_effect_count": 1,
+      "unmapped_relation_diagnostics": [
+        {
+          "raw_object": "seating_object",
+          "raw_phrase": "positioned adjacent to",
+          "raw_subject": "refreshment_item_container",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "seating_object",
+          "raw_phrase": "accessible from",
+          "raw_subject": "support_surface",
+          "reason": "Semantic candidates ['ACCESSIBLE_FROM_BOTH_SEATS'] incompatible with endpoints (SHARED_REMOTE_REGION, SEATING_POSITION)",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "unmapped_required_relation_count": 2,
+      "unresolved_role_count": 1,
+      "unresolved_role_diagnostics": [
+        {
+          "raw_role": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "cup",
+              "glass",
+              "plate",
+              "bowl",
+              "dish"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "Receptacle for holding beverages or food",
+            "id": "refreshment_item_container",
+            "required_count": 2,
+            "required_properties": [],
+            "visible_candidates": [
+              {
+                "label": "red_cup_on_table",
+                "visual_description": "Cylindrical red drinking vessel on surface"
+              },
+              {
+                "label": "white_plate_on_table",
+                "visual_description": "Round white ceramic plate on surface"
+              }
+            ]
+          },
+          "status": "UNRESOLVED_SEMANTIC"
+        }
+      ],
+      "variant": "L10"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 1,
+      "domain": "living_room",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "CUP_SAUCER_SET",
+        "PERSONAL_CUP_SAUCER_REGION",
+        "REMOTE",
+        "SEATING_POSITION",
+        "SHARED_REMOTE_REGION"
+      ],
+      "normalization_trace": [],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [
+        "shared_entertainment_group"
+      ],
+      "original_strict_live_valid": true,
+      "original_validation_error": null,
+      "raw_operation_phrases": [
+        "Place_refreshment_on_adjacent_table",
+        "Relocate_controller_to_central_spot"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L2/raw_v2.json",
+      "raw_relation_phrases": [
+        "is_adjacent_to",
+        "is_accessible_by",
+        "is_accessible_by"
+      ],
+      "raw_role_function_phrases": [
+        "Furniture for two distinct seated occupants",
+        "Support surface for personal refreshment items near a seat",
+        "Container for fluid or food for one occupant",
+        "Remote control for the television display",
+        "Central support surface for shared controls"
+      ],
+      "task_effect_count": 0,
+      "unmapped_relation_diagnostics": [
+        {
+          "raw_object": "armchair_seat_anchor",
+          "raw_phrase": "is_accessible_by",
+          "raw_subject": "entertainment_controller",
+          "reason": "Semantic candidates ['ACCESSIBLE_FROM_BOTH_SEATS'] incompatible with endpoints (REMOTE, SEATING_POSITION)",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "armchair_seat_anchor",
+          "raw_phrase": "is_accessible_by",
+          "raw_subject": "entertainment_controller",
+          "reason": "Semantic candidates ['ACCESSIBLE_FROM_BOTH_SEATS'] incompatible with endpoints (REMOTE, SEATING_POSITION)",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "unmapped_required_relation_count": 2,
+      "unresolved_role_count": 0,
+      "unresolved_role_diagnostics": [],
+      "variant": "L2"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 1,
+      "domain": "living_room",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "CUP_SAUCER_SET",
+        "PERSONAL_CUP_SAUCER_REGION",
+        "SHARED_REMOTE_REGION"
+      ],
+      "normalization_trace": [],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [
+        "personal_support_group"
+      ],
+      "original_strict_live_valid": true,
+      "original_validation_error": null,
+      "raw_operation_phrases": [
+        "transfer_container_to_surface",
+        "transfer_device_to_surface"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L3/raw_v2.json",
+      "raw_relation_phrases": [
+        "placed_on",
+        "placed_on"
+      ],
+      "raw_role_function_phrases": [
+        "vessel_holding_refreshment",
+        "support_surface_near_chair",
+        "user_input_interface",
+        "common_access_location"
+      ],
+      "task_effect_count": 1,
+      "unmapped_relation_diagnostics": [
+        {
+          "raw_object": "central_access_point",
+          "raw_phrase": "placed_on",
+          "raw_subject": "entertainment_device",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "unmapped_required_relation_count": 1,
+      "unresolved_role_count": 1,
+      "unresolved_role_diagnostics": [
+        {
+          "raw_role": {
+            "binding_policy": "REUSABLE",
+            "candidate_categories": [
+              "remote_control"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "user_input_interface",
+            "id": "entertainment_device",
+            "required_count": 1,
+            "required_properties": [
+              "has_button_interface"
+            ],
+            "visible_candidates": [
+              {
+                "label": "remote_control",
+                "visual_description": "Black rectangular remote on the large wooden desk"
+              }
+            ]
+          },
+          "status": "UNRESOLVED_SEMANTIC"
+        }
+      ],
+      "variant": "L3"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 1,
+      "domain": "living_room",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "PERSONAL_CUP_SAUCER_REGION",
+        "REMOTE",
+        "SEATING_PAIR",
+        "SEATING_POSITION",
+        "SHARED_REMOTE_REGION"
+      ],
+      "normalization_trace": [],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [
+        "shared_entertainment_group"
+      ],
+      "original_strict_live_valid": true,
+      "original_validation_error": null,
+      "raw_operation_phrases": [
+        "place_refreshment_item_on_surface",
+        "relocate_device_to_shared_spot"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L4/raw_v2.json",
+      "raw_relation_phrases": [
+        "physically_adjacent_to",
+        "reachable_from",
+        "placed_on"
+      ],
+      "raw_role_function_phrases": [
+        "Personal refreshment serving area",
+        "Individual seating for occupant",
+        "Consumable portion for occupant",
+        "Entertainment interface device",
+        "Central accessible interaction point"
+      ],
+      "task_effect_count": 1,
+      "unmapped_relation_diagnostics": [
+        {
+          "raw_object": "seating_unit",
+          "raw_phrase": "reachable_from",
+          "raw_subject": "controller_device",
+          "reason": "Semantic candidates ['ACCESSIBLE_FROM_BOTH_SEATS'] incompatible with endpoints (REMOTE, SEATING_POSITION)",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "unmapped_required_relation_count": 1,
+      "unresolved_role_count": 1,
+      "unresolved_role_diagnostics": [
+        {
+          "raw_role": {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "cup",
+              "mug",
+              "bowl",
+              "plate"
+            ],
+            "description": "",
+            "entity_kind": "OBJECT",
+            "function": "Consumable portion for occupant",
+            "id": "refreshment_item",
+            "required_count": 2,
+            "required_properties": [
+              "food_or_beverage_containment"
+            ],
+            "visible_candidates": [
+              {
+                "label": "Cup on Coffee Table",
+                "visual_description": "Red ceramic mug resting on light blue table surface"
+              }
+            ]
+          },
+          "status": "UNRESOLVED_SEMANTIC"
+        }
+      ],
+      "variant": "L4"
+    },
+    {
+      "canonicalization_status": "NOT_COMPILED",
+      "compile_error": null,
+      "disabled_operation_count": 0,
+      "domain": "living_room",
+      "g_f_ready": false,
+      "normalization_trace": [
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[2].anchor_role",
+          "operation_id": "op_3"
+        }
+      ],
+      "normalized_strict_live_valid": false,
+      "normalized_validation_error": "Relation object_role 'television_screen' not in declared roles",
+      "online_executable_contract_complete": false,
+      "original_strict_live_valid": false,
+      "original_validation_error": "Relation object_role 'television_screen' not in declared roles",
+      "raw_operation_phrases": [
+        "Arrange seating fixtures toward viewing direction",
+        "Transfer beverage container to refreshment surface",
+        "Position controller at accessible access point"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L5/raw_v2.json",
+      "raw_relation_phrases": [
+        "Faced toward television area",
+        "Adjacent to personal refreshment surface",
+        "Resting upon designated surface",
+        "Located within access point reach"
+      ],
+      "raw_role_function_phrases": [
+        "Seating for viewer",
+        "Surface for personal refreshment setting",
+        "Vessel holding liquid refreshment",
+        "Device for controlling media playback",
+        "Shared zone for control retrieval"
+      ],
+      "task_effect_count": 0,
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "variant": "L5"
+    },
+    {
+      "canonicalization_status": "NOT_COMPILED",
+      "compile_error": null,
+      "disabled_operation_count": 0,
+      "domain": "living_room",
+      "g_f_ready": false,
+      "normalization_trace": [],
+      "normalized_strict_live_valid": false,
+      "normalized_validation_error": "Relation object_role 'seating_area' not in declared roles",
+      "online_executable_contract_complete": false,
+      "original_strict_live_valid": false,
+      "original_validation_error": "Relation object_role 'seating_area' not in declared roles",
+      "raw_operation_phrases": [
+        "distribute_refreshment_settings",
+        "relocate_entertainment_control"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L6/raw_v2.json",
+      "raw_relation_phrases": [
+        "placed_on_for_access",
+        "located_near_seating_zone"
+      ],
+      "raw_role_function_phrases": [
+        "Container or dish holding refreshment",
+        "Small surface for individual refreshment",
+        "Device controlling television or media"
+      ],
+      "task_effect_count": 0,
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "variant": "L6"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 0,
+      "domain": "living_room",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "CUP_SAUCER_SET",
+        "PERSONAL_CUP_SAUCER_REGION",
+        "REMOTE",
+        "SHARED_REMOTE_REGION"
+      ],
+      "normalization_trace": [],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [
+        "personal_support_group",
+        "shared_entertainment_group"
+      ],
+      "original_strict_live_valid": true,
+      "original_validation_error": null,
+      "raw_operation_phrases": [
+        "distribute_refreshment_sets",
+        "relocate_entertainment_control"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L7/raw_v2.json",
+      "raw_relation_phrases": [
+        "located_adjacent_to",
+        "must_be_placed_on",
+        "must_be_placed_on",
+        "currently_resides_on"
+      ],
+      "raw_role_function_phrases": [
+        "Carries drink and food for one user",
+        "Supports personal items near seating",
+        "Operates media playback device",
+        "Provides shared access to media control",
+        "Current storage location for items",
+        "Anchors 'nearby' location for refreshment"
+      ],
+      "task_effect_count": 2,
+      "unmapped_relation_diagnostics": [
+        {
+          "raw_object": "initial_storage_surface",
+          "raw_phrase": "currently_resides_on",
+          "raw_subject": "refreshment_set",
+          "reason": "Unresolved or context-only endpoint",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "unmapped_required_relation_count": 1,
+      "unresolved_role_count": 1,
+      "unresolved_role_diagnostics": [
+        {
+          "code": "AMBIGUOUS_ROLE_MAPPING",
+          "collision_with": "accessible_central_zone",
+          "raw_role": {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "large coffee table",
+              "cluttered surface"
+            ],
+            "description": "",
+            "entity_kind": "REGION",
+            "function": "Current storage location for items",
+            "id": "initial_storage_surface",
+            "required_count": 1,
+            "required_properties": [
+              "currently holds scattered items",
+              "larger than required for individuals"
+            ],
+            "visible_candidates": [
+              {
+                "label": "large_coffee_table",
+                "visual_description": "Long wooden table holding items in foreground"
+              }
+            ]
+          }
+        }
+      ],
+      "variant": "L7"
+    },
+    {
+      "canonicalization_status": "NOT_COMPILED",
+      "compile_error": null,
+      "disabled_operation_count": 0,
+      "domain": "living_room",
+      "g_f_ready": false,
+      "normalization_trace": [
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[0].anchor_role",
+          "operation_id": "op_move_refreshments"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[1].anchor_role",
+          "operation_id": "op_move_controller"
+        }
+      ],
+      "normalized_strict_live_valid": false,
+      "normalized_validation_error": "Relation object_role 'living_room_floor' not in declared roles",
+      "online_executable_contract_complete": false,
+      "original_strict_live_valid": false,
+      "original_validation_error": "Relation object_role 'living_room_floor' not in declared roles",
+      "raw_operation_phrases": [
+        "transfer_refreshment_setting",
+        "transfer_entertainment_controller"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L8/raw_v2.json",
+      "raw_relation_phrases": [
+        "initially_rests_above",
+        "initially_rests_above",
+        "located_adjacent_to_seating_zone"
+      ],
+      "raw_role_function_phrases": [
+        "Storage surface for original items",
+        "Support surface for relocated items",
+        "Group of drinkware and plates for one person",
+        "Device to control media display"
+      ],
+      "task_effect_count": 0,
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "variant": "L8"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 1,
+      "domain": "living_room",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "CUP_SAUCER_SET",
+        "PERSONAL_CUP_SAUCER_REGION",
+        "REMOTE",
+        "SEATING_POSITION"
+      ],
+      "normalization_trace": [],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [
+        "personal_support_group"
+      ],
+      "original_strict_live_valid": true,
+      "original_validation_error": null,
+      "raw_operation_phrases": [
+        "place_refreshment_setting_on_nearby_surface",
+        "place_entertainment_control_in_central_access_spot"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/living_room/L9/raw_v2.json",
+      "raw_relation_phrases": [
+        "assigned_to_person_seating_area",
+        "located_at_proximity_of",
+        "accessible_by_all_viewers",
+        "supported_by",
+        "supported_by"
+      ],
+      "raw_role_function_phrases": [
+        "Set of drinkware and dish for one person",
+        "Device for operating media equipment",
+        "Stationary seating location for a viewer",
+        "Flat planar area for supporting objects"
+      ],
+      "task_effect_count": 2,
+      "unmapped_relation_diagnostics": [
+        {
+          "raw_object": "viewing_seat",
+          "raw_phrase": "assigned_to_person_seating_area",
+          "raw_subject": "refreshment_setting",
+          "reason": "Relation text 'assigned_to_person_seating_area' provides no semantic evidence for valid predicates [] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "viewing_seat",
+          "raw_phrase": "located_at_proximity_of",
+          "raw_subject": "refreshment_setting",
+          "reason": "Relation text 'located_at_proximity_of' provides no semantic evidence for valid predicates [] or task causal semantics",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        },
+        {
+          "raw_object": "viewing_seat",
+          "raw_phrase": "accessible_by_all_viewers",
+          "raw_subject": "entertainment_control",
+          "reason": "Semantic candidates ['ACCESSIBLE_FROM_BOTH_SEATS'] incompatible with endpoints (REMOTE, SEATING_POSITION)",
+          "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+        }
+      ],
+      "unmapped_required_relation_count": 3,
+      "unresolved_role_count": 0,
+      "unresolved_role_diagnostics": [],
+      "variant": "L9"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 1,
+      "domain": "workshop",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "driver",
+        "repair_target"
+      ],
+      "normalization_trace": [],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [],
+      "original_strict_live_valid": true,
+      "original_validation_error": null,
+      "raw_operation_phrases": [
+        "Apply fastening action",
+        "Store equipment on surface"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W1/raw_v2.json",
+      "raw_relation_phrases": [
+        "physically_connected_to",
+        "supports_stably"
+      ],
+      "raw_role_function_phrases": [
+        "Reusable equipment for completing fastening",
+        "Marked workbench location requiring fastening",
+        "Safe flat surface for storing equipment"
+      ],
+      "task_effect_count": 0,
+      "unmapped_relation_diagnostics": [],
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "unresolved_role_diagnostics": [],
+      "variant": "W1"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 2,
+      "domain": "workshop",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "driver",
+        "fastener",
+        "repair_target"
+      ],
+      "normalization_trace": [
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[1].anchor_role",
+          "operation_id": "OP02"
+        }
+      ],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [],
+      "original_strict_live_valid": false,
+      "original_validation_error": "DUPLICATE_OPERATION_ENDPOINT: operation_pairings[1].anchor_role equals target_role",
+      "raw_operation_phrases": [
+        "insert_and_secure_fastener",
+        "return_tool_to_workspace"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W10/raw_v2.json",
+      "raw_relation_phrases": [
+        "is located on",
+        "is adjacent to",
+        "compatible with",
+        "applies force to",
+        "secures to"
+      ],
+      "raw_role_function_phrases": [
+        "workspace surface",
+        "specified mount position",
+        "part receiving fastener",
+        "mechanical joining part",
+        "driving tool instrument"
+      ],
+      "task_effect_count": 0,
+      "unmapped_relation_diagnostics": [],
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "unresolved_role_diagnostics": [],
+      "variant": "W10"
+    },
+    {
+      "canonicalization_status": "NOT_COMPILED",
+      "compile_error": null,
+      "disabled_operation_count": 0,
+      "domain": "workshop",
+      "g_f_ready": false,
+      "normalization_trace": [],
+      "normalized_strict_live_valid": false,
+      "normalized_validation_error": "NON_ATOMIC_ROLE_FUNCTION: functional_roles[2].function must be one phrase of at most 10 words",
+      "online_executable_contract_complete": false,
+      "original_strict_live_valid": false,
+      "original_validation_error": "NON_ATOMIC_ROLE_FUNCTION: functional_roles[2].function must be one phrase of at most 10 words",
+      "raw_operation_phrases": [
+        "complete_fastening",
+        "place_reusable_equipment"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W2/raw_v2.json",
+      "raw_relation_phrases": [
+        "is_part_of",
+        "interacts_at_location"
+      ],
+      "raw_role_function_phrases": [
+        "A reusable instrument used to perform the fastening.",
+        "The specific location on the workbench designated for assembly.",
+        "The support plane providing space for the assembly and tool storage."
+      ],
+      "task_effect_count": 0,
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "variant": "W2"
+    },
+    {
+      "canonicalization_status": "FULL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 0,
+      "domain": "workshop",
+      "g_f_ready": true,
+      "graph_node_names": [
+        "driver",
+        "fastener"
+      ],
+      "normalization_trace": [],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": true,
+      "operation_group_ids": [],
+      "original_strict_live_valid": true,
+      "original_validation_error": null,
+      "raw_operation_phrases": [
+        "Apply tightening action to unit",
+        "Deposit tool on workbench surface"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W3/raw_v2.json",
+      "raw_relation_phrases": [
+        "Physically engages with fastening interface",
+        "Spatially associated with",
+        "Resting on for storage"
+      ],
+      "raw_role_function_phrases": [
+        "Wrench or driver implement",
+        "Mechanical part to be assembled",
+        "Workspace anchor and support"
+      ],
+      "task_effect_count": 0,
+      "unmapped_relation_diagnostics": [],
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "unresolved_role_diagnostics": [],
+      "variant": "W3"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 1,
+      "domain": "workshop",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "driver",
+        "repair_target"
+      ],
+      "normalization_trace": [],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [],
+      "original_strict_live_valid": true,
+      "original_validation_error": null,
+      "raw_operation_phrases": [
+        "secure fastener to fixture",
+        "deposit tool on surface"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W4/raw_v2.json",
+      "raw_relation_phrases": [
+        "capable of securing",
+        "resting on",
+        "placed upon"
+      ],
+      "raw_role_function_phrases": [
+        "Manual instrument for applying mechanical force",
+        "Physical object or joint to be fastened together",
+        "Flat horizontal workspace area for placement and access"
+      ],
+      "task_effect_count": 0,
+      "unmapped_relation_diagnostics": [],
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "unresolved_role_diagnostics": [],
+      "variant": "W4"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 2,
+      "domain": "workshop",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "driver",
+        "repair_target"
+      ],
+      "normalization_trace": [
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[0].anchor_role",
+          "operation_id": "op_fasten"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[1].anchor_role",
+          "operation_id": "op_place_back"
+        }
+      ],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [],
+      "original_strict_live_valid": false,
+      "original_validation_error": "DUPLICATE_OPERATION_ENDPOINT: operation_pairings[0].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[1].anchor_role equals target_role",
+      "raw_operation_phrases": [
+        "tighten_connection_using_tool",
+        "release_tool_and_settle_on_surface"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W5/raw_v2.json",
+      "raw_relation_phrases": [
+        "performs_securement_action_on",
+        "physically_holds_and_stabilizes"
+      ],
+      "raw_role_function_phrases": [
+        "device used to secure or tighten components",
+        "workpiece or component requiring secure fixation",
+        "supported area for placing tools and materials"
+      ],
+      "task_effect_count": 0,
+      "unmapped_relation_diagnostics": [],
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "unresolved_role_diagnostics": [],
+      "variant": "W5"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 2,
+      "domain": "workshop",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "driver",
+        "fastener",
+        "repair_target"
+      ],
+      "normalization_trace": [
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "source_role",
+          "location": "task_contract.operation_pairings[1].anchor_role",
+          "operation_id": "op_2"
+        }
+      ],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [],
+      "original_strict_live_valid": false,
+      "original_validation_error": "DUPLICATE_OPERATION_ENDPOINT: operation_pairings[1].anchor_role equals source_role",
+      "raw_operation_phrases": [
+        "apply_fastening_force",
+        "place_tool_down"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W6/raw_v2.json",
+      "raw_relation_phrases": [
+        "physically_attached_to_during_fastening",
+        "actuates_connection_between",
+        "rests_on_top_of"
+      ],
+      "raw_role_function_phrases": [
+        "physical object receiving fastening",
+        "part to be attached to target",
+        "device applying fastening force",
+        "stable horizontal surface for tool placement"
+      ],
+      "task_effect_count": 0,
+      "unmapped_relation_diagnostics": [],
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "unresolved_role_diagnostics": [],
+      "variant": "W6"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 1,
+      "domain": "workshop",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "driver",
+        "fastener"
+      ],
+      "normalization_trace": [
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[0].anchor_role",
+          "operation_id": "OP_1"
+        }
+      ],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [],
+      "original_strict_live_valid": false,
+      "original_validation_error": "DUPLICATE_OPERATION_ENDPOINT: operation_pairings[0].anchor_role equals target_role",
+      "raw_operation_phrases": [
+        "Fasten Component To Site",
+        "Place Tool On Bench"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W7/raw_v2.json",
+      "raw_relation_phrases": [
+        "physically compatible with site geometry",
+        "interact mechanically with fastener",
+        "operate over assembly location",
+        "provides resting support for tool"
+      ],
+      "raw_role_function_phrases": [
+        "Designated geometric zone on workbench for attachment",
+        "Small mechanical part designed to join surfaces",
+        "Instrument used to apply torque or force for joining",
+        "Primary horizontal planar surface of the furniture"
+      ],
+      "task_effect_count": 0,
+      "unmapped_relation_diagnostics": [],
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "unresolved_role_diagnostics": [],
+      "variant": "W7"
+    },
+    {
+      "canonicalization_status": "PARTIAL",
+      "compile_error": null,
+      "contract_incompleteness_reasons": [],
+      "disabled_operation_count": 3,
+      "domain": "workshop",
+      "g_f_ready": false,
+      "graph_node_names": [
+        "driver",
+        "fastener",
+        "repair_target"
+      ],
+      "normalization_trace": [
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[2].anchor_role",
+          "operation_id": "op_3"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[3].anchor_role",
+          "operation_id": "op_4"
+        }
+      ],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "operation_group_ids": [],
+      "original_strict_live_valid": false,
+      "original_validation_error": "DUPLICATE_OPERATION_ENDPOINT: operation_pairings[2].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[3].anchor_role equals target_role",
+      "raw_operation_phrases": [
+        "Retrieve Fastening Tool from Storage",
+        "Retrieve Fastener from Storage",
+        "Secure Fastener to Workpiece",
+        "Return Fastening Tool to Workbench"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W8/raw_v2.json",
+      "raw_relation_phrases": [
+        "physically acts upon",
+        "mechanically attaches_to",
+        "originally contained_in",
+        "rests_on",
+        "transferred_from"
+      ],
+      "raw_role_function_phrases": [
+        "Mechanical instrument for driving fasteners",
+        "Physical connector joining components",
+        "Object receiving the fastening operation",
+        "Container for locating required parts",
+        "Designated location for tool deposition"
+      ],
+      "task_effect_count": 0,
+      "unmapped_relation_diagnostics": [],
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "unresolved_role_diagnostics": [],
+      "variant": "W8"
+    },
+    {
+      "canonicalization_status": "NOT_COMPILED",
+      "compile_error": "No executable role could be typed",
+      "disabled_operation_count": 0,
+      "domain": "workshop",
+      "g_f_ready": false,
+      "normalization_trace": [
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[0].anchor_role",
+          "operation_id": "op_01"
+        },
+        {
+          "code": "REDUNDANT_ANCHOR_REMOVED",
+          "duplicate_of": "target_role",
+          "location": "task_contract.operation_pairings[1].anchor_role",
+          "operation_id": "op_02"
+        }
+      ],
+      "normalized_strict_live_valid": true,
+      "normalized_validation_error": null,
+      "online_executable_contract_complete": false,
+      "original_strict_live_valid": false,
+      "original_validation_error": "DUPLICATE_OPERATION_ENDPOINT: operation_pairings[0].anchor_role equals target_role; DUPLICATE_OPERATION_ENDPOINT: operation_pairings[1].anchor_role equals target_role",
+      "raw_operation_phrases": [
+        "execute_fastening_manipulation",
+        "place_equipment_onto_workbench"
+      ],
+      "raw_path": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST/workshop/W9/raw_v2.json",
+      "raw_relation_phrases": [
+        "acts_upon_during_fastening_operation",
+        "rests_finally_on"
+      ],
+      "raw_role_function_phrases": [
+        "The compatible component used for fastening",
+        "The specific location on the workbench requiring fastening",
+        "The workbench surface serving as the safe equipment landing area"
+      ],
+      "task_effect_count": 0,
+      "unmapped_required_relation_count": 0,
+      "unresolved_role_count": 0,
+      "variant": "W9"
+    }
+  ],
+  "classification_counts": {
+    "G_F_READY": 3,
+    "RAW_FM_INCOMPLETE": 9,
+    "RAW_FM_INTERNAL_CONTRADICTION": 4,
+    "RAW_FM_INVALID": 8,
+    "RELATION_MAPPING_BLOCKER": 2,
+    "ROLE_MAPPING_BLOCKER": 6
+  },
+  "classifications": [
+    {
+      "domain": "kitchen",
+      "earliest_blocker": "RAW_FM_INTERNAL_CONTRADICTION",
+      "reason": "dedicated transfer count 2 conflicts with reusable singleton coffee and water sources",
+      "variant": "K1"
+    },
+    {
+      "domain": "kitchen",
+      "earliest_blocker": "RAW_FM_INVALID",
+      "reason": "operation references undeclared table_surface anchor",
+      "variant": "K10"
+    },
+    {
+      "domain": "kitchen",
+      "earliest_blocker": "RAW_FM_INVALID",
+      "reason": "operation references undeclared soup_content source",
+      "variant": "K11"
+    },
+    {
+      "domain": "kitchen",
+      "earliest_blocker": "G_F_READY",
+      "reason": "canonical FULL and online executable contract complete",
+      "variant": "K12"
+    },
+    {
+      "domain": "kitchen",
+      "earliest_blocker": "RAW_FM_INVALID",
+      "reason": "relation references undeclared serving_surface",
+      "variant": "K2"
+    },
+    {
+      "domain": "kitchen",
+      "earliest_blocker": "RAW_FM_INCOMPLETE",
+      "reason": "one combined eating-or-stirring role conflates distinct task functions",
+      "variant": "K3"
+    },
+    {
+      "domain": "kitchen",
+      "earliest_blocker": "ROLE_MAPPING_BLOCKER",
+      "reason": "expressed bulk soup source and final-serving support have no executable canonical role coverage",
+      "variant": "K4"
+    },
+    {
+      "domain": "kitchen",
+      "earliest_blocker": "RAW_FM_INVALID",
+      "reason": "operation references undeclared soup_source",
+      "variant": "K5"
+    },
+    {
+      "domain": "kitchen",
+      "earliest_blocker": "ROLE_MAPPING_BLOCKER",
+      "reason": "generic food-placement service surface remains outside safe Kitchen context mapping",
+      "variant": "K6"
+    },
+    {
+      "domain": "kitchen",
+      "earliest_blocker": "RAW_FM_INTERNAL_CONTRADICTION",
+      "reason": "dedicated transfer count 2 conflicts with reusable singleton material sources",
+      "variant": "K7"
+    },
+    {
+      "domain": "kitchen",
+      "earliest_blocker": "RAW_FM_INCOMPLETE",
+      "reason": "one role conflates coffee stirring and soup eating, and soup transfer exceeds supported task contract",
+      "variant": "K8"
+    },
+    {
+      "domain": "kitchen",
+      "earliest_blocker": "RAW_FM_INTERNAL_CONTRADICTION",
+      "reason": "dedicated transfer count 2 conflicts with reusable singleton coffee and water sources",
+      "variant": "K9"
+    },
+    {
+      "domain": "living_room",
+      "earliest_blocker": "G_F_READY",
+      "reason": "canonical FULL and online executable contract complete",
+      "variant": "L1"
+    },
+    {
+      "domain": "living_room",
+      "earliest_blocker": "ROLE_MAPPING_BLOCKER",
+      "reason": "generic food-or-beverage receptacle does not safely identify a cup-and-saucer payload",
+      "variant": "L10"
+    },
+    {
+      "domain": "living_room",
+      "earliest_blocker": "RELATION_MAPPING_BLOCKER",
+      "reason": "remote-to-individual-seat accessibility edges do not match shared-support accessibility signature",
+      "variant": "L2"
+    },
+    {
+      "domain": "living_room",
+      "earliest_blocker": "ROLE_MAPPING_BLOCKER",
+      "reason": "user_input_interface alone does not safely identify an entertainment control",
+      "variant": "L3"
+    },
+    {
+      "domain": "living_room",
+      "earliest_blocker": "ROLE_MAPPING_BLOCKER",
+      "reason": "consumable portion alone does not safely identify a cup-and-saucer payload",
+      "variant": "L4"
+    },
+    {
+      "domain": "living_room",
+      "earliest_blocker": "RAW_FM_INVALID",
+      "reason": "relation references undeclared television_screen",
+      "variant": "L5"
+    },
+    {
+      "domain": "living_room",
+      "earliest_blocker": "RAW_FM_INVALID",
+      "reason": "relation references undeclared seating_area",
+      "variant": "L6"
+    },
+    {
+      "domain": "living_room",
+      "earliest_blocker": "ROLE_MAPPING_BLOCKER",
+      "reason": "current storage location is scene state/context, not an executable task role",
+      "variant": "L7"
+    },
+    {
+      "domain": "living_room",
+      "earliest_blocker": "RAW_FM_INVALID",
+      "reason": "relation references undeclared living_room_floor",
+      "variant": "L8"
+    },
+    {
+      "domain": "living_room",
+      "earliest_blocker": "RELATION_MAPPING_BLOCKER",
+      "reason": "payload-to-seat assignment/proximity and remote accessibility relations have incompatible endpoint signatures",
+      "variant": "L9"
+    },
+    {
+      "domain": "workshop",
+      "earliest_blocker": "RAW_FM_INCOMPLETE",
+      "reason": "manipulated fastening component is omitted",
+      "variant": "W1"
+    },
+    {
+      "domain": "workshop",
+      "earliest_blocker": "RAW_FM_INCOMPLETE",
+      "reason": "expressed joining part is omitted from fastening operation endpoints",
+      "variant": "W10"
+    },
+    {
+      "domain": "workshop",
+      "earliest_blocker": "RAW_FM_INVALID",
+      "reason": "role function violates atomic live phrase limit",
+      "variant": "W2"
+    },
+    {
+      "domain": "workshop",
+      "earliest_blocker": "G_F_READY",
+      "reason": "canonical FULL and online executable contract complete",
+      "variant": "W3"
+    },
+    {
+      "domain": "workshop",
+      "earliest_blocker": "RAW_FM_INCOMPLETE",
+      "reason": "manipulated fastening component is omitted",
+      "variant": "W4"
+    },
+    {
+      "domain": "workshop",
+      "earliest_blocker": "RAW_FM_INCOMPLETE",
+      "reason": "manipulated fastening component is omitted",
+      "variant": "W5"
+    },
+    {
+      "domain": "workshop",
+      "earliest_blocker": "RAW_FM_INTERNAL_CONTRADICTION",
+      "reason": "fastening component is encoded as anchor while fixed fastening target is encoded as acted-on target",
+      "variant": "W6"
+    },
+    {
+      "domain": "workshop",
+      "earliest_blocker": "RAW_FM_INCOMPLETE",
+      "reason": "expressed fastener is omitted from fastening operation endpoints",
+      "variant": "W7"
+    },
+    {
+      "domain": "workshop",
+      "earliest_blocker": "RAW_FM_INCOMPLETE",
+      "reason": "expressed fastener is omitted from secure operation endpoints",
+      "variant": "W8"
+    },
+    {
+      "domain": "workshop",
+      "earliest_blocker": "RAW_FM_INCOMPLETE",
+      "reason": "manipulated fastening component is omitted",
+      "variant": "W9"
+    }
+  ],
+  "downstream_smoke_selection": {
+    "kitchen": "K12",
+    "living_room": "L1",
+    "workshop": "W3"
+  },
+  "downstream_smokes": {
+    "kitchen": {
+      "astar_invocations": 1,
+      "candidate_plan_length": 8,
+      "domain": "kitchen",
+      "failure_reason": null,
+      "high_level_replans": 0,
+      "independent_plan_validation": {
+        "grounding_complete": false,
+        "plan_replay_valid": true,
+        "violations": []
+      },
+      "inspected_regions": [
+        "D1",
+        "D2",
+        "C2",
+        "B1",
+        "C1"
+      ],
+      "next_blocker": "NONE_AT_PIPELINE_BOUNDARY; independent audit notes grounding_complete=false despite ACTION_SEQUENCE_READY",
+      "saved_raw_sha256": "63926f969f1d99a03ff95d42b35084752ad490e02cc41ab94c10e8af642df6f0",
+      "search_statistics": {
+        "algorithm": "deterministic_astar_symbolic_state_search",
+        "expanded_states": 80,
+        "frontier_peak": 30,
+        "generated_states": 222,
+        "is_partial": false,
+        "plan_cost": 8,
+        "plan_length": 8,
+        "satisfied_goals": 5,
+        "search_time_ms": 0.30920899007469416,
+        "total_goals": 5,
+        "visited_states": 94
+      },
+      "semantic_fm_calls": 0,
+      "spec_acquisition": "archived raw response after safe deterministic normalization",
+      "terminal_status": "ACTION_SEQUENCE_READY",
+      "variant": "K12"
+    },
+    "living_room": {
+      "astar_invocations": 0,
+      "candidate_plan_length": 0,
+      "domain": "living_room",
+      "failure_reason": "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement",
+      "high_level_replans": 0,
+      "independent_plan_validation": null,
+      "inspected_regions": [],
+      "next_blocker": "UNINSTANTIABLE_MISSING_RELATION: living runtime did not consume capability-owned placement preconditions",
+      "saved_raw_sha256": "919e6558c19bf5ecee114a229b9ae0866cf902745f0135aeba3f622f2d5121d5",
+      "search_statistics": {},
+      "semantic_fm_calls": 0,
+      "spec_acquisition": "archived raw response after safe deterministic normalization",
+      "terminal_status": "NO_MEANINGFUL_CANDIDATE_PLAN",
+      "variant": "L1"
+    },
+    "workshop": {
+      "astar_invocations": 1,
+      "candidate_plan_length": 2,
+      "domain": "workshop",
+      "failure_reason": null,
+      "high_level_replans": 0,
+      "independent_plan_validation": {
+        "grounding_complete": true,
+        "plan_replay_valid": true,
+        "violations": []
+      },
+      "inspected_regions": [
+        "LEFT_DRAWER"
+      ],
+      "next_blocker": "A* satisfied 2/3 goals and returned an independently valid partial sequence",
+      "saved_raw_sha256": "fc1ee425f159590d21d21a65b6d681e5b0c2c93aa257cdf8ce96d0d3e0ae76dc",
+      "search_statistics": {
+        "algorithm": "deterministic_astar_symbolic_state_search",
+        "expanded_states": 5,
+        "frontier_peak": 2,
+        "generated_states": 4,
+        "is_partial": true,
+        "plan_cost": 2,
+        "plan_length": 2,
+        "satisfied_goals": 2,
+        "search_time_ms": 0.02317401231266558,
+        "total_goals": 3,
+        "visited_states": 5
+      },
+      "semantic_fm_calls": 0,
+      "spec_acquisition": "archived raw response after safe deterministic normalization",
+      "terminal_status": "PARTIAL_ACTION_SEQUENCE_READY",
+      "variant": "W3"
+    }
+  },
+  "highest_impact_next_blocker": "RAW_FM participant and endpoint completeness: 8 invalid, 9 incomplete, and 4 internally contradictory saved contracts remain upstream of deterministic compilation.",
+  "historical_baseline": {
+    "by_domain": {
+      "kitchen": {
+        "g_f_ready": 0,
+        "strict_live_valid": 2
+      },
+      "living_room": {
+        "g_f_ready": 0,
+        "strict_live_valid": 6
+      },
+      "workshop": {
+        "g_f_ready": 0,
+        "strict_live_valid": 3
+      }
+    },
+    "g_f_ready": 0,
+    "strict_live_valid": 11
+  },
+  "overall": {
+    "canonical_full": 3,
+    "cases": 32,
+    "g_f_ready": 3,
+    "normalized_strict_live_valid": 21,
+    "online_executable_contract_complete": 3,
+    "original_strict_live_valid": 10
+  },
+  "raw_sha256": {
+    "kitchen/K1": "0afaf2e58d4428ebab8a488c84c0747464c18089d2e8aaa8aa5be4a79b23d14f",
+    "kitchen/K10": "5fd8ab9467f199cb872030682cc7d6ff88e5717f81deacc1af617d4ac958684a",
+    "kitchen/K11": "dd82a0935584edb85197ad7a53e89187bbb492eec47440d8a5002e9cd9f1240f",
+    "kitchen/K12": "63926f969f1d99a03ff95d42b35084752ad490e02cc41ab94c10e8af642df6f0",
+    "kitchen/K2": "0791e30f7e9a76e2b67a15ba72cd9d5187029fae691b74cff3f4caf49f337ce9",
+    "kitchen/K3": "0c403045145d751c29ca95fa22c98271930c1af946cc075322e41e18502bf063",
+    "kitchen/K4": "74be47daf559b8ae14b7a3e068029eac5c34737b0c7145a40c2dcc5467574181",
+    "kitchen/K5": "4008dcc01721b5968677199379935fdac85510f44859c22f393a2d117bc2e5bc",
+    "kitchen/K6": "0d68713bd22064ce710c644a75413b71e1ef2e01ee36c42b19cf0dba7f8f5d0e",
+    "kitchen/K7": "817acebbbf63d0fc58a785117171a669f53b2d11a519ae321df54373e48102c6",
+    "kitchen/K8": "44b63dae3074897aedafd42770ab27cb4f21befbb15ed71bbbbb818843f742a2",
+    "kitchen/K9": "d62e34e6122df2b8b33d7d298e8f41736cbffb815a32a10c3bbc6d320784d191",
+    "living_room/L1": "919e6558c19bf5ecee114a229b9ae0866cf902745f0135aeba3f622f2d5121d5",
+    "living_room/L10": "b4310b52f922594c64d4b672ad353096802dd5142d35e58b9c19269c56d0ae97",
+    "living_room/L2": "8c48e0dafe08961d3c5b361930be2606aab7261835609d2d3fc6036fabb83295",
+    "living_room/L3": "646f4421a62372bf22f98398ca1a42fd0f0339eb5988a09fd056bca28a7a32a4",
+    "living_room/L4": "cbe51e468f910743f7937771d53643d7698e69b232168ac75d3f233f6cca7357",
+    "living_room/L5": "329d779ed36db11fece2e1489bb3ebe6be7541bb8ce4e8b9bef36150d5836b56",
+    "living_room/L6": "6298cf0bdc32c63bd20804c580ba4807631535c1359a7472f8fdaae00b32bc3b",
+    "living_room/L7": "7018fafc38e722cd242b446bdd8508704455aa5f49e23deceeea39c5c9a025b9",
+    "living_room/L8": "45ecb7b5e588691d61f384944791806bb3bb856d84deee2b3d0937c14cf39428",
+    "living_room/L9": "17f3581f539071b2663e229f5c7be3bc8c9fc654dd7bdcefd6f2dabb6e708eaf",
+    "workshop/W1": "6b1df393b85c2cfc1bae433de883a409766c5d09333c7ce93aa9119dbfd92a40",
+    "workshop/W10": "8a119644ea916914a7d4ffb8c90c573ef0a9e2373ee463fd5a6dce8d3e074652",
+    "workshop/W2": "eca058ac2a2d126aedcbbe34fdac9c4487064f4226d7d1e57e50c7bb39c3ca59",
+    "workshop/W3": "fc1ee425f159590d21d21a65b6d681e5b0c2c93aa257cdf8ce96d0d3e0ae76dc",
+    "workshop/W4": "9aa0378225bb424ce227491092ddc7fcfd3eb84331f69d6663f3802d20b2344e",
+    "workshop/W5": "28bfa543a9df114556a8653e52af1ae21e8ea2be23a719e528c3c0d4ba70d85b",
+    "workshop/W6": "b7c3609c0b354df91ffc44440a77cfc1643300e14384ff1fe3b1b6536e630d00",
+    "workshop/W7": "4d6c9847527ae0c249847abd7977f485e422285368585eeddfed1ab97fa28513",
+    "workshop/W8": "c84a069599f863af43cb7a80c87e3ccdcbbabb60702ea92e76dcd7b232bcb158",
+    "workshop/W9": "e71eeae38429533ff81677d55b7cbf7676a492b5369774cb449129d3c110d01e"
+  },
+  "recurring_inventories": {
+    "normalized_validation_errors": {
+      "INCONSISTENT_OPERATION_REUSE_CARDINALITY": 3,
+      "NON_ATOMIC_ROLE_FUNCTION": 1,
+      "Operation anchor_role 'table_surface' not in declared roles": 1,
+      "Operation source_role 'soup_content' not in declared roles": 1,
+      "Operation source_role 'soup_source' not in declared roles": 1,
+      "Relation object_role 'living_room_floor' not in declared roles": 1,
+      "Relation object_role 'seating_area' not in declared roles": 1,
+      "Relation object_role 'serving_surface' not in declared roles": 1,
+      "Relation object_role 'television_screen' not in declared roles": 1
+    },
+    "original_validation_errors": {
+      "DUPLICATE_OPERATION_ENDPOINT": 8,
+      "INCONSISTENT_OPERATION_REUSE_CARDINALITY": 3,
+      "Live V2 schema validation failed": 3,
+      "NON_ATOMIC_ROLE_FUNCTION": 1,
+      "Operation anchor_role 'table_surface' not in declared roles": 1,
+      "Operation source_role 'soup_content' not in declared roles": 1,
+      "Operation source_role 'soup_source' not in declared roles": 1,
+      "Relation object_role 'living_room_floor' not in declared roles": 1,
+      "Relation object_role 'seating_area' not in declared roles": 1,
+      "Relation object_role 'serving_surface' not in declared roles": 1,
+      "Relation object_role 'television_screen' not in declared roles": 1
+    },
+    "raw_operation_phrases": {
+      "Add coffee ingredient to cup": 1,
+      "Apply fastening action": 1,
+      "Apply tightening action to unit": 1,
+      "Arrange seating fixtures toward viewing direction": 1,
+      "Deposit tool on workbench surface": 1,
+      "Dispense coffee powder": 1,
+      "Fasten Component To Site": 1,
+      "Fill bowl with soup": 1,
+      "Fill soup bowl from stockpot": 1,
+      "Place Tool On Bench": 1,
+      "Place coffee cups on table": 1,
+      "Place eating utensil beside bowl": 1,
+      "Place eating utensil with soup": 1,
+      "Place soup bowls on table": 1,
+      "Place utensils near bowls": 1,
+      "Place_refreshment_on_adjacent_table": 1,
+      "Position controller at accessible access point": 1,
+      "Pour soup into bowls": 1,
+      "Pour water into coffee cup": 1,
+      "Pour water into cup": 1,
+      "Pour water into cups": 1,
+      "Relocate_controller_to_central_spot": 1,
+      "Retrieve Fastener from Storage": 1,
+      "Retrieve Fastening Tool from Storage": 1,
+      "Return Fastening Tool to Workbench": 1,
+      "Secure Fastener to Workpiece": 1,
+      "Stir coffee mixture": 1,
+      "Stir coffee mixture in cup": 1,
+      "Stir liquid in cup": 1,
+      "Store equipment on surface": 1,
+      "Transfer beverage container to refreshment surface": 1,
+      "Transfer dry coffee to cup": 1,
+      "add coffee powder to vessel": 1,
+      "apply_fastening_force": 1,
+      "arrange_eating_utensil_on_bowl": 1,
+      "arrange_food_on_surface": 2,
+      "blend_coffee_and_water_in_cup": 1,
+      "complete_fastening": 1,
+      "deposit tool on surface": 1,
+      "distribute_refreshment_sets": 1,
+      "distribute_refreshment_settings": 1,
+      "execute_fastening_manipulation": 1,
+      "fill_cup_with_water_and_add_coffee": 2,
+      "fill_soup_bowl": 1,
+      "fill_soup_vessel_with_soup": 1,
+      "insert_and_secure_fastener": 1,
+      "move entertainment control to surface": 1,
+      "pair utensil with food bowl": 1,
+      "place refreshment items near seating": 1,
+      "place_coffee_cup_on_table": 1,
+      "place_coffee_on_table": 1,
+      "place_eating_utensil": 1,
+      "place_eating_utensil_near_bowl": 1,
+      "place_eating_utensil_next_to_soup": 1,
+      "place_entertainment_control_in_central_access_spot": 1,
+      "place_equipment_onto_workbench": 1,
+      "place_refreshment_item_on_surface": 1,
+      "place_refreshment_setting_on_nearby_surface": 1,
+      "place_reusable_equipment": 1,
+      "place_soup_on_table": 3,
+      "place_tool_down": 1,
+      "place_utensil_at_bowl": 1,
+      "place_utensil_near_soup": 1,
+      "position_eating_utensil_next_to_soup": 1,
+      "position_soup_bowl_at_table": 1,
+      "pour water into vessel": 1,
+      "pour_coffee_ingredient_into_cup": 1,
+      "pour_coffee_into_container": 1,
+      "pour_coffee_powder_into_mug": 1,
+      "pour_soup_into_bowl": 1,
+      "pour_water_into_container": 1,
+      "pour_water_into_cup": 2,
+      "pour_water_into_mug": 1,
+      "pour_water_to_mix_with_coffee": 1,
+      "release_tool_and_settle_on_surface": 1,
+      "relocate_device_to_shared_spot": 1,
+      "relocate_entertainment_control": 2,
+      "rest_utensil_with_soup_bowl": 1,
+      "return_tool_to_workspace": 1,
+      "secure fastener to fixture": 1,
+      "stir beverage with tool": 1,
+      "stir_coffee_beverage": 2,
+      "stir_coffee_content": 1,
+      "stir_coffee_contents": 1,
+      "stir_coffee_mix": 1,
+      "stir_coffee_mixture": 1,
+      "stir_coffee_with_spool": 1,
+      "stir_mixture_with_tool": 1,
+      "tighten_connection_using_tool": 1,
+      "transfer_coffee_powder_to_cup": 1,
+      "transfer_coffee_to_cup": 1,
+      "transfer_container_to_surface": 1,
+      "transfer_device_to_surface": 1,
+      "transfer_entertainment_controller": 1,
+      "transfer_powder_into_cup": 1,
+      "transfer_refreshment_pair_to_table": 1,
+      "transfer_refreshment_setting": 1,
+      "transfer_soup_to_bowl": 1,
+      "transfer_water_to_coffee_cup": 1,
+      "transfer_water_to_cup": 1,
+      "transport_control_device_to_central_area": 1
+    },
+    "raw_relation_phrases": {
+      "Adjacent to personal refreshment surface": 1,
+      "Faced toward television area": 1,
+      "Located within access point reach": 1,
+      "Physically engages with fastening interface": 1,
+      "Resting on for storage": 1,
+      "Resting upon designated surface": 1,
+      "Spatially associated with": 1,
+      "accessible from": 1,
+      "accessible_by_all_viewers": 1,
+      "accommodates eating utensil": 1,
+      "accompanied_by": 1,
+      "actives_stirring_within": 1,
+      "acts_upon_during_fastening_operation": 1,
+      "actuates_connection_between": 1,
+      "applies force to": 1,
+      "assigned_to_person_seating_area": 1,
+      "assigned_to_serve": 1,
+      "associated_with_placement": 1,
+      "associated_with_serving": 1,
+      "associated_with_soup": 1,
+      "capable of securing": 1,
+      "compatible with": 1,
+      "contained_within": 1,
+      "contains_and_is_filled_by": 1,
+      "contains_coffee_liquid": 1,
+      "contains_water_liquid": 1,
+      "contents mixed in": 1,
+      "contents poured into": 1,
+      "currently_resides_on": 1,
+      "fits_in_contained_volume": 1,
+      "fits_in_open_container": 1,
+      "initially_rests_above": 2,
+      "interact mechanically with fastener": 1,
+      "interacts_at_location": 1,
+      "is adjacent to": 1,
+      "is located on": 1,
+      "is_accessible_by": 2,
+      "is_adjacent_to": 1,
+      "is_part_of": 1,
+      "is_served_with": 1,
+      "located upon": 1,
+      "located within or accessible from": 1,
+      "located_adjacent": 1,
+      "located_adjacent_to": 1,
+      "located_adjacent_to_seating_zone": 1,
+      "located_at_proximity_of": 1,
+      "located_near_seating_zone": 1,
+      "manipulates_contents_of": 1,
+      "mechanically attaches_to": 1,
+      "mechanically_agitates": 1,
+      "mixed_with": 1,
+      "must accompany": 1,
+      "must_be_placed_on": 2,
+      "operate over assembly location": 1,
+      "originally contained_in": 1,
+      "performs mixing action in": 1,
+      "performs_securement_action_on": 1,
+      "physically acts upon": 1,
+      "physically compatible with site geometry": 1,
+      "physically_adjacent_to": 1,
+      "physically_attached_to_during_fastening": 1,
+      "physically_connected_to": 1,
+      "physically_holds_and_stabilizes": 1,
+      "placed adjacent to serving of": 1,
+      "placed upon": 1,
+      "placed_adjacent_to": 2,
+      "placed_near": 1,
+      "placed_on": 4,
+      "placed_on_for_access": 1,
+      "placed_on_surface": 2,
+      "placed_on_top_of": 2,
+      "placed_upon": 1,
+      "positioned adjacent to": 1,
+      "positioned_on": 2,
+      "provides fillable fluid to": 1,
+      "provides resting support for tool": 1,
+      "provides_coffee_for_blend": 1,
+      "provides_content_for": 3,
+      "provides_content_to": 1,
+      "provides_water_for_blend": 1,
+      "reachable_from": 1,
+      "receives_content_from": 2,
+      "receives_transfer_from": 5,
+      "receiving_from": 2,
+      "requires access to coffee ingredients": 1,
+      "requires access to water source": 1,
+      "requires_contents_from": 1,
+      "resting on": 1,
+      "rests_finally_on": 1,
+      "rests_on": 1,
+      "rests_on_top_of": 1,
+      "rests_upon": 2,
+      "secures to": 1,
+      "supplies_fluid_to": 1,
+      "supplies_solid_to": 1,
+      "supported_by": 2,
+      "supported_by_flat_plane": 1,
+      "supported_on": 1,
+      "supported_on_by_gravity": 2,
+      "supports_stably": 1,
+      "transferred_from": 1,
+      "transfers contents to": 1,
+      "used to mix contents of": 1,
+      "used_for_stirring": 1
+    },
+    "raw_role_function_phrases": {
+      "A reusable instrument used to perform the fastening.": 1,
+      "Anchors 'nearby' location for refreshment": 1,
+      "Area for presenting final dishes": 1,
+      "Bowl or vessel for holding hot soup": 1,
+      "Carries drink and food for one user": 1,
+      "Central accessible interaction point": 1,
+      "Central support surface for shared controls": 1,
+      "Closed storage volume for hidden items": 1,
+      "Coffee beverage container": 1,
+      "Coffee container vessel": 1,
+      "Consumable portion for occupant": 1,
+      "Consume solid food": 1,
+      "Contain prepared beverage for consumption": 1,
+      "Contain prepared soup for consumption": 1,
+      "Container for fluid or food for one occupant": 1,
+      "Container for locating required parts": 1,
+      "Container for prepared coffee": 1,
+      "Container for prepared coffee beverage": 2,
+      "Container for prepared soup portion": 1,
+      "Container for served soup": 2,
+      "Container for the final coffee beverage": 1,
+      "Container holding dry coffee powder or grounds": 1,
+      "Container holding potable water for beverage preparation": 1,
+      "Container of instant or ground coffee": 1,
+      "Container or dish holding refreshment": 1,
+      "Container or stockpot holding raw soup liquid": 1,
+      "Current storage location for items": 1,
+      "Designated geometric zone on workbench for attachment": 1,
+      "Designated location for tool deposition": 1,
+      "Device controlling television or media": 1,
+      "Device for controlling media playback": 1,
+      "Device for operating media equipment": 1,
+      "Device to control media display": 1,
+      "Dishes holding soup portions": 1,
+      "Dry coffee ingredient container": 1,
+      "Dry soluble coffee source": 1,
+      "Enclosed space containing missing objects": 1,
+      "Entertainment interface device": 1,
+      "Flat horizontal workspace area for placement and access": 1,
+      "Flat planar area for supporting objects": 1,
+      "Flat surface for placing food items": 1,
+      "Furniture for two distinct seated occupants": 1,
+      "Furniture supporting seated user position": 1,
+      "Group of drinkware and plates for one person": 1,
+      "Horizontal platform suitable for item placement": 1,
+      "Horizontal work and service plane": 1,
+      "Hot water supply container": 1,
+      "Implement for mixing coffee": 1,
+      "Individual seating for occupant": 1,
+      "Ingredient containment space": 1,
+      "Input mechanism for controlling media playback": 1,
+      "Instrument for consuming food from soup bowl": 1,
+      "Instrument provided for eating the soup": 1,
+      "Instrument used to agitate the coffee mixture": 1,
+      "Instrument used to apply torque or force for joining": 1,
+      "Liquid content supply": 1,
+      "Liquidity mixing implement": 1,
+      "Location for placing completed dishes": 1,
+      "Manual instrument for applying mechanical force": 1,
+      "Marked workbench location requiring fastening": 1,
+      "Mechanical instrument for driving fasteners": 1,
+      "Mechanical part to be assembled": 1,
+      "Mix liquid contents in vessel": 1,
+      "Object receiving the fastening operation": 1,
+      "Operates media playback device": 1,
+      "Packaging containing dry coffee extract": 1,
+      "Personal refreshment serving area": 1,
+      "Physical connector joining components": 1,
+      "Physical object or joint to be fastened together": 1,
+      "Physical storage of coffee granules": 1,
+      "Physical storage of drinking water": 1,
+      "Physical storage of pre-prepared soup": 1,
+      "Primary horizontal planar surface of the furniture": 1,
+      "Provide caffeine additive": 1,
+      "Provide liquid volume": 1,
+      "Provides shared access to media control": 1,
+      "Receiving vessel for prepared coffee": 1,
+      "Receiving vessel for served soup": 1,
+      "Receptacle for holding beverages or food": 1,
+      "Receptacle for prepared coffee beverage": 1,
+      "Receptacle for serving liquid soup": 1,
+      "Remote control for the television display": 1,
+      "Reusable equipment for completing fastening": 1,
+      "Safe flat surface for storing equipment": 1,
+      "Seating for viewer": 1,
+      "Set of drinkware and dish for one person": 1,
+      "Shallow vessel holding the soup portion": 1,
+      "Shared zone for control retrieval": 1,
+      "Small hand-held eating or stirring tool": 1,
+      "Small mechanical part designed to join surfaces": 1,
+      "Small surface for individual refreshment": 1,
+      "Soup accompaniment tool": 1,
+      "Soup serving dish": 1,
+      "Soup serving vessel": 1,
+      "Source containing coffee ingredients": 1,
+      "Source containing water for coffee": 1,
+      "Source of coffee concentrate or grounds": 1,
+      "Source of drinking water": 1,
+      "Source of raw soup or cooked stock": 1,
+      "Stationary seating location for a viewer": 1,
+      "Storage surface for original items": 1,
+      "Supply point for beverage water": 1,
+      "Supply point for coffee concentrate or grounds": 1,
+      "Supply point for dry coffee ingredient": 1,
+      "Supply point for liquid water": 1,
+      "Support surface for personal refreshment items near a seat": 1,
+      "Support surface for relocated items": 1,
+      "Supports personal items near seating": 1,
+      "Surface for personal refreshment setting": 1,
+      "Surface for placing finished dishes": 1,
+      "The compatible component used for fastening": 1,
+      "The specific location on the workbench designated for assembly.": 1,
+      "The specific location on the workbench requiring fastening": 1,
+      "The support plane providing space for the assembly and tool storage.": 1,
+      "The workbench surface serving as the safe equipment landing area": 1,
+      "Tool for consuming soup": 1,
+      "Tool for mixing coffee contents": 1,
+      "Tool for stirring coffee liquid": 1,
+      "Tool for stirring coffee or eating soup": 1,
+      "Tool for stirring liquid ingredients": 1,
+      "Tool used to mix coffee ingredients": 1,
+      "Tool used to mix the coffee ingredients": 1,
+      "Tools for consuming soup": 1,
+      "Utensil for consuming solid/semi-solid food": 1,
+      "Utensil for consuming soup": 1,
+      "Utensil provided for eating soup": 1,
+      "Vessel containing bulk soup stock": 1,
+      "Vessel for holding prepared coffee drink": 1,
+      "Vessel holding liquid refreshment": 1,
+      "Vessel providing hot water for coffee": 1,
+      "Vessel providing water for brewing": 1,
+      "Vessels holding coffee portions": 1,
+      "Work and serving support": 1,
+      "Workspace anchor and support": 1,
+      "Wrench or driver implement": 1,
+      "accessible table for shared items": 1,
+      "common_access_location": 1,
+      "container for prepared coffee beverage": 1,
+      "container for prepared soup dish": 1,
+      "designated spot for individual person": 1,
+      "device applying fastening force": 1,
+      "device for controlling television functions": 1,
+      "device used to secure or tighten components": 1,
+      "driving tool instrument": 1,
+      "hand-holding implement for eating or stirring": 1,
+      "mechanical joining part": 1,
+      "part receiving fastener": 1,
+      "part to be attached to target": 1,
+      "physical object receiving fastening": 1,
+      "single cup and plate for one person": 1,
+      "small table for personal refreshment items": 1,
+      "specified mount position": 1,
+      "stable horizontal surface for tool placement": 1,
+      "storage holding dry coffee ingredient": 1,
+      "storage holding potable water liquid": 1,
+      "storage holding prepared soup stock or solids": 1,
+      "support_surface_near_chair": 1,
+      "supported area for placing tools and materials": 1,
+      "user_input_interface": 1,
+      "vessel_holding_refreshment": 1,
+      "workpiece or component requiring secure fixation": 1,
+      "workspace surface": 1
+    }
+  },
+  "semantic_fm_calls": 0,
+  "source_commit": "10d3e99665314977eeb9f423c87a8cd30cea1d09",
+  "source_matrix": "benchmark_reports/live_v2_thinking_3view_full32_20260909T105016IST"
+}

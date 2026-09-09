@@ -1,0 +1,93 @@
+{
+  "canonicalization_status": "PARTIAL",
+  "compiled": true,
+  "contract_missing_reasons": [
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op1', 'function': 'Place_refreshment_on_adjacent_table', 'tool_role': 'refreshment_container_item', 'target_role': 'adjacent_surface_area', 'required_target_count': 4, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_relations': [], 'context_role': 'armchair_seat_anchor', 'context_relations': []}, 'status': 'INCONSISTENT_OPERATION_REUSE_CARDINALITY', 'reason': \"Dedicated operation count 4 exceeds source role 'PERSONAL_CUP_SAUCER_REGION' maximum distinct count 2\"}]",
+    "Unresolved required relations: [{'raw_subject': 'entertainment_controller', 'raw_phrase': 'is_accessible_by', 'raw_object': 'armchair_seat_anchor', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Semantic candidates ['ACCESSIBLE_FROM_BOTH_SEATS'] incompatible with endpoints (REMOTE, SEATING_POSITION)\"}, {'raw_subject': 'entertainment_controller', 'raw_phrase': 'is_accessible_by', 'raw_object': 'armchair_seat_anchor', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Semantic candidates ['ACCESSIBLE_FROM_BOTH_SEATS'] incompatible with endpoints (REMOTE, SEATING_POSITION)\"}]"
+  ],
+  "disabled_operations": [
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": "armchair_seat_anchor",
+        "function": "Place_refreshment_on_adjacent_table",
+        "id": "op1",
+        "required_relations": [],
+        "required_target_count": 4,
+        "target_role": "adjacent_surface_area",
+        "tool_role": "refreshment_container_item",
+        "usage_policy": "DEDICATED_PER_TARGET"
+      },
+      "reason": "Dedicated operation count 4 exceeds source role 'PERSONAL_CUP_SAUCER_REGION' maximum distinct count 2",
+      "status": "INCONSISTENT_OPERATION_REUSE_CARDINALITY"
+    }
+  ],
+  "domain": "living_room",
+  "graph_node_names": [
+    "CUP_SAUCER_SET",
+    "PERSONAL_CUP_SAUCER_REGION",
+    "REMOTE",
+    "SEATING_POSITION",
+    "SHARED_REMOTE_REGION"
+  ],
+  "online_executable_contract_complete": false,
+  "operation_groups": [
+    {
+      "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": true,
+      "function": "SUPPORT_ENTERTAINMENT_CONTROL",
+      "id": "shared_entertainment_group",
+      "preconditions_provenance": [
+        {
+          "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+          "predicate": "FITS_ON",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op2"
+        }
+      ],
+      "required_relations": [
+        "FITS_ON"
+      ],
+      "required_target_count": 1,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": null,
+      "target_role": "REMOTE",
+      "tool_role": "SHARED_REMOTE_REGION",
+      "usage_policy": "DEDICATED_PER_TARGET"
+    }
+  ],
+  "physical_verifier_relations": [
+    {
+      "capability_id": null,
+      "category": "PHYSICAL_VERIFIER",
+      "expected": true,
+      "object_role": "SEATING_POSITION",
+      "predicate": "NEAR_SEAT",
+      "provenance": "EXPLICIT_REQUIREMENT",
+      "source_operation_id": null,
+      "subject_role": "PERSONAL_CUP_SAUCER_REGION"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unresolved_required_relations": [
+    {
+      "raw_object": "armchair_seat_anchor",
+      "raw_phrase": "is_accessible_by",
+      "raw_subject": "entertainment_controller",
+      "reason": "Semantic candidates ['ACCESSIBLE_FROM_BOTH_SEATS'] incompatible with endpoints (REMOTE, SEATING_POSITION)",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    },
+    {
+      "raw_object": "armchair_seat_anchor",
+      "raw_phrase": "is_accessible_by",
+      "raw_subject": "entertainment_controller",
+      "reason": "Semantic candidates ['ACCESSIBLE_FROM_BOTH_SEATS'] incompatible with endpoints (REMOTE, SEATING_POSITION)",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [],
+  "variant": "L2"
+}

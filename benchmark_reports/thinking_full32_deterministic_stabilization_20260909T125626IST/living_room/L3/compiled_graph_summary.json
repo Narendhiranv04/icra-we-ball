@@ -1,0 +1,110 @@
+{
+  "canonicalization_status": "PARTIAL",
+  "compiled": true,
+  "contract_missing_reasons": [
+    "Unresolved roles: [{'raw_role': {'binding_policy': 'REUSABLE', 'candidate_categories': ['remote_control'], 'entity_kind': 'OBJECT', 'function': 'user_input_interface', 'id': 'entertainment_device', 'required_count': 1, 'required_properties': ['has_button_interface'], 'visible_candidates': [{'label': 'remote_control', 'visual_description': 'Black rectangular remote on the large wooden desk'}], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}]",
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'op_set_remote', 'function': 'transfer_device_to_surface', 'tool_role': 'entertainment_device', 'target_role': 'central_access_point', 'required_target_count': 1, 'usage_policy': 'REUSABLE_ACROSS_TARGETS', 'required_relations': [], 'context_role': None, 'context_relations': []}, 'status': 'UNINSTANTIABLE_MISSING_ROLE'}]",
+    "Unresolved required relations: [{'raw_subject': 'entertainment_device', 'raw_phrase': 'placed_on', 'raw_object': 'central_access_point', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]"
+  ],
+  "disabled_operations": [
+    {
+      "raw_group": {
+        "context_relations": [],
+        "context_role": null,
+        "function": "transfer_device_to_surface",
+        "id": "op_set_remote",
+        "required_relations": [],
+        "required_target_count": 1,
+        "target_role": "central_access_point",
+        "tool_role": "entertainment_device",
+        "usage_policy": "REUSABLE_ACROSS_TARGETS"
+      },
+      "status": "UNINSTANTIABLE_MISSING_ROLE"
+    }
+  ],
+  "domain": "living_room",
+  "graph_node_names": [
+    "CUP_SAUCER_SET",
+    "PERSONAL_CUP_SAUCER_REGION",
+    "SHARED_REMOTE_REGION"
+  ],
+  "online_executable_contract_complete": false,
+  "operation_groups": [
+    {
+      "capability_id": "SUPPORT_DRINKWARE",
+      "context_relations": [],
+      "context_role": null,
+      "distinct_within_group": true,
+      "function": "SUPPORT_DRINKWARE",
+      "id": "personal_support_group",
+      "preconditions_provenance": [
+        {
+          "capability_id": "SUPPORT_DRINKWARE",
+          "predicate": "FITS_SET_ON",
+          "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+          "source_operation_id": "op_set_refreshment"
+        }
+      ],
+      "required_relations": [
+        "FITS_SET_ON"
+      ],
+      "required_target_count": 2,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": null,
+      "target_role": "CUP_SAUCER_SET",
+      "tool_role": "PERSONAL_CUP_SAUCER_REGION",
+      "usage_policy": "DEDICATED_PER_TARGET"
+    }
+  ],
+  "physical_verifier_relations": [],
+  "task_causal_relations": [],
+  "task_effect_relations": [
+    {
+      "category": "TASK_EFFECT_SEMANTICS",
+      "object_is_literal": false,
+      "object_value": "PERSONAL_CUP_SAUCER_REGION",
+      "predicate": "PLACED_ON",
+      "provenance": "FM_EXPLICIT_SEMANTIC",
+      "raw_object": "side_table",
+      "raw_phrase": "placed_on",
+      "raw_subject": "refreshment_container",
+      "source_operation_id": "op_set_refreshment",
+      "subject_role": "CUP_SAUCER_SET"
+    }
+  ],
+  "unresolved_required_relations": [
+    {
+      "raw_object": "central_access_point",
+      "raw_phrase": "placed_on",
+      "raw_subject": "entertainment_device",
+      "reason": "Unresolved or context-only endpoint",
+      "status": "UNINTERPRETABLE_REQUIRED_RELATION"
+    }
+  ],
+  "unresolved_roles": [
+    {
+      "raw_role": {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote_control"
+        ],
+        "description": "",
+        "entity_kind": "OBJECT",
+        "function": "user_input_interface",
+        "id": "entertainment_device",
+        "required_count": 1,
+        "required_properties": [
+          "has_button_interface"
+        ],
+        "visible_candidates": [
+          {
+            "label": "remote_control",
+            "visual_description": "Black rectangular remote on the large wooden desk"
+          }
+        ]
+      },
+      "status": "UNRESOLVED_SEMANTIC"
+    }
+  ],
+  "variant": "L3"
+}

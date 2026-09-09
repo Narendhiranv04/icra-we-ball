@@ -1,0 +1,19 @@
+{
+  "canonicalization_status": "NOT_COMPILED",
+  "compile_error": null,
+  "disabled_operation_count": 0,
+  "domain": "kitchen",
+  "earliest_blocker": "RAW_FM_INTERNAL_CONTRADICTION",
+  "earliest_blocker_reason": "dedicated transfer count 2 conflicts with reusable singleton coffee and water sources",
+  "g_f_ready": false,
+  "normalized_strict_live_valid": false,
+  "normalized_validation_error": "INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[0] requires 2 distinct source instances but role 'water_source' declares required_count=1 and binding_policy='REUSABLE'; INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[1] requires 2 distinct source instances but role 'coffee_source' declares required_count=1 and binding_policy='REUSABLE'",
+  "online_executable_contract_complete": false,
+  "original_strict_live_valid": false,
+  "original_validation_error": "INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[0] requires 2 distinct source instances but role 'water_source' declares required_count=1 and binding_policy='REUSABLE'; INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[1] requires 2 distinct source instances but role 'coffee_source' declares required_count=1 and binding_policy='REUSABLE'",
+  "semantic_fm_calls": 0,
+  "task_effect_count": 0,
+  "unmapped_required_relation_count": 0,
+  "unresolved_role_count": 0,
+  "variant": "K1"
+}

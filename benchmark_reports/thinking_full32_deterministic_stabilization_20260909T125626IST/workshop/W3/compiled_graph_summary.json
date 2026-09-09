@@ -1,0 +1,30 @@
+{
+  "canonicalization_status": "FULL",
+  "compiled": true,
+  "contract_missing_reasons": [],
+  "disabled_operations": [],
+  "domain": "workshop",
+  "graph_node_names": [
+    "driver",
+    "fastener"
+  ],
+  "online_executable_contract_complete": true,
+  "operation_groups": [],
+  "physical_verifier_relations": [
+    {
+      "capability_id": null,
+      "category": "PHYSICAL_VERIFIER",
+      "expected": true,
+      "object_role": "fastener",
+      "predicate": "COMPATIBLE_WITH",
+      "provenance": "EXPLICIT_REQUIREMENT",
+      "source_operation_id": null,
+      "subject_role": "driver"
+    }
+  ],
+  "task_causal_relations": [],
+  "task_effect_relations": [],
+  "unresolved_required_relations": [],
+  "unresolved_roles": [],
+  "variant": "W3"
+}
