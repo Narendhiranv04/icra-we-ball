@@ -833,8 +833,42 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
 
         is_v2 = is_v2_document(raw)
         if not ctx_role_id:
-            if domain == 'workshop' and 'repair_target' in nodes:
-                ctx_role_id = 'repair_target'
+            from .robot_capability_registry import extract_operation_semantic_candidates
+            semantic_capabilities = extract_operation_semantic_candidates(domain, raw_op)
+            capability_anchors = {
+                anchor for capability in semantic_capabilities
+                for anchor in capability.allowed_anchor_roles
+            }
+            from .predicate_registry import get_predicate_signature
+            capability_anchors = {
+                anchor for anchor in capability_anchors
+                if all(
+                    not (subj_key == 'anchor' or obj_key == 'anchor')
+                    or (
+                        (signature := get_predicate_signature(domain, predicate)) is not None
+                        and (subj_key != 'anchor' or not signature.allowed_subject_roles or anchor in signature.allowed_subject_roles)
+                        and (obj_key != 'anchor' or not signature.allowed_object_roles or anchor in signature.allowed_object_roles)
+                    )
+                    for capability in semantic_capabilities
+                    for subj_key, predicate, obj_key in capability.required_relation_templates
+                )
+            }
+            fixed_anchors = set(get_domain_system_fixed_anchors(domain))
+            if len(capability_anchors) == 1 and capability_anchors <= fixed_anchors:
+                ctx_role_id = next(iter(capability_anchors))
+                if ctx_role_id not in nodes:
+                    nodes[ctx_role_id] = FunctionalRole(
+                        name=ctx_role_id, entity_kind='FIXED_TARGET', count=1,
+                        binding_policy='SHARED',
+                        semantic_categories=ontology.get_system_role_semantic_categories(domain, ctx_role_id),
+                        verification_mode='GEOMETRIC_ONLY',
+                        role_resolution_status='OPERATION_ASSISTED',
+                        canonical_role_candidates=(ctx_role_id,),
+                        role_resolution_provenance=({
+                            'source': 'ROBOT_CAPABILITY_SIGNATURE',
+                            'capability_ids': [cap.capability_id for cap in semantic_capabilities],
+                        },),
+                    )
 
         op_interp = interpret_operation(
             domain=domain,

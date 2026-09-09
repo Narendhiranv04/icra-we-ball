@@ -432,8 +432,9 @@ def _evaluate_operation_group(
                 })
 
         context_dict = {grp.context_role: c_id} if (grp.context_role and c_id is not None) else {}
-        binding = {"tool_id": u_id, "target_id": t_id, "context": context_dict,
-                   "relation_evidence": relation_evidence}
+        binding = {"tool_id": u_id, "target_id": t_id, "context": context_dict}
+        if grp.capability_id:
+            binding["relation_evidence"] = relation_evidence
 
         if "FALSE" in statuses:
             return "FALSE", binding
@@ -741,10 +742,27 @@ def ground_graph(
                     unresolved_relations_recorded.extend(grp_diags)
                 else:
                     for binding in grp_matching:
-                        binding["capability_id"] = grp.capability_id
-                        binding["source_operation_id"] = grp.id
-                        binding["planner_operation"] = grp.function
-                        for relation_evidence in binding.get("relation_evidence", []):
+                        if grp.capability_id:
+                            binding["capability_id"] = grp.capability_id
+                            binding["source_operation_id"] = grp.id
+                            binding["planner_operation"] = grp.function
+                        binding_relation_evidence = binding.get("relation_evidence", [])
+                        if not binding_relation_evidence:
+                            role_to_instance = {grp.tool_role: binding["tool_id"], grp.target_role: binding["target_id"]}
+                            role_to_instance.update(binding.get("context", {}))
+                            templates = grp.physical_preconditions or tuple(
+                                [(grp.tool_role, pred, grp.target_role) for pred in grp.required_relations]
+                                + [(grp.tool_role, pred, grp.context_role) for pred in grp.context_relations if grp.context_role]
+                            )
+                            binding_relation_evidence = [
+                                {"predicate": pred, "subject_id": role_to_instance[s_role],
+                                 "object_id": role_to_instance[o_role],
+                                 "status": (graph_o.get_relation(pred, role_to_instance[s_role], role_to_instance[o_role]).status
+                                            if graph_o.get_relation(pred, role_to_instance[s_role], role_to_instance[o_role]) else "UNKNOWN")}
+                                for s_role, pred, o_role in templates
+                                if s_role in role_to_instance and o_role in role_to_instance
+                            ]
+                        for relation_evidence in binding_relation_evidence:
                             s_id = relation_evidence["subject_id"]
                             o_id = relation_evidence["object_id"]
                             role_instances = [(grp.tool_role, tool_list), (grp.target_role, target_list)]
@@ -998,6 +1016,7 @@ def ground_verified_candidate_subgraph(graph_f, graph_o, context=None):
             if verified.complete and verified.assignment:
                 return replace(verified, complete=False, status='PARTIAL_VERIFIED_GROUNDING',
                     missing_roles=tuple(sorted(set(names) - keep)),
+                    failure_kind=full.failure_kind,
                     evidence={**verified.evidence, 'candidate_roles': list(selected),
                               'original_grounding_status': full.status, 'search_exhausted': True})
     return full

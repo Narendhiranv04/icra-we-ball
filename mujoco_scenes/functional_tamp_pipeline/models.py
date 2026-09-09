@@ -583,6 +583,7 @@ class PipelineResult:
     functional_spec_complete: bool = False
     candidate_plan: tuple[dict[str, Any], ...] = ()
     candidate_search_statistics: dict[str, Any] = field(default_factory=dict)
+    outcome_category: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -604,6 +605,7 @@ class PipelineResult:
             functional_spec_complete=bool(data.get("functional_spec_complete", False)),
             candidate_plan=tuple(dict(p) for p in data.get("candidate_plan", ())),
             candidate_search_statistics=dict(data.get("candidate_search_statistics", {})),
+            outcome_category=str(data["outcome_category"]) if data.get("outcome_category") else None,
         )
 
 

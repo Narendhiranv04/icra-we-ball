@@ -143,6 +143,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
             nodes=nodes,
             relations=tuple(relations),
             operation_groups=tuple(provider.normalized_operation_groups),
+            cross_group_reuse_allowed=False,
             detector_vocabulary=detector_vocab,
             candidate_regions=tuple(provider.candidate_regions),
             region_ranking=tuple(provider.region_ranking),

@@ -1615,8 +1615,9 @@ class FMRequirementProvider(RequirementProvider):
                     "planner_context_constant": "MAIN_WORKBENCH_ZONE",
                 })
 
-        # Step 5: Validate and absorb Interaction Groups (Zero runtime operation groups emitted)
+        # Step 5: Validate interaction groups and retain explicit task operations.
         raw_groups = document.get("interaction_groups", [])
+        normalized_operation_groups: list[OperationGroup] = []
         if len(raw_groups) > 1:
             raise AmbiguousCanonicalizationError(
                 f"Multiple interaction groups produced for Workshop task: {[g['id'] for g in raw_groups]}"
@@ -1783,9 +1784,29 @@ class FMRequirementProvider(RequirementProvider):
                 "target_role": f"{target_raw} -> fastener",
                 "context_role": f"{ctx_raw} -> repair_target",
             })
+            normalized_operation_groups.append(OperationGroup(
+                id="drive_fastener_group",
+                function="DRIVE_FASTENER_INTO_TARGET",
+                tool_role="driver",
+                target_role="fastener",
+                required_target_count=target_count,
+                usage_policy=norm_policy,
+                required_relations=("COMPATIBLE_WITH",),
+                context_role="repair_target",
+                context_relations=("REACHES_TARGET",),
+                capability_id="FASTEN_JOINT",
+                physical_preconditions=(
+                    ("driver", "COMPATIBLE_WITH", "fastener"),
+                    ("driver", "REACHES_TARGET", "repair_target"),
+                    ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target"),
+                ),
+                preconditions_provenance=({
+                    "source": "ROBOT_CAPABILITY_REGISTRY",
+                    "capability_id": "FASTEN_JOINT",
+                },),
+            ))
 
-        # Workshop runtime G_F has zero operation groups
-        self.normalized_operation_groups = []
+        self.normalized_operation_groups = normalized_operation_groups
 
         self.normalized_roles = normalized_roles
         self.normalized_relations = normalized_relations

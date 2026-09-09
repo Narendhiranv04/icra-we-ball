@@ -16,6 +16,7 @@ from mujoco_scenes.region_ablation import create_region_semantic_detector
 from mujoco_scenes.region_ablation2 import DEFAULT_EVALUATION_CONFIG
 
 from ..models import FunctionalSpecification, PipelineResult
+from ..outcome_classifier import classify_pipeline_outcome, complete_planning_contract
 from .. import role_semantic_ontology as semantic_ontology
 from ..scene_graph import ObservedNode, ObservedObject, ObservedRelation, ObservedSceneGraph
 
@@ -453,6 +454,12 @@ def run_to_plan(
                 ground_result.unsatisfied_relations or ground_result.missing_roles or "NO_GLOBAL_REGION_ASSIGNMENT"
             ),
             canonicalization_succeeded=True,
+            outcome_category=classify_pipeline_outcome(
+                task_specification_valid=True,
+                graph_compiled=True,
+                individual_candidates_sufficient=ground_result.failure_kind != "OBJECT_DISCOVERY_FAILURE",
+                functional_assignment_complete=False,
+            ).category,
         )
 
     # Sync canonical assignment phi into planner input using exact operation_bindings
@@ -601,7 +608,13 @@ def run_to_plan(
             return PipelineResult(domain="living_room", variant=variant_label, mode=mode,
                 status="NO_MEANINGFUL_CANDIDATE_PLAN", assignment=ground_result.assignment,
                 canonicalization_succeeded=True, functional_spec_complete=False,
-                failure_reason="UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement")
+                failure_reason="UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement",
+                outcome_category=classify_pipeline_outcome(
+                    task_specification_valid=True,
+                    graph_compiled=True,
+                    individual_candidates_sufficient=True,
+                    functional_assignment_complete=False,
+                ).category)
 
     # Write deterministic compiler/planner projection artifacts before invoking symbolic planner (note: these are compiler projections, not canonical phi*)
     (phase1 / "region_assignments.json").write_text(
@@ -630,6 +643,14 @@ def run_to_plan(
             canonicalization_succeeded=True,
             functional_spec_complete=False,
             failure_reason=f"CANDIDATE_GRAPH_UNSATISFIABLE: {fail_detail}",
+            outcome_category=classify_pipeline_outcome(
+                task_specification_valid=True,
+                graph_compiled=True,
+                individual_candidates_sufficient=True,
+                functional_assignment_complete=ground_result.complete,
+                planning_invoked=True,
+                plan_complete=False,
+            ).category,
         )
 
     plan_payload = json.loads(plan_file.read_text(encoding="utf-8"))
@@ -652,7 +673,12 @@ def run_to_plan(
         encoding="utf-8",
     )
     is_partial = planning.get("is_partial", False)
-    is_full_plan = (not is_partial and planning.get("goal_status") == "GOAL_SATISFIED")
+    is_full_plan = complete_planning_contract(
+        specification, ground_result,
+        {"is_partial": is_partial},
+        {"status": "VALID" if planning.get("status") == "SUCCESS" else "INVALID",
+         "goal_status": planning.get("goal_status")},
+    )
     if is_full_plan:
         status = "ACTION_SEQUENCE_READY"
         spec_complete = True
@@ -675,4 +701,10 @@ def run_to_plan(
         candidate_search_statistics=planning.get("search_statistics", {}),
         canonicalization_succeeded=True,
         functional_spec_complete=spec_complete,
+        outcome_category=classify_pipeline_outcome(
+            task_specification_valid=True, graph_compiled=True,
+            individual_candidates_sufficient=ground_result.failure_kind != "OBJECT_DISCOVERY_FAILURE",
+            functional_assignment_complete=ground_result.complete,
+            planning_invoked=True, plan_complete=is_full_plan,
+        ).category,
     )

@@ -112,6 +112,28 @@ class GTSpecProvider(FunctionalSpecProvider):
             task_instruction=task_instruction,
             nodes=nodes,
             relations=tuple(relations),
+            operation_groups=(OperationGroup(
+                id="drive_fastener_group",
+                function="DRIVE_FASTENER_INTO_TARGET",
+                tool_role="driver",
+                target_role="fastener",
+                required_target_count=1,
+                usage_policy="DEDICATED_PER_TARGET",
+                required_relations=("COMPATIBLE_WITH",),
+                context_role="repair_target",
+                context_relations=("REACHES_TARGET",),
+                capability_id="FASTEN_JOINT",
+                physical_preconditions=(
+                    ("driver", "COMPATIBLE_WITH", "fastener"),
+                    ("driver", "REACHES_TARGET", "repair_target"),
+                    ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target"),
+                ),
+                preconditions_provenance=({
+                    "source": "ROBOT_CAPABILITY_REGISTRY",
+                    "capability_id": "FASTEN_JOINT",
+                },),
+            ),),
+            cross_group_reuse_allowed=False,
             detector_vocabulary=vocabulary,
             candidate_regions=ranking,
             region_ranking=ranking,
@@ -124,7 +146,6 @@ class GTSpecProvider(FunctionalSpecProvider):
                 "alias_to_canonical": provider.get_alias_to_canonical_map(),
             },
         )
-
     @staticmethod
     def _kitchen(task_instruction: str) -> FunctionalRequirementGraph:
         root = Path(__file__).resolve().parents[1]
@@ -348,5 +369,3 @@ class GTSpecProvider(FunctionalSpecProvider):
                 ),
             },
         )
-
-

@@ -16,6 +16,7 @@ from mujoco_scenes.symbolic_planning import (
 from mujoco_scenes.symbolic_planning_core import SymbolicAction, SymbolicProblem
 
 from ..models import FunctionalSpecification, PipelineResult
+from ..outcome_classifier import classify_pipeline_outcome, complete_planning_contract
 from ..planning import plan_with_common_astar
 
 
@@ -869,6 +870,12 @@ def run_to_plan(
             canonicalization_succeeded=True,
             functional_spec_complete=False,
             failure_reason=str(ground_result.unsatisfied_relations or ground_result.missing_roles or "NO_COMPLETE_FUNCTIONAL_WITNESS"),
+            outcome_category=classify_pipeline_outcome(
+                task_specification_valid=True,
+                graph_compiled=True,
+                individual_candidates_sufficient=ground_result.failure_kind != "OBJECT_DISCOVERY_FAILURE",
+                functional_assignment_complete=False,
+            ).category,
         )
 
     # Compile observed symbolic state from graph grounding assignment
@@ -926,7 +933,9 @@ def run_to_plan(
             encoding="utf-8",
         )
         is_partial = planned.search.statistics.get("is_partial", False)
-        is_full_plan = (not is_partial and planned.validation.get("goal_status") == "GOAL_SATISFIED")
+        is_full_plan = complete_planning_contract(
+            specification, ground_result, planned.search.statistics, planned.validation
+        )
         if is_full_plan:
             status = "ACTION_SEQUENCE_READY"
             spec_complete = True
@@ -947,6 +956,12 @@ def run_to_plan(
             candidate_search_statistics=planned.search.statistics,
             canonicalization_succeeded=True,
             functional_spec_complete=spec_complete,
+            outcome_category=classify_pipeline_outcome(
+                task_specification_valid=True, graph_compiled=True,
+                individual_candidates_sufficient=ground_result.failure_kind != "OBJECT_DISCOVERY_FAILURE",
+                functional_assignment_complete=ground_result.complete,
+                planning_invoked=True, plan_complete=is_full_plan,
+            ).category,
         )
     except Exception as exc:
         return PipelineResult(
@@ -959,4 +974,12 @@ def run_to_plan(
             canonicalization_succeeded=True,
             functional_spec_complete=False,
             failure_reason=f"NO_MEANINGFUL_CANDIDATE_PLAN: {exc}" if mode == "vlm" else f"CANDIDATE_GRAPH_UNSATISFIABLE: {exc}",
+            outcome_category=classify_pipeline_outcome(
+                task_specification_valid=True,
+                graph_compiled=True,
+                individual_candidates_sufficient=True,
+                functional_assignment_complete=ground_result.complete,
+                planning_invoked=True,
+                plan_complete=False,
+            ).category,
         )

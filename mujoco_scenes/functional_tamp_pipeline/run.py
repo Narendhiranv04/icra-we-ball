@@ -27,6 +27,7 @@ try:
     from .role_semantic_ontology import get_runtime_semantic_ontology_hash
     from .audit import compute_prompt_and_schema_hash
     from .robot_capability_registry import get_robot_capability_registry_hash
+    from .outcome_classifier import classify_pipeline_outcome, complete_planning_contract
 except ImportError:
     from mujoco_scenes.functional_tamp_pipeline.errors import (
         PipelineError, VLMSpecificationError, ReplaySpecificationError, SearchRegionContractError
@@ -41,6 +42,7 @@ except ImportError:
     from mujoco_scenes.functional_tamp_pipeline.role_semantic_ontology import get_runtime_semantic_ontology_hash
     from mujoco_scenes.functional_tamp_pipeline.audit import compute_prompt_and_schema_hash
     from mujoco_scenes.functional_tamp_pipeline.robot_capability_registry import get_robot_capability_registry_hash
+    from mujoco_scenes.functional_tamp_pipeline.outcome_classifier import classify_pipeline_outcome, complete_planning_contract
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -280,6 +282,15 @@ def _acquire_spec_or_fail(
             state.failure_reason = str(error)
             state.canonicalization_succeeded = False
             state.functional_spec_complete = False
+            task_specification_valid = cat not in {
+                "MALFORMED_VLM_SPECIFICATION", "TRANSPORT_OR_STRUCTURED_OUTPUT_FAILURE",
+                "SANITIZER_UNRECOVERABLE",
+            }
+            outcome = classify_pipeline_outcome(
+                task_specification_valid=task_specification_valid,
+                graph_compiled=False,
+                reason=str(error),
+            )
             res = PipelineResult(
                 domain=state.domain,
                 variant=state.variant,
@@ -289,6 +300,7 @@ def _acquire_spec_or_fail(
                 failure_category=cat,
                 canonicalization_succeeded=False,
                 functional_spec_complete=False,
+                outcome_category=outcome.category,
             )
             _write_json(state.run_dir / "result.json", res.to_dict())
             return res
@@ -704,6 +716,13 @@ def _run_pipeline_impl(
             inspected_regions=inspected, failure_reason=reason, failure_category=None,
             canonicalization_succeeded=True,
             functional_spec_complete=False,
+            outcome_category=classify_pipeline_outcome(
+                task_specification_valid=True, graph_compiled=True,
+                search_exhausted=True,
+                individual_candidates_sufficient=satisfaction.failure_kind != "OBJECT_DISCOVERY_FAILURE",
+                functional_assignment_complete=False,
+                reason=reason,
+            ).category,
         )
         _write_json(state.run_dir / "result.json", result.to_dict())
         return result
@@ -753,7 +772,9 @@ def _run_pipeline_impl(
             )
 
         is_partial = planned.search.statistics.get("is_partial", False)
-        is_full_plan = not is_partial
+        is_full_plan = complete_planning_contract(
+            state.specification, satisfaction, planned.search.statistics, planned.validation
+        )
         if is_full_plan:
             status = "ACTION_SEQUENCE_READY"
             spec_complete = True
@@ -775,6 +796,13 @@ def _run_pipeline_impl(
             candidate_plan=planned.actions,
             search_statistics=planned.search.statistics,
             candidate_search_statistics=planned.search.statistics,
+            outcome_category=classify_pipeline_outcome(
+                task_specification_valid=True, graph_compiled=True,
+                individual_candidates_sufficient=True,
+                functional_assignment_complete=satisfaction.complete,
+                planning_invoked=True, plan_complete=is_full_plan,
+                reason=("Complete task plan" if is_full_plan else "Projected or goal-incomplete plan cannot establish task success"),
+            ).category,
             failure_reason=None,
             canonicalization_succeeded=True,
             functional_spec_complete=spec_complete,
@@ -795,6 +823,13 @@ def _run_pipeline_impl(
             failure_reason=str(exc),
             canonicalization_succeeded=True,
             functional_spec_complete=False,
+            outcome_category=classify_pipeline_outcome(
+                task_specification_valid=True, graph_compiled=True,
+                individual_candidates_sufficient=True,
+                functional_assignment_complete=satisfaction.complete,
+                planning_invoked=True, plan_complete=False,
+                reason=str(exc),
+            ).category,
         )
         _write_json(state.run_dir / "result.json", result.to_dict())
         return result
