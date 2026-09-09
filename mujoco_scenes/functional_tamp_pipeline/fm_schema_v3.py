@@ -851,6 +851,31 @@ def convert_v3_to_canonical_document(
             elif effect == "PLACED_ON":
                 edge["subject_role"], edge["object_role"] = group["tool_role"], group["target_role"]
             break
+
+    # Reconcile the accounting against the raw contract.  Every raw role,
+    # relation and operation must leave a trace of what became of it, so that a
+    # required semantic cannot disappear without the runtime saying so.  Anything
+    # not already accounted for is recorded as unresolved rather than dropped.
+    accounted = {
+        (row.get("element_kind"), row.get("raw_id"))
+        for row in canonical["fm_semantic_accounting"]
+    }
+    for kind, collection in (
+        ("role", contract["functional_roles"]),
+        ("relation", contract["functional_relations"]),
+        ("operation", contract["operation_pairings"]),
+    ):
+        for element in collection:
+            if (kind, element["id"]) in accounted:
+                continue
+            canonical["fm_semantic_accounting"].append({
+                "element_kind": kind, "raw_id": element["id"],
+                "disposition": "UNRESOLVED_REQUIRED_SEMANTIC",
+                "canonical_representation": None,
+                "provenance": "FM_EXPLICIT_SEMANTIC",
+                "requirement_provenance": "UNDETERMINED",
+                "reason": "no stage claimed this element",
+            })
     return canonical
 
 

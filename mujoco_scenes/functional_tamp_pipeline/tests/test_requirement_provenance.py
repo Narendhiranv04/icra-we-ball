@@ -100,3 +100,25 @@ def test_provenance_is_recorded_not_enforced():
     accounted = {row["raw_id"] for row in canonical["fm_semantic_accounting"]
                  if row["element_kind"] == "role"}
     assert accounted == {"cup", "shelf"}
+
+
+def test_every_raw_element_is_accounted_for():
+    """No raw role, relation or operation may vanish without a recorded disposition."""
+    doc = _document(
+        roles=[
+            _role("cup", "a container for the served coffee", ["cup"]),
+            _role("spoon", "a tool for stirring the coffee", ["spoon"]),
+            _role("odd", "an unclassifiable curiosity", ["curio"]),
+        ],
+        relations=[{"id": "r1", "relation": "spoon fits in cup",
+                    "participant_roles": ["spoon", "cup"], "required": True}],
+        operations=[{"id": "o1", "operation": "stir coffee",
+                     "participant_roles": ["spoon", "cup"], "operation_count": 1}],
+    )
+    canonical = convert_v3_to_canonical_document(
+        doc, domain="kitchen", task_instruction=KITCHEN_INSTRUCTION)
+    accounted = {(row["element_kind"], row["raw_id"])
+                 for row in canonical["fm_semantic_accounting"]}
+    expected = {("role", "cup"), ("role", "spoon"), ("role", "odd"),
+                ("relation", "r1"), ("operation", "o1")}
+    assert expected <= accounted, f"unaccounted: {expected - accounted}"
