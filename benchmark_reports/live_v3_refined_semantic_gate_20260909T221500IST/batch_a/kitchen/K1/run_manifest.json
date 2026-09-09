@@ -1,0 +1,36 @@
+{
+  "astar_invocations": 0,
+  "batch": "A",
+  "canonicalization_succeeded": false,
+  "domain": "kitchen",
+  "failure_category": "MALFORMED_VLM_SPECIFICATION",
+  "failure_reason": "INVALID_INSPECTION_ORDER: must list every unique region ID exactly once",
+  "finished_at_utc": "2026-09-09T15:52:53.213811+00:00",
+  "fm_schema_version": 3,
+  "functional_spec_complete": false,
+  "git_commit": "d4720d210f2fa9e874f90b0c0f077ef9f5fefadb",
+  "git_dirty": false,
+  "high_level_replans": 0,
+  "image_views": [
+    "left_shoulder_camera.png",
+    "right_shoulder_camera.png",
+    "overhead_camera.png"
+  ],
+  "inference_config": {
+    "max_tokens": 24000,
+    "model": "qwen35-9b",
+    "presence_penalty": 1.5,
+    "temperature": 1.0,
+    "top_k": 20,
+    "top_p": 0.95
+  },
+  "internal_variant": "F0_ALL_VISIBLE",
+  "pipeline_runtime_seconds": 73.0933,
+  "prompt_schema_hash": "225d3acb0daa46c9598203c49180eac4b5dbc3630fda4e92898764bd8936e76c",
+  "provider_model": "qwen35-9b",
+  "semantic_vlm_requests": 1,
+  "started_at_utc": "2026-09-09T15:51:40.120525+00:00",
+  "terminal_status": "VLM_SPEC_FAILED",
+  "transport_retries": 0,
+  "variant": "K1"
+}

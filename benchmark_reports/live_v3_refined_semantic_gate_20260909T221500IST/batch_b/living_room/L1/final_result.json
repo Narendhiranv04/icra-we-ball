@@ -1,0 +1,21 @@
+{
+  "assignment": null,
+  "astar_calls": 0,
+  "candidate_plan": [],
+  "candidate_search_statistics": {},
+  "canonicalization_succeeded": false,
+  "domain": "living_room",
+  "failure_category": "GRAPH_COMPILATION_FAILURE",
+  "failure_reason": "INCOMPLETE_CANONICAL_GRAPH: coherent FM contract could not be fully represented; unresolved=[{'raw_role': {'id': 'left_end_table', 'entity_kind': 'FIXED_TARGET', 'function': 'personal_support', 'description': 'Small table beside left armchair.', 'required_count': 1, 'binding_policy': 'SHARED', 'candidate_categories': ['TABLE'], 'required_properties': ['PLANAR_SURFACE'], 'visible_candidates': []}, 'status': 'UNRESOLVED_SEMANTIC'}, {'raw_role': {'id': 'right_end_table', 'entity_kind': 'FIXED_TARGET', 'function': 'personal_support', 'description': 'Small table beside right armchair.', 'required_count': 1, 'binding_policy': 'SHARED', 'candidate_categories': ['TABLE'], 'required_properties': ['PLANAR_SURFACE'], 'visible_candidates': []}, 'status': 'UNRESOLVED_SEMANTIC'}, {'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'refreshment_set_b', 'entity_kind': 'REGION', 'function': 'material_source', 'description': 'Second complete drink/dish pair.', 'required_count': 1, 'binding_policy': 'REUSABLE', 'candidate_categories': ['CUP', 'PLATE'], 'required_properties': ['SMALL_OBJECT'], 'visible_candidates': [{'label': 'red_cup', 'visual_description': 'Red cylindrical object'}, {'label': 'white_plate', 'visual_description': 'White circular object'}]}, 'collision_with': 'refreshment_set_a'}, {'raw_subject': 'refreshment_set_b', 'raw_phrase': 'LOCATED_AT', 'raw_object': 'main_desk', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]",
+  "finish_reason": "stop",
+  "fresh_fm_calls": 1,
+  "functional_spec_complete": false,
+  "inspected_regions": [],
+  "mode": "vlm",
+  "num_images": 3,
+  "outcome_category": "GRAPH_COMPILATION_FAILURE",
+  "plan": [],
+  "search_statistics": {},
+  "status": "VLM_SPEC_FAILED",
+  "variant": "L1"
+}

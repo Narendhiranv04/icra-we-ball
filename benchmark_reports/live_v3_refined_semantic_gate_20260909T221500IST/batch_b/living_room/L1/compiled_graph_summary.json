@@ -1,0 +1,69 @@
+{
+  "canonical_roles": [
+    "main_desk",
+    "left_end_table",
+    "right_end_table",
+    "center_coffee_table",
+    "refreshment_set_a",
+    "refreshment_set_b",
+    "remote_control"
+  ],
+  "compiler_reached": true,
+  "conversion_error": null,
+  "function_alias_structural_overrides": 0,
+  "graph_compiled": false,
+  "operation_assisted_role_resolutions": 0,
+  "operation_participant_slot_resolutions": [
+    {
+      "id": "op_1",
+      "raw_operation": "TRANSFER",
+      "resolved_anchor": null,
+      "resolved_source": "refreshment_set_a",
+      "resolved_target": "left_end_table",
+      "slot_assignments": [],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "op_2",
+      "raw_operation": "TRANSFER",
+      "resolved_anchor": null,
+      "resolved_source": "refreshment_set_b",
+      "resolved_target": "right_end_table",
+      "slot_assignments": [],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "op_3",
+      "raw_operation": "MOVE",
+      "resolved_anchor": null,
+      "resolved_source": "remote_control",
+      "resolved_target": "center_coffee_table",
+      "slot_assignments": [],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  ],
+  "relation_assisted_role_resolutions": 0,
+  "relation_orientation_resolutions": [
+    {
+      "id": "rel_1",
+      "orientation_options": [],
+      "raw_relation": "LOCATED_AT",
+      "resolved_object": "main_desk",
+      "resolved_subject": "refreshment_set_a"
+    },
+    {
+      "id": "rel_2",
+      "orientation_options": [],
+      "raw_relation": "LOCATED_AT",
+      "resolved_object": "main_desk",
+      "resolved_subject": "refreshment_set_b"
+    },
+    {
+      "id": "rel_3",
+      "orientation_options": [],
+      "raw_relation": "LOCATED_AT",
+      "resolved_object": "main_desk",
+      "resolved_subject": "remote_control"
+    }
+  ]
+}

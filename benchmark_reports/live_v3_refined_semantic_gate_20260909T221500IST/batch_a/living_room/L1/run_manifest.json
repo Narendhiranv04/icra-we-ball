@@ -1,0 +1,36 @@
+{
+  "astar_invocations": 0,
+  "batch": "A",
+  "canonicalization_succeeded": false,
+  "domain": "living_room",
+  "failure_category": "TASK_SPECIFICATION_FAILURE",
+  "failure_reason": "FM_INTERNAL_RELATION_PARTICIPANT_CONTRADICTION: relation 'relation_5' ('ACCESSIBLE_TO_BOTH') has no valid orientation for participant_roles=['coffee_table', 'armchair_left']",
+  "finished_at_utc": "2026-09-09T15:55:08.383108+00:00",
+  "fm_schema_version": 3,
+  "functional_spec_complete": false,
+  "git_commit": "d4720d210f2fa9e874f90b0c0f077ef9f5fefadb",
+  "git_dirty": false,
+  "high_level_replans": 0,
+  "image_views": [
+    "l2_camera_left.png",
+    "l2_camera_right.png",
+    "l2_camera_top.png"
+  ],
+  "inference_config": {
+    "max_tokens": 24000,
+    "model": "qwen35-9b",
+    "presence_penalty": 1.5,
+    "temperature": 1.0,
+    "top_k": 20,
+    "top_p": 0.95
+  },
+  "internal_variant": "F0_ALL_OBJECTS_IN_STAGING",
+  "pipeline_runtime_seconds": 105.7235,
+  "prompt_schema_hash": "225d3acb0daa46c9598203c49180eac4b5dbc3630fda4e92898764bd8936e76c",
+  "provider_model": "qwen35-9b",
+  "semantic_vlm_requests": 1,
+  "started_at_utc": "2026-09-09T15:53:22.659596+00:00",
+  "terminal_status": "VLM_SPEC_FAILED",
+  "transport_retries": 0,
+  "variant": "L1"
+}

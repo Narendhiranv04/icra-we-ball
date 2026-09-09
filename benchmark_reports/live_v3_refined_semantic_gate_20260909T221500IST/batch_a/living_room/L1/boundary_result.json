@@ -1,0 +1,27 @@
+{
+  "batch": "A",
+  "content_sha256": "66a50e39762926b417596a2e6f1d37502ca69e11f573170ef887b9cf4381e9db",
+  "failure_category": "TASK_SPECIFICATION_FAILURE",
+  "failure_reason": "FM_INTERNAL_RELATION_PARTICIPANT_CONTRADICTION: relation 'relation_5' ('ACCESSIBLE_TO_BOTH') has no valid orientation for participant_roles=['coffee_table', 'armchair_left']",
+  "finish_reason": "stop",
+  "image_views": [
+    "l2_camera_left.png",
+    "l2_camera_right.png",
+    "l2_camera_top.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [],
+  "num_images": 3,
+  "strict_v3_valid": true,
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 9271,
+    "completion_tokens_details": {
+      "reasoning_tokens": 6982
+    },
+    "prompt_tokens": 4137,
+    "prompt_tokens_details": null,
+    "total_tokens": 13408
+  }
+}

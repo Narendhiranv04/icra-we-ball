@@ -1,0 +1,36 @@
+{
+  "batch": "B",
+  "content_sha256": "45967f1079eeb66fc5ea7958551465dde7dcbba3ff5eb9b276ef18e019101061",
+  "failure_category": "TASK_SPECIFICATION_FAILURE",
+  "failure_reason": "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: operation '2' ('deposit_tool_on_support') cannot instantiate any supported capability from participant_roles=['manipulator', 'driving_tool', 'workbench_surface']",
+  "finish_reason": "stop",
+  "image_views": [
+    "initial_iso_left.png",
+    "initial_iso_right.png",
+    "initial_detail.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [
+    {
+      "candidate": {
+        "label": "gripper_holding_gold_block",
+        "visual_description": "End effector holding a metallic-looking rectangular component, visible in view 3."
+      },
+      "code": "ROBOT_SELF_CANDIDATE_REMOVED",
+      "role_id": "manipulator"
+    }
+  ],
+  "num_images": 3,
+  "strict_v3_valid": true,
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 7523,
+    "completion_tokens_details": {
+      "reasoning_tokens": 6166
+    },
+    "prompt_tokens": 3284,
+    "prompt_tokens_details": null,
+    "total_tokens": 10807
+  }
+}

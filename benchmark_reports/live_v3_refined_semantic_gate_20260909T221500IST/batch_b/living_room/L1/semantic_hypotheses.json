@@ -1,0 +1,222 @@
+{
+  "conversion_error": null,
+  "roles": {
+    "center_coffee_table": {
+      "canonical_role_candidates": [
+        "SHARED_REMOTE_REGION"
+      ],
+      "entity_kind": "FIXED_TARGET",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "CUP_SAUCER_SET",
+            "REMOTE",
+            "SEATING_PAIR",
+            "SEATING_POSITION"
+          ],
+          "explicit_families": [
+            "SUPPORT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "SHARED_REMOTE_REGION"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        }
+      ],
+      "raw_description": "Central low table for shared access.",
+      "raw_function": "shared_support",
+      "raw_role_id": "center_coffee_table",
+      "status": "DIRECT_FUNCTION_MATCH"
+    },
+    "left_end_table": {
+      "canonical_role_candidates": [
+        "PERSONAL_CUP_SAUCER_REGION",
+        "SEATING_PAIR",
+        "SEATING_POSITION",
+        "SHARED_REMOTE_REGION",
+        "staging_tray"
+      ],
+      "entity_kind": "FIXED_TARGET",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "CUP_SAUCER_SET",
+            "REMOTE"
+          ],
+          "explicit_families": [
+            "SEATING",
+            "SUPPORT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "PERSONAL_CUP_SAUCER_REGION",
+            "SEATING_POSITION"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        }
+      ],
+      "raw_description": "Small table beside left armchair.",
+      "raw_function": "personal_support",
+      "raw_role_id": "left_end_table",
+      "status": "UNCONSTRAINED_ROLE_TYPE"
+    },
+    "main_desk": {
+      "canonical_role_candidates": [],
+      "entity_kind": "FIXED_TARGET",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "CUP_SAUCER_SET",
+            "PERSONAL_CUP_SAUCER_REGION",
+            "REMOTE",
+            "SEATING_PAIR",
+            "SEATING_POSITION",
+            "SHARED_REMOTE_REGION",
+            "staging_tray"
+          ],
+          "explicit_families": [
+            "SOURCE"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "PERSONAL_CUP_SAUCER_REGION"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        }
+      ],
+      "raw_description": "Long wooden surface containing all current items.",
+      "raw_function": "initial_refreshment_source",
+      "raw_role_id": "main_desk",
+      "status": "UNREPRESENTED_SEMANTIC"
+    },
+    "refreshment_set_a": {
+      "canonical_role_candidates": [
+        "CUP_SAUCER_SET"
+      ],
+      "entity_kind": "REGION",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "PERSONAL_CUP_SAUCER_REGION",
+            "SEATING_PAIR",
+            "SEATING_POSITION",
+            "SHARED_REMOTE_REGION",
+            "staging_tray"
+          ],
+          "explicit_families": [
+            "PAYLOAD",
+            "SOURCE"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "CUP_SAUCER_SET"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        }
+      ],
+      "raw_description": "One complete drink/dish pair.",
+      "raw_function": "material_source",
+      "raw_role_id": "refreshment_set_a",
+      "status": "DIRECT_FUNCTION_MATCH"
+    },
+    "refreshment_set_b": {
+      "canonical_role_candidates": [
+        "CUP_SAUCER_SET"
+      ],
+      "entity_kind": "REGION",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "PERSONAL_CUP_SAUCER_REGION",
+            "SEATING_PAIR",
+            "SEATING_POSITION",
+            "SHARED_REMOTE_REGION",
+            "staging_tray"
+          ],
+          "explicit_families": [
+            "PAYLOAD",
+            "SOURCE"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "CUP_SAUCER_SET"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        }
+      ],
+      "raw_description": "Second complete drink/dish pair.",
+      "raw_function": "material_source",
+      "raw_role_id": "refreshment_set_b",
+      "status": "DIRECT_FUNCTION_MATCH"
+    },
+    "remote_control": {
+      "canonical_role_candidates": [
+        "REMOTE"
+      ],
+      "entity_kind": "REGION",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "PERSONAL_CUP_SAUCER_REGION",
+            "SEATING_PAIR",
+            "SEATING_POSITION",
+            "SHARED_REMOTE_REGION",
+            "staging_tray"
+          ],
+          "explicit_families": [
+            "PAYLOAD"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "REMOTE"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        }
+      ],
+      "raw_description": "Device for controlling TV.",
+      "raw_function": "manipulating_component",
+      "raw_role_id": "remote_control",
+      "status": "DIRECT_FUNCTION_MATCH"
+    },
+    "right_end_table": {
+      "canonical_role_candidates": [
+        "PERSONAL_CUP_SAUCER_REGION",
+        "SEATING_PAIR",
+        "SEATING_POSITION",
+        "SHARED_REMOTE_REGION",
+        "staging_tray"
+      ],
+      "entity_kind": "FIXED_TARGET",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "CUP_SAUCER_SET",
+            "REMOTE"
+          ],
+          "explicit_families": [
+            "SEATING",
+            "SUPPORT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "PERSONAL_CUP_SAUCER_REGION",
+            "SEATING_POSITION"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        }
+      ],
+      "raw_description": "Small table beside right armchair.",
+      "raw_function": "personal_support",
+      "raw_role_id": "right_end_table",
+      "status": "UNCONSTRAINED_ROLE_TYPE"
+    }
+  }
+}

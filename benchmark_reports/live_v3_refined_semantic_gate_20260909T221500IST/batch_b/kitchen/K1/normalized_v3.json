@@ -1,0 +1,316 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "obj_coffee_receptacle": [
+        {
+          "label": "blue_mug",
+          "visual_description": "Blue cylindrical vessel"
+        }
+      ],
+      "obj_coffee_source": [
+        {
+          "label": "small_brown_box",
+          "visual_description": "Rectangular box on table corner"
+        }
+      ],
+      "obj_eating_utensil": [
+        {
+          "label": "metal_spoons",
+          "visual_description": "Multiple spoons resting on left edge of table"
+        }
+      ],
+      "obj_seating_anchor": [
+        {
+          "label": "green_bench",
+          "visual_description": "Green rectangular platform attached to table or floor"
+        }
+      ],
+      "obj_soup_receptacle": [
+        {
+          "label": "small_white/red_bowl",
+          "visual_description": "Small shallow dish with red liquid"
+        }
+      ],
+      "obj_stir_implement": [
+        {
+          "label": "silver_spoon",
+          "visual_description": "Long metallic utensil on table surface"
+        }
+      ],
+      "obj_water_source": [
+        {
+          "label": "white_kettle/pot",
+          "visual_description": "White rounded vessel with spout/lid"
+        }
+      ],
+      "obj_work_surface": [
+        {
+          "label": "beige_table",
+          "visual_description": "Flat horizontal rectangular object with legs and drawers"
+        }
+      ]
+    }
+  },
+  "schema_version": 3,
+  "status": "UNSUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "relation_preparation_surface",
+        "participant_roles": [
+          "obj_coffee_source",
+          "obj_water_source"
+        ],
+        "relation": "supported_on",
+        "required": true
+      },
+      {
+        "id": "relation_serve_pairing",
+        "participant_roles": [
+          "obj_soup_receptacle",
+          "obj_eating_utensil"
+        ],
+        "relation": "paired_with",
+        "required": true
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "pot",
+          "kettle",
+          "jug"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Stores water for coffee preparation",
+        "id": "obj_water_source",
+        "required_count": 1,
+        "required_properties": [
+          "fluid_holding",
+          "openable"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "jar",
+          "canister",
+          "tin"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Stores coffee grounds/powder for preparation",
+        "id": "obj_coffee_source",
+        "required_count": 1,
+        "required_properties": [
+          "powder_holding",
+          "openable"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "cup",
+          "mug",
+          "glass"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Recipient for prepared coffee drink",
+        "id": "obj_coffee_receptacle",
+        "required_count": 2,
+        "required_properties": [
+          "drink_holding"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "bowl",
+          "dish"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Recipient for served soup",
+        "id": "obj_soup_receptacle",
+        "required_count": 2,
+        "required_properties": [
+          "food_holding"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "spoon",
+          "rod"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Instrument to mix coffee contents",
+        "id": "obj_stir_implement",
+        "required_count": 1,
+        "required_properties": [
+          "rigid",
+          "long"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "spoon",
+          "fork"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Instrument for consuming soup",
+        "id": "obj_eating_utensil",
+        "required_count": 2,
+        "required_properties": [
+          "rigid",
+          "hand-graspable"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "counter",
+          "desk"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Primary support surface for preparation tools and ingredients",
+        "id": "obj_work_surface",
+        "required_count": 1,
+        "required_properties": [
+          "horizontal",
+          "stable"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "seat",
+          "chairs",
+          "bench"
+        ],
+        "entity_kind": "REGION",
+        "function": "Spatial reference for delivering final products to users",
+        "id": "obj_seating_anchor",
+        "required_count": 2,
+        "required_properties": [
+          "human-scale_accessibility"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_prepare_coffee_batch_1",
+        "operation": "Pour_transfer",
+        "operation_count": 1,
+        "participant_roles": [
+          "obj_water_source",
+          "obj_coffee_receptacle"
+        ]
+      },
+      {
+        "id": "op_add_coffee_grains",
+        "operation": "Transfer",
+        "operation_count": 1,
+        "participant_roles": [
+          "obj_coffee_source",
+          "obj_coffee_receptacle"
+        ]
+      },
+      {
+        "id": "op_stir_coffee_mix",
+        "operation": "Stir",
+        "operation_count": 1,
+        "participant_roles": [
+          "obj_coffee_receptacle",
+          "obj_stir_implement"
+        ]
+      },
+      {
+        "id": "op_deliver_coffee_one",
+        "operation": "Transport_to",
+        "operation_count": 1,
+        "participant_roles": [
+          "obj_coffee_receptacle",
+          "obj_seating_anchor"
+        ]
+      },
+      {
+        "id": "op_prepare_coffee_batch_2",
+        "operation": "Pour_transfer",
+        "operation_count": 1,
+        "participant_roles": [
+          "obj_water_source",
+          "obj_coffee_receptacle"
+        ]
+      },
+      {
+        "id": "op_add_coffee_grains_2",
+        "operation": "Transfer",
+        "operation_count": 1,
+        "participant_roles": [
+          "obj_coffee_source",
+          "obj_coffee_receptacle"
+        ]
+      },
+      {
+        "id": "op_stir_coffee_mix_2",
+        "operation": "Stir",
+        "operation_count": 1,
+        "participant_roles": [
+          "obj_coffee_receptacle",
+          "obj_stir_implement"
+        ]
+      },
+      {
+        "id": "op_deliver_coffee_two",
+        "operation": "Transport_to",
+        "operation_count": 1,
+        "participant_roles": [
+          "obj_coffee_receptacle",
+          "obj_seating_anchor"
+        ]
+      },
+      {
+        "id": "op_serve_soup_one",
+        "operation": "Place_on",
+        "operation_count": 1,
+        "participant_roles": [
+          "obj_soup_receptacle",
+          "obj_seating_anchor"
+        ]
+      },
+      {
+        "id": "op_pair_utensil_one",
+        "operation": "Associate_with",
+        "operation_count": 1,
+        "participant_roles": [
+          "obj_eating_utensil",
+          "obj_soup_receptacle"
+        ]
+      },
+      {
+        "id": "op_serve_soup_two",
+        "operation": "Place_on",
+        "operation_count": 1,
+        "participant_roles": [
+          "obj_soup_receptacle",
+          "obj_seating_anchor"
+        ]
+      },
+      {
+        "id": "op_pair_utensil_two",
+        "operation": "Associate_with",
+        "operation_count": 1,
+        "participant_roles": [
+          "obj_eating_utensil",
+          "obj_soup_receptacle"
+        ]
+      }
+    ]
+  },
+  "task_summary": "Functional task contract cannot be generated in valid JSON without explicit schema. Standard assumption applied: JSON containing 'object_roles', 'relations', 'operations' and optional 'inspection_order'.",
+  "unsupported_reason": "This contract describes a multi-instance preparation task which requires inferring hidden inventory counts (e.g., sufficient amounts of water, coffee grounds, soup portions for 2x servings) not verifiable by static RGB views alone."
+}

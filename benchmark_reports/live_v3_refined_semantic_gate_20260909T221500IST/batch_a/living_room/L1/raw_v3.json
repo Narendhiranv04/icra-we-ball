@@ -1,0 +1,345 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "console_desk_top",
+        "label": "Top of Console Desk",
+        "reason": "Source of refreshment components and control",
+        "visual_description": "surface containing cups, plates, remote"
+      }
+    ],
+    "inspection_order": [
+      "console_desk_top"
+    ],
+    "visible_candidates_per_role": {
+      "coffee_table": [
+        {
+          "label": "ct_1",
+          "visual_description": "rectangular table with light top in center of room"
+        }
+      ],
+      "cup_red": [
+        {
+          "label": "cup_1",
+          "visual_description": "red cylindrical object on console desk"
+        },
+        {
+          "label": "cup_2",
+          "visual_description": "red cylindrical object on console desk"
+        }
+      ],
+      "plate_white": [
+        {
+          "label": "plate_1",
+          "visual_description": "white flat circular object on console desk"
+        },
+        {
+          "label": "plate_2",
+          "visual_description": "white flat circular object on console desk"
+        }
+      ],
+      "remote_control": [
+        {
+          "label": "remote_1",
+          "visual_description": "black rectangular object on console desk"
+        }
+      ],
+      "side_table_left": [
+        {
+          "label": "st_1",
+          "visual_description": "small light wood table next to left chair"
+        }
+      ],
+      "side_table_right": [
+        {
+          "label": "st_2",
+          "visual_description": "small light wood table next to right chair"
+        }
+      ],
+      "television": [
+        {
+          "label": "tv_1",
+          "visual_description": "large black rectangle mounted on back wall"
+        }
+      ]
+    }
+  },
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "relation_1",
+        "participant_roles": [
+          "side_table_left",
+          "armchair_left"
+        ],
+        "relation": "NEARBY",
+        "required": true
+      },
+      {
+        "id": "relation_2",
+        "participant_roles": [
+          "side_table_right",
+          "armchair_right"
+        ],
+        "relation": "NEARBY",
+        "required": true
+      },
+      {
+        "id": "relation_3",
+        "participant_roles": [
+          "armchair_left",
+          "television"
+        ],
+        "relation": "FACING",
+        "required": true
+      },
+      {
+        "id": "relation_4",
+        "participant_roles": [
+          "armchair_right",
+          "television"
+        ],
+        "relation": "FACING",
+        "required": true
+      },
+      {
+        "id": "relation_5",
+        "participant_roles": [
+          "coffee_table",
+          "armchair_left"
+        ],
+        "relation": "ACCESSIBLE_TO_BOTH",
+        "required": true
+      },
+      {
+        "id": "relation_6",
+        "participant_roles": [
+          "coffee_table",
+          "armchair_right"
+        ],
+        "relation": "ACCESSIBLE_TO_BOTH",
+        "required": true
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "TABLE",
+          "SIDE_TABLE"
+        ],
+        "description": "Small wooden table next to left armchair",
+        "entity_kind": "FIXED_TARGET",
+        "function": "PERSONAL_SUPPORT_LEFT",
+        "id": "side_table_left",
+        "required_count": 1,
+        "required_properties": [
+          "SUPPORTED_BY_FLOOR",
+          "HORIZONTAL_SURFACE",
+          "ACCESSIBLE"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "TABLE",
+          "SIDE_TABLE"
+        ],
+        "description": "Small wooden table next to right armchair",
+        "entity_kind": "FIXED_TARGET",
+        "function": "PERSONAL_SUPPORT_RIGHT",
+        "id": "side_table_right",
+        "required_count": 1,
+        "required_properties": [
+          "SUPPORTED_BY_FLOOR",
+          "HORIZONTAL_SURFACE",
+          "ACCESSIBLE"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "CHAIR",
+          "ARMCHAIR"
+        ],
+        "description": "Armchair for left person",
+        "entity_kind": "FIXED_TARGET",
+        "function": "SEATING_LEFT",
+        "id": "armchair_left",
+        "required_count": 1,
+        "required_properties": [
+          "UPRIGHT_STRUCTURE",
+          "COMFORTABLE_SEAT",
+          "FACING_TV"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "CHAIR",
+          "ARMCHAIR"
+        ],
+        "description": "Armchair for right person",
+        "entity_kind": "FIXED_TARGET",
+        "function": "SEATING_RIGHT",
+        "id": "armchair_right",
+        "required_count": 1,
+        "required_properties": [
+          "UPRIGHT_STRUCTURE",
+          "COMFORTABLE_SEAT",
+          "FACING_TV"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "TABLE",
+          "COFFEE_TABLE"
+        ],
+        "description": "Central table between chairs for shared items",
+        "entity_kind": "FIXED_TARGET",
+        "function": "SHARED_ACCESS_SURFACE",
+        "id": "coffee_table",
+        "required_count": 1,
+        "required_properties": [
+          "HORIZONTAL_SURFACE",
+          "CENTRAL_LOCATION"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "TABLE",
+          "DESK"
+        ],
+        "description": "Large desk in foreground holding initial items",
+        "entity_kind": "FIXED_TARGET",
+        "function": "INITIAL_SOURCE",
+        "id": "console_desk",
+        "required_count": 1,
+        "required_properties": [
+          "HORIZONTAL_SURFACE",
+          "CONTAINS_ITEMS"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "SCREEN",
+          "TELEVISION"
+        ],
+        "description": "Wall mounted TV screen",
+        "entity_kind": "FIXED_TARGET",
+        "function": "VIEWING_ANCHOR",
+        "id": "television",
+        "required_count": 1,
+        "required_properties": [
+          "ELECTRONIC_DISPLAY",
+          "MOUNTED_ON_WALL"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "CUP",
+          "GLASS",
+          "DRINK_VESSEL"
+        ],
+        "description": "Red drinking vessel",
+        "entity_kind": "REGION",
+        "function": "REFRESHMENT_CONTAINERRIGHT",
+        "id": "cup_red",
+        "required_count": 2,
+        "required_properties": [
+          "HOLDING_LIQUID",
+          "OPEN_TOP"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "PLATE",
+          "SAUCER",
+          "FOOD_DISH"
+        ],
+        "description": "White flat serving dish",
+        "entity_kind": "REGION",
+        "function": "REFRESHMENT_CONTAINER",
+        "id": "plate_white",
+        "required_count": 2,
+        "required_properties": [
+          "FLAT_HOLDER",
+          "OPEN_TOP"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "REMOTE",
+          "CONTROLLER",
+          "INPUT_DEVICE"
+        ],
+        "description": "Black handheld device",
+        "entity_kind": "REGION",
+        "function": "ENTERTAINMENT_CONTROL",
+        "id": "remote_control",
+        "required_count": 1,
+        "required_properties": [
+          "HANDHELD",
+          "BUTTON_INPUT"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "operation_1",
+        "operation": "TRANSFER_OBJECT",
+        "operation_count": 1,
+        "participant_roles": [
+          "cup_red",
+          "side_table_left"
+        ]
+      },
+      {
+        "id": "operation_2",
+        "operation": "TRANSFER_OBJECT",
+        "operation_count": 1,
+        "participant_roles": [
+          "cup_red",
+          "side_table_right"
+        ]
+      },
+      {
+        "id": "operation_3",
+        "operation": "TRANSFER_OBJECT",
+        "operation_count": 1,
+        "participant_roles": [
+          "plate_white",
+          "side_table_left"
+        ]
+      },
+      {
+        "id": "operation_4",
+        "operation": "TRANSFER_OBJECT",
+        "operation_count": 1,
+        "participant_roles": [
+          "plate_white",
+          "side_table_right"
+        ]
+      },
+      {
+        "id": "operation_5",
+        "operation": "TRANSFER_OBJECT",
+        "operation_count": 1,
+        "participant_roles": [
+          "remote_control",
+          "coffee_table"
+        ]
+      }
+    ]
+  },
+  "task_summary": "Distribute refreshment settings to side tables and relocate remote control to central table.",
+  "unsupported_reason": ""
+}

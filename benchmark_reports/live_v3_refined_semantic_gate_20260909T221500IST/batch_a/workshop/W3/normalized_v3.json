@@ -1,0 +1,232 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "drawer_openings",
+        "label": "front_of_drawers",
+        "reason": "Could contain compatible fastening components or the tool",
+        "visual_description": "Silver handles on drawers below bench"
+      },
+      {
+        "id": "cabinet_door_area",
+        "label": "front_of_cabinet",
+        "reason": "Could open to reveal storage containers",
+        "visual_description": "Vertical panel with handle"
+      }
+    ],
+    "inspection_order": [
+      "scan_cabinet_for_fasteners",
+      "examine_yellow_part_geometry",
+      "check_bench_marking"
+    ],
+    "visible_candidates_per_role": {
+      "primary_object_part": [
+        {
+          "label": "yellow_block_on_tray",
+          "visual_description": "Yellow rectangular object resting on a dark slate/tray on the workbench surface in frames 1 and 2"
+        }
+      ],
+      "source_storage_unit": [
+        {
+          "label": "blue_cabinet",
+          "visual_description": "Tall dark-blue cabinet standing against the back wall"
+        },
+        {
+          "label": "drawers_under_bench",
+          "visual_description": "Two blue drawers visible beneath the workbench surface"
+        }
+      ],
+      "target_worksurface": [
+        {
+          "label": "wooden_table_top",
+          "visual_description": "Orange-brown rectangular wooden surface occupying center foreground"
+        }
+      ],
+      "tooling_instrument": [
+        {
+          "label": "indistinct_tool",
+          "visual_description": "Cannot distinguish specific fastening tool; assumed to be picked up or available within reach"
+        }
+      ],
+      "user_robot_system": [
+        {
+          "label": "white_arm_base",
+          "visual_description": "Large white industrial robotic base visible on the right side across all frames"
+        },
+        {
+          "label": "gripper_end_effecto",
+          "visual_description": "Yellow/Gold articulated finger tip visible in frame 3 holding an object"
+        }
+      ]
+    }
+  },
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "agent_to_support",
+        "participant_roles": [
+          "user_robot_system",
+          "target_worksurface"
+        ],
+        "relation": "operates_on",
+        "required": true
+      },
+      {
+        "id": "source_contains_materials",
+        "participant_roles": [
+          "source_storage_unit",
+          "compatible_components"
+        ],
+        "relation": "contains",
+        "required": true
+      },
+      {
+        "id": "part_located_at_source",
+        "participant_roles": [
+          "primary_object_part",
+          "target_worksurface"
+        ],
+        "relation": "physically_located_within",
+        "required": true
+      },
+      {
+        "id": "agent_tools_accessory",
+        "participant_roles": [
+          "user_robot_system",
+          "tooling_instrument"
+        ],
+        "relation": "handles",
+        "required": true
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "ROBOT_ARM_BASE_UNIT",
+          "END_EFFECTOR_GRIPPER"
+        ],
+        "description": "The active robotic entity controlling end-effectors.",
+        "entity_kind": "REGION",
+        "function": "robot_manipulator_agent",
+        "id": "user_robot_system",
+        "required_count": 1,
+        "required_properties": [
+          "MANIPULATION_CAPABILITY",
+          "VISUAL_PERCEPTION_ACCESS"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "WOODEN_DESK_TOP",
+          "WORK_BENCH_SURFACE"
+        ],
+        "description": "The wooden table surface serving as the primary work area and target for placement.",
+        "entity_kind": "OBJECT",
+        "function": "fixed_workbench_anchor",
+        "id": "target_worksurface",
+        "required_count": 1,
+        "required_properties": [
+          "SOLID_SUPPORT_REGION",
+          "HORIZONTAL_PLANE"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "TALL_CABINET",
+          "DRAWER_UNIT"
+        ],
+        "description": "The blue cabinet or drawer bank containing compatible fastening components.",
+        "entity_kind": "OBJECT",
+        "function": "hidden_material_source",
+        "id": "source_storage_unit",
+        "required_count": 1,
+        "required_properties": [
+          "ACCESSIBLE_CONTENT_CONTAINER",
+          "STORED_FASTENERS_OR_PARTS"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "RECTANGULAR_BRACKET",
+          "PLASTIC_PART",
+          "WASHER_NUT_ASSEMBLY"
+        ],
+        "description": "The yellow rectangular object currently residing on the tray/workbench requiring attachment.",
+        "entity_kind": "OBJECT",
+        "function": "manipulated_assembly_piece",
+        "id": "primary_object_part",
+        "required_count": 1,
+        "required_properties": [
+          "GEOMETRY_COMPATIBILITY_WITH_TARGET",
+          "MATERIAL_SUBSTRATE"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "DRIVING_TOOL",
+          "CLAMPING_DEVICE"
+        ],
+        "description": "The instrument required to execute the fastening action (e.g., screwdriver, wrench).",
+        "entity_kind": "OBJECT",
+        "function": "reusable_fastrning_implment",
+        "id": "tooling_instrument",
+        "required_count": 1,
+        "required_properties": [
+          "MECHANICAL_INTERFACE",
+          "REUSABLE_STATUS"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_01_identification_phase",
+        "operation": "locate_required_hardware",
+        "operation_count": 1,
+        "participant_roles": [
+          "user_robot_system",
+          "source_storage_unit"
+        ]
+      },
+      {
+        "id": "op_02_retrieval_phase",
+        "operation": "extract_fastening_elements",
+        "operation_count": 1,
+        "participant_roles": [
+          "user_robot_system",
+          "source_storage_unit",
+          "compatible_components"
+        ]
+      },
+      {
+        "id": "op_03_execution_phase",
+        "operation": "apply_mechanical_fastening",
+        "operation_count": 1,
+        "participant_roles": [
+          "user_robot_system",
+          "tooling_instrument",
+          "primary_object_part",
+          "target_worksurface"
+        ]
+      },
+      {
+        "id": "op_04_cleanup_phase",
+        "operation": "return_implements_to_safe_zone",
+        "operation_count": 1,
+        "participant_roles": [
+          "user_robot_system",
+          "tooling_instrument",
+          "target_worksurface"
+        ]
+      }
+    ]
+  },
+  "task_summary": "Locate necessary hardware in the storage unit, fasten the yellow component to the designated area on the workbench, and store the tool.",
+  "unsupported_reason": ""
+}

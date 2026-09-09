@@ -1,0 +1,27 @@
+{
+  "batch": "B",
+  "content_sha256": "2ee2e10f6fc79c68cd20baacf3a72de9725382b011b4145b3ef934b7cf4db802",
+  "failure_category": "MALFORMED_VLM_SPECIFICATION",
+  "failure_reason": "UNSUPPORTED V3 specification must have an empty contract",
+  "finish_reason": "stop",
+  "image_views": [
+    "left_shoulder_camera.png",
+    "right_shoulder_camera.png",
+    "overhead_camera.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [],
+  "num_images": 3,
+  "strict_v3_valid": false,
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 9234,
+    "completion_tokens_details": {
+      "reasoning_tokens": 7037
+    },
+    "prompt_tokens": 4245,
+    "prompt_tokens_details": null,
+    "total_tokens": 13479
+  }
+}

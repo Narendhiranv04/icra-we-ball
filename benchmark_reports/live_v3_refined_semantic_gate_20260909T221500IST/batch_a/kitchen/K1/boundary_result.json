@@ -1,0 +1,27 @@
+{
+  "batch": "A",
+  "content_sha256": "d6539862acb2da1df8b97f0611227fa826bf5b2221a4e7c9556ea61d742d2f8b",
+  "failure_category": "MALFORMED_VLM_SPECIFICATION",
+  "failure_reason": "INVALID_INSPECTION_ORDER: must list every unique region ID exactly once",
+  "finish_reason": "stop",
+  "image_views": [
+    "left_shoulder_camera.png",
+    "right_shoulder_camera.png",
+    "overhead_camera.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [],
+  "num_images": 3,
+  "strict_v3_valid": false,
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 5982,
+    "completion_tokens_details": {
+      "reasoning_tokens": 3543
+    },
+    "prompt_tokens": 4137,
+    "prompt_tokens_details": null,
+    "total_tokens": 10119
+  }
+}
