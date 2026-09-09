@@ -48,7 +48,7 @@ USER_REQUEST_V3 = (
 
 RESPONSE_SCHEMA_V3: dict[str, Any] = deepcopy(RESPONSE_SCHEMA_V2)
 RESPONSE_SCHEMA_V3["properties"] = dict(RESPONSE_SCHEMA_V3["properties"])
-RESPONSE_SCHEMA_V3["properties"]["schema_version"] = {"const": 3}
+RESPONSE_SCHEMA_V3["properties"]["schema_version"] = {"type": "integer", "enum": [3]}
 RESPONSE_SCHEMA_V3["required"] = ["schema_version", *RESPONSE_SCHEMA_V3["required"]]
 _contract = RESPONSE_SCHEMA_V3["properties"]["task_contract"]
 _contract["properties"]["functional_roles"]["items"]["required"] = [
@@ -62,7 +62,7 @@ _contract["properties"]["functional_relations"]["items"] = {
         "relation": {"type": "string", "minLength": 1},
         "participant_roles": {
             "type": "array", "minItems": 2, "maxItems": 2,
-            "uniqueItems": True, "items": {"type": "string", "minLength": 1},
+            "items": {"type": "string", "minLength": 1},
         },
         "required": {"type": "boolean"},
     },
@@ -76,7 +76,7 @@ _contract["properties"]["operation_pairings"]["items"] = {
         "operation": {"type": "string", "minLength": 1},
         "participant_roles": {
             "type": "array", "minItems": 2, "maxItems": 4,
-            "uniqueItems": True, "items": {"type": "string", "minLength": 1},
+            "items": {"type": "string", "minLength": 1},
         },
         "operation_count": {"type": "integer", "minimum": 1, "maximum": 20},
     },
