@@ -14,6 +14,7 @@ from .models import (
     FunctionalRole,
     FunctionalRelation,
     OperationGroup,
+    RoleTypeHypothesis,
     TaskEffectRelation,
 )
 from .structural_sanitizer import sanitize_functional_graph
@@ -191,6 +192,195 @@ def _relation(domain: str, subject: str, phrase: str, target: str) -> tuple[str,
     return canonicalize_workshop_relation(subject, subject, phrase, target, target)[:3]
 
 
+def _canonical_role_kind(domain: str, role_name: str) -> str:
+    from .system_context_registry import get_domain_system_fixed_anchors
+    if role_name in set(get_domain_system_fixed_anchors(domain)):
+        return "FIXED_TARGET"
+    if role_name in {"PERSONAL_CUP_SAUCER_REGION", "SHARED_REMOTE_REGION", "MAIN_WORKBENCH_ZONE"}:
+        return "REGION"
+    return "OBJECT"
+
+
+def _causal_role_pairs(domain: str, predicate: str) -> tuple[tuple[str, str], ...]:
+    """Generic domains induced by a causal predicate, never a physical check."""
+    if domain == "kitchen":
+        if predicate == "PROVIDES_MATERIAL_TO":
+            return tuple((s, t) for s in ("coffee_source", "water_source") for t in ("coffee_container", "soup_container"))
+        if predicate == "ACTS_ON":
+            return (("coffee_stirrer", "coffee_container"), ("soup_eating_utensil", "soup_container"))
+        if predicate == "PAIRED_WITH":
+            return (("soup_eating_utensil", "soup_container"),)
+    if domain == "workshop":
+        if predicate == "ACTS_ON":
+            return (("driver", "fastener"),)
+        if predicate in {"INSTALLED_AT", "CONNECTED_TO"}:
+            return (("fastener", "repair_target"),)
+    return ()
+
+
+def _explicit_incompatible_role_claim(domain: str, role: dict[str, Any], candidates: set[str]) -> bool:
+    """Detect a clear function claim outside the candidate role family."""
+    text = re.sub(r"[_-]+", " ", f"{role.get('function', '')} {role.get('description', '')}").lower()
+    if domain == "living_room" and re.search(r"\b(television|tv screen|display screen|monitor)\b", text):
+        return bool(candidates.intersection({"REMOTE", "CUP_SAUCER_SET", "PERSONAL_CUP_SAUCER_REGION", "SHARED_REMOTE_REGION"}))
+    return False
+
+
+def resolve_role_type_hypotheses(domain: str, document: dict[str, Any]) -> dict[str, RoleTypeHypothesis]:
+    """Resolve FM roles jointly from function, relation, and operation evidence.
+
+    Direct function mapping is evidence, not a prerequisite.  Relation and
+    operation text first nominate semantic candidates independently, then their
+    registered signatures constrain both endpoints to a fixed point.
+    """
+    from .predicate_registry import get_predicate_signature
+    from .relation_interpreter import extract_relation_semantic_candidates
+    from .robot_capability_registry import extract_operation_semantic_candidates
+    from .system_context_registry import get_domain_selectable_roles, get_domain_system_fixed_anchors
+
+    allowed = set(get_domain_selectable_roles(domain)) | set(get_domain_system_fixed_anchors(domain))
+    roles_by_id = {str(role["id"]): role for role in document.get("functional_roles", ())}
+    candidates: dict[str, set[str]] = {}
+    direct: dict[str, str | None] = {}
+    evidence: dict[str, list[dict[str, Any]]] = {rid: [] for rid in roles_by_id}
+    constrained_by: dict[str, set[str]] = {rid: set() for rid in roles_by_id}
+    contradictions: set[str] = set()
+
+    for rid, role in roles_by_id.items():
+        try:
+            mapped, rule = _map_role(domain, role, document)
+        except (VLMSpecificationError, KeyError, ValueError) as exc:
+            mapped, rule = None, str(exc)
+        mapped = mapped if mapped in allowed else None
+        direct[rid] = mapped
+        kind = role.get("entity_kind", "OBJECT")
+        candidates[rid] = ({mapped} if mapped else {
+            name for name in allowed if _canonical_role_kind(domain, name) == kind
+        })
+        evidence[rid].append({
+            "source": "FUNCTION_TEXT", "status": "MATCH" if mapped else "UNKNOWN",
+            "canonical_role": mapped, "rule": rule,
+        })
+
+    constraints: list[tuple[str, str, set[tuple[str, str]], dict[str, Any]]] = []
+    for relation in document.get("functional_relations", ()):
+        raw_s = relation.get("subject_role")
+        raw_o = relation.get("object_role")
+        if raw_s not in roles_by_id or raw_o not in roles_by_id:
+            continue
+        phrase = str(relation.get("relation", relation.get("predicate", "")))
+        pairs: set[tuple[str, str]] = set()
+        semantic = extract_relation_semantic_candidates(domain, phrase)
+        for item in semantic:
+            if item.category == "PHYSICAL_VERIFIER":
+                sig = get_predicate_signature(domain, item.predicate_name)
+                if not sig or sig.arity != 2 or not sig.active_in_functional_graph:
+                    continue
+                canonical_pairs = {
+                    (s, o) for s in sig.allowed_subject_roles for o in sig.allowed_object_roles
+                }
+                if item.predicate_name in {"NEAR_SEAT", "ACCESSIBLE_FROM_BOTH_SEATS", "COMPATIBLE_WITH"}:
+                    canonical_pairs |= {(o, s) for s, o in canonical_pairs}
+            elif item.category == "TASK_CAUSAL_SEMANTICS":
+                canonical_pairs = set(_causal_role_pairs(domain, item.predicate_name))
+            else:
+                continue
+            if item.direction == "REVERSE":
+                canonical_pairs = {(o, s) for s, o in canonical_pairs}
+            pairs.update(canonical_pairs)
+        if pairs and any(s in candidates[raw_s] and o in candidates[raw_o] for s, o in pairs):
+            detail = {"source": "RELATION_TEXT", "raw_phrase": phrase,
+                      "semantic_candidates": [item.__dict__ for item in semantic]}
+            constraints.append((raw_s, raw_o, pairs, detail))
+
+    for operation in document.get("interaction_groups", ()) or document.get("operations", ()):
+        raw_s = operation.get("tool_role") or operation.get("source_role")
+        raw_o = operation.get("target_role")
+        raw_a = operation.get("context_role") or operation.get("anchor_role")
+        if raw_s not in roles_by_id or raw_o not in roles_by_id:
+            continue
+        phrase = str(operation.get("function") or operation.get("operation") or "")
+        capabilities = extract_operation_semantic_candidates(domain, phrase)
+        pairs: set[tuple[str, str]] = set()
+        for capability in capabilities:
+            direct_pairs = {
+                (source, target)
+                for source in capability.allowed_source_roles
+                for target in capability.allowed_target_roles
+            }
+            reverse_pairs = (
+                {(target, source) for source, target in direct_pairs}
+                if domain == "living_room" else set()
+            )
+            # Payload-to-support language in Living Room is represented by a
+            # support capability whose executable source is the support region.
+            pairs.update(direct_pairs | reverse_pairs)
+        if pairs and any(s in candidates[raw_s] and o in candidates[raw_o] for s, o in pairs):
+            detail = {"source": "OPERATION_TEXT", "raw_phrase": phrase,
+                      "capability_candidates": [cap.capability_id for cap in capabilities]}
+            constraints.append((raw_s, raw_o, pairs, detail))
+        if raw_a in roles_by_id and capabilities:
+            anchor_allowed = {role for cap in capabilities for role in cap.allowed_anchor_roles}
+            if anchor_allowed:
+                before = set(candidates[raw_a])
+                candidates[raw_a].intersection_update(anchor_allowed)
+                constrained_by[raw_a].add("OPERATION_TEXT")
+                evidence[raw_a].append({"source": "OPERATION_TEXT", "raw_phrase": phrase,
+                                        "allowed_anchor_roles": sorted(anchor_allowed)})
+                if before and not candidates[raw_a]:
+                    contradictions.add(raw_a)
+
+    changed = True
+    while changed:
+        changed = False
+        for raw_s, raw_o, pairs, detail in constraints:
+            viable = {(s, o) for s, o in pairs if s in candidates[raw_s] and o in candidates[raw_o]}
+            s_allowed = {s for s, _ in viable}
+            o_allowed = {o for _, o in viable}
+            before_s, before_o = set(candidates[raw_s]), set(candidates[raw_o])
+            candidates[raw_s].intersection_update(s_allowed)
+            candidates[raw_o].intersection_update(o_allowed)
+            source = detail["source"]
+            constrained_by[raw_s].add(source)
+            constrained_by[raw_o].add(source)
+            if detail not in evidence[raw_s]: evidence[raw_s].append(detail)
+            if detail not in evidence[raw_o]: evidence[raw_o].append(detail)
+            if (before_s and not candidates[raw_s]) or (before_o and not candidates[raw_o]):
+                contradictions.update((raw_s, raw_o))
+            changed |= before_s != candidates[raw_s] or before_o != candidates[raw_o]
+
+    for rid, role in roles_by_id.items():
+        if direct[rid] is None and constrained_by[rid] and _explicit_incompatible_role_claim(domain, role, candidates[rid]):
+            contradictions.add(rid)
+
+    result: dict[str, RoleTypeHypothesis] = {}
+    for rid, role in roles_by_id.items():
+        values = tuple(sorted(candidates[rid]))
+        sources = constrained_by[rid]
+        if rid in contradictions or not values:
+            status = "CONTRADICTORY_ROLE_TYPE"
+        elif len(values) > 1:
+            status = "AMBIGUOUS_ROLE_TYPE" if sources else "UNCONSTRAINED_ROLE_TYPE"
+        elif direct[rid] is not None:
+            status = "DIRECT_FUNCTION_MATCH"
+        elif sources == {"RELATION_TEXT"}:
+            status = "RELATION_ASSISTED"
+        elif sources == {"OPERATION_TEXT"}:
+            status = "OPERATION_ASSISTED"
+        else:
+            status = "JOINT_SEMANTIC_RESOLUTION"
+        result[rid] = RoleTypeHypothesis(
+            raw_role_id=rid,
+            raw_function=str(role.get("function", "")),
+            raw_description=str(role.get("description", "")),
+            entity_kind=str(role.get("entity_kind", "OBJECT")),
+            canonical_role_candidates=values,
+            status=status,
+            evidence=tuple(evidence[rid]),
+        )
+    return result
+
+
 def check_required_contract_complete(
     domain: str,
     nodes: dict[str, Any],
@@ -217,6 +407,9 @@ def check_required_contract_complete(
 
     if trace.get("unresolved_roles"):
         missing.append(f"Unresolved roles: {trace['unresolved_roles']}")
+
+    if trace.get("provisional_roles"):
+        missing.append(f"Provisional role hypotheses require grounding resolution: {trace['provisional_roles']}")
 
     if trace.get("disabled_groups"):
         missing.append(f"Disabled/unsupported operations: {trace['disabled_groups']}")
@@ -261,7 +454,8 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     trace: dict[str, Any] = dict(roles=[], properties=[], relations=[], groups=[], context_only_roles=[],
                                 unresolved_roles=[], merged_roles=[], disambiguated_roles=[], disabled_groups=[],
                                 unresolved_required_relations=[], unresolved_required_operations=[],
-                                task_causal_relations=[], role_operation_reconciliations=[])
+                                task_causal_relations=[], role_operation_reconciliations=[],
+                                provisional_roles=[], provisional_relation_constraints=[])
     nodes = {}
     id_map = {}
     planner_context_id_map = {}
@@ -277,13 +471,25 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     )
     allowed = set(get_domain_selectable_roles(domain)) | set(get_domain_system_fixed_anchors(domain))
     planner_constants = set(get_domain_planner_context_constants(domain))
+    role_hypotheses = resolve_role_type_hypotheses(domain, doc)
     for role in doc['functional_roles']:
         rid = role['id']
+        hypothesis = role_hypotheses[rid]
         try:
-            name, rule = _map_role(domain, role, doc)
+            direct_name, direct_rule = _map_role(domain, role, doc)
         except VLMSpecificationError as exc:
-            name, rule = None, str(exc)
-        if name not in allowed:
+            direct_name, direct_rule = None, str(exc)
+        name = hypothesis.resolved_role
+        rule = hypothesis.status
+        if direct_name == name and direct_name is not None:
+            rule = direct_rule
+        if direct_name in planner_constants:
+            name, rule = direct_name, direct_rule
+        elif hypothesis.status == 'AMBIGUOUS_ROLE_TYPE' and hypothesis.canonical_role_candidates:
+            name = 'fm_role__' + re.sub(r'[^a-zA-Z0-9_]+', '_', rid).strip('_')
+            rule = 'AMBIGUOUS_ROLE_TYPE'
+        is_provisional = hypothesis.status == 'AMBIGUOUS_ROLE_TYPE' and bool(hypothesis.canonical_role_candidates)
+        if name not in allowed and not is_provisional:
             if name in planner_constants:
                 planner_context_id_map[rid] = name
                 context_provenance = (
@@ -324,15 +530,28 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 canonical_kind = role['entity_kind']
             id_map[rid] = name
             owners[name] = role
+            role_candidates = hypothesis.canonical_role_candidates or (name,)
+            semantic_categories = tuple(dict.fromkeys(
+                category for candidate in role_candidates
+                for category in ontology.get_system_role_semantic_categories(domain, candidate)
+            ))
             nodes[name] = FunctionalRole(name=name, entity_kind=canonical_kind, count=role['required_count'],
-                binding_policy=role['binding_policy'], semantic_categories=ontology.get_system_role_semantic_categories(domain, name),
+                binding_policy=role['binding_policy'], semantic_categories=semantic_categories,
                 description=role.get('description', ''), semantic_hints=tuple(role['required_properties']),
                 min_count=role.get('binding_cardinality', {}).get('minimum_distinct_physical_objects', role.get('min_count')),
                 max_count=role.get('binding_cardinality', {}).get('maximum_distinct_physical_objects', role.get('max_count')),
                 preference=role.get('binding_cardinality', {}).get('preferred', role.get('preference')),
                 verification_mode=('GEOMETRIC_ONLY' if domain == 'workshop' and canonical_kind == 'FIXED_TARGET'
-                    else 'SEMANTIC_ONLY' if domain != 'workshop' and not role['required_properties'] else 'SEMANTIC_AND_GEOMETRIC'))
-        trace['roles'].append({'raw_id': rid, 'canonical_role': name, 'rule': rule, 'status': 'CANONICAL_EXECUTABLE_SEMANTIC'})
+                    else 'SEMANTIC_ONLY' if domain != 'workshop' and not role['required_properties'] else 'SEMANTIC_AND_GEOMETRIC'),
+                raw_role_id=rid,
+                canonical_role_candidates=role_candidates,
+                role_resolution_status=hypothesis.status,
+                role_resolution_provenance=hypothesis.evidence)
+        role_status = 'PROVISIONAL_ROLE_HYPOTHESIS' if hypothesis.status == 'AMBIGUOUS_ROLE_TYPE' else 'CANONICAL_EXECUTABLE_SEMANTIC'
+        trace['roles'].append({'raw_id': rid, 'canonical_role': name, 'canonical_role_candidates': list(hypothesis.canonical_role_candidates),
+                               'rule': rule, 'status': role_status, 'resolution_status': hypothesis.status})
+        if hypothesis.status == 'AMBIGUOUS_ROLE_TYPE':
+            trace['provisional_roles'].append(hypothesis.to_dict())
         if rule == 'CAUSAL_SOURCE_PROVIDER':
             trace['disambiguated_roles'].append({'code': 'RAW_ROLE_DISAMBIGUATED', 'raw_id': rid, 'canonical_role': name, 'evidence': sorted(causal_position(role, doc))})
         for prop in role['required_properties']:
@@ -401,6 +620,15 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
 
             canon_s = id_map[raw_subject]
             canon_o = id_map[raw_target]
+            if nodes[canon_s].role_resolution_status == 'AMBIGUOUS_ROLE_TYPE' or nodes[canon_o].role_resolution_status == 'AMBIGUOUS_ROLE_TYPE':
+                from .relation_interpreter import extract_relation_semantic_candidates
+                evidence.update(
+                    status='PROVISIONAL_RELATION_CONSTRAINT',
+                    semantic_candidates=[item.__dict__ for item in extract_relation_semantic_candidates(domain, phrase)],
+                )
+                trace['relations'].append(evidence)
+                trace['provisional_relation_constraints'].append(evidence)
+                return None
             s_kind = nodes[canon_s].entity_kind
             o_kind = nodes[canon_o].entity_kind
 
@@ -580,6 +808,18 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
 
         if not tool_raw or not target_raw or tool_raw not in id_map or target_raw not in id_map:
             trace['disabled_groups'].append({'raw_group': group, 'status': 'UNINSTANTIABLE_MISSING_ROLE'})
+            continue
+
+        if (
+            nodes[id_map[tool_raw]].role_resolution_status == 'AMBIGUOUS_ROLE_TYPE'
+            or nodes[id_map[target_raw]].role_resolution_status == 'AMBIGUOUS_ROLE_TYPE'
+        ):
+            from .robot_capability_registry import extract_operation_semantic_candidates
+            trace['groups'].append({
+                'raw_group': group,
+                'status': 'PROVISIONAL_OPERATION_CONSTRAINT',
+                'capability_candidates': [c.capability_id for c in extract_operation_semantic_candidates(domain, raw_op)],
+            })
             continue
 
         tool_role_id = id_map[tool_raw]
@@ -822,7 +1062,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                     region_ids[proposal.get('id')] = mapped
         ranking = list(dict.fromkeys(region_ids[r] for r in doc['inspection_order'] if isinstance(r, str) and r in region_ids))
         ranking.extend(r for r in proposed if r not in ranking)
-    partial = sanitized.semantically_incomplete or bool(unverified_required or unresolved or trace['unresolved_roles'] or trace['disabled_groups'])
+    partial = sanitized.semantically_incomplete or bool(unverified_required or unresolved or trace['unresolved_roles'] or trace['disabled_groups'] or trace['provisional_roles'])
     contract_complete, contract_missing_reasons = check_required_contract_complete(
         domain, nodes, relations, groups, trace, sanitized, unresolved
     )
@@ -852,6 +1092,8 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             'precondition_provenance': all_precond_prov,
             'task_causal_relations': [r.to_dict() for r in task_causal_relations],
             'task_effect_relations': [r.to_dict() for r in task_effect_relations],
+            'role_type_hypotheses': {rid: hypothesis.to_dict() for rid, hypothesis in role_hypotheses.items()},
+            'provisional_relation_constraints': trace['provisional_relation_constraints'],
             'soft_semantic_evidence': soft, 'unresolved_semantics': unresolved, 'unverified_required_properties': unverified_required, 'raw_role_to_canonical': id_map})
     from pathlib import Path
     if domain == 'living_room':

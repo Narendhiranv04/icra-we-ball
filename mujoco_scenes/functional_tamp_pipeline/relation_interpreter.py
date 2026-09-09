@@ -46,6 +46,15 @@ class RelationInterpretationResult:
         return bool(self.interpreted_predicates)
 
 
+@dataclass(frozen=True)
+class RelationSemanticCandidate:
+    """Endpoint-independent meaning nominated by relation text."""
+
+    predicate_name: str
+    direction: str = "FORWARD"
+    category: str = "PHYSICAL_VERIFIER"
+
+
 # Deterministic linguistic cues for proposing semantic predicate candidates
 _SEMANTIC_PREDICATE_CUES: dict[tuple[str, str], tuple[str, ...]] = {
     # Kitchen
@@ -69,11 +78,13 @@ _SEMANTIC_PREDICATE_CUES: dict[tuple[str, str], tuple[str, ...]] = {
         "support surface", "table for refreshments", "staging surface",
         "tabletop support", "tabletop support for drinkware set", "support for drinkware set",
         "support for drinkware", "drinkware set", "supports drinkware set", "support drinkware set",
+        "supports refreshment setting", "support refreshment setting",
     ),
     ("living_room", "FITS_ON"): (
         "fits on", "placed on", "place on", "supported on", "support on", "rests on",
         "rest on", "tabletop for remote", "surface for remote", "remote on",
         "entertainment control on", "control device on", "support remote",
+        "supports entertainment control", "support entertainment control",
     ),
     ("living_room", "NEAR_SEAT"): (
         "near seat", "near seating", "beside seat", "adjacent to seat", "close to seat",
@@ -212,6 +223,39 @@ def _extract_inverse_semantic_candidates(
                 candidates.add(pred_name)
                 break
     return candidates
+
+
+def extract_relation_semantic_candidates(
+    domain: str,
+    raw_phrase: str,
+) -> tuple[RelationSemanticCandidate, ...]:
+    """Extract relation meanings from text without consulting endpoint roles.
+
+    Endpoint signatures are deliberately applied later by the compiler's joint
+    role resolver.  Text must nominate every candidate returned here.
+    """
+    norm_phrase = _normalize_text(raw_phrase)
+    if not norm_phrase:
+        return ()
+    candidates = [
+        RelationSemanticCandidate(name, "FORWARD")
+        for name in sorted(_extract_semantic_candidates(domain, norm_phrase))
+    ]
+    candidates.extend(
+        RelationSemanticCandidate(name, "REVERSE")
+        for name in sorted(_extract_inverse_semantic_candidates(domain, norm_phrase))
+        if (name, "REVERSE") not in {(c.predicate_name, c.direction) for c in candidates}
+    )
+    causal = _extract_task_causal_candidates(norm_phrase)
+    if causal:
+        name, reverse = causal
+        candidates.append(RelationSemanticCandidate(
+            name, "REVERSE" if reverse else "FORWARD", "TASK_CAUSAL_SEMANTICS"
+        ))
+    effect = interpret_task_effect_predicate(raw_phrase)
+    if effect:
+        candidates.append(RelationSemanticCandidate(effect, "FORWARD", "TASK_EFFECT_SEMANTICS"))
+    return tuple(dict.fromkeys(candidates))
 
 
 # Deterministic linguistic cues for task/causal semantic relations
@@ -424,7 +468,11 @@ def interpret_relation(
     evidence["forward_valid_predicates"] = sorted(forward_valid_names)
 
     # 2. Extract semantic candidates from phrase (including exact predicate names)
-    semantic_candidates = _extract_semantic_candidates(d_norm, norm_phrase)
+    semantic_candidates = {
+        candidate.predicate_name
+        for candidate in extract_relation_semantic_candidates(d_norm, raw_phrase)
+        if candidate.category == "PHYSICAL_VERIFIER" and candidate.direction == "FORWARD"
+    }
     for sig in forward_valid_sigs:
         pred_norm = _normalize_text(sig.name)
         if pred_norm in norm_phrase or norm_phrase == pred_norm:

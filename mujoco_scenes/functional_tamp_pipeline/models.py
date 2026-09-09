@@ -124,6 +124,10 @@ class FunctionalRole:
     verification_mode: str = "SEMANTIC_AND_GEOMETRIC"  # "SEMANTIC_ONLY", "SEMANTIC_AND_GEOMETRIC"
     description: str = ""
     semantic_hints: tuple[str, ...] = ()
+    raw_role_id: str | None = None
+    canonical_role_candidates: tuple[str, ...] = ()
+    role_resolution_status: str = "DIRECT_FUNCTION_MATCH"
+    role_resolution_provenance: tuple[dict[str, Any], ...] = ()
 
     @property
     def minimum_count(self) -> int:
@@ -169,6 +173,10 @@ class FunctionalRole:
             "verification_mode": self.verification_mode,
             "description": self.description,
             "semantic_hints": list(self.semantic_hints),
+            "raw_role_id": self.raw_role_id,
+            "canonical_role_candidates": list(self.canonical_role_candidates or (self.name,)),
+            "role_resolution_status": self.role_resolution_status,
+            "role_resolution_provenance": list(self.role_resolution_provenance),
             "distinct": self.distinct,
             "reusable": self.reusable,
             "shared": self.shared,
@@ -205,7 +213,31 @@ class FunctionalRole:
             verification_mode=str(data.get("verification_mode", "SEMANTIC_AND_GEOMETRIC")),
             description=str(data.get("description", "")),
             semantic_hints=tuple(map(str, data.get("semantic_hints", ()))),
+            raw_role_id=str(data["raw_role_id"]) if data.get("raw_role_id") else None,
+            canonical_role_candidates=tuple(map(str, data.get("canonical_role_candidates", ()))),
+            role_resolution_status=str(data.get("role_resolution_status", "DIRECT_FUNCTION_MATCH")),
+            role_resolution_provenance=tuple(dict(item) for item in data.get("role_resolution_provenance", ())),
         )
+
+
+@dataclass(frozen=True)
+class RoleTypeHypothesis:
+    """Compiler-time canonical role domain for one FM-declared role."""
+
+    raw_role_id: str
+    raw_function: str
+    raw_description: str
+    entity_kind: str
+    canonical_role_candidates: tuple[str, ...]
+    status: str
+    evidence: tuple[dict[str, Any], ...] = ()
+
+    @property
+    def resolved_role(self) -> str | None:
+        return self.canonical_role_candidates[0] if len(self.canonical_role_candidates) == 1 else None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 @dataclass(frozen=True)

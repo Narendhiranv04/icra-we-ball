@@ -297,6 +297,28 @@ def get_robot_capability_registry_hash() -> str:
     return hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 
 
+def extract_operation_semantic_candidates(
+    domain: str,
+    raw_phrase: str,
+) -> tuple[RobotCapability, ...]:
+    """Extract physical capability meanings from text without endpoint filtering."""
+    norm_text = _phrase(raw_phrase)
+    if not norm_text or is_non_physical_operation_phrase(raw_phrase):
+        return ()
+    matched: list[RobotCapability] = []
+    for capability in get_robot_capabilities(domain):
+        if norm_text in (_phrase(capability.capability_id), _phrase(capability.planner_operation)):
+            matched.append(capability)
+            continue
+        if any(
+            (cue_norm := _phrase(cue)) == norm_text
+            or (len(cue_norm) >= 4 and cue_norm in norm_text)
+            for cue in capability.semantic_cues
+        ):
+            matched.append(capability)
+    return tuple(sorted(set(matched), key=lambda item: item.capability_id))
+
+
 def interpret_operation(
     domain: str,
     raw_phrase: str,
@@ -343,18 +365,7 @@ def interpret_operation(
         )
 
     # 1. Semantic candidates based on text evidence
-    semantic_matches: set[RobotCapability] = set()
-    for cap in capabilities:
-        cap_id_norm = _phrase(cap.capability_id)
-        plan_op_norm = _phrase(cap.planner_operation)
-        if norm_text == cap_id_norm or norm_text == plan_op_norm:
-            semantic_matches.add(cap)
-            continue
-        for cue in cap.semantic_cues:
-            c_norm = _phrase(cue)
-            if c_norm == norm_text or (len(c_norm) >= 4 and c_norm in norm_text):
-                semantic_matches.add(cap)
-                break
+    semantic_matches = set(extract_operation_semantic_candidates(d_norm, raw_phrase))
 
     if not semantic_matches:
         return OperationInterpretationResult(
