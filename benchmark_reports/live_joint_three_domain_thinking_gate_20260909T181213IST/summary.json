@@ -1,0 +1,125 @@
+{
+  "source_commit": "8384d08dc957dabb32e55c1677d16329233da8b3",
+  "configuration": {
+    "model": "Qwen/Qwen3.5-9B",
+    "model_alias": "qwen35-9b",
+    "thinking": true,
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 20,
+    "presence_penalty": 1.5,
+    "max_tokens": 24000,
+    "schema": "V2",
+    "images_per_fm_call": 3
+  },
+  "totals": {
+    "semantic_fm_calls": 3,
+    "transport_attempts": 3,
+    "transport_retries": 0,
+    "a_star_calls": 0,
+    "high_level_replans": 0
+  },
+  "cases": {
+    "K1": {
+      "domain": "kitchen",
+      "views": ["left_shoulder_camera", "right_shoulder_camera", "overhead_camera"],
+      "raw_fm": {
+        "finish_reason": "stop",
+        "usage": {"prompt_tokens": 6003, "completion_tokens": 6103, "reasoning_tokens": 4237, "total_tokens": 12106},
+        "strict_v2_validation": "PASS",
+        "task_spec_semantic_coherence": "PASS",
+        "role_count": 7,
+        "relation_count": 4,
+        "operation_count": 5
+      },
+      "compilation": {
+        "graph_compiled": true,
+        "canonicalization_status": "PARTIAL",
+        "online_executable_contract_complete": false,
+        "canonical_roles": ["coffee_container", "coffee_stirrer", "soup_container", "soup_eating_utensil", "water_source"],
+        "provisional_roles": [],
+        "relation_assisted_type_resolutions": [],
+        "operation_assisted_type_resolutions": [],
+        "unresolved_semantics": [
+          "coffee_cup_target collided with coffee_ingredient_source at coffee_container",
+          "soup_bowl_target collided with soup_ingredient_source at soup_container",
+          "four required FM relations retained as UNINTERPRETABLE_REQUIRED_RELATION"
+        ]
+      },
+      "final_boundary_replay": {
+        "fm_calls": 0,
+        "graph_compiled": false,
+        "failure_code": "INCOMPLETE_CANONICAL_GRAPH",
+        "final_category": "GRAPH_COMPILATION_FAILURE"
+      },
+      "grounding": {
+        "initial_candidate_counts": {
+          "coffee_container": {"true": 3, "unknown": 0, "required": 1},
+          "coffee_stirrer": {"true": 3, "unknown": 0, "required": 1},
+          "soup_container": {"true": 0, "unknown": 1, "required": 1},
+          "soup_eating_utensil": {"true": 3, "unknown": 0, "required": 2},
+          "water_source": {"true": 1, "unknown": 0, "required": 1}
+        },
+        "inspected_regions": [],
+        "resolved_canonical_role_types": {},
+        "phi_star": null,
+        "relation_assisted_object_bindings": [],
+        "semantic_unknown_recoveries": [],
+        "grounded_operation_bindings": {},
+        "complete": false,
+        "missing_roles": ["soup_container"],
+        "note": "Diagnostic evidence from the original live execution; final boundary now prevents this partial graph from entering grounding"
+      },
+      "planning": {
+        "a_star_invoked": false,
+        "a_star_calls": 0,
+        "action_count": 0,
+        "goal_count": 0,
+        "goals_satisfied": 0,
+        "replay_validation": "NOT_RUN",
+        "final_category": "GRAPH_COMPILATION_FAILURE",
+        "terminal_status": "VLM_SPEC_FAILED"
+      }
+    },
+    "L1": {
+      "domain": "living_room",
+      "views": ["l2_camera_left", "l2_camera_right", "l2_camera_top"],
+      "raw_fm": {
+        "finish_reason": "stop",
+        "usage": {"prompt_tokens": 6003, "completion_tokens": 7981, "reasoning_tokens": 6560, "total_tokens": 13984},
+        "strict_v2_validation": "PASS",
+        "task_spec_semantic_coherence": "FAIL",
+        "role_count": 6,
+        "relation_count": 5,
+        "operation_count": 2
+      },
+      "failure": {
+        "code": "INCOMPLETE_OPERATION_PARTICIPANT_STRUCTURE",
+        "detail": "SUPPORT_DRINKWARE bound SIDE_TABLE as SEATING_POSITION rather than a support-region target"
+      },
+      "compilation": {"graph_compiled": false, "canonical_roles": [], "provisional_roles": [], "unresolved_semantics": ["operation participant signature incoherent"]},
+      "grounding": {"initial_candidate_counts": null, "inspected_regions": [], "resolved_canonical_role_types": {}, "phi_star": null, "relation_assisted_object_bindings": [], "semantic_unknown_recoveries": [], "grounded_operation_bindings": {}, "complete": false, "stage": "NOT_REACHED"},
+      "planning": {"a_star_invoked": false, "a_star_calls": 0, "action_count": 0, "goal_count": 0, "goals_satisfied": 0, "replay_validation": "NOT_RUN", "final_category": "TASK_SPECIFICATION_FAILURE", "terminal_status": "VLM_SPEC_FAILED"}
+    },
+    "W3": {
+      "domain": "workshop",
+      "views": ["ISO_LEFT", "ISO_RIGHT", "DETAIL"],
+      "raw_fm": {
+        "finish_reason": "stop",
+        "usage": {"prompt_tokens": 5042, "completion_tokens": 6907, "reasoning_tokens": 5773, "total_tokens": 11949},
+        "strict_v2_validation": "PASS",
+        "task_spec_semantic_coherence": "FAIL",
+        "role_count": 3,
+        "relation_count": 2,
+        "operation_count": 2
+      },
+      "failure": {
+        "code": "INCOMPLETE_OPERATION_PARTICIPANT_STRUCTURE",
+        "detail": "FASTEN_JOINT bound workpiece_assembly as fastener and declared no independently typed repair target"
+      },
+      "compilation": {"graph_compiled": false, "canonical_roles": [], "provisional_roles": [], "unresolved_semantics": ["operation participant signature incoherent"]},
+      "grounding": {"initial_candidate_counts": null, "inspected_regions": [], "resolved_canonical_role_types": {}, "phi_star": null, "relation_assisted_object_bindings": [], "semantic_unknown_recoveries": [], "grounded_operation_bindings": {}, "complete": false, "stage": "NOT_REACHED"},
+      "planning": {"a_star_invoked": false, "a_star_calls": 0, "action_count": 0, "goal_count": 0, "goals_satisfied": 0, "replay_validation": "NOT_RUN", "final_category": "TASK_SPECIFICATION_FAILURE", "terminal_status": "VLM_SPEC_FAILED"}
+    }
+  }
+}
