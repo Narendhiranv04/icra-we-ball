@@ -1,0 +1,147 @@
+{
+  "conversion_error": null,
+  "roles": {
+    "assembly_part": {
+      "canonical_role_candidates": [
+        "fastener"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [],
+          "explicit_families": [],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [],
+          "source": "FUNCTION_TEXT",
+          "strength": "UNKNOWN"
+        },
+        {
+          "capabilities": [
+            "FASTEN_JOINT"
+          ],
+          "raw_phrase": "secure_with_driving_tool",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "The hardware element currently held or to be positioned by the manipulator.",
+      "raw_function": "Passive component to be secured at the target location.",
+      "raw_role_id": "assembly_part",
+      "status": "OPERATION_ASSISTED"
+    },
+    "assembly_receptacle": {
+      "canonical_role_candidates": [
+        "repair_target"
+      ],
+      "entity_kind": "REGION",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "driver",
+            "fastener"
+          ],
+          "explicit_families": [
+            "FIXED_TARGET",
+            "SUPPORT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "MAIN_WORKBENCH_ZONE",
+            "repair_target"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "allowed_anchor_roles": [
+            "repair_target"
+          ],
+          "raw_phrase": "secure_with_driving_tool",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "The specific zone on the workbench prepared for the assembly.",
+      "raw_function": "Fixed point on the support structure accepting the fastened part.",
+      "raw_role_id": "assembly_receptacle",
+      "status": "OPERATION_ASSISTED"
+    },
+    "driving_tool": {
+      "canonical_role_candidates": [
+        "driver"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "MAIN_WORKBENCH_ZONE",
+            "fastener",
+            "repair_target",
+            "workshop_frame_joint"
+          ],
+          "explicit_families": [
+            "INSTRUMENT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "driver"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "capabilities": [
+            "FASTEN_JOINT"
+          ],
+          "raw_phrase": "secure_with_driving_tool",
+          "source": "OPERATION_TEXT"
+        },
+        {
+          "capabilities": [
+            "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+          ],
+          "raw_phrase": "deposit_tool_on_support",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "A screwdriver or similar torque-applying device located on the work surface.",
+      "raw_function": "Mechanical implement used to apply fastening force.",
+      "raw_role_id": "driving_tool",
+      "status": "OPERATION_ASSISTED"
+    },
+    "workbench_surface": {
+      "canonical_role_candidates": [
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "entity_kind": "REGION",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "driver",
+            "fastener",
+            "repair_target",
+            "workshop_frame_joint"
+          ],
+          "explicit_families": [
+            "SUPPORT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "MAIN_WORKBENCH_ZONE"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "capabilities": [
+            "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+          ],
+          "raw_phrase": "deposit_tool_on_support",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "The wooden desk top serving as the base for the task and tool return.",
+      "raw_function": "Primary static support and context for all interactions.",
+      "raw_role_id": "workbench_surface",
+      "status": "OPERATION_ASSISTED"
+    }
+  }
+}

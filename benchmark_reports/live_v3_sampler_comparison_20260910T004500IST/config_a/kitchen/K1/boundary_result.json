@@ -1,0 +1,27 @@
+{
+  "batch": "CONFIG_A",
+  "content_sha256": "277a2345115f8deb1ba9993da9067e29ec2cfee7d72303abe9dd48b373e6f7e6",
+  "failure_category": "GRAPH_COMPILATION_FAILURE",
+  "failure_reason": "INCOMPLETE_CANONICAL_GRAPH: coherent FM contract could not be fully represented; unresolved=[]",
+  "finish_reason": "stop",
+  "image_views": [
+    "left_shoulder_camera.png",
+    "right_shoulder_camera.png",
+    "overhead_camera.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [],
+  "num_images": 3,
+  "strict_v3_valid": true,
+  "task_specification_valid": true,
+  "usage": {
+    "completion_tokens": 8234,
+    "completion_tokens_details": {
+      "reasoning_tokens": 6086
+    },
+    "prompt_tokens": 4533,
+    "prompt_tokens_details": null,
+    "total_tokens": 12767
+  }
+}

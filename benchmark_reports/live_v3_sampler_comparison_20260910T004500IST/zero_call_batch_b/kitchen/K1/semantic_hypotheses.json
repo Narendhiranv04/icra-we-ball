@@ -1,0 +1,296 @@
+{
+  "conversion_error": null,
+  "roles": {
+    "obj_coffee_receptacle": {
+      "canonical_role_candidates": [
+        "coffee_container"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [],
+          "explicit_families": [],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [],
+          "source": "CANDIDATE_CATEGORY_TEXT",
+          "strength": "UNKNOWN"
+        },
+        {
+          "capabilities": [
+            "TRANSFER_CONTENT_TO_CONTAINER"
+          ],
+          "raw_phrase": "Pour_transfer",
+          "source": "OPERATION_TEXT"
+        },
+        {
+          "capabilities": [
+            "TRANSFER_CONTENT_TO_CONTAINER"
+          ],
+          "raw_phrase": "Transfer",
+          "source": "OPERATION_TEXT"
+        },
+        {
+          "capabilities": [
+            "STIR_COFFEE"
+          ],
+          "raw_phrase": "Stir",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Recipient for prepared coffee drink",
+      "raw_role_id": "obj_coffee_receptacle",
+      "status": "OPERATION_ASSISTED"
+    },
+    "obj_coffee_source": {
+      "canonical_role_candidates": [
+        "coffee_source"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "coffee_container",
+            "coffee_stirrer",
+            "countertop",
+            "dining_table",
+            "serving_area",
+            "soup_container",
+            "soup_eating_utensil",
+            "water_source"
+          ],
+          "explicit_families": [
+            "SOURCE"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "coffee_source"
+          ],
+          "source": "ROLE_ID_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "capabilities": [
+            "TRANSFER_CONTENT_TO_CONTAINER"
+          ],
+          "raw_phrase": "Transfer",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Stores coffee grounds/powder for preparation",
+      "raw_role_id": "obj_coffee_source",
+      "status": "OPERATION_ASSISTED"
+    },
+    "obj_eating_utensil": {
+      "canonical_role_candidates": [
+        "soup_eating_utensil"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "coffee_container",
+            "coffee_source",
+            "countertop",
+            "dining_table",
+            "serving_area",
+            "soup_container",
+            "water_source"
+          ],
+          "explicit_families": [
+            "INSTRUMENT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "soup_eating_utensil"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "raw_phrase": "paired_with",
+          "source": "RELATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Instrument for consuming soup",
+      "raw_role_id": "obj_eating_utensil",
+      "status": "RELATION_ASSISTED"
+    },
+    "obj_seating_anchor": {
+      "canonical_role_candidates": [
+        "coffee_container",
+        "coffee_source",
+        "coffee_stirrer",
+        "countertop",
+        "dining_table",
+        "serving_area",
+        "soup_container",
+        "soup_eating_utensil",
+        "water_source"
+      ],
+      "entity_kind": "REGION",
+      "evidence": [
+        {
+          "excluded_roles": [],
+          "explicit_families": [],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [],
+          "source": "ROLE_ID_TEXT",
+          "strength": "UNKNOWN"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Spatial reference for delivering final products to users",
+      "raw_role_id": "obj_seating_anchor",
+      "status": "UNCONSTRAINED_ROLE_TYPE"
+    },
+    "obj_soup_receptacle": {
+      "canonical_role_candidates": [
+        "soup_container"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "coffee_source",
+            "coffee_stirrer",
+            "countertop",
+            "dining_table",
+            "serving_area",
+            "soup_eating_utensil",
+            "water_source"
+          ],
+          "explicit_families": [
+            "DESTINATION"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "soup_container"
+          ],
+          "source": "COMBINED_FALLBACK_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "raw_phrase": "paired_with",
+          "source": "RELATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Recipient for served soup",
+      "raw_role_id": "obj_soup_receptacle",
+      "status": "RELATION_ASSISTED"
+    },
+    "obj_stir_implement": {
+      "canonical_role_candidates": [
+        "coffee_stirrer"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "coffee_container",
+            "coffee_source",
+            "countertop",
+            "dining_table",
+            "serving_area",
+            "soup_container",
+            "water_source"
+          ],
+          "explicit_families": [
+            "INSTRUMENT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "coffee_stirrer"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "capabilities": [
+            "STIR_COFFEE"
+          ],
+          "raw_phrase": "Stir",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Instrument to mix coffee contents",
+      "raw_role_id": "obj_stir_implement",
+      "status": "OPERATION_ASSISTED"
+    },
+    "obj_water_source": {
+      "canonical_role_candidates": [
+        "water_source"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "coffee_container",
+            "coffee_source",
+            "coffee_stirrer",
+            "countertop",
+            "dining_table",
+            "serving_area",
+            "soup_container",
+            "soup_eating_utensil"
+          ],
+          "explicit_families": [
+            "SOURCE"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "water_source"
+          ],
+          "source": "ROLE_ID_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "capabilities": [
+            "TRANSFER_CONTENT_TO_CONTAINER"
+          ],
+          "raw_phrase": "Pour_transfer",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Stores water for coffee preparation",
+      "raw_role_id": "obj_water_source",
+      "status": "OPERATION_ASSISTED"
+    },
+    "obj_work_surface": {
+      "canonical_role_candidates": [
+        "countertop"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "coffee_container",
+            "coffee_source",
+            "coffee_stirrer",
+            "soup_container",
+            "soup_eating_utensil",
+            "water_source"
+          ],
+          "explicit_families": [
+            "SUPPORT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "countertop"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Primary support surface for preparation tools and ingredients",
+      "raw_role_id": "obj_work_surface",
+      "status": "DIRECT_FUNCTION_MATCH"
+    }
+  }
+}

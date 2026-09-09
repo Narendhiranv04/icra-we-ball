@@ -1,0 +1,290 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "coffee_table": [
+        {
+          "label": "central table",
+          "visual_description": "Rectangular table with light green top between armchairs"
+        }
+      ],
+      "cup_1": [
+        {
+          "label": "red cup on desk",
+          "visual_description": "Red cylindrical cup on foreground desk"
+        }
+      ],
+      "cup_2": [
+        {
+          "label": "red cup on desk",
+          "visual_description": "Red cylindrical cup on foreground desk"
+        }
+      ],
+      "plate_1": [
+        {
+          "label": "white plate on desk",
+          "visual_description": "Round white ceramic plate on foreground desk"
+        }
+      ],
+      "plate_2": [
+        {
+          "label": "white plate on desk",
+          "visual_description": "Round white ceramic plate on foreground desk"
+        }
+      ],
+      "remote": [
+        {
+          "label": "black remote on desk",
+          "visual_description": "Black rectangular remote control on foreground desk"
+        }
+      ],
+      "seat_1": [
+        {
+          "label": "left armchair",
+          "visual_description": "Wooden frame, black cushion, facing coffee table"
+        }
+      ],
+      "seat_2": [
+        {
+          "label": "right armchair",
+          "visual_description": "Wooden frame, black cushion, facing coffee table"
+        }
+      ],
+      "side_table_1": [
+        {
+          "label": "left side table",
+          "visual_description": "Small wooden table next to left armchair"
+        }
+      ],
+      "side_table_2": [
+        {
+          "label": "right side table",
+          "visual_description": "Small wooden table next to right armchair"
+        }
+      ]
+    }
+  },
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_1",
+        "participant_roles": [
+          "plate_1",
+          "seat_1"
+        ],
+        "relation": "nearby",
+        "required": true
+      },
+      {
+        "id": "rel_2",
+        "participant_roles": [
+          "cup_1",
+          "seat_1"
+        ],
+        "relation": "nearby",
+        "required": true
+      },
+      {
+        "id": "rel_3",
+        "participant_roles": [
+          "plate_2",
+          "seat_2"
+        ],
+        "relation": "nearby",
+        "required": true
+      },
+      {
+        "id": "rel_4",
+        "participant_roles": [
+          "cup_2",
+          "seat_2"
+        ],
+        "relation": "nearby",
+        "required": true
+      },
+      {
+        "id": "rel_5",
+        "participant_roles": [
+          "remote",
+          "coffee_table"
+        ],
+        "relation": "accessible_to_both",
+        "required": true
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "armchair"
+        ],
+        "description": "Armchair seat 1",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Seating reference for person 1",
+        "id": "seat_1",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "armchair"
+        ],
+        "description": "Armchair seat 2",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Seating reference for person 2",
+        "id": "seat_2",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "plate"
+        ],
+        "description": "White plate for setting 1",
+        "entity_kind": "OBJECT",
+        "function": "Refreshment plate for person 1",
+        "id": "plate_1",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup"
+        ],
+        "description": "Red cup for setting 1",
+        "entity_kind": "OBJECT",
+        "function": "Refreshment cup for person 1",
+        "id": "cup_1",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "plate"
+        ],
+        "description": "White plate for setting 2",
+        "entity_kind": "OBJECT",
+        "function": "Refreshment plate for person 2",
+        "id": "plate_2",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup"
+        ],
+        "description": "Red cup for setting 2",
+        "entity_kind": "OBJECT",
+        "function": "Refreshment cup for person 2",
+        "id": "cup_2",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "remote"
+        ],
+        "description": "Black remote control",
+        "entity_kind": "OBJECT",
+        "function": "Entertainment control device",
+        "id": "remote",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "side table"
+        ],
+        "description": "Small wooden side table left of center",
+        "entity_kind": "REGION",
+        "function": "Support surface near seat_1",
+        "id": "side_table_1",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "side table"
+        ],
+        "description": "Small wooden side table right of center",
+        "entity_kind": "REGION",
+        "function": "Support surface near seat_2",
+        "id": "side_table_2",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table"
+        ],
+        "description": "Central coffee table with light top",
+        "entity_kind": "REGION",
+        "function": "Shared support surface accessible to both seats",
+        "id": "coffee_table",
+        "required_count": 1,
+        "required_properties": []
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_1",
+        "operation": "place",
+        "operation_count": 1,
+        "participant_roles": [
+          "plate_1",
+          "side_table_1"
+        ]
+      },
+      {
+        "id": "op_2",
+        "operation": "place",
+        "operation_count": 1,
+        "participant_roles": [
+          "cup_1",
+          "side_table_1"
+        ]
+      },
+      {
+        "id": "op_3",
+        "operation": "place",
+        "operation_count": 1,
+        "participant_roles": [
+          "plate_2",
+          "side_table_2"
+        ]
+      },
+      {
+        "id": "op_4",
+        "operation": "place",
+        "operation_count": 1,
+        "participant_roles": [
+          "cup_2",
+          "side_table_2"
+        ]
+      },
+      {
+        "id": "op_5",
+        "operation": "move",
+        "operation_count": 1,
+        "participant_roles": [
+          "remote",
+          "coffee_table"
+        ]
+      }
+    ]
+  },
+  "task_summary": "Set up refreshment stations for two seats and place remote on shared table.",
+  "unsupported_reason": ""
+}

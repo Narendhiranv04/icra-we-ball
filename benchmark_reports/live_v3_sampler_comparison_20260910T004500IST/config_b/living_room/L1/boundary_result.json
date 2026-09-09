@@ -1,0 +1,27 @@
+{
+  "batch": "CONFIG_B",
+  "content_sha256": "cb36018a0d899e2f13eddcd37b5eba8ccbc5faf56775d99778c7006a39b93753",
+  "failure_category": "TASK_SPECIFICATION_FAILURE",
+  "failure_reason": "FM_INTERNAL_RELATION_PARTICIPANT_CONTRADICTION: relation 'rel_5' ('accessible_to_both') has no valid orientation for participant_roles=['remote', 'coffee_table']",
+  "finish_reason": "stop",
+  "image_views": [
+    "l2_camera_left.png",
+    "l2_camera_right.png",
+    "l2_camera_top.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [],
+  "num_images": 3,
+  "strict_v3_valid": true,
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 9354,
+    "completion_tokens_details": {
+      "reasoning_tokens": 7160
+    },
+    "prompt_tokens": 4533,
+    "prompt_tokens_details": null,
+    "total_tokens": 13887
+  }
+}

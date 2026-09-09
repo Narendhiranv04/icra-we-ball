@@ -1,0 +1,212 @@
+{
+  "canonical_roles": [
+    "obj_water_source",
+    "obj_coffee_source",
+    "obj_coffee_receptacle",
+    "obj_soup_receptacle",
+    "obj_stir_implement",
+    "obj_eating_utensil",
+    "obj_work_surface",
+    "obj_seating_anchor"
+  ],
+  "compiler_reached": true,
+  "conversion_error": null,
+  "function_alias_structural_overrides": 0,
+  "graph_compiled": false,
+  "operation_assisted_role_resolutions": 4,
+  "operation_participant_slot_resolutions": [
+    {
+      "id": "op_prepare_coffee_batch_1",
+      "raw_operation": "Pour_transfer",
+      "resolved_anchor": null,
+      "resolved_source": "obj_water_source",
+      "resolved_target": "obj_coffee_receptacle",
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+          "planner_operation": "POUR",
+          "source_role": "obj_water_source",
+          "source_type": "water_source",
+          "target_role": "obj_coffee_receptacle",
+          "target_type": "coffee_container",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "op_add_coffee_grains",
+      "raw_operation": "Transfer",
+      "resolved_anchor": null,
+      "resolved_source": "obj_coffee_source",
+      "resolved_target": "obj_coffee_receptacle",
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+          "planner_operation": "POUR",
+          "source_role": "obj_coffee_source",
+          "source_type": "coffee_source",
+          "target_role": "obj_coffee_receptacle",
+          "target_type": "coffee_container",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "op_stir_coffee_mix",
+      "raw_operation": "Stir",
+      "resolved_anchor": null,
+      "resolved_source": "obj_stir_implement",
+      "resolved_target": "obj_coffee_receptacle",
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "STIR_COFFEE",
+          "planner_operation": "STIR_COFFEE",
+          "source_role": "obj_stir_implement",
+          "source_type": "coffee_stirrer",
+          "target_role": "obj_coffee_receptacle",
+          "target_type": "coffee_container",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "op_deliver_coffee_one",
+      "raw_operation": "Transport_to",
+      "resolved_anchor": null,
+      "resolved_source": null,
+      "resolved_target": null,
+      "slot_assignments": [],
+      "usage_policy": null
+    },
+    {
+      "id": "op_prepare_coffee_batch_2",
+      "raw_operation": "Pour_transfer",
+      "resolved_anchor": null,
+      "resolved_source": "obj_water_source",
+      "resolved_target": "obj_coffee_receptacle",
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+          "planner_operation": "POUR",
+          "source_role": "obj_water_source",
+          "source_type": "water_source",
+          "target_role": "obj_coffee_receptacle",
+          "target_type": "coffee_container",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "op_add_coffee_grains_2",
+      "raw_operation": "Transfer",
+      "resolved_anchor": null,
+      "resolved_source": "obj_coffee_source",
+      "resolved_target": "obj_coffee_receptacle",
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+          "planner_operation": "POUR",
+          "source_role": "obj_coffee_source",
+          "source_type": "coffee_source",
+          "target_role": "obj_coffee_receptacle",
+          "target_type": "coffee_container",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "op_stir_coffee_mix_2",
+      "raw_operation": "Stir",
+      "resolved_anchor": null,
+      "resolved_source": "obj_stir_implement",
+      "resolved_target": "obj_coffee_receptacle",
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "STIR_COFFEE",
+          "planner_operation": "STIR_COFFEE",
+          "source_role": "obj_stir_implement",
+          "source_type": "coffee_stirrer",
+          "target_role": "obj_coffee_receptacle",
+          "target_type": "coffee_container",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "op_deliver_coffee_two",
+      "raw_operation": "Transport_to",
+      "resolved_anchor": null,
+      "resolved_source": null,
+      "resolved_target": null,
+      "slot_assignments": [],
+      "usage_policy": null
+    },
+    {
+      "id": "op_serve_soup_one",
+      "raw_operation": "Place_on",
+      "resolved_anchor": null,
+      "resolved_source": null,
+      "resolved_target": null,
+      "slot_assignments": [],
+      "usage_policy": null
+    },
+    {
+      "id": "op_serve_soup_two",
+      "raw_operation": "Place_on",
+      "resolved_anchor": null,
+      "resolved_source": null,
+      "resolved_target": null,
+      "slot_assignments": [],
+      "usage_policy": null
+    }
+  ],
+  "relation_assisted_role_resolutions": 2,
+  "relation_orientation_resolutions": [
+    {
+      "id": "relation_preparation_surface",
+      "orientation_options": [
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "obj_water_source",
+          "predicate": "PLACED_ON",
+          "subject_role": "obj_coffee_source"
+        }
+      ],
+      "raw_relation": "supported_on",
+      "resolved_object": "obj_water_source",
+      "resolved_subject": "obj_coffee_source"
+    },
+    {
+      "id": "relation_serve_pairing",
+      "orientation_options": [
+        {
+          "category": "TASK_CAUSAL_SEMANTICS",
+          "object_role": "obj_soup_receptacle",
+          "predicate": "PAIRED_WITH",
+          "subject_role": "obj_eating_utensil"
+        }
+      ],
+      "raw_relation": "paired_with",
+      "resolved_object": "obj_soup_receptacle",
+      "resolved_subject": "obj_eating_utensil"
+    }
+  ]
+}

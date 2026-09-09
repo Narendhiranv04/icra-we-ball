@@ -1,0 +1,59 @@
+{
+  "canonical_roles": [
+    "driving_tool",
+    "assembly_part",
+    "assembly_receptacle",
+    "workbench_surface"
+  ],
+  "compiler_reached": true,
+  "conversion_error": null,
+  "function_alias_structural_overrides": 0,
+  "graph_compiled": true,
+  "operation_assisted_role_resolutions": 4,
+  "operation_participant_slot_resolutions": [
+    {
+      "id": "1",
+      "raw_operation": "secure_with_driving_tool",
+      "resolved_anchor": "assembly_receptacle",
+      "resolved_source": "driving_tool",
+      "resolved_target": "assembly_part",
+      "slot_assignments": [
+        {
+          "anchor_role": "assembly_receptacle",
+          "anchor_type": "repair_target",
+          "capability_id": "FASTEN_JOINT",
+          "planner_operation": "DRIVE_FASTENER_INTO_TARGET",
+          "source_role": "driving_tool",
+          "source_type": "driver",
+          "target_role": "assembly_part",
+          "target_type": "fastener",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "2",
+      "raw_operation": "deposit_tool_on_support",
+      "resolved_anchor": null,
+      "resolved_source": "driving_tool",
+      "resolved_target": "workbench_surface",
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "RETURN_REUSABLE_ITEM_TO_SUPPORT",
+          "planner_operation": "PLACE",
+          "source_role": "driving_tool",
+          "source_type": "driver",
+          "target_role": "workbench_surface",
+          "target_type": "MAIN_WORKBENCH_ZONE",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  ],
+  "relation_assisted_role_resolutions": 0,
+  "relation_orientation_resolutions": []
+}

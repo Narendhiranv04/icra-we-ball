@@ -1,0 +1,411 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "Table_Surface",
+        "label": "table",
+        "reason": "Could be inspected for additional task-relevant candidates.",
+        "visual_description": "Flat surface with objects"
+      }
+    ],
+    "inspection_order": [
+      "Table_Surface"
+    ],
+    "visible_candidates_per_role": {
+      "Coffee_Cup_1": [
+        {
+          "label": "beige_cup",
+          "visual_description": "Beige cup on table"
+        }
+      ],
+      "Coffee_Cup_2": [
+        {
+          "label": "blue_mug",
+          "visual_description": "Blue mug on table"
+        }
+      ],
+      "Coffee_Powder_Source": [
+        {
+          "label": "brown_box",
+          "visual_description": "Brown rectangular box on table"
+        }
+      ],
+      "Eating_Utensil_1": [
+        {
+          "label": "spoon_1",
+          "visual_description": "Metal spoon on table"
+        }
+      ],
+      "Eating_Utensil_2": [
+        {
+          "label": "spoon_2",
+          "visual_description": "Metal spoon on table"
+        }
+      ],
+      "Hot_Water_Source": [
+        {
+          "label": "teapot",
+          "visual_description": "Silver teapot on table"
+        }
+      ],
+      "Person_1": [],
+      "Person_2": [],
+      "Soup_Bowl_1": [
+        {
+          "label": "blue_bowl",
+          "visual_description": "Blue bowl with red liquid"
+        }
+      ],
+      "Soup_Bowl_2": [
+        {
+          "label": "white_bowl",
+          "visual_description": "White bowl with red liquid"
+        }
+      ],
+      "Table_Surface": [
+        {
+          "label": "table",
+          "visual_description": "White table with drawers"
+        }
+      ]
+    }
+  },
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_1",
+        "participant_roles": [
+          "Coffee_Cup_1",
+          "Table_Surface"
+        ],
+        "relation": "supported_by",
+        "required": true
+      },
+      {
+        "id": "rel_2",
+        "participant_roles": [
+          "Coffee_Cup_2",
+          "Table_Surface"
+        ],
+        "relation": "supported_by",
+        "required": true
+      },
+      {
+        "id": "rel_3",
+        "participant_roles": [
+          "Soup_Bowl_1",
+          "Table_Surface"
+        ],
+        "relation": "supported_by",
+        "required": true
+      },
+      {
+        "id": "rel_4",
+        "participant_roles": [
+          "Soup_Bowl_2",
+          "Table_Surface"
+        ],
+        "relation": "supported_by",
+        "required": true
+      },
+      {
+        "id": "rel_5",
+        "participant_roles": [
+          "Soup_Bowl_1",
+          "Eating_Utensil_1"
+        ],
+        "relation": "served_with",
+        "required": true
+      },
+      {
+        "id": "rel_6",
+        "participant_roles": [
+          "Soup_Bowl_2",
+          "Eating_Utensil_2"
+        ],
+        "relation": "served_with",
+        "required": true
+      },
+      {
+        "id": "rel_7",
+        "participant_roles": [
+          "Coffee_Cup_1",
+          "Coffee_Powder_Source"
+        ],
+        "relation": "filled_with",
+        "required": true
+      },
+      {
+        "id": "rel_8",
+        "participant_roles": [
+          "Coffee_Cup_1",
+          "Hot_Water_Source"
+        ],
+        "relation": "filled_with",
+        "required": true
+      },
+      {
+        "id": "rel_9",
+        "participant_roles": [
+          "Coffee_Cup_2",
+          "Coffee_Powder_Source"
+        ],
+        "relation": "filled_with",
+        "required": true
+      },
+      {
+        "id": "rel_10",
+        "participant_roles": [
+          "Coffee_Cup_2",
+          "Hot_Water_Source"
+        ],
+        "relation": "filled_with",
+        "required": true
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "Container",
+          "Box"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Source of coffee powder",
+        "id": "Coffee_Powder_Source",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "Vessel",
+          "Pot"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Source of hot water",
+        "id": "Hot_Water_Source",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "Cup",
+          "Mug"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Receiving vessel for first coffee",
+        "id": "Coffee_Cup_1",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "Cup",
+          "Mug"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Receiving vessel for second coffee",
+        "id": "Coffee_Cup_2",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "Bowl"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Receiving vessel for first soup",
+        "id": "Soup_Bowl_1",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "Bowl"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Receiving vessel for second soup",
+        "id": "Soup_Bowl_2",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "Spoon",
+          "Fork"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Utensil for first soup",
+        "id": "Eating_Utensil_1",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "Spoon",
+          "Fork"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Utensil for second soup",
+        "id": "Eating_Utensil_2",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "Human"
+        ],
+        "entity_kind": "FIXED_TARGET",
+        "function": "Recipient for first set",
+        "id": "Person_1",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "Human"
+        ],
+        "entity_kind": "FIXED_TARGET",
+        "function": "Recipient for second set",
+        "id": "Person_2",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "Table",
+          "Counter"
+        ],
+        "entity_kind": "REGION",
+        "function": "Support surface for items",
+        "id": "Table_Surface",
+        "required_count": 1,
+        "required_properties": []
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_1",
+        "operation": "add_ingredient",
+        "operation_count": 1,
+        "participant_roles": [
+          "Coffee_Powder_Source",
+          "Coffee_Cup_1"
+        ]
+      },
+      {
+        "id": "op_2",
+        "operation": "add_ingredient",
+        "operation_count": 1,
+        "participant_roles": [
+          "Hot_Water_Source",
+          "Coffee_Cup_1"
+        ]
+      },
+      {
+        "id": "op_3",
+        "operation": "stir_mixture",
+        "operation_count": 1,
+        "participant_roles": [
+          "Eating_Utensil_1",
+          "Coffee_Cup_1"
+        ]
+      },
+      {
+        "id": "op_4",
+        "operation": "add_ingredient",
+        "operation_count": 1,
+        "participant_roles": [
+          "Coffee_Powder_Source",
+          "Coffee_Cup_2"
+        ]
+      },
+      {
+        "id": "op_5",
+        "operation": "add_ingredient",
+        "operation_count": 1,
+        "participant_roles": [
+          "Hot_Water_Source",
+          "Coffee_Cup_2"
+        ]
+      },
+      {
+        "id": "op_6",
+        "operation": "stir_mixture",
+        "operation_count": 1,
+        "participant_roles": [
+          "Eating_Utensil_2",
+          "Coffee_Cup_2"
+        ]
+      },
+      {
+        "id": "op_7",
+        "operation": "place_item",
+        "operation_count": 1,
+        "participant_roles": [
+          "Eating_Utensil_1",
+          "Soup_Bowl_1"
+        ]
+      },
+      {
+        "id": "op_8",
+        "operation": "place_item",
+        "operation_count": 1,
+        "participant_roles": [
+          "Eating_Utensil_2",
+          "Soup_Bowl_2"
+        ]
+      },
+      {
+        "id": "op_9",
+        "operation": "serve_item",
+        "operation_count": 1,
+        "participant_roles": [
+          "Coffee_Cup_1",
+          "Person_1"
+        ]
+      },
+      {
+        "id": "op_10",
+        "operation": "serve_item",
+        "operation_count": 1,
+        "participant_roles": [
+          "Coffee_Cup_2",
+          "Person_2"
+        ]
+      },
+      {
+        "id": "op_11",
+        "operation": "serve_item",
+        "operation_count": 1,
+        "participant_roles": [
+          "Soup_Bowl_1",
+          "Person_1"
+        ]
+      },
+      {
+        "id": "op_12",
+        "operation": "serve_item",
+        "operation_count": 1,
+        "participant_roles": [
+          "Soup_Bowl_2",
+          "Person_2"
+        ]
+      }
+    ]
+  },
+  "task_summary": "Prepare two coffees and two soups for two people, stirring coffee and serving soups with utensils.",
+  "unsupported_reason": ""
+}

@@ -1,0 +1,27 @@
+{
+  "batch": "CONFIG_A",
+  "content_sha256": "da35a543fd9feb5c475141b41615bd02a3954382879488b5c1d4a38630f399c7",
+  "failure_category": "MALFORMED_VLM_SPECIFICATION",
+  "failure_reason": "UNDECLARED_PARTICIPANT: functional_relations[0] references ['assembly_components']",
+  "finish_reason": "stop",
+  "image_views": [
+    "initial_iso_left.png",
+    "initial_iso_right.png",
+    "initial_detail.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [],
+  "num_images": 3,
+  "strict_v3_valid": false,
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 4476,
+    "completion_tokens_details": {
+      "reasoning_tokens": 3705
+    },
+    "prompt_tokens": 3572,
+    "prompt_tokens_details": null,
+    "total_tokens": 8048
+  }
+}

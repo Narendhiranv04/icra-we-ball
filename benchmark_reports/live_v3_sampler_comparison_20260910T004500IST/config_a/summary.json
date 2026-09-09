@@ -1,0 +1,96 @@
+{
+  "astar_invocations": 0,
+  "batch": "CONFIG_A",
+  "cases": [
+    {
+      "astar_invocations": 0,
+      "astar_reached": false,
+      "domain": "kitchen",
+      "failure_category": "GRAPH_COMPILATION_FAILURE",
+      "failure_reason": "INCOMPLETE_CANONICAL_GRAPH: coherent FM contract could not be fully represented; unresolved=[]",
+      "graph_compiled": false,
+      "grounding_complete": false,
+      "grounding_reached": false,
+      "outcome": "GRAPH_COMPILATION_FAILURE",
+      "semantic_vlm_requests": 1,
+      "strict_v3_valid": true,
+      "success": false,
+      "task_specification_valid": true,
+      "usage": {
+        "completion_tokens": 8234,
+        "completion_tokens_details": {
+          "reasoning_tokens": 6086
+        },
+        "prompt_tokens": 4533,
+        "prompt_tokens_details": null,
+        "total_tokens": 12767
+      },
+      "variant": "K1"
+    },
+    {
+      "astar_invocations": 0,
+      "astar_reached": false,
+      "domain": "living_room",
+      "failure_category": "TASK_SPECIFICATION_FAILURE",
+      "failure_reason": "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: operation 'op_transfer_refresh_a' ('transfer_object_to_region') cannot instantiate any supported capability from participant_roles=['refreshment_set_1', 'main_service_table', 'side_table_left']",
+      "graph_compiled": false,
+      "grounding_complete": false,
+      "grounding_reached": false,
+      "outcome": "TASK_SPECIFICATION_FAILURE",
+      "semantic_vlm_requests": 1,
+      "strict_v3_valid": true,
+      "success": false,
+      "task_specification_valid": false,
+      "usage": {
+        "completion_tokens": 6881,
+        "completion_tokens_details": {
+          "reasoning_tokens": 5003
+        },
+        "prompt_tokens": 4533,
+        "prompt_tokens_details": null,
+        "total_tokens": 11414
+      },
+      "variant": "L1"
+    },
+    {
+      "astar_invocations": 0,
+      "astar_reached": false,
+      "domain": "workshop",
+      "failure_category": "MALFORMED_VLM_SPECIFICATION",
+      "failure_reason": "UNDECLARED_PARTICIPANT: functional_relations[0] references ['assembly_components']",
+      "graph_compiled": false,
+      "grounding_complete": false,
+      "grounding_reached": false,
+      "outcome": "TASK_SPECIFICATION_FAILURE",
+      "semantic_vlm_requests": 1,
+      "strict_v3_valid": false,
+      "success": false,
+      "task_specification_valid": false,
+      "usage": {
+        "completion_tokens": 4476,
+        "completion_tokens_details": {
+          "reasoning_tokens": 3705
+        },
+        "prompt_tokens": 3572,
+        "prompt_tokens_details": null,
+        "total_tokens": 8048
+      },
+      "variant": "W3"
+    }
+  ],
+  "counts": {
+    "astar_reached": 0,
+    "graph_compiled": 0,
+    "grounding_complete": 0,
+    "grounding_reached": 0,
+    "strict_v3_valid": 2,
+    "success": 0,
+    "task_specification_valid": 1
+  },
+  "semantic_vlm_requests": 3,
+  "token_totals": {
+    "completion_tokens": 19591,
+    "prompt_tokens": 12638,
+    "reasoning_tokens": 14794
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "batch": "ZERO_CALL_REPLAY",
+  "content_sha256": "74fb585c7a072e1f0a9efc9cbc0f71a9b9156d89cd2335dba851cbe71a670ff4",
+  "failure_category": null,
+  "failure_reason": "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement",
+  "finish_reason": "stop",
+  "image_views": [
+    "l2_camera_left.png",
+    "l2_camera_right.png",
+    "l2_camera_top.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [
+    {
+      "code": "ENTITY_KIND_SEMANTIC_NORMALIZATION",
+      "new": "REGION",
+      "old": "FIXED_TARGET",
+      "role_id": "left_end_table"
+    },
+    {
+      "code": "ENTITY_KIND_SEMANTIC_NORMALIZATION",
+      "new": "REGION",
+      "old": "FIXED_TARGET",
+      "role_id": "right_end_table"
+    },
+    {
+      "code": "ENTITY_KIND_SEMANTIC_NORMALIZATION",
+      "new": "REGION",
+      "old": "FIXED_TARGET",
+      "role_id": "center_coffee_table"
+    },
+    {
+      "code": "ENTITY_KIND_SEMANTIC_NORMALIZATION",
+      "new": "OBJECT",
+      "old": "REGION",
+      "role_id": "refreshment_set_a"
+    },
+    {
+      "code": "ENTITY_KIND_SEMANTIC_NORMALIZATION",
+      "new": "OBJECT",
+      "old": "REGION",
+      "role_id": "refreshment_set_b"
+    },
+    {
+      "code": "ENTITY_KIND_SEMANTIC_NORMALIZATION",
+      "new": "OBJECT",
+      "old": "REGION",
+      "role_id": "remote_control"
+    },
+    {
+      "code": "HIDDEN_CONTENT_REASON_SANITIZED",
+      "region_id": "region_desk_top"
+    }
+  ],
+  "num_images": 3,
+  "strict_v3_valid": true,
+  "task_specification_valid": true,
+  "usage": {
+    "completion_tokens": 7802,
+    "completion_tokens_details": {
+      "reasoning_tokens": 6331
+    },
+    "prompt_tokens": 4245,
+    "prompt_tokens_details": null,
+    "total_tokens": 12047
+  }
+}

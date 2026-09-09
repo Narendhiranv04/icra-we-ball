@@ -1,0 +1,271 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "main_service_table",
+        "label": "Main Service Table",
+        "reason": "Holds initial items.",
+        "visual_description": "Visible in images 1-3."
+      },
+      {
+        "id": "side_table_left",
+        "label": "Side Table Left",
+        "reason": "Target for refreshment set 1.",
+        "visual_description": "Visible in images 1-3."
+      },
+      {
+        "id": "side_table_right",
+        "label": "Side Table Right",
+        "reason": "Target for refreshment set 2.",
+        "visual_description": "Visible in images 1-3."
+      },
+      {
+        "id": "center_coffee_table",
+        "label": "Center Coffee Table",
+        "reason": "Target for remote.",
+        "visual_description": "Visible in images 1-3."
+      }
+    ],
+    "inspection_order": [
+      "main_service_table",
+      "side_table_left",
+      "side_table_right",
+      "center_coffee_table"
+    ],
+    "visible_candidates_per_role": {
+      "center_coffee_table": [
+        {
+          "label": "Low rectangular table",
+          "visual_description": "Glass-topped table in center of room"
+        }
+      ],
+      "main_service_table": [
+        {
+          "label": "Long wooden table",
+          "visual_description": "Furniture on right side with items stacked"
+        }
+      ],
+      "refreshment_set_1": [
+        {
+          "label": "Plate/Cup cluster on service table (left group)",
+          "visual_description": "White plates and red cups on right-side table"
+        }
+      ],
+      "refreshment_set_2": [
+        {
+          "label": "Plate/Cup cluster on service table (right group)",
+          "visual_description": "White plates and red cups on right-side table"
+        }
+      ],
+      "remote_control": [
+        {
+          "label": "Black rectangular object on service table",
+          "visual_description": "Remote visible among items on right-side table"
+        }
+      ],
+      "side_table_left": [
+        {
+          "label": "Small square table",
+          "visual_description": "Wooden end table next to left chair"
+        }
+      ],
+      "side_table_right": [
+        {
+          "label": "Small square table",
+          "visual_description": "Wooden end table next to right chair"
+        }
+      ]
+    }
+  },
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "init_refresh_loc",
+        "participant_roles": [
+          "refreshment_set_1",
+          "main_service_table"
+        ],
+        "relation": "is_on",
+        "required": true
+      },
+      {
+        "id": "init_remote_loc",
+        "participant_roles": [
+          "remote_control",
+          "main_service_table"
+        ],
+        "relation": "is_on",
+        "required": true
+      },
+      {
+        "id": "init_refresh_b_loc",
+        "participant_roles": [
+          "refreshment_set_2",
+          "main_service_table"
+        ],
+        "relation": "is_on",
+        "required": true
+      },
+      {
+        "id": "final_refresh_a_loc",
+        "participant_roles": [
+          "refreshment_set_1",
+          "side_table_left"
+        ],
+        "relation": "is_on",
+        "required": true
+      },
+      {
+        "id": "final_refresh_b_loc",
+        "participant_roles": [
+          "refreshment_set_2",
+          "side_table_right"
+        ],
+        "relation": "is_on",
+        "required": true
+      },
+      {
+        "id": "final_remote_loc",
+        "participant_roles": [
+          "remote_control",
+          "center_coffee_table"
+        ],
+        "relation": "is_on",
+        "required": true
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "CUPS_AND_PATES"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Refreshment payload for user A",
+        "id": "refreshment_set_1",
+        "required_count": 1,
+        "required_properties": [
+          "selectable"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "CUPS_AND_PATES"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Refreshment payload for user B",
+        "id": "refreshment_set_2",
+        "required_count": 1,
+        "required_properties": [
+          "selectable"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "TOOL"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Entertainment control device",
+        "id": "remote_control",
+        "required_count": 1,
+        "required_properties": [
+          "selectable"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "TABLE_SURFACE"
+        ],
+        "entity_kind": "REGION",
+        "function": "Current support surface for refreshments and remote",
+        "id": "main_service_table",
+        "required_count": 1,
+        "required_properties": [
+          "flat",
+          "reachable"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "TABLE_SURFACE"
+        ],
+        "entity_kind": "REGION",
+        "function": "Support surface for refreshments near left seat",
+        "id": "side_table_left",
+        "required_count": 1,
+        "required_properties": [
+          "flat",
+          "reachable"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "TABLE_SURFACE"
+        ],
+        "entity_kind": "REGION",
+        "function": "Support surface for refreshments near right seat",
+        "id": "side_table_right",
+        "required_count": 1,
+        "required_properties": [
+          "flat",
+          "reachable"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "TABLE_SURFACE"
+        ],
+        "entity_kind": "REGION",
+        "function": "Central shared support for remote accessibility",
+        "id": "center_coffee_table",
+        "required_count": 1,
+        "required_properties": [
+          "flat",
+          "centralized"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_transfer_refresh_a",
+        "operation": "transfer_object_to_region",
+        "operation_count": 1,
+        "participant_roles": [
+          "refreshment_set_1",
+          "main_service_table",
+          "side_table_left"
+        ]
+      },
+      {
+        "id": "op_transfer_refresh_b",
+        "operation": "transfer_object_to_region",
+        "operation_count": 1,
+        "participant_roles": [
+          "refreshment_set_2",
+          "main_service_table",
+          "side_table_right"
+        ]
+      },
+      {
+        "id": "op_transfer_remote",
+        "operation": "transfer_object_to_region",
+        "operation_count": 1,
+        "participant_roles": [
+          "remote_control",
+          "main_service_table",
+          "center_coffee_table"
+        ]
+      }
+    ]
+  },
+  "task_summary": "Transfer refreshment sets to side tables for two chairs and remote to coffee table.",
+  "unsupported_reason": ""
+}

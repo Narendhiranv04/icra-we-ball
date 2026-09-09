@@ -1,0 +1,36 @@
+{
+  "astar_invocations": 0,
+  "batch": "ZERO_CALL_REPLAY",
+  "canonicalization_succeeded": false,
+  "domain": "kitchen",
+  "failure_category": "GRAPH_COMPILATION_FAILURE",
+  "failure_reason": "INCOMPLETE_CANONICAL_GRAPH: coherent FM contract could not be fully represented; unresolved=[{'raw_subject': 'obj_coffee_source', 'raw_phrase': 'supported_on', 'raw_object': 'obj_water_source', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'supported_on' provides no semantic evidence for valid predicates [] or task causal semantics\"}]",
+  "finished_at_utc": "2026-09-09T16:55:45.281432+00:00",
+  "fm_schema_version": 2,
+  "functional_spec_complete": false,
+  "git_commit": "92430e7a517bbb7f396357efbc908566399ddf47",
+  "git_dirty": true,
+  "high_level_replans": 0,
+  "image_views": [
+    "left_shoulder_camera.png",
+    "right_shoulder_camera.png",
+    "overhead_camera.png"
+  ],
+  "inference_config": {
+    "max_tokens": null,
+    "model": null,
+    "presence_penalty": null,
+    "temperature": null,
+    "top_k": null,
+    "top_p": null
+  },
+  "internal_variant": "F0_ALL_VISIBLE",
+  "pipeline_runtime_seconds": 0.7253,
+  "prompt_schema_hash": "8de8f68b7eade1a8b3ed152eb34ace55cb98519557324ffafead2b29dd283979",
+  "provider_model": null,
+  "semantic_vlm_requests": 0,
+  "started_at_utc": "2026-09-09T16:55:44.556171+00:00",
+  "terminal_status": "VLM_SPEC_FAILED",
+  "transport_retries": 0,
+  "variant": "K1"
+}

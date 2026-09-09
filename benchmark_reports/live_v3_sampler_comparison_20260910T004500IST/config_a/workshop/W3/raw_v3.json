@@ -1,0 +1,101 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "assembly_components": [
+        {
+          "label": "Yellow block on tray",
+          "visual_description": "Two yellow rectangular prisms inside a grey tray-like object on the wooden desk."
+        }
+      ],
+      "fastening_instrument": [],
+      "receiving_base": [
+        {
+          "label": "Grey tray/base",
+          "visual_description": "Dark grey flat object with indentations holding the yellow blocks."
+        }
+      ],
+      "work_bench_surface": [
+        {
+          "label": "Wooden table top",
+          "visual_description": "The brown wooden surface of the desk visible in all frames."
+        }
+      ]
+    }
+  },
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "compatible_tool_part",
+        "participant_roles": [
+          "fastening_instrument",
+          "assembly_components"
+        ],
+        "relation": "compatible_for_operation",
+        "required": true
+      },
+      {
+        "id": "secured_component",
+        "participant_roles": [
+          "assembly_components",
+          "receiving_base"
+        ],
+        "relation": "physically_fixed_to",
+        "required": true
+      },
+      {
+        "id": "placed_equipment",
+        "participant_roles": [
+          "fastening_instrument",
+          "work_bench_surface"
+        ],
+        "relation": "positioned_at",
+        "required": true
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "hand_tool",
+          "fastening_device"
+        ],
+        "description": "A screwdriver or clamp required to perform the fastening.",
+        "entity_kind": "OBJECT",
+        "function": "Reusable hand tool used to secure components.",
+        "id": "fastening_instrument",
+        "required_count": 1,
+        "required_properties": [
+          "rigid",
+          "mechanical_action"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "execute_fastening",
+        "operation": "secure_assembly",
+        "operation_count": 1,
+        "participant_roles": [
+          "fastening_instrument",
+          "assembly_components",
+          "receiving_base"
+        ]
+      },
+      {
+        "id": "cleanup_tool",
+        "operation": "place_item",
+        "operation_count": 1,
+        "participant_roles": [
+          "fastening_instrument",
+          "work_bench_surface"
+        ]
+      }
+    ]
+  },
+  "task_summary": "Assemble fastening parts and secure them, then return tool.",
+  "unsupported_reason": ""
+}

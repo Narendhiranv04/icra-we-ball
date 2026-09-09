@@ -1,0 +1,220 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "region_desk_top",
+        "label": "main_desk",
+        "reason": "Could be inspected for additional task-relevant candidates.",
+        "visual_description": "Flat horizontal surface of the desk"
+      }
+    ],
+    "inspection_order": [
+      "region_desk_top"
+    ],
+    "visible_candidates_per_role": {
+      "center_coffee_table": [],
+      "left_end_table": [],
+      "main_desk": [
+        {
+          "label": "red_cup",
+          "visual_description": "Red cylindrical object"
+        },
+        {
+          "label": "white_plate",
+          "visual_description": "White circular object"
+        },
+        {
+          "label": "remote_control",
+          "visual_description": "Black rectangular object with buttons"
+        }
+      ],
+      "refreshment_set_a": [
+        {
+          "label": "red_cup",
+          "visual_description": "Red cylindrical object"
+        },
+        {
+          "label": "white_plate",
+          "visual_description": "White circular object"
+        }
+      ],
+      "refreshment_set_b": [
+        {
+          "label": "red_cup",
+          "visual_description": "Red cylindrical object"
+        },
+        {
+          "label": "white_plate",
+          "visual_description": "White circular object"
+        }
+      ],
+      "right_end_table": []
+    }
+  },
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_1",
+        "participant_roles": [
+          "refreshment_set_a",
+          "main_desk"
+        ],
+        "relation": "LOCATED_AT",
+        "required": true
+      },
+      {
+        "id": "rel_2",
+        "participant_roles": [
+          "refreshment_set_b",
+          "main_desk"
+        ],
+        "relation": "LOCATED_AT",
+        "required": true
+      },
+      {
+        "id": "rel_3",
+        "participant_roles": [
+          "remote_control",
+          "main_desk"
+        ],
+        "relation": "LOCATED_AT",
+        "required": true
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "TABLE"
+        ],
+        "description": "Long wooden surface containing all current items.",
+        "entity_kind": "FIXED_TARGET",
+        "function": "initial_refreshment_source",
+        "id": "main_desk",
+        "required_count": 1,
+        "required_properties": [
+          "PLANAR_SURFACE"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "TABLE"
+        ],
+        "description": "Small table beside left armchair.",
+        "entity_kind": "REGION",
+        "function": "personal_support",
+        "id": "left_end_table",
+        "required_count": 1,
+        "required_properties": [
+          "PLANAR_SURFACE"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "TABLE"
+        ],
+        "description": "Small table beside right armchair.",
+        "entity_kind": "REGION",
+        "function": "personal_support",
+        "id": "right_end_table",
+        "required_count": 1,
+        "required_properties": [
+          "PLANAR_SURFACE"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "TABLE"
+        ],
+        "description": "Central low table for shared access.",
+        "entity_kind": "REGION",
+        "function": "shared_support",
+        "id": "center_coffee_table",
+        "required_count": 1,
+        "required_properties": [
+          "PLANAR_SURFACE"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "CUP",
+          "PLATE"
+        ],
+        "description": "One complete drink/dish pair.",
+        "entity_kind": "OBJECT",
+        "function": "material_source",
+        "id": "refreshment_set_a",
+        "required_count": 1,
+        "required_properties": [
+          "SMALL_OBJECT"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "CUP",
+          "PLATE"
+        ],
+        "description": "Second complete drink/dish pair.",
+        "entity_kind": "OBJECT",
+        "function": "material_source",
+        "id": "refreshment_set_b",
+        "required_count": 1,
+        "required_properties": [
+          "SMALL_OBJECT"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "ELECTRONIC_DEVICE"
+        ],
+        "description": "Device for controlling TV.",
+        "entity_kind": "OBJECT",
+        "function": "manipulating_component",
+        "id": "remote_control",
+        "required_count": 1,
+        "required_properties": [
+          "SMALL_OBJECT"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_1",
+        "operation": "TRANSFER",
+        "operation_count": 1,
+        "participant_roles": [
+          "refreshment_set_a",
+          "left_end_table"
+        ]
+      },
+      {
+        "id": "op_2",
+        "operation": "TRANSFER",
+        "operation_count": 1,
+        "participant_roles": [
+          "refreshment_set_b",
+          "right_end_table"
+        ]
+      },
+      {
+        "id": "op_3",
+        "operation": "MOVE",
+        "operation_count": 1,
+        "participant_roles": [
+          "remote_control",
+          "center_coffee_table"
+        ]
+      }
+    ]
+  },
+  "task_summary": "Distribute refreshment sets to side tables and move remote to center table.",
+  "unsupported_reason": ""
+}

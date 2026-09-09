@@ -1,0 +1,32 @@
+{
+  "batch": "ZERO_CALL_REPLAY",
+  "content_sha256": "2ee2e10f6fc79c68cd20baacf3a72de9725382b011b4145b3ef934b7cf4db802",
+  "failure_category": "GRAPH_COMPILATION_FAILURE",
+  "failure_reason": "INCOMPLETE_CANONICAL_GRAPH: coherent FM contract could not be fully represented; unresolved=[{'raw_subject': 'obj_coffee_source', 'raw_phrase': 'supported_on', 'raw_object': 'obj_water_source', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'supported_on' provides no semantic evidence for valid predicates [] or task causal semantics\"}]",
+  "finish_reason": "stop",
+  "image_views": [
+    "left_shoulder_camera.png",
+    "right_shoulder_camera.png",
+    "overhead_camera.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [
+    {
+      "code": "OBSERVABILITY_UNSUPPORTED_NORMALIZED_TO_SUPPORTED",
+      "raw_reason": "This contract describes a multi-instance preparation task which requires inferring hidden inventory counts (e.g., sufficient amounts of water, coffee grounds, soup portions for 2x servings) not verifiable by static RGB views alone."
+    }
+  ],
+  "num_images": 3,
+  "strict_v3_valid": true,
+  "task_specification_valid": true,
+  "usage": {
+    "completion_tokens": 9234,
+    "completion_tokens_details": {
+      "reasoning_tokens": 7037
+    },
+    "prompt_tokens": 4245,
+    "prompt_tokens_details": null,
+    "total_tokens": 13479
+  }
+}

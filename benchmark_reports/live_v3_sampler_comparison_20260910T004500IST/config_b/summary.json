@@ -1,0 +1,96 @@
+{
+  "astar_invocations": 0,
+  "batch": "CONFIG_B",
+  "cases": [
+    {
+      "astar_invocations": 0,
+      "astar_reached": false,
+      "domain": "kitchen",
+      "failure_category": "TASK_SPECIFICATION_FAILURE",
+      "failure_reason": "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: operation 'op_3' ('stir_mixture') cannot instantiate any supported capability from participant_roles=['Eating_Utensil_1', 'Coffee_Cup_1']",
+      "graph_compiled": false,
+      "grounding_complete": false,
+      "grounding_reached": false,
+      "outcome": "TASK_SPECIFICATION_FAILURE",
+      "semantic_vlm_requests": 1,
+      "strict_v3_valid": true,
+      "success": false,
+      "task_specification_valid": false,
+      "usage": {
+        "completion_tokens": 7668,
+        "completion_tokens_details": {
+          "reasoning_tokens": 4976
+        },
+        "prompt_tokens": 4533,
+        "prompt_tokens_details": null,
+        "total_tokens": 12201
+      },
+      "variant": "K1"
+    },
+    {
+      "astar_invocations": 0,
+      "astar_reached": false,
+      "domain": "living_room",
+      "failure_category": "TASK_SPECIFICATION_FAILURE",
+      "failure_reason": "FM_INTERNAL_RELATION_PARTICIPANT_CONTRADICTION: relation 'rel_5' ('accessible_to_both') has no valid orientation for participant_roles=['remote', 'coffee_table']",
+      "graph_compiled": false,
+      "grounding_complete": false,
+      "grounding_reached": false,
+      "outcome": "TASK_SPECIFICATION_FAILURE",
+      "semantic_vlm_requests": 1,
+      "strict_v3_valid": true,
+      "success": false,
+      "task_specification_valid": false,
+      "usage": {
+        "completion_tokens": 9354,
+        "completion_tokens_details": {
+          "reasoning_tokens": 7160
+        },
+        "prompt_tokens": 4533,
+        "prompt_tokens_details": null,
+        "total_tokens": 13887
+      },
+      "variant": "L1"
+    },
+    {
+      "astar_invocations": 0,
+      "astar_reached": false,
+      "domain": "workshop",
+      "failure_category": "TASK_SPECIFICATION_FAILURE",
+      "failure_reason": "FM_INTERNAL_RELATION_PARTICIPANT_CONTRADICTION: relation 'rel_component_target' ('compatible_with') has no valid orientation for participant_roles=['fastening_component', 'fastening_target']",
+      "graph_compiled": false,
+      "grounding_complete": false,
+      "grounding_reached": false,
+      "outcome": "TASK_SPECIFICATION_FAILURE",
+      "semantic_vlm_requests": 1,
+      "strict_v3_valid": true,
+      "success": false,
+      "task_specification_valid": false,
+      "usage": {
+        "completion_tokens": 8083,
+        "completion_tokens_details": {
+          "reasoning_tokens": 6847
+        },
+        "prompt_tokens": 3572,
+        "prompt_tokens_details": null,
+        "total_tokens": 11655
+      },
+      "variant": "W3"
+    }
+  ],
+  "counts": {
+    "astar_reached": 0,
+    "graph_compiled": 0,
+    "grounding_complete": 0,
+    "grounding_reached": 0,
+    "strict_v3_valid": 3,
+    "success": 0,
+    "task_specification_valid": 0
+  },
+  "semantic_vlm_requests": 3,
+  "token_totals": {
+    "completion_tokens": 25105,
+    "prompt_tokens": 12638,
+    "reasoning_tokens": 18983
+  }
+}

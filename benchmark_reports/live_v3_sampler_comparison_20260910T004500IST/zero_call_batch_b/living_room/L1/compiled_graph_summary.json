@@ -1,0 +1,83 @@
+{
+  "canonical_roles": [
+    "main_desk",
+    "left_end_table",
+    "right_end_table",
+    "center_coffee_table",
+    "refreshment_set_a",
+    "refreshment_set_b",
+    "remote_control"
+  ],
+  "compiler_reached": true,
+  "conversion_error": null,
+  "function_alias_structural_overrides": 0,
+  "graph_compiled": true,
+  "operation_assisted_role_resolutions": 6,
+  "operation_participant_slot_resolutions": [
+    {
+      "id": "op_1",
+      "raw_operation": "TRANSFER",
+      "resolved_anchor": null,
+      "resolved_source": "left_end_table",
+      "resolved_target": "refreshment_set_a",
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "SUPPORT_DRINKWARE",
+          "planner_operation": "SUPPORT_DRINKWARE",
+          "source_role": "left_end_table",
+          "source_type": "PERSONAL_CUP_SAUCER_REGION",
+          "target_role": "refreshment_set_a",
+          "target_type": "CUP_SAUCER_SET",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "op_2",
+      "raw_operation": "TRANSFER",
+      "resolved_anchor": null,
+      "resolved_source": "right_end_table",
+      "resolved_target": "refreshment_set_b",
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "SUPPORT_DRINKWARE",
+          "planner_operation": "SUPPORT_DRINKWARE",
+          "source_role": "right_end_table",
+          "source_type": "PERSONAL_CUP_SAUCER_REGION",
+          "target_role": "refreshment_set_b",
+          "target_type": "CUP_SAUCER_SET",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "op_3",
+      "raw_operation": "MOVE",
+      "resolved_anchor": null,
+      "resolved_source": "center_coffee_table",
+      "resolved_target": "remote_control",
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+          "planner_operation": "SUPPORT_ENTERTAINMENT_CONTROL",
+          "source_role": "center_coffee_table",
+          "source_type": "SHARED_REMOTE_REGION",
+          "target_role": "remote_control",
+          "target_type": "REMOTE",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  ],
+  "relation_assisted_role_resolutions": 0,
+  "relation_orientation_resolutions": []
+}

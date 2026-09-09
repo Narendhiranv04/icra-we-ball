@@ -1,0 +1,260 @@
+{
+  "canonical_roles": [
+    "coffee_cup_1",
+    "coffee_cup_2",
+    "soup_bowl_1",
+    "soup_bowl_2",
+    "water_pourer",
+    "coffee_mixer",
+    "stirrer_tool",
+    "eat_spoon_1",
+    "eat_spoon_2",
+    "prep_table",
+    "seating_loc_1",
+    "seating_loc_2"
+  ],
+  "compiler_reached": true,
+  "conversion_error": null,
+  "function_alias_structural_overrides": 0,
+  "graph_compiled": false,
+  "operation_assisted_role_resolutions": 3,
+  "operation_participant_slot_resolutions": [
+    {
+      "id": "op_1",
+      "raw_operation": "pour_liquid",
+      "resolved_anchor": null,
+      "resolved_source": null,
+      "resolved_target": null,
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+          "planner_operation": "POUR",
+          "source_role": "water_pourer",
+          "source_type": "coffee_source",
+          "target_role": "coffee_cup_1",
+          "target_type": "coffee_container",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+          "planner_operation": "POUR",
+          "source_role": "water_pourer",
+          "source_type": "water_source",
+          "target_role": "coffee_cup_1",
+          "target_type": "coffee_container",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": null
+    },
+    {
+      "id": "op_2",
+      "raw_operation": "add_dry",
+      "resolved_anchor": null,
+      "resolved_source": null,
+      "resolved_target": null,
+      "slot_assignments": [],
+      "usage_policy": null
+    },
+    {
+      "id": "op_3",
+      "raw_operation": "stir",
+      "resolved_anchor": null,
+      "resolved_source": "stirrer_tool",
+      "resolved_target": "coffee_cup_1",
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "STIR_COFFEE",
+          "planner_operation": "STIR_COFFEE",
+          "source_role": "stirrer_tool",
+          "source_type": "coffee_stirrer",
+          "target_role": "coffee_cup_1",
+          "target_type": "coffee_container",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "op_4",
+      "raw_operation": "pour_liquid",
+      "resolved_anchor": null,
+      "resolved_source": null,
+      "resolved_target": null,
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+          "planner_operation": "POUR",
+          "source_role": "water_pourer",
+          "source_type": "coffee_source",
+          "target_role": "coffee_cup_2",
+          "target_type": "coffee_container",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+          "planner_operation": "POUR",
+          "source_role": "water_pourer",
+          "source_type": "water_source",
+          "target_role": "coffee_cup_2",
+          "target_type": "coffee_container",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": null
+    },
+    {
+      "id": "op_5",
+      "raw_operation": "add_dry",
+      "resolved_anchor": null,
+      "resolved_source": null,
+      "resolved_target": null,
+      "slot_assignments": [],
+      "usage_policy": null
+    },
+    {
+      "id": "op_6",
+      "raw_operation": "stir",
+      "resolved_anchor": null,
+      "resolved_source": "stirrer_tool",
+      "resolved_target": "coffee_cup_2",
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "STIR_COFFEE",
+          "planner_operation": "STIR_COFFEE",
+          "source_role": "stirrer_tool",
+          "source_type": "coffee_stirrer",
+          "target_role": "coffee_cup_2",
+          "target_type": "coffee_container",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "op_7",
+      "raw_operation": "move_to_region",
+      "resolved_anchor": null,
+      "resolved_source": null,
+      "resolved_target": null,
+      "slot_assignments": [],
+      "usage_policy": null
+    },
+    {
+      "id": "op_8",
+      "raw_operation": "move_to_region",
+      "resolved_anchor": null,
+      "resolved_source": null,
+      "resolved_target": null,
+      "slot_assignments": [],
+      "usage_policy": null
+    },
+    {
+      "id": "op_9",
+      "raw_operation": "pair_utility",
+      "resolved_anchor": null,
+      "resolved_source": null,
+      "resolved_target": null,
+      "slot_assignments": [],
+      "usage_policy": null
+    },
+    {
+      "id": "op_10",
+      "raw_operation": "move_to_region",
+      "resolved_anchor": null,
+      "resolved_source": null,
+      "resolved_target": null,
+      "slot_assignments": [],
+      "usage_policy": null
+    },
+    {
+      "id": "op_11",
+      "raw_operation": "move_to_region",
+      "resolved_anchor": null,
+      "resolved_source": null,
+      "resolved_target": null,
+      "slot_assignments": [],
+      "usage_policy": null
+    },
+    {
+      "id": "op_12",
+      "raw_operation": "pair_utility",
+      "resolved_anchor": null,
+      "resolved_source": null,
+      "resolved_target": null,
+      "slot_assignments": [],
+      "usage_policy": null
+    }
+  ],
+  "relation_assisted_role_resolutions": 4,
+  "relation_orientation_resolutions": [
+    {
+      "id": "rel_1",
+      "orientation_options": [
+        {
+          "category": "TASK_CAUSAL_SEMANTICS",
+          "object_role": "soup_bowl_1",
+          "predicate": "PAIRED_WITH",
+          "subject_role": "eat_spoon_1"
+        }
+      ],
+      "raw_relation": "paired_with",
+      "resolved_object": "soup_bowl_1",
+      "resolved_subject": "eat_spoon_1"
+    },
+    {
+      "id": "rel_2",
+      "orientation_options": [
+        {
+          "category": "TASK_CAUSAL_SEMANTICS",
+          "object_role": "soup_bowl_2",
+          "predicate": "PAIRED_WITH",
+          "subject_role": "eat_spoon_2"
+        }
+      ],
+      "raw_relation": "paired_with",
+      "resolved_object": "soup_bowl_2",
+      "resolved_subject": "eat_spoon_2"
+    },
+    {
+      "id": "rel_3",
+      "orientation_options": [],
+      "raw_relation": "placed_at",
+      "resolved_object": "seating_loc_1",
+      "resolved_subject": "coffee_cup_1"
+    },
+    {
+      "id": "rel_4",
+      "orientation_options": [],
+      "raw_relation": "placed_at",
+      "resolved_object": "seating_loc_2",
+      "resolved_subject": "coffee_cup_2"
+    },
+    {
+      "id": "rel_5",
+      "orientation_options": [],
+      "raw_relation": "placed_at",
+      "resolved_object": "seating_loc_1",
+      "resolved_subject": "soup_bowl_1"
+    },
+    {
+      "id": "rel_6",
+      "orientation_options": [],
+      "raw_relation": "placed_at",
+      "resolved_object": "seating_loc_2",
+      "resolved_subject": "soup_bowl_2"
+    }
+  ]
+}

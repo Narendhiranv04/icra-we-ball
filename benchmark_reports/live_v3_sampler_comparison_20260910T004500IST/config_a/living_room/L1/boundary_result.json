@@ -1,0 +1,32 @@
+{
+  "batch": "CONFIG_A",
+  "content_sha256": "47540c4a02ee48bd88c4262aa9f387ae3902ff43649430d0774517c23ea23af7",
+  "failure_category": "TASK_SPECIFICATION_FAILURE",
+  "failure_reason": "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: operation 'op_transfer_refresh_a' ('transfer_object_to_region') cannot instantiate any supported capability from participant_roles=['refreshment_set_1', 'main_service_table', 'side_table_left']",
+  "finish_reason": "stop",
+  "image_views": [
+    "l2_camera_left.png",
+    "l2_camera_right.png",
+    "l2_camera_top.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [
+    {
+      "code": "HIDDEN_CONTENT_REASON_SANITIZED",
+      "region_id": "main_service_table"
+    }
+  ],
+  "num_images": 3,
+  "strict_v3_valid": true,
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 6881,
+    "completion_tokens_details": {
+      "reasoning_tokens": 5003
+    },
+    "prompt_tokens": 4533,
+    "prompt_tokens_details": null,
+    "total_tokens": 11414
+  }
+}

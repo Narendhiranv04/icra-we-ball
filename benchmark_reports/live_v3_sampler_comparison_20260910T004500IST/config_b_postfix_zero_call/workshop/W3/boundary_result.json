@@ -1,0 +1,45 @@
+{
+  "batch": "CONFIG_B_POSTFIX_ZERO_CALL",
+  "content_sha256": "974ae35f058de204bb7194bf9b38564fec011f462c9104b06781ba718052b049",
+  "failure_category": null,
+  "failure_reason": null,
+  "finish_reason": "stop",
+  "image_views": [
+    "initial_iso_left.png",
+    "initial_iso_right.png",
+    "initial_detail.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [
+    {
+      "code": "IMPLICIT_ROBOT_EXECUTOR_REMOVED",
+      "removed_operation": "op_identify",
+      "removed_role_ids": [
+        "robot_arm"
+      ]
+    },
+    {
+      "code": "IMPLICIT_ROBOT_EXECUTOR_REMOVED",
+      "removed_role_ids": [
+        "robot_arm"
+      ]
+    },
+    {
+      "code": "HIDDEN_CONTENT_REASON_SANITIZED",
+      "region_id": "workbench_surface"
+    }
+  ],
+  "num_images": 3,
+  "strict_v3_valid": true,
+  "task_specification_valid": true,
+  "usage": {
+    "completion_tokens": 8083,
+    "completion_tokens_details": {
+      "reasoning_tokens": 6847
+    },
+    "prompt_tokens": 3572,
+    "prompt_tokens_details": null,
+    "total_tokens": 11655
+  }
+}

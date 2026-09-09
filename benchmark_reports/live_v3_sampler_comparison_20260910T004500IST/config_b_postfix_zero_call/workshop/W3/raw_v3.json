@@ -1,0 +1,175 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "workbench_surface",
+        "label": "Workbench surface",
+        "reason": "Contains the visible fastening component; marked location may be here.",
+        "visual_description": "Top surface of the wooden table where the yellow object rests"
+      },
+      {
+        "id": "tray_area",
+        "label": "Black tray area",
+        "reason": "Source location for the fastening component.",
+        "visual_description": "Black rectangular base holding the yellow object"
+      }
+    ],
+    "inspection_order": [
+      "workbench_surface",
+      "tray_area"
+    ],
+    "visible_candidates_per_role": {
+      "fastening_component": [
+        {
+          "label": "yellow_object",
+          "visual_description": "Yellow rectangular object lying on a black tray on the workbench surface"
+        }
+      ],
+      "fastening_target": [],
+      "fastening_tool": [],
+      "robot_arm": [
+        {
+          "label": "white_robot_arm",
+          "visual_description": "White articulated robotic arm present in foreground"
+        }
+      ],
+      "workbench": [
+        {
+          "label": "wooden_table",
+          "visual_description": "Wooden workbench with drawers and a monitor/cabinet behind it"
+        }
+      ]
+    }
+  },
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_component_target",
+        "participant_roles": [
+          "fastening_component",
+          "fastening_target"
+        ],
+        "relation": "compatible_with",
+        "required": true
+      },
+      {
+        "id": "rel_component_location",
+        "participant_roles": [
+          "fastening_component",
+          "workbench"
+        ],
+        "relation": "located_on",
+        "required": false
+      },
+      {
+        "id": "rel_tool_component",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_component"
+        ],
+        "relation": "compatible_with",
+        "required": false
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "robot_arm"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Manipulation agent",
+        "id": "robot_arm",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "workbench",
+          "table"
+        ],
+        "entity_kind": "REGION",
+        "function": "Surface and storage area",
+        "id": "workbench",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "connector"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Material to be fastened",
+        "id": "fastening_component",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "hole",
+          "slot",
+          "surface"
+        ],
+        "entity_kind": "REGION",
+        "function": "Fixed receiving location for component",
+        "id": "fastening_target",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "gripper"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "Instrument for applying fastening force",
+        "id": "fastening_tool",
+        "required_count": 1,
+        "required_properties": []
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_identify",
+        "operation": "Identify",
+        "operation_count": 1,
+        "participant_roles": [
+          "robot_arm",
+          "workbench"
+        ]
+      },
+      {
+        "id": "op_fasten",
+        "operation": "Fasten",
+        "operation_count": 1,
+        "participant_roles": [
+          "robot_arm",
+          "fastening_tool",
+          "fastening_component",
+          "fastening_target"
+        ]
+      },
+      {
+        "id": "op_place",
+        "operation": "Place",
+        "operation_count": 1,
+        "participant_roles": [
+          "robot_arm",
+          "fastening_tool",
+          "workbench"
+        ]
+      }
+    ]
+  },
+  "task_summary": "Identify fastening component on workbench, fasten it to marked target using a tool, then return tool to workbench.",
+  "unsupported_reason": ""
+}

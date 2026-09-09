@@ -1,0 +1,36 @@
+{
+  "astar_invocations": 0,
+  "batch": "CONFIG_B",
+  "canonicalization_succeeded": false,
+  "domain": "living_room",
+  "failure_category": "TASK_SPECIFICATION_FAILURE",
+  "failure_reason": "FM_INTERNAL_RELATION_PARTICIPANT_CONTRADICTION: relation 'rel_5' ('accessible_to_both') has no valid orientation for participant_roles=['remote', 'coffee_table']",
+  "finished_at_utc": "2026-09-09T17:26:03.796510+00:00",
+  "fm_schema_version": 3,
+  "functional_spec_complete": false,
+  "git_commit": "761d5b771ebfa6e9d02e84174dcf9906dd20b369",
+  "git_dirty": false,
+  "high_level_replans": 0,
+  "image_views": [
+    "l2_camera_left.png",
+    "l2_camera_right.png",
+    "l2_camera_top.png"
+  ],
+  "inference_config": {
+    "max_tokens": 24000,
+    "model": "qwen35-9b",
+    "presence_penalty": 1.0,
+    "temperature": 0.6,
+    "top_k": 20,
+    "top_p": 0.95
+  },
+  "internal_variant": "F0_ALL_OBJECTS_IN_STAGING",
+  "pipeline_runtime_seconds": 109.6515,
+  "prompt_schema_hash": "8de8f68b7eade1a8b3ed152eb34ace55cb98519557324ffafead2b29dd283979",
+  "provider_model": "qwen35-9b",
+  "semantic_vlm_requests": 1,
+  "started_at_utc": "2026-09-09T17:24:14.145037+00:00",
+  "terminal_status": "VLM_SPEC_FAILED",
+  "transport_retries": 0,
+  "variant": "L1"
+}

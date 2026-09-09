@@ -27,17 +27,27 @@ def write(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def package(source: Path, output: Path, batch: str) -> None:
+def package(
+    source: Path, output: Path, batch: str, pipeline_source: Path | None = None,
+    variants: set[str] | None = None,
+) -> None:
+    summaries = []
     for domain, variant in CASES:
+        if variants is not None and variant not in variants:
+            continue
         src = source / domain / variant / "vlm"
+        run_src = (pipeline_source / domain / variant / "vlm") if pipeline_source else src
         dst = output / domain / variant
         diagnostic = read(src / "fm_diagnostics" / "fm_call_001.json")
-        manifest = read(src / "run_manifest.json")
-        result = read(src / "result.json")
-        record_path = src / "evaluation_record.json"
+        manifest = read(run_src / "run_manifest.json")
+        result = read(run_src / "result.json")
+        record_path = run_src / "evaluation_record.json"
         record = read(record_path) if record_path.exists() else {}
         raw = json.loads(diagnostic["content"])
-        normalized, normalization_trace = normalize_v3_live_document(raw)
+        task_instruction = str(diagnostic["sanitized_request"]["user_prompt"].get("task_instruction", ""))
+        normalized, normalization_trace = normalize_v3_live_document(
+            raw, task_instruction=task_instruction, domain=domain
+        )
 
         strict_valid = manifest.get("failure_category") != "MALFORMED_VLM_SPECIFICATION"
         task_spec_valid = strict_valid and manifest.get("failure_category") != "TASK_SPECIFICATION_FAILURE"
@@ -140,8 +150,25 @@ def package(source: Path, output: Path, batch: str) -> None:
         }
         compact_manifest["image_views"] = boundary["image_views"]
 
+        summaries.append({
+            "domain": domain, "variant": variant,
+            "strict_v3_valid": strict_valid, "task_specification_valid": task_spec_valid,
+            "graph_compiled": graph_compiled,
+            "grounding_reached": bool(record.get("candidate_grounding_eligible")),
+            "grounding_complete": bool(record.get("grounding_complete")),
+            "astar_reached": bool(manifest.get("astar_invocations", 0)),
+            "success": result.get("outcome_category") == "SUCCESS" or manifest.get("terminal_status") == "ACTION_SEQUENCE_READY",
+            "outcome": result.get("outcome_category") or manifest.get("terminal_status"),
+            "failure_category": result.get("failure_category") or manifest.get("failure_category"),
+            "failure_reason": result.get("failure_reason") or manifest.get("failure_reason"),
+            "semantic_vlm_requests": manifest.get("semantic_vlm_requests", 0),
+            "astar_invocations": manifest.get("astar_invocations", 0),
+            "usage": diagnostic.get("usage", {}),
+        })
+
         write(dst / "raw_v3.json", raw)
         write(dst / "normalized_v3.json", normalized)
+        write(dst / "normalization_trace.json", normalization_trace)
         write(dst / "boundary_result.json", boundary)
         write(dst / "semantic_hypotheses.json", {"conversion_error": conversion_error, "roles": hypotheses})
         write(dst / "compiled_graph_summary.json", compiled)
@@ -149,14 +176,37 @@ def package(source: Path, output: Path, batch: str) -> None:
         write(dst / "final_result.json", final)
         write(dst / "run_manifest.json", compact_manifest)
 
+    write(output / "summary.json", {
+        "batch": batch,
+        "cases": summaries,
+        "counts": {
+            key: sum(bool(row[key]) for row in summaries)
+            for key in ("strict_v3_valid", "task_specification_valid", "graph_compiled",
+                        "grounding_reached", "grounding_complete", "astar_reached", "success")
+        },
+        "semantic_vlm_requests": sum(row["semantic_vlm_requests"] for row in summaries),
+        "astar_invocations": sum(row["astar_invocations"] for row in summaries),
+        "token_totals": {
+            key: sum(int(row["usage"].get(key, 0) or 0) for row in summaries)
+            for key in ("prompt_tokens", "completion_tokens")
+        } | {
+            "reasoning_tokens": sum(int(row["usage"].get("completion_tokens_details", {}).get("reasoning_tokens", 0) or 0) for row in summaries)
+        },
+    })
+
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--batch", required=True)
+    parser.add_argument("--pipeline-source", type=Path)
+    parser.add_argument("--variants", help="Optional comma-separated subset")
     args = parser.parse_args()
-    package(args.source, args.output, args.batch)
+    package(
+        args.source, args.output, args.batch, args.pipeline_source,
+        set(args.variants.split(",")) if args.variants else None,
+    )
 
 
 if __name__ == "__main__":

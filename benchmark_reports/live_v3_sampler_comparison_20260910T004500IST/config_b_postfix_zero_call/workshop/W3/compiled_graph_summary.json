@@ -1,0 +1,108 @@
+{
+  "canonical_roles": [
+    "workbench",
+    "fastening_component",
+    "fastening_target",
+    "fastening_tool"
+  ],
+  "compiler_reached": true,
+  "conversion_error": null,
+  "function_alias_structural_overrides": 0,
+  "graph_compiled": true,
+  "operation_assisted_role_resolutions": 1,
+  "operation_participant_slot_resolutions": [
+    {
+      "id": "op_fasten",
+      "raw_operation": "Fasten",
+      "resolved_anchor": "fastening_target",
+      "resolved_source": "fastening_tool",
+      "resolved_target": "fastening_component",
+      "slot_assignments": [
+        {
+          "anchor_role": "fastening_target",
+          "anchor_type": "repair_target",
+          "capability_id": "FASTEN_JOINT",
+          "planner_operation": "DRIVE_FASTENER_INTO_TARGET",
+          "source_role": "fastening_tool",
+          "source_type": "driver",
+          "target_role": "fastening_component",
+          "target_type": "fastener",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "op_place",
+      "raw_operation": "Place",
+      "resolved_anchor": null,
+      "resolved_source": "fastening_tool",
+      "resolved_target": "workbench",
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "RETURN_REUSABLE_ITEM_TO_SUPPORT",
+          "planner_operation": "PLACE",
+          "source_role": "fastening_tool",
+          "source_type": "driver",
+          "target_role": "workbench",
+          "target_type": "MAIN_WORKBENCH_ZONE",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  ],
+  "relation_assisted_role_resolutions": 0,
+  "relation_orientation_resolutions": [
+    {
+      "id": "rel_component_target",
+      "orientation_options": [
+        {
+          "category": "PHYSICAL_VERIFIER",
+          "object_role": "fastening_target",
+          "predicate": "COMPATIBLE_WITH_TARGET",
+          "subject_role": "fastening_component"
+        }
+      ],
+      "raw_relation": "compatible_with",
+      "resolved_object": "fastening_target",
+      "resolved_subject": "fastening_component"
+    },
+    {
+      "id": "rel_component_location",
+      "orientation_options": [
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "fastening_component",
+          "predicate": "PLACED_ON",
+          "subject_role": "workbench"
+        },
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "workbench",
+          "predicate": "PLACED_ON",
+          "subject_role": "fastening_component"
+        }
+      ],
+      "raw_relation": "located_on",
+      "resolved_object": "workbench",
+      "resolved_subject": "fastening_component"
+    },
+    {
+      "id": "rel_tool_component",
+      "orientation_options": [
+        {
+          "category": "PHYSICAL_VERIFIER",
+          "object_role": "fastening_component",
+          "predicate": "COMPATIBLE_WITH",
+          "subject_role": "fastening_tool"
+        }
+      ],
+      "raw_relation": "compatible_with",
+      "resolved_object": "fastening_component",
+      "resolved_subject": "fastening_tool"
+    }
+  ]
+}

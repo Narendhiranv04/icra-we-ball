@@ -1,0 +1,32 @@
+{
+  "batch": "CONFIG_B",
+  "content_sha256": "5a955872a2f00375723382ae97ba9663f8c977489bed776dffc5a036688ae8b9",
+  "failure_category": "TASK_SPECIFICATION_FAILURE",
+  "failure_reason": "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: operation 'op_3' ('stir_mixture') cannot instantiate any supported capability from participant_roles=['Eating_Utensil_1', 'Coffee_Cup_1']",
+  "finish_reason": "stop",
+  "image_views": [
+    "left_shoulder_camera.png",
+    "right_shoulder_camera.png",
+    "overhead_camera.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [
+    {
+      "code": "HIDDEN_CONTENT_REASON_SANITIZED",
+      "region_id": "Table_Surface"
+    }
+  ],
+  "num_images": 3,
+  "strict_v3_valid": true,
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 7668,
+    "completion_tokens_details": {
+      "reasoning_tokens": 4976
+    },
+    "prompt_tokens": 4533,
+    "prompt_tokens_details": null,
+    "total_tokens": 12201
+  }
+}
