@@ -257,6 +257,92 @@ def test_diagnostic_preserves_finish_reason_and_usage(tmp_path, monkeypatch):
     assert saved["sanitized_request"]["schema_name"] == "functional_specification"
 
 
+def test_vlm_request_uses_only_first_three_ordered_views(tmp_path, monkeypatch):
+    monkeypatch.setenv("TAMP_FM_SCHEMA_VERSION", "2")
+    images = []
+    for index in range(5):
+        image = tmp_path / f"view_{index}.png"
+        image.write_bytes(f"image-{index}".encode())
+        images.append(image)
+
+    mock_doc = {
+        "status": "UNSUPPORTED",
+        "task_summary": "Unsupported mock request",
+        "task_contract": {
+            "functional_roles": [],
+            "functional_relations": [],
+            "operation_pairings": [],
+        },
+        "observation_guidance": {
+            "visible_candidates_per_role": {},
+            "inspectable_regions": [],
+            "inspection_order": [],
+        },
+        "unsupported_reason": "Mock transport response",
+    }
+    transport = MockTransport({
+        "choices": [{
+            "index": 0,
+            "finish_reason": "stop",
+            "message": {"role": "assistant", "content": json.dumps(mock_doc)},
+        }]
+    })
+    adapter = FMAdapter(
+        base_url="http://127.0.0.1:18000/v1",
+        model="qwen35-9b",
+        transport=transport,
+    )
+
+    adapter.generate_task_requirements("Mock task", observation_images=images)
+
+    assert images == [tmp_path / f"view_{index}.png" for index in range(5)]
+    assert [Path(item["path"]) for item in adapter.last_observation_images] == images[:3]
+    user_content = transport.calls[0]["messages"][1]["content"]
+    assert len([item for item in user_content if item["type"] == "image_url"]) == 3
+
+
+def test_live_request_reiterates_operation_endpoint_coherence(tmp_path, monkeypatch):
+    monkeypatch.setenv("TAMP_FM_SCHEMA_VERSION", "2")
+    image = tmp_path / "view.png"
+    image.write_bytes(b"image")
+    mock_doc = {
+        "status": "UNSUPPORTED",
+        "task_summary": "Unsupported mock request",
+        "task_contract": {
+            "functional_roles": [],
+            "functional_relations": [],
+            "operation_pairings": [],
+        },
+        "observation_guidance": {
+            "visible_candidates_per_role": {},
+            "inspectable_regions": [],
+            "inspection_order": [],
+        },
+        "unsupported_reason": "Mock transport response",
+    }
+    transport = MockTransport({
+        "choices": [{
+            "index": 0,
+            "finish_reason": "stop",
+            "message": {"role": "assistant", "content": json.dumps(mock_doc)},
+        }]
+    })
+    adapter = FMAdapter(
+        base_url="http://127.0.0.1:18000/v1",
+        model="qwen35-9b",
+        transport=transport,
+    )
+
+    adapter.generate_task_requirements("Mock task", observation_images=[image])
+
+    request = json.loads(transport.calls[0]["messages"][1]["content"][0]["text"])[
+        "request"
+    ]
+    assert "pairwise distinct" in request
+    assert "omit anchor when the target itself" in request
+    assert "never emit identification, selection, search, or inspection" in request
+
+
 def test_response_schema_v2_enforces_valid_structure():
     """Gate 8: V2 schema strictly validates valid structures and rejects invalid constructs."""
     import jsonschema

@@ -61,6 +61,16 @@ class FMResponseValidationError(MalformedVLMSpecificationError):
     """Raised when the model response violates the transport-level schema."""
 
 
+MAX_VLM_OBSERVATION_IMAGES = 3
+
+
+def _select_vlm_observation_images(
+    observation_images: Sequence[str | Path],
+) -> list[str | Path]:
+    """Select the fixed ordered view budget used only at the VLM boundary."""
+    return list(observation_images[:MAX_VLM_OBSERVATION_IMAGES])
+
+
 @dataclass
 class FMCallMetrics:
     requirement_calls: int = 0
@@ -1457,7 +1467,7 @@ class FMAdapter:
                 task_instruction, observation_images=observation_images
             )
         image_blocks, self.last_observation_images = _encode_observation_images(
-            observation_images
+            _select_vlm_observation_images(observation_images)
         )
         system_prompt = SYSTEM_PROMPT
         prompt = {
@@ -1545,7 +1555,7 @@ class FMAdapter:
         if len(task_instruction) > 4000:
             raise ValueError("task_instruction exceeds 4000 characters")
         image_blocks, self.last_observation_images = _encode_observation_images(
-            observation_images
+            _select_vlm_observation_images(observation_images)
         )
         transport = self._completion_transport()
         user_prompt_data = {
@@ -1555,6 +1565,10 @@ class FMAdapter:
                 "atomic transformations, every required physical participant, all "
                 "functional relations, all operations, explicit counts, and "
                 "distinct/shared/reusable bindings. Audit every instruction clause. "
+                "For every operation, keep source, target, and optional anchor pairwise "
+                "distinct; omit anchor when the target itself is the operation location. "
+                "Bind every declared role explicitly named by the operation, and never "
+                "emit identification, selection, search, or inspection as an operation. "
                 "Use one counted role for equivalent physical instances; exclude "
                 "users, actions, states, and unmanipulated contents as standalone roles. "
                 "Use physical dependencies rather than purpose or narrative relations. "
@@ -1640,7 +1654,9 @@ class FMAdapter:
     ) -> dict[str, Any]:
         """Ask Qwen for visually proposed inspectable regions and search order."""
         del search_region_descriptors
-        image_blocks, self.last_observation_images = _encode_observation_images(observation_images)
+        image_blocks, self.last_observation_images = _encode_observation_images(
+            _select_vlm_observation_images(observation_images)
+        )
         system_prompt = (
             "You choose an evidence-gathering order for the task. Return only the requested JSON. "
             "Visually identify any closed storage regions (such as drawers or cabinets) visible in the "
