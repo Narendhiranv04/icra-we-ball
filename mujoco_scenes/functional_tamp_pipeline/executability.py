@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from .models import FunctionalRequirementGraph
+from .robot_capability_registry import get_robot_capabilities
 
 
 def analyze_executability(graph: FunctionalRequirementGraph,
@@ -26,9 +27,18 @@ def analyze_executability(graph: FunctionalRequirementGraph,
     for group in graph.operation_groups:
         roles = [group.tool_role, group.target_role] + ([group.context_role] if group.context_role else [])
         missing = [r for r in roles if r not in graph.nodes]
+        capabilities = {
+            capability.capability_id: capability
+            for capability in get_robot_capabilities(graph.domain)
+        }
+        relationless_capability = bool(
+            group.capability_id
+            and group.capability_id in capabilities
+            and not capabilities[group.capability_id].required_relation_templates
+        )
         if missing:
             status = 'UNINSTANTIABLE_MISSING_ROLE'
-        elif not group.required_relations:
+        elif not group.required_relations and not relationless_capability:
             status = 'UNINSTANTIABLE_MISSING_RELATION'
         elif assignment is None:
             status = 'UNINSTANTIABLE_UNGROUNDED_ROLE'

@@ -30,10 +30,12 @@ try:
     )
     from mujoco_scenes.functional_tamp_pipeline.fm_schema_v2 import (
         SYSTEM_PROMPT_V2,
+        USER_REQUEST_V2,
         LIVE_RESPONSE_SCHEMA_V2,
         is_v2_document,
         validate_v2_functional_specification,
         validate_v2_live_contract,
+        normalize_v2_live_document,
         convert_v2_to_canonical_document,
         compute_v2_prompt_and_schema_hash,
     )
@@ -1560,21 +1562,7 @@ class FMAdapter:
         transport = self._completion_transport()
         user_prompt_data = {
             "task_instruction": task_instruction.strip(),
-            "request": (
-                "First derive a complete task contract from the instruction alone: "
-                "atomic transformations, every required physical participant, all "
-                "functional relations, all operations, explicit counts, and "
-                "distinct/shared/reusable bindings. Audit every instruction clause. "
-                "For every operation, keep source, target, and optional anchor pairwise "
-                "distinct; omit anchor when the target itself is the operation location. "
-                "Bind every declared role explicitly named by the operation, and never "
-                "emit identification, selection, search, or inspection as an operation. "
-                "Use one counted role for equivalent physical instances; exclude "
-                "users, actions, states, and unmanipulated contents as standalone roles. "
-                "Use physical dependencies rather than purpose or narrative relations. "
-                "Only then use the initial images for visible candidates and search "
-                "guidance. Do not omit a participant because it is not visible."
-            ),
+            "request": USER_REQUEST_V2,
         }
         user_text = json.dumps(
             user_prompt_data,
@@ -1638,9 +1626,12 @@ class FMAdapter:
         self.last_raw_requirement_response = deepcopy(raw_document)
         live_v2_document = None
         if schema_version == 2 and is_v2_document(raw_document):
-            live_v2_document = validate_v2_live_contract(raw_document)
+            normalized_document, self.last_normalization_trace = normalize_v2_live_document(
+                raw_document
+            )
+            live_v2_document = validate_v2_live_contract(normalized_document)
         if getattr(self, "return_raw_graph", False):
-            return raw_document
+            return live_v2_document if live_v2_document is not None else raw_document
         if live_v2_document is not None:
             return live_v2_document
         return validate_requirement_response(raw_document)

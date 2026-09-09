@@ -668,8 +668,15 @@ def map_living_room_fixed_target_role(raw: dict[str, Any] | str) -> str | None:
         if raw_k == "REGION":
             # For REGION, only consider seating anchors if the function explicitly refers to seating/occupant support,
             # not supporting drinks/refreshments/remotes.
-            fn_text = _phrase(str(raw.get("function", "")))
-            if not any(_contains_phrase(fn_text, k) for k in ("seat", "seating", "occupant", "armchair", "chair", "support user", "support person", "support viewer")):
+            fn_text = _phrase(
+                f"{raw.get('function', '')} {raw.get('description', '')}"
+            )
+            if any(_contains_phrase(fn_text, k) for k in (
+                "table", "surface", "support", "supports", "platform", "refreshment", "personal items", "shared access",
+                "central zone", "access location",
+            )):
+                return None
+            if not any(_contains_phrase(fn_text, k) for k in ("seat", "seating", "occupant", "person", "armchair", "chair", "support user", "support person", "support viewer")):
                 return None
             if any(_contains_phrase(fn_text, k) for k in ("cup", "saucer", "drink", "remote", "refreshment", "entertainment", "payload")):
                 return None
@@ -683,8 +690,12 @@ def map_living_room_fixed_target_role(raw: dict[str, Any] | str) -> str | None:
 
     words = set(norm.split())
     if raw_k == "OBJECT":
-        # Movable payload objects should not be mapped to fixed seating anchors
-        if any(w in words for w in ("remote", "cup", "saucer", "drinkware", "drink", "refreshment", "beverage", "tray", "controller")):
+        # Recover an explicitly described seating fixture despite an erroneous
+        # wire kind, but never turn an arbitrary payload/user interface into a seat.
+        if not (
+            any(w in words for w in ("seat", "seating", "seated", "chair", "armchair"))
+            or ("furniture" in words and any(w in words for w in ("occupant", "person", "viewer")))
+        ):
             return None
 
     # 1. Forward match against reviewed aliases (check SEATING_PAIR before SEATING_POSITION)

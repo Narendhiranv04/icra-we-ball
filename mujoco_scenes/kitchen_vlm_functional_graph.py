@@ -65,13 +65,16 @@ KITCHEN_ROLE_REGISTRY: dict[str, tuple[str, ...]] = {
         "eating utensil for soup bowl", "provide a suitable utensil for each soup bowl",
         "tool provided alongside the soup vessel for consumption",
         "tool provided alongside soup vessel", "tool provided for consumption",
+        "utensil for eating soup", "instrument for consuming food from soup bowl",
+        "instrument provided for eating the soup", "tool for consuming soup",
     ),
     "coffee_source": (
         "provide coffee", "coffee source", "coffee material", "coffee ingredient",
         "coffee supply", "coffee jar", "source of coffee", "coffee grounds",
         "provide coffee material", "coffee beans", "instant coffee",
         "instant coffee jar", "package of coffee", "coffee container jar",
-        "source of dry or liquid coffee substance",
+        "source of dry or liquid coffee substance", "coffee material source",
+        "caffeine additive source", "provide caffeine additive",
     ),
     "water_source": (
         "provide water", "water source", "pour water", "hot water", "kettle",
@@ -225,7 +228,7 @@ def map_kitchen_planner_context_role(
         re.search(r"\b(surface|support|destination|location|area|table|station)\b", text)
     )
     has_serving_purpose = bool(
-        re.search(r"\b(serv(?:e|ed|ing)|dining|prepared|ready for consumption|presentation)\b", text)
+        re.search(r"\b(serv(?:e|ed|ing)|dining|prepared|ready for consumption|presentation|presenting|completed|finished)\b", text)
     )
     if not (has_support_form and has_serving_purpose):
         return None

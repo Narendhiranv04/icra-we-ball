@@ -27,7 +27,7 @@ def causal_position(role: dict, document: dict) -> set[str]:
     """Causal types from role language and graph position, without material names."""
     text = re.sub(r"[_-]", " ", f"{role.get('function', '')} {role.get('description', '')}").lower()
     positions = set()
-    if re.search(r"\b(supplies|supply|source|provider|ingredient|powder|granules|raw material)\b", text):
+    if re.search(r"\b(supplies|supply|source|provider|provides|providing|ingredient|powder|granules|raw material)\b", text):
         positions.add("source")
     if re.search(r"\b(receives|receiving|prepared|served|serving|destination)\b", text):
         positions.add("destination")
@@ -42,7 +42,9 @@ def causal_position(role: dict, document: dict) -> set[str]:
         if group.get('target_role') == rid:
             positions.add('group_target')
     for relation in document.get('functional_relations', []):
-        phrase = str(relation.get('relation', relation.get('predicate', ''))).lower()
+        phrase = re.sub(
+            r"\s+", " ", re.sub(r"[_-]+", " ", str(relation.get('relation', relation.get('predicate', ''))).lower())
+        ).strip()
         if re.search(r"\b(supplies|pours into|transfers to|provides material to)\b", phrase):
             if relation.get('subject_role') == rid:
                 positions.add('source')
@@ -89,21 +91,43 @@ def _map_role(domain: str, role: dict, doc: dict) -> tuple[str | None, str]:
             enriched['function'] = 'source provider ' + role['function']
             enriched['description'] = role.get('description', '')
             text = (enriched['function'] + ' ' + enriched['description']).lower()
-            for material in ('coffee', 'water'):
+            for material in ('water', 'coffee'):
                 if re.search(r'\b' + material + r'\b', text):
                     return material + '_source', 'CAUSAL_SOURCE_PROVIDER'
         return map_kitchen_role_function(enriched), 'DOMAIN_SEMANTICS'
     if domain == 'living_room':
         from mujoco_scenes.environment_vlm_requirements import (map_living_room_role_function,
             map_living_room_object_payload_role, map_living_room_fixed_target_role)
+        role_text = re.sub(
+            r"\s+", " ", re.sub(r"[_-]+", " ", f"{role.get('function', '')} {role.get('description', '')}".lower())
+        ).strip()
         seating = map_living_room_fixed_target_role(role)
         if seating:
             return seating, 'FIXED_TARGET_SEMANTICS'
+        support_semantics = bool(re.search(r"\b(table|surface|support|platform|area|zone)\b", role_text))
+        personal_semantics = bool(re.search(r"\b(personal|individual|refreshment|near(?:by)?|beside|adjacent|side table)\b", role_text))
+        shared_control_semantics = bool(re.search(r"\b(shared|central|common|accessible|both|control|remote|media)\b", role_text))
+        if support_semantics and shared_control_semantics and not personal_semantics:
+            return 'SHARED_REMOTE_REGION', 'EXPLICIT_SHARED_CONTROL_SUPPORT_SEMANTICS'
+        if support_semantics and personal_semantics and not shared_control_semantics:
+            return 'PERSONAL_CUP_SAUCER_REGION', 'EXPLICIT_PERSONAL_REFRESHMENT_SUPPORT_SEMANTICS'
+        if re.search(r"\b(set|pair|setting|drinkware)\b", role_text) and re.search(
+            r"\b(refreshment|cup|dish|plate|saucer|drinkware|food|drink)\b", role_text
+        ):
+            return 'CUP_SAUCER_SET', 'EXPLICIT_REFRESHMENT_PAYLOAD_SEMANTICS'
+        if re.search(r"\b(carr(?:y|ies)|container|receptacle|vessel|payload)\b", role_text) and re.search(
+            r"\b(refreshment|beverage|drink|food|consumable)\b", role_text
+        ) and re.search(r"\b(person|occupant|user|individual|one)\b", role_text):
+            return 'CUP_SAUCER_SET', 'EXPLICIT_REFRESHMENT_PAYLOAD_SEMANTICS'
         mapper = {'REGION': map_living_room_role_function, 'OBJECT': map_living_room_object_payload_role,
                   'FIXED_TARGET': map_living_room_fixed_target_role}.get(role['entity_kind'], map_living_room_role_function)
         mapped = mapper(role)
         if mapped is None and role['entity_kind'] == 'REGION':
             function = (role.get('function', '') + ' ' + role.get('description', '')).lower()
+            if re.search(r'\b(current|currently|original|initial)\b', function) and re.search(
+                r'\b(storage|location|surface|position)\b', function
+            ):
+                return None, 'CURRENT_STATE_CONTEXT_ONLY'
             edges = [r for r in doc.get('functional_relations', []) if role['id'] in (r.get('subject_role'), r.get('object_role'))]
             spatial = ' '.join(str(r.get('relation', r.get('predicate', ''))) for r in edges).lower()
             bp = role.get('binding_policy')
@@ -128,7 +152,24 @@ def _map_role(domain: str, role: dict, doc: dict) -> tuple[str | None, str]:
         return target, 'FIXED_TARGET_SEMANTICS'
     if role['entity_kind'] == 'REGION':
         return map_workshop_context_region_role(role), 'SUPPORT_CONTEXT'
+    role_text = re.sub(
+        r"\s+", " ", re.sub(r"[_-]+", " ", f"{role.get('function', '')} {role.get('description', '')}".lower())
+    ).strip()
+    if re.search(
+        r"\b(fastening target|repair target|fixture assembly|target workpiece|workpiece target|part receiving fastener|object receiving fastening)\b",
+        role_text,
+    ):
+        return 'repair_target', 'EXPLICIT_FIXED_FASTENING_TARGET_SEMANTICS'
     mapped = map_workshop_role_function(role)
+    if mapped is None and re.search(
+        r"\b(fastener|fastening component|joining part|connector|component to be (?:installed|tightened)|part to be (?:attached|assembled))\b",
+        role_text,
+    ) and not re.search(r"\b(tool|driver|wrench|drill|instrument|equipment)\b", role_text):
+        mapped = 'CAN_FASTEN'
+    if mapped == 'CAN_FASTEN' and re.search(
+        r"\b(receiv(?:e|es|ing)|fixture|assembly|workpiece)\b", role_text
+    ) and not re.search(r"\b(fastener|connector|joining part|screw|bolt)\b", role_text):
+        mapped = 'repair_target'
     if mapped is None and 'instrument' in position and 'group_tool' in position and 'component' not in position:
         # Operation-instrument position plus explicit implement semantics.
         from mujoco_scenes.workshop_phase1.requirements import ManualWorkshopFMContract
@@ -275,7 +316,12 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 trace['unresolved_roles'].append({'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': role, 'collision_with': owners[name]['id']})
                 continue
         else:
-            canonical_kind = 'FIXED_TARGET' if name in set(get_domain_system_fixed_anchors(domain)) else role['entity_kind']
+            if name in set(get_domain_system_fixed_anchors(domain)):
+                canonical_kind = 'FIXED_TARGET'
+            elif name in {'PERSONAL_CUP_SAUCER_REGION', 'SHARED_REMOTE_REGION'}:
+                canonical_kind = 'REGION'
+            else:
+                canonical_kind = role['entity_kind']
             id_map[rid] = name
             owners[name] = role
             nodes[name] = FunctionalRole(name=name, entity_kind=canonical_kind, count=role['required_count'],
@@ -439,6 +485,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     for rel in doc['functional_relations']:
         from .relation_interpreter import (
             has_compatible_explicit_effect_operation,
+            has_compatible_explicit_pairing_operation,
             interpret_task_effect_predicate,
         )
         raw_subject = rel['subject_role']
@@ -446,6 +493,32 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         raw_phrase = rel.get('relation', rel.get('predicate'))
         effect_predicate = rel.get('effect_predicate') or interpret_task_effect_predicate(raw_phrase)
         object_is_literal = rel.get('object_is_literal') is True
+        pairing_matches, pairing_operation_id = has_compatible_explicit_pairing_operation(
+            raw_phrase, raw_subject, raw_object, doc.get('interaction_groups', [])
+        )
+        if pairing_matches and raw_subject in id_map and raw_object in id_map:
+            paired = FunctionalRelation(
+                subject_role=id_map[raw_subject],
+                predicate='PAIRED_WITH',
+                object_role=id_map[raw_object],
+                expected=rel.get('expected', True),
+                provenance='TASK_CAUSAL_SEMANTICS',
+                source_operation_id=pairing_operation_id,
+                category='TASK_CAUSAL_SEMANTICS',
+            )
+            task_causal_relations.append(paired)
+            pairing_evidence = {
+                'raw_subject': raw_subject,
+                'raw_phrase': raw_phrase,
+                'raw_object': raw_object,
+                'status': 'TASK_CAUSAL_SEMANTICS',
+                'category': 'TASK_CAUSAL_SEMANTICS',
+                'canonical': paired.to_dict(),
+                'provenance': 'FM_EXPLICIT_SEMANTIC',
+            }
+            trace['relations'].append(pairing_evidence)
+            trace['task_causal_relations'].append(pairing_evidence)
+            continue
         operation_matches, source_operation_id = has_compatible_explicit_effect_operation(
             effect_predicate or '', raw_subject, raw_object, doc.get('interaction_groups', [])
         )
@@ -494,7 +567,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         if (
             context_endpoint
             and non_context_endpoint in id_map
-            and re.search(r'\b(place|return|leave|restore|set down|put)\b', raw_op.lower())
+            and re.search(r'\b(place|return|leave|restore|set down|put|deposit|store|release)\b', raw_op.lower())
         ):
             context_raw = tool_raw if tool_raw in planner_context_id_map else target_raw
             trace['groups'].append({
@@ -565,6 +638,22 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             policy = 'SEQUENTIAL_REUSE_ALLOWED'
         elif policy is None:
             policy = 'DEDICATED_PER_TARGET'
+
+        if (
+            policy == 'DEDICATED_PER_TARGET'
+            and isinstance(count, int)
+            and count > nodes[tool_role_id].maximum_count
+        ):
+            trace['disabled_groups'].append({
+                'raw_group': group,
+                'status': 'INCONSISTENT_OPERATION_REUSE_CARDINALITY',
+                'reason': (
+                    f'Dedicated operation count {count} exceeds source role '
+                    f'{tool_role_id!r} maximum distinct count '
+                    f'{nodes[tool_role_id].maximum_count}'
+                ),
+            })
+            continue
 
         if not count or type(count) is not int or count < 1 or count > nodes[target_role_id].maximum_count or policy not in {'DEDICATED_PER_TARGET', 'SEQUENTIAL_REUSE_ALLOWED'}:
             trace['disabled_groups'].append({'raw_group': group, 'status': 'UNSUPPORTED_OPERATOR', 'reason': f'Invalid count or policy: count={count}, policy={policy}'})
@@ -639,6 +728,17 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         if domain == 'living_room':
             if executable_context_role == 'SEATING_POSITION' and 'ACCESSIBLE_FROM_BOTH_SEATS' in all_context:
                 executable_context_role = 'SEATING_PAIR'
+                if executable_context_role not in nodes:
+                    nodes[executable_context_role] = FunctionalRole(
+                        name=executable_context_role,
+                        entity_kind='FIXED_TARGET',
+                        count=1,
+                        binding_policy='SHARED',
+                        semantic_categories=ontology.get_system_role_semantic_categories(
+                            domain, executable_context_role
+                        ),
+                        verification_mode='GEOMETRIC_ONLY',
+                    )
             if runtime_function == 'SUPPORT_DRINKWARE' or (op_interp.capability and op_interp.capability.capability_id == 'SUPPORT_DRINKWARE'):
                 usage_policy = 'DEDICATED_PER_TARGET'
         source_node = nodes[tool_role_id]

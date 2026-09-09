@@ -13,6 +13,7 @@ from mujoco_scenes.functional_tamp_pipeline.fm_schema_v2 import (
     LIVE_RESPONSE_SCHEMA_V2,
     RESPONSE_SCHEMA_V2,
     SYSTEM_PROMPT_V2,
+    USER_REQUEST_V2,
     compute_v2_prompt_and_schema_hash,
     convert_v2_to_canonical_document,
     validate_v2_functional_specification,
@@ -635,8 +636,9 @@ def test_fake_transport_cannot_bypass_post_validation(monkeypatch, tmp_path):
 def test_live_prompt_schema_hash_matches_actual_wire_contract():
     expected = hashlib.sha256(json.dumps(
         {
-            "system_prompt_v2": SYSTEM_PROMPT_V2,
-            "response_schema_v2": LIVE_RESPONSE_SCHEMA_V2,
+                "system_prompt_v2": SYSTEM_PROMPT_V2,
+                "user_request_v2": USER_REQUEST_V2,
+                "response_schema_v2": LIVE_RESPONSE_SCHEMA_V2,
         },
         sort_keys=True,
     ).encode()).hexdigest()

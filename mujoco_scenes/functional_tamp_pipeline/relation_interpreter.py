@@ -79,12 +79,16 @@ _SEMANTIC_PREDICATE_CUES: dict[tuple[str, str], tuple[str, ...]] = {
         "near seat", "near seating", "beside seat", "adjacent to seat", "close to seat",
         "accessible to seat", "convenient to seat", "at seating position", "viewer seating position",
         "near viewer", "beside viewer", "adjacent to viewer",
+        "near", "located near", "located adjacent", "located adjacent to", "is adjacent to",
+        "physically adjacent to", "positioned adjacent to", "placed near", "placed adjacent to",
     ),
     ("living_room", "ACCESSIBLE_FROM_BOTH_SEATS"): (
         "accessible from both seats", "accessible from both", "reachable from both seats",
         "shared between seats", "between both seats", "serves both seats", "central to both seats",
         "accessible to pair of seats", "paired seating", "accessible from pair",
         "accessible to viewers", "accessible between seats",
+        "accessible from", "accessible to", "within reach of", "reachable from",
+        "accessible by all viewers", "is accessible by",
     ),
 
     # Workshop
@@ -95,6 +99,8 @@ _SEMANTIC_PREDICATE_CUES: dict[tuple[str, str], tuple[str, ...]] = {
         "transmit torque", "drives screw", "fastens with", "operates on", "used together",
         "mechanically engages", "engages with", "driver engages", "fits recess",
         "compatible tool", "matches fastener", "tightens", "rotates fastener",
+        "physically engages with fastening interface", "interact mechanically with fastener",
+        "mechanically compatible with", "engages fastening interface",
     ),
     ("workshop", "REACHES_TARGET"): (
         "reaches target", "reaches repair target", "reach target", "reaches hole",
@@ -108,6 +114,7 @@ _SEMANTIC_PREDICATE_CUES: dict[tuple[str, str], tuple[str, ...]] = {
         "diameter matches", "inserted into workpiece", "fastens into target",
         "inserted into target", "secured at target", "secures into hole",
         "fastened at target", "installed in target", "anchored in hole",
+        "compatible with fastening target", "fits fastening interface",
     ),
 }
 
@@ -123,6 +130,12 @@ _INVERSE_DIRECTION_CUES: dict[tuple[str, str], tuple[str, ...]] = {
     ),
     ("workshop", "COMPATIBLE_WITH_TARGET"): (
         "receives fastener", "accepts fastener", "threaded for",
+    ),
+    ("living_room", "FITS_SET_ON"): (
+        "supported by", "supported on", "placed on", "rests on", "located upon",
+    ),
+    ("living_room", "FITS_ON"): (
+        "supported by", "supported on", "placed on", "rests on", "located upon",
     ),
 }
 
@@ -209,22 +222,32 @@ _TASK_CAUSAL_RELATION_CUES: dict[str, tuple[str, ...]] = {
         "dispenses into", "fills", "provides contents to", "provides ingredients to", "source for",
         "provides coffee to", "provides water to", "provides soup to", "poured in", "pours in",
         "supplies", "feeds into", "supplies material into",
+        "provides fluid to", "provides fillable fluid to", "provides content to",
+        "provides content for", "provides coffee for blend", "provides water for blend",
+        "supplies fluid to", "supplies solid to",
     ),
     "ACTS_ON": (
         "acts on", "operates on", "manipulates", "manipulates interior of", "stirs contents of",
         "stirs contents", "works on", "applies to", "interacts with", "stirs", "mixes",
         "mixes contents of", "stirs interior of", "manipulates fastener", "manipulates component",
         "manipulate or install", "drives", "fastens",
+        "used to stir", "used for stirring", "performs mixing action in",
+        "acts upon during fastening", "physically acts upon", "applies force to",
+        "performs securement action on", "actuates connection between", "capable of securing",
     ),
     "PAIRED_WITH": (
         "paired with", "is paired with", "accompanied by", "alongside", "served with",
-        "served alongside", "associated with", "complements", "set with", "provided alongside",
+        "served alongside", "complements", "set with", "provided alongside",
         "arranged with", "provided for", "arranged for", "placed with",
+        "must accompany", "accompanied by", "provided with", "accommodates eating utensil",
+        "associated for serving", "is served with", "placed adjacent to serving of",
+        "associated with serving", "associated with soup", "assigned to serve",
     ),
     "INSTALLED_AT": (
         "installed at", "installed in", "secured at", "secured in", "fastened at", "fastened in",
         "anchored at", "anchored in", "attached to", "mounted at", "placed at target",
-        "installed on", "secured on",
+        "installed on", "secured on", "attaches to", "mechanically attaches to",
+        "secures to", "physically attached to during fastening",
     ),
     "CONNECTED_TO": (
         "connects to", "connected to", "joins with", "joined with", "fastened together",
@@ -236,6 +259,8 @@ _TASK_CAUSAL_INVERSE_CUES: dict[str, tuple[str, ...]] = {
         "receives material from", "receives contents from", "receives coffee from",
         "receives water from", "receives ingredients from", "receives from", "filled by",
         "supplied by", "receives liquid from",
+        "receives transfer from", "receiving from", "transferred from",
+        "requires contents from", "receives content from",
     ),
     "ACTS_ON": (
         "manipulated by", "operated by", "acted on by", "stirred by", "mixed by",
@@ -250,6 +275,10 @@ _TASK_EFFECT_RELATION_CUES: dict[str, tuple[str, ...]] = {
     "CONTAINS": (
         "contains", "contain", "holds contents", "holds material",
         "filled with", "has contents", "has material",
+    ),
+    "PLACED_ON": (
+        "placed on", "placed upon", "positioned on", "supported on", "supported by",
+        "rests on", "rests upon", "located upon", "located on", "must be placed on",
     ),
 }
 
@@ -282,16 +311,46 @@ def has_compatible_explicit_effect_operation(
     This recognizes direction only; it never creates an operation from a
     relation.  For CONTAINS, the material/source must flow into the carrier.
     """
-    if predicate != "CONTAINS":
+    if predicate not in {"CONTAINS", "PLACED_ON"}:
         return False, None
     for group in groups:
         source = group.get("tool_role") or group.get("source_role")
         target = group.get("target_role")
         phrase = _normalize_text(group.get("function") or group.get("operation") or "")
-        if (
-            source == raw_object
+        contains_match = (
+            predicate == "CONTAINS"
+            and source == raw_object
             and target == raw_subject
             and any(re.search(r"\b" + re.escape(cue) + r"\b", phrase) for cue in _TRANSFER_OPERATION_CUES)
+        )
+        placement_match = (
+            predicate == "PLACED_ON"
+            and source == raw_subject
+            and target == raw_object
+            and bool(re.search(r"\b(place|transfer|relocate|position|distribute|move|support)\w*\b", phrase))
+        )
+        if contains_match or placement_match:
+            return True, str(group.get("id", "")) or None
+    return False, None
+
+
+def has_compatible_explicit_pairing_operation(
+    raw_phrase: str,
+    raw_subject: str,
+    raw_object: str,
+    groups: Sequence[dict[str, Any]],
+) -> tuple[bool, str | None]:
+    """Corroborate otherwise-generic association text with an explicit FM operation."""
+    if _normalize_text(raw_phrase) != "associated with":
+        return False, None
+    for group in groups:
+        source = group.get("tool_role") or group.get("source_role")
+        target = group.get("target_role")
+        operation = _normalize_text(group.get("function") or group.get("operation") or "")
+        if (
+            source == raw_subject
+            and target == raw_object
+            and re.search(r"\b(pair|provide|place|serve|accompany|arrange|associate)\w*\b", operation)
         ):
             return True, str(group.get("id", "")) or None
     return False, None

@@ -301,6 +301,9 @@ RESPONSE_SCHEMA_V2: dict[str, Any] = {
 # agree without changing archived replay behavior.
 LIVE_RESPONSE_SCHEMA_V2: dict[str, Any] = deepcopy(RESPONSE_SCHEMA_V2)
 _live_contract_schema = LIVE_RESPONSE_SCHEMA_V2["properties"]["task_contract"]
+_live_contract_schema["properties"]["operation_pairings"]["items"]["properties"][
+    "anchor_role"
+] = {"type": "string", "minLength": 1}
 _live_contract_schema["properties"]["functional_roles"]["items"]["required"] = [
     "id",
     "entity_kind",
@@ -340,6 +343,59 @@ _live_region_schema["properties"] = {
 }
 _live_region_schema["required"] = ["id", "label", "visual_description", "reason"]
 _live_region_schema["additionalProperties"] = False
+
+
+USER_REQUEST_V2 = (
+    "First derive a complete task contract from the instruction alone: atomic "
+    "transformations, every required physical participant, all functional relations, "
+    "all operations, explicit counts, and distinct/shared/reusable bindings. Audit "
+    "every instruction clause. For every operation, keep source, target, and optional "
+    "anchor pairwise distinct; omit anchor when the target itself is the operation "
+    "location. Bind every declared role explicitly named by the operation, and never "
+    "emit identification, selection, search, or inspection as an operation. Use one "
+    "counted role for equivalent physical instances; exclude users, actions, states, "
+    "and unmanipulated contents as standalone roles. Use physical dependencies rather "
+    "than purpose or narrative relations. Only then use the initial images for visible "
+    "candidates and search guidance. Inspectable regions must be visible closed, "
+    "enclosed, or storage-access structures that could be inspected for missing "
+    "candidates; never assert what a region contains and do not nominate open tabletops "
+    "or empty staging areas. Do not omit a participant because it is not visible."
+)
+
+
+def normalize_v2_live_document(
+    doc: Mapping[str, Any],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Apply only semantics-preserving cleanup before strict live validation."""
+    if not isinstance(doc, Mapping):
+        raise MalformedVLMSpecificationError("Live V2 specification must be a JSON object")
+    normalized = deepcopy(dict(doc))
+    trace: list[dict[str, Any]] = []
+    operations = normalized.get("task_contract", {}).get("operation_pairings", [])
+    for index, operation in enumerate(operations):
+        if not isinstance(operation, dict) or "anchor_role" not in operation:
+            continue
+        anchor = operation.get("anchor_role")
+        location = f"task_contract.operation_pairings[{index}].anchor_role"
+        if isinstance(anchor, str) and not anchor.strip():
+            del operation["anchor_role"]
+            trace.append({
+                "code": "EMPTY_OPTIONAL_ANCHOR_REMOVED",
+                "location": location,
+                "operation_id": operation.get("id"),
+            })
+        elif anchor in (operation.get("source_role"), operation.get("target_role")):
+            duplicate_of = (
+                "source_role" if anchor == operation.get("source_role") else "target_role"
+            )
+            del operation["anchor_role"]
+            trace.append({
+                "code": "REDUNDANT_ANCHOR_REMOVED",
+                "location": location,
+                "operation_id": operation.get("id"),
+                "duplicate_of": duplicate_of,
+            })
+    return normalized, trace
 
 
 def is_v2_document(doc: Mapping[str, Any]) -> bool:
@@ -588,6 +644,7 @@ def validate_v2_live_contract(doc: Mapping[str, Any]) -> dict[str, Any]:
         )
 
     operation_semantic_errors: list[str] = []
+    roles_by_id = {role["id"]: role for role in roles}
     for index, operation in enumerate(operations):
         location = f"operation_pairings[{index}]"
         if not isinstance(operation["id"], str) or not operation["id"].strip():
@@ -609,6 +666,18 @@ def validate_v2_live_contract(doc: Mapping[str, Any]) -> dict[str, Any]:
         if operation["source_role"] == operation["target_role"]:
             operation_semantic_errors.append(
                 f"INVALID_OPERATION_SELF_PAIRING: {location} source_role equals target_role"
+            )
+        source_contract = roles_by_id.get(operation["source_role"], {})
+        if (
+            operation["reuse_policy"] == "DEDICATED_PER_TARGET"
+            and operation["operation_count"] > source_contract.get("required_count", 0)
+        ):
+            operation_semantic_errors.append(
+                "INCONSISTENT_OPERATION_REUSE_CARDINALITY: "
+                f"{location} requires {operation['operation_count']} distinct source instances "
+                f"but role {operation['source_role']!r} declares "
+                f"required_count={source_contract.get('required_count')} and "
+                f"binding_policy={source_contract.get('binding_policy')!r}"
             )
         anchor_role = operation.get("anchor_role")
         if anchor_role is not None and anchor_role in (
@@ -701,6 +770,7 @@ def compute_v2_prompt_and_schema_hash() -> str:
     blob = json.dumps(
         {
             "system_prompt_v2": SYSTEM_PROMPT_V2,
+            "user_request_v2": USER_REQUEST_V2,
             "response_schema_v2": LIVE_RESPONSE_SCHEMA_V2,
         },
         sort_keys=True,
