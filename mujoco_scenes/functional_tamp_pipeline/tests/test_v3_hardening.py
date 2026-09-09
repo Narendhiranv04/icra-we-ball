@@ -230,6 +230,16 @@ def test_entity_kind_payload_recovery_is_narrow_and_traced():
     assert any(row["code"] == "ENTITY_KIND_SEMANTIC_NORMALIZATION" for row in trace)
 
 
+def test_undeclared_observation_hint_is_removed_without_altering_task_contract():
+    raw = document([role("payload", "refreshment payload", categories=["CUP"])])
+    raw["observation_guidance"]["visible_candidates_per_role"] = {
+        "payload": [], "undeclared_table": [{"label": "table", "visual_description": "visible table"}],
+    }
+    normalized, trace = normalize_and_validate_v3_contract(raw, domain="living_room")
+    assert set(normalized["observation_guidance"]["visible_candidates_per_role"]) == {"payload"}
+    assert any(row["code"] == "UNDECLARED_OBSERVATION_GUIDANCE_REMOVED" for row in trace)
+
+
 def _living_context_roles(*, include_remote=True, include_extra=False):
     roles = [
         role("shared", "shared support accessible to both seats", kind="REGION", policy="SHARED"),
