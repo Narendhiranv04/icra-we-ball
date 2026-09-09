@@ -325,7 +325,7 @@ _TASK_EFFECT_RELATION_CUES: dict[str, tuple[str, ...]] = {
         "filled with", "has contents", "has material",
     ),
     "PLACED_ON": (
-        "placed on", "placed upon", "positioned on", "supported on", "supported by",
+        "on", "placed on", "placed upon", "positioned on", "supported on", "supported by",
         "rests on", "rests upon", "located upon", "located on", "must be placed on",
     ),
 }

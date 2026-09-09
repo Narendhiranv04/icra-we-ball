@@ -297,6 +297,101 @@ def test_personal_placement_operation_supplies_robot_owned_preconditions():
     assert all(row["provenance"] == "ROBOT_CAPABILITY_PRECONDITION" for row in group.preconditions_provenance)
 
 
+def test_current_storage_context_is_elided_and_explicit_anchor_is_graph_joined():
+    raw = document([
+        role("storage", "current storage location", kind="REGION", policy="SHARED", categories=["TABLE"]),
+        role("payload", "personal refreshment payload", categories=["CUP"]),
+        role("support", "personal support", kind="REGION", policy="SHARED"),
+        role("seat", "seating reference", kind="FIXED_TARGET", policy="SHARED"),
+    ], relations=[relation("near", "near", ["support", "seat"])], operations=[
+        operation("move", "transfer", ["storage", "payload", "support"]),
+    ])
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    group = canonical["interaction_groups"][0]
+    assert group["v3_participant_roles"] == ["payload", "support", "seat"]
+    assert group["v3_explicit_participant_roles"] == ["payload", "support", "seat"]
+    assert group["v3_raw_fm_participant_roles"] == ["storage", "payload", "support"]
+    codes = {row["code"] for row in canonical["functional_constraint_interpretation"]}
+    assert codes == {"CURRENT_STATE_OPERATION_CONTEXT_ELIDED", "EXPLICIT_RELATION_OPERATION_CONTEXT_JOIN"}
+    graph = compile_candidate_graph("living_room", "move refreshment from storage beside seat", raw)
+    assert graph.operation_groups[0].capability_id == "SUPPORT_DRINKWARE"
+    assert graph.operation_groups[0].context_role == "SEATING_POSITION"
+
+
+def test_explicit_relation_completes_missing_shared_operation_context():
+    raw = document(
+        _living_context_roles(),
+        relations=[relation("between", "between", ["shared", "seat_left", "seat_right"])],
+        operations=[operation("move", "move remote", ["remote", "shared"])],
+    )
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    group = canonical["interaction_groups"][0]
+    assert group["v3_slot_assignments"][0]["capability_id"] == "SUPPORT_ENTERTAINMENT_CONTROL"
+    assert group["v3_slot_assignments"][0]["anchor_type"] == "SEATING_PAIR"
+
+
+def test_missing_explicit_shared_context_is_not_invented():
+    raw = document(_living_context_roles()[:1] + _living_context_roles()[3:], operations=[
+        operation("move", "move remote", ["remote", "shared"]),
+    ])
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    assert canonical["interaction_groups"][0]["v3_slot_assignments"]
+    assert canonical["interaction_groups"][0]["context_role"] is None
+    assert not canonical.get("explicit_context_sets")
+
+
+def test_beverage_macro_has_unique_two_transfer_lowering_and_accounting():
+    raw = document([
+        role("source_a", "source of coffee material", policy="SHARED"),
+        role("source_b", "source of water", policy="SHARED"),
+        role("container", "receiving vessel for coffee", count=2, policy="DISTINCT"),
+    ], operations=[operation("prepare", "prepare coffee beverage", ["source_a", "source_b", "container"], count=2)])
+    canonical = convert_v3_to_canonical_document(raw, domain="kitchen")
+    assert len(canonical["interaction_groups"]) == 2
+    assert {g["v3_slot_assignments"][0]["capability_id"] for g in canonical["interaction_groups"]} == {"TRANSFER_CONTENT_TO_CONTAINER"}
+    assert canonical["fm_semantic_accounting"][0]["disposition"] == "DETERMINISTIC_COMPOSITE_OPERATION_LOWERING"
+
+
+def test_beverage_macro_with_incompatible_participant_does_not_lower():
+    raw = document([
+        role("source", "source of coffee material", policy="SHARED"),
+        role("utensil", "soup eating utensil"),
+        role("container", "receiving vessel for coffee", count=2, policy="DISTINCT"),
+    ], operations=[operation("prepare", "prepare coffee beverage", ["source", "utensil", "container"], count=2)])
+    canonical = convert_v3_to_canonical_document(raw, domain="kitchen")
+    assert len(canonical["interaction_groups"]) == 1
+    assert canonical["interaction_groups"][0]["v3_slot_assignments"] == []
+    assert canonical["fm_semantic_accounting"][0]["disposition"] == "UNRESOLVED_REQUIRED_OPERATION"
+
+
+def test_every_raw_fm_element_has_semantic_accounting_disposition():
+    raw = document([
+        role("payload", "personal refreshment payload", categories=["CUP"]),
+        role("support", "personal support", kind="REGION", policy="SHARED"),
+    ], relations=[relation("on", "on", ["payload", "support"])], operations=[
+        operation("move", "move", ["payload", "support"]),
+    ])
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    keys = {(row["element_kind"], row["raw_id"]) for row in canonical["fm_semantic_accounting"]}
+    assert keys == {("role", "payload"), ("role", "support"), ("relation", "on"), ("operation", "move")}
+
+
+def test_unique_multi_channel_remote_evidence_overrides_isolated_bad_function():
+    raw = document([
+        role("remote_control", "joining_component", categories=["electronic", "controller"],
+             description="entertainment control device"),
+        role("shared", "shared central support", kind="REGION", policy="SHARED"),
+    ], relations=[relation("on", "on", ["remote_control", "shared"])], operations=[
+        operation("move", "move entertainment control", ["remote_control", "shared"]),
+    ])
+    hypothesis = build_role_type_hypotheses(
+        "living_room", convert_v3_to_canonical_document(raw, domain="living_room")
+    )["remote_control"]
+    assert hypothesis.canonical_role_candidates == ("REMOTE",)
+    assert hypothesis.status == "GLOBAL_GRAPH_CONSISTENCY_OVERRIDE"
+    assert any(row.get("status") == "UNIQUE_MINIMAL_REPAIR" for row in hypothesis.evidence)
+
+
 def test_explicit_raw_personal_pairings_survive_count_consolidation():
     raw = document([
         role("payload_1", "personal refreshment payload", categories=["CUP"]),
@@ -319,6 +414,10 @@ def test_explicit_raw_personal_pairings_survive_count_consolidation():
         ["payload_1", "support_1", "seat_1"],
         ["payload_2", "support_2", "seat_2"],
     ]
+    assert len(graph.operation_groups) == 1
+    assert graph.operation_groups[0].required_target_count == 2
+    assert any(row.get("status") == "CONSOLIDATED_EQUIVALENT_OPERATION_INSTANCES"
+               for row in graph.metadata["canonicalization_trace"]["groups"])
 
 
 def test_kitchen_operation_rejects_meal_utensil_as_beverage_stirrer():

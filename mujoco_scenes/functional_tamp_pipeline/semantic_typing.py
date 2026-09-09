@@ -37,7 +37,7 @@ def _text(role: dict[str, Any]) -> str:
     signal = re.compile(
         r"\b(source|provider|ingredient|receiv|destination|tool|implement|instrument|utensil|driver|"
         r"table|surface|support|platform|seat|chair|component|fastener|target|fixture|refreshment|"
-        r"drinkware|remote|control|television|display|cup|plate|saucer)\w*\b", re.I
+        r"drinkware|refreshment|payload|remote|control|television|display|cup|plate|saucer)\w*\b", re.I
     )
     for _, value in fields:
         normalized = re.sub(r"\s+", " ", re.sub(r"[_-]+", " ", value).lower()).strip()
@@ -91,6 +91,13 @@ def function_semantic_evidence(
 ) -> FunctionSemanticEvidence:
     """Extract positive preferences and explicit family exclusions without scores."""
     text = _text(role)
+    all_text = re.sub(
+        r"\s+", " ",
+        re.sub(r"[_-]+", " ", " ".join((
+            str(role.get("function", "")), str(role.get("id", "")),
+            str(role.get("description", "")), " ".join(role.get("candidate_categories", ())),
+        )).lower()),
+    ).strip()
     evidence_source = _evidence_source(role, text)
     families: set[str] = set()
     # Keep a legacy lexical hit available as a fallback, but do not mix it
@@ -113,7 +120,7 @@ def function_semantic_evidence(
         families.add("COMPONENT")
     if re.search(r"\b(fixed (?:workpiece|point|target|receiving (?:location|site|target))|repair target|fixture|marked (?:target|joint|site|location)|target joint|joint hole|fastening site|location[^.]*requiring fastening|assembly receiv(?:ing|er)|workpiece assembly|object to be secured|primary object to be secured)\b", text):
         families.add("FIXED_TARGET")
-    if re.search(r"\b(refreshment set|cup and saucer|drinkware|remote control|media control|entertainment control(?:ler)?|device (?:used to|for controlling|to control)|controlling (?:television|tv|display)|(?:remote|media|entertainment|television|tv) controller?|control(?:ler)? (?:television|tv|display)|consumables)\b", text):
+    if re.search(r"\b(payload|refreshment set(?:ting)?|cup and saucer|drinkware|remote control|media control|entertainment control(?:ler)?|device (?:used to|for controlling|to control)|controlling (?:television|tv|display)|(?:remote|media|entertainment|television|tv) controller?|control(?:ler)? (?:television|tv|display)|consumables)\b", all_text):
         families.add("PAYLOAD")
     if re.search(r"\b(television|tv screen|display|monitor)\b", text):
         families.add("DISPLAY_CONTEXT")
@@ -148,14 +155,22 @@ def function_semantic_evidence(
             families.discard("SOURCE")
             families.add("PAYLOAD")
             evidence_source = "CANDIDATE_CATEGORY_TEXT"
-        if "COMPONENT" in families and re.search(r"\b(electronic|remote|controller|device)\b", categories + " " + description) and re.search(r"\b(control|remote|television|tv)\b", description):
+        if re.search(r"\b(joining component|fastener|connector)\b", str(role.get("function", "")).replace("_", " "), re.I) and sum(bool(re.search(pattern, value, re.I)) for pattern, value in (
+            (r"\b(remote|control)\b", str(role.get("id", "")).replace("_", " ")),
+            (r"\b(entertainment|remote|control(?:ler)?|television|tv)\b", description),
+            (r"\b(electronic|remote|controller|device)\b", categories),
+        )) >= 2:
+            families.discard("COMPONENT")
+            families.add("PAYLOAD")
+            evidence_source = "GLOBAL_GRAPH_CONSISTENCY_OVERRIDE"
+        elif "COMPONENT" in families and re.search(r"\b(electronic|remote|controller|device)\b", categories + " " + description) and re.search(r"\b(control|remote|television|tv)\b", description):
             families.discard("COMPONENT")
             families.add("PAYLOAD")
             evidence_source = "CANDIDATE_CATEGORY_TEXT"
         if "SUPPORT" in families:
-            if re.search(r"\b(shared|central|common|coffee table|both|remote)\b", text):
+            if re.search(r"\b(shared|central|common|coffee table|both|remote)\b", all_text):
                 preferred.add("SHARED_REMOTE_REGION")
-            else:
+            elif re.search(r"\b(personal|side table|end table|individual)\b", all_text):
                 preferred.add("PERSONAL_CUP_SAUCER_REGION")
         if "SEATING" in families:
             preferred.add(
@@ -164,7 +179,7 @@ def function_semantic_evidence(
                 else "SEATING_POSITION"
             )
         if "PAYLOAD" in families:
-            preferred.add("REMOTE" if re.search(r"\b(remote|control)\b", text) else "CUP_SAUCER_SET")
+            preferred.add("REMOTE" if re.search(r"\b(remote|control|entertainment)\b", all_text) else "CUP_SAUCER_SET")
     elif domain == "workshop":
         if "INSTRUMENT" in families: preferred.add("driver")
         if "COMPONENT" in families: preferred.add("fastener")
@@ -388,6 +403,14 @@ def build_role_type_hypotheses(
             status = "AMBIGUOUS_ROLE_TYPE" if structural else "UNCONSTRAINED_ROLE_TYPE"
         elif override:
             status = "STRUCTURAL_OVERRIDE_OF_WEAK_FUNCTION_ALIAS"
+        elif functions[rid].evidence_source == "GLOBAL_GRAPH_CONSISTENCY_OVERRIDE" and len(values) == 1:
+            status = "GLOBAL_GRAPH_CONSISTENCY_OVERRIDE"
+            evidences[rid].append({
+                "source": "GLOBAL_GRAPH_CONSISTENCY_OVERRIDE",
+                "status": "UNIQUE_MINIMAL_REPAIR",
+                "raw_function": str(role.get("function", "")),
+                "resolved_role": values[0],
+            })
         elif len(values) == 1 and weak_mapped[rid] == values[0]: status = "DIRECT_FUNCTION_MATCH"
         elif structural == {"RELATION_TEXT"}: status = "RELATION_ASSISTED"
         elif structural == {"OPERATION_TEXT"}: status = "OPERATION_ASSISTED"

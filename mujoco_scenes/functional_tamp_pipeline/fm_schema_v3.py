@@ -39,7 +39,7 @@ Reason silently in this order:
 5. Count audit: required_count counts physical instances; operation_count counts applications. Repeated use requires REUSABLE or enough DISTINCT instances. Distributing counted payloads to distinct destinations requires one operation per pairing or one unambiguous repeated pattern; never combine alternative destinations.
 6. Consistency audit: every participant is an exact declared role ID—never a count, field name, placeholder, or undeclared plural. Every clause is represented; interchangeable instances use a counted role; personal and shared supports remain distinct; robot components are not task objects unless targeted. Inspection/search belongs in observation guidance. For both, all, pair, each, or between, include every declared role defining that set; do not invent a synthetic pair role. Example: shared support accessible from both seats lists support, left seat, and right seat.
 
-Represent only participants required by the actual instruction. Do not invent ingredients, material sources, or preparation mechanisms merely to explain a broad end-state verb. A person/user mentioned only for quantity, ownership, one-each, servings, or settings is not a physical role or serve-to-human operation. Include a person or calibrated seating reference only when the instruction requires a geometric relation to it. Abstract words such as serve, provide, or prepare are not physical operations unless they express an actual transformation or placement.
+Declare material sources or preparation processes only when explicitly specified; an end product never implies hidden ingredients or containers. A quantity-only person/user is not a physical role or serve target. Include people or seats only for required geometric relations. Serve, provide, or prepare is physical only when it expresses a transformation or placement. A payload's current surface is observation context, not normally a placement participant. Placement uses the payload, destination support, and required spatial anchors.
 
 Use short atomic natural-language role functions, relations, operations, and unary properties, not uppercase backend-style predicate names. Relation participant order is not directional. Initial-location statements such as currently on, located initially, or stored on are observation context, not automatically required final relations. Required relations express compatibility, functional dependency, final state, or a physical relation needed by an operation. Do not add operations merely to describe an already satisfied state unless the instruction requires the transformation. Do not estimate numeric geometry. Observation candidates are visible evidence only. Inspectable regions must be visible closed/storage structures; inspection_order must contain every exact declared region id once and nothing else. Region reasons may say they could be inspected for task-relevant candidates but must not claim hidden contents."""
 
@@ -480,6 +480,7 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
     contract = v3_doc["task_contract"]
     roles_by_id: dict[str, Mapping[str, Any]] = {role["id"]: role for role in contract["functional_roles"]}
     hypotheses = build_role_type_hypotheses(domain, canonical)
+
     bundles: dict[tuple[str, str], str] = {}
 
     normalized_relations = []
@@ -509,6 +510,23 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
         else:
             normalized_operations.append(operation)
     hypotheses = build_role_type_hypotheses(domain, canonical)
+
+    from .functional_constraint_interpreter import FunctionalConstraintInterpreter
+    constraint_interpreter = FunctionalConstraintInterpreter(
+        domain=domain,
+        roles_by_id=roles_by_id,
+        hypotheses=hypotheses,
+        relations=normalized_relations,
+        slot_resolver=resolve_v3_operation_slots,
+    )
+    normalized_operations = constraint_interpreter.interpret(normalized_operations)
+    canonical["functional_constraint_interpretation"] = list(constraint_interpreter.trace)
+    canonical["fm_semantic_accounting"] = list(constraint_interpreter.accounting)
+    canonical["current_state_operation_context_roles"] = sorted({
+        str(row["raw_role"])
+        for row in constraint_interpreter.trace
+        if row.get("code") == "CURRENT_STATE_OPERATION_CONTEXT_ELIDED"
+    })
 
     relations = []
     current_state_relations = []
@@ -591,9 +609,29 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
             "v3_slot_assignments": options,
             "v3_participant_roles": list(operation["participant_roles"]),
             "v3_explicit_participant_roles": list(operation.get("explicit_participant_roles", operation["participant_roles"])),
+            "v3_raw_fm_participant_roles": list(operation.get("raw_fm_participant_roles", operation.get("explicit_participant_roles", operation["participant_roles"]))),
+            "v3_current_state_context_roles": list(operation.get("current_state_context_roles", [])),
+            "v3_graph_join_relation_id": operation.get("graph_join_relation_id"),
             "v3_explicit_context_set_id": operation.get("explicit_context_set_id"),
         })
     canonical["interaction_groups"] = groups
+    for role in contract["functional_roles"]:
+        is_current_context = role["id"] in set(canonical.get("current_state_operation_context_roles", ()))
+        canonical["fm_semantic_accounting"].append({
+            "element_kind": "role", "raw_id": role["id"],
+            "disposition": "CURRENT_STATE_CONTEXT" if is_current_context else "GROUNDED_TASK_PARTICIPANT",
+            "canonical_representation": None if is_current_context else list(hypotheses[role["id"]].canonical_role_candidates),
+            "provenance": "FM_EXPLICIT_ROLE",
+        })
+    relation_dispositions = {item["id"]: "CURRENT_STATE_CONTEXT" for item in current_state_relations}
+    relation_dispositions.update({item["id"]: "GROUNDED_TASK_RELATION" for item in relations})
+    for relation in contract["functional_relations"]:
+        canonical["fm_semantic_accounting"].append({
+            "element_kind": "relation", "raw_id": relation["id"],
+            "disposition": relation_dispositions.get(relation["id"], "EXPLICIT_RUNTIME_CONTEXT"),
+            "canonical_representation": relation.get("relation"),
+            "provenance": "FM_EXPLICIT_RELATION",
+        })
     for edge in canonical["functional_relations"]:
         effect = interpret_task_effect_predicate(edge["relation"])
         participants = {edge["subject_role"], edge["object_role"]}

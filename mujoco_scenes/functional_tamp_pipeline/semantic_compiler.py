@@ -512,6 +512,13 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     role_hypotheses = resolve_role_type_hypotheses(domain, doc)
     for role in doc['functional_roles']:
         rid = role['id']
+        if rid in set(doc.get('current_state_operation_context_roles', [])):
+            trace['context_only_roles'].append({
+                'raw_role': role,
+                'status': 'CURRENT_STATE_OPERATION_CONTEXT_ELIDED',
+                'provenance': 'FM_ROLE_FUNCTION_AND_GRAPH_STRUCTURE',
+            })
+            continue
         hypothesis = role_hypotheses[rid]
         try:
             direct_name, direct_rule = _map_role(domain, role, doc)
@@ -1269,6 +1276,9 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             trace['explicit_role_pairings'].append({
                 'operation_id': group.get('id'),
                 'raw_participant_roles': list(group['v3_explicit_participant_roles']),
+                'raw_fm_participant_roles': list(group.get('v3_raw_fm_participant_roles', group['v3_explicit_participant_roles'])),
+                'current_state_context_roles': list(group.get('v3_current_state_context_roles', [])),
+                'graph_join_relation_id': group.get('v3_graph_join_relation_id'),
                 'canonical_source_role': tool_role_id,
                 'canonical_target_role': target_role_id,
                 'canonical_context_role': executable_context_role,
@@ -1286,6 +1296,40 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             'preconditions_provenance': grp_precond_provenance,
         })
     if domain == 'living_room':
+        # Separate FM operations may preserve explicit one-to-one pairings while
+        # canonicalization consolidates their equivalent role types.  Execute
+        # those as one counted capability group; keeping duplicate groups would
+        # falsely demand disjoint copies of the same consolidated source set.
+        merged_groups: list[OperationGroup] = []
+        for group in groups:
+            key = (
+                group.capability_id, group.function, group.tool_role,
+                group.target_role, group.context_role, group.required_relations,
+                group.context_relations, group.usage_policy,
+            )
+            prior_index = next((i for i, existing in enumerate(merged_groups) if (
+                existing.capability_id, existing.function, existing.tool_role,
+                existing.target_role, existing.context_role, existing.required_relations,
+                existing.context_relations, existing.usage_policy,
+            ) == key), None)
+            if prior_index is None:
+                merged_groups.append(group)
+                continue
+            prior = merged_groups[prior_index]
+            combined_count = prior.required_target_count + group.required_target_count
+            merged_groups[prior_index] = replace(
+                prior,
+                required_target_count=combined_count,
+                preconditions_provenance=tuple(prior.preconditions_provenance + group.preconditions_provenance),
+            )
+            trace['groups'].append({
+                'status': 'CONSOLIDATED_EQUIVALENT_OPERATION_INSTANCES',
+                'canonical_group_id': prior.id,
+                'merged_group_id': group.id,
+                'required_target_count': combined_count,
+                'provenance': 'FM_EXPLICIT_OPERATION_PAIRINGS',
+            })
+        groups = merged_groups
         # Group pairing governs these edges, not unconstrained all-to-all checks.
         grouped_triples = {(g.tool_role, p, g.target_role) for g in groups for p in g.required_relations}
         grouped_triples |= {(g.tool_role, p, g.context_role) for g in groups for p in g.context_relations}
@@ -1345,6 +1389,9 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             'explicit_context_sets': list(doc.get('explicit_context_sets', [])),
             'explicit_role_pairings': trace['explicit_role_pairings'],
             'role_operation_consistency_audit': list(doc.get('role_operation_consistency_audit', [])),
+            'functional_constraint_interpretation': list(doc.get('functional_constraint_interpretation', [])),
+            'fm_semantic_accounting': list(doc.get('fm_semantic_accounting', [])),
+            'current_state_operation_context_roles': list(doc.get('current_state_operation_context_roles', [])),
             'task_effect_relations': [r.to_dict() for r in task_effect_relations],
             'role_type_hypotheses': {rid: hypothesis.to_dict() for rid, hypothesis in role_hypotheses.items()},
             'provisional_relation_constraints': trace['provisional_relation_constraints'],
