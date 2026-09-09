@@ -477,3 +477,107 @@ def interpret_operation(
         required_relations=tuple(req_rels),
         context_relations=tuple(ctx_rels),
     )
+
+
+# ---------------------------------------------------------------------------
+# Operation-induced abstract role requirements
+# ---------------------------------------------------------------------------
+# When the FM explicitly expresses a physical operation but enumerates its
+# participants imperfectly, the operation's own semantics still tell the runtime
+# which functional participants must exist.  A fastening needs an instrument, a
+# joining component and a fixed receiving target whether or not the FM named all
+# three.  Those requirements may be represented existentially -- as typed slots
+# to be resolved later against the observed scene -- but never bound here to a
+# concrete object, instance or scene category.  Search and grounding resolve
+# them; this module only states that they must exist.
+#
+# This is gated on the FM having expressed the operation.  The runtime never
+# invents an operation in order to invent its participants.
+
+ABSTRACT_ROLE_PROVENANCE: Final[str] = "OPERATION_INDUCED_ABSTRACT_ROLE_REQUIREMENT"
+
+
+@dataclass(frozen=True)
+class AbstractRoleRequirement:
+    """An existential functional participant implied by an expressed operation."""
+
+    slot: str
+    semantic_family: str
+    candidate_canonical_roles: tuple[str, ...]
+    capability_id: str
+    provenance: str = ABSTRACT_ROLE_PROVENANCE
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "slot": self.slot,
+            "semantic_family": self.semantic_family,
+            "candidate_canonical_roles": list(self.candidate_canonical_roles),
+            "capability_id": self.capability_id,
+            "provenance": self.provenance,
+        }
+
+
+def _dominant_role_family(domain: str, roles: tuple[str, ...]) -> str:
+    """Most common declared family among a capability slot's admissible roles."""
+    from .semantic_typing import canonical_role_family
+    counts: dict[str, int] = {}
+    for role in roles:
+        family = canonical_role_family(domain, role)
+        if family != "OTHER":
+            counts[family] = counts.get(family, 0) + 1
+    if not counts:
+        return "UNSPECIFIED"
+    return max(sorted(counts), key=lambda family: counts[family])
+
+
+def abstract_slots_for_capability(capability: RobotCapability) -> tuple[AbstractRoleRequirement, ...]:
+    """The existential participants a capability requires, independent of any binding."""
+    slots: list[AbstractRoleRequirement] = []
+    for slot, allowed in (
+        ("source", capability.allowed_source_roles),
+        ("target", capability.allowed_target_roles),
+        ("anchor", capability.allowed_anchor_roles),
+    ):
+        if not allowed:
+            continue
+        slots.append(AbstractRoleRequirement(
+            slot=slot,
+            semantic_family=_dominant_role_family(capability.domain, allowed),
+            candidate_canonical_roles=tuple(allowed),
+            capability_id=capability.capability_id,
+        ))
+    return tuple(slots)
+
+
+def abstract_slots_for_operation(
+    domain: str,
+    raw_phrase: str,
+) -> tuple[AbstractRoleRequirement, ...]:
+    """Existential participants implied by an operation the FM actually expressed.
+
+    Returns an empty tuple when the phrase supports no capability, so a
+    non-physical directive or an unrecognised operation induces nothing.  When
+    several capabilities match, only requirements common to all of them are
+    returned, since anything else would presuppose a choice not yet justified.
+    """
+    capabilities = extract_operation_semantic_candidates(domain, raw_phrase)
+    if not capabilities:
+        return ()
+    per_capability = [abstract_slots_for_capability(cap) for cap in capabilities]
+    if len(per_capability) == 1:
+        return per_capability[0]
+    shared_slots = set.intersection(*({s.slot for s in slots} for slots in per_capability))
+    merged: list[AbstractRoleRequirement] = []
+    for slot in ("source", "target", "anchor"):
+        if slot not in shared_slots:
+            continue
+        entries = [s for slots in per_capability for s in slots if s.slot == slot]
+        families = {s.semantic_family for s in entries}
+        merged.append(AbstractRoleRequirement(
+            slot=slot,
+            semantic_family=next(iter(families)) if len(families) == 1 else "UNSPECIFIED",
+            candidate_canonical_roles=tuple(dict.fromkeys(
+                role for s in entries for role in s.candidate_canonical_roles)),
+            capability_id="|".join(sorted({s.capability_id for s in entries})),
+        ))
+    return tuple(merged)
