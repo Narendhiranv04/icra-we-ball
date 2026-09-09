@@ -241,6 +241,43 @@ class RoleTypeHypothesis:
 
 
 @dataclass(frozen=True)
+class ProvisionalRelationConstraint:
+    """FM relation whose canonical endpoint types are resolved during grounding."""
+
+    raw_subject_role: str
+    raw_object_role: str
+    subject_node: str
+    object_node: str
+    semantic_candidates: tuple[dict[str, Any], ...]
+    allowed_canonical_role_pairs: tuple[tuple[str, str, str, str], ...]
+    expected: bool = True
+    provenance: str = "FM_EXPLICIT_SEMANTIC"
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ProvisionalOperationConstraint:
+    """FM operation with a finite capability/endpoint-type interpretation set."""
+
+    raw_operation_id: str
+    raw_source_role: str
+    raw_target_role: str
+    raw_anchor_role: str | None
+    source_node: str
+    target_node: str
+    anchor_node: str | None
+    capability_candidates: tuple[dict[str, Any], ...]
+    required_count: int
+    reuse_policy: str
+    provenance: str = "FM_EXPLICIT_OPERATION"
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class OperationGroup:
     """Structure for repeated / multi-target tool operations (e.g. Kitchen, Living Room)."""
 
@@ -295,6 +332,8 @@ class FunctionalRequirementGraph:
     task_causal_relations: tuple[FunctionalRelation, ...] = ()
     task_effect_relations: tuple[TaskEffectRelation, ...] = ()
     operation_groups: tuple[OperationGroup, ...] = ()
+    provisional_relation_constraints: tuple[ProvisionalRelationConstraint, ...] = ()
+    provisional_operation_constraints: tuple[ProvisionalOperationConstraint, ...] = ()
     cross_group_reuse_allowed: bool = True
     detector_vocabulary: tuple[str, ...] = ()
     candidate_regions: tuple[str, ...] = ()
@@ -442,6 +481,8 @@ class FunctionalRequirementGraph:
             "task_causal_relations": [r.to_dict() for r in self.task_causal_relations],
             "task_effect_relations": [r.to_dict() for r in self.task_effect_relations],
             "operation_groups": [g.to_dict() for g in self.operation_groups],
+            "provisional_relation_constraints": [r.to_dict() for r in self.provisional_relation_constraints],
+            "provisional_operation_constraints": [o.to_dict() for o in self.provisional_operation_constraints],
             "cross_group_reuse_allowed": self.cross_group_reuse_allowed,
             "detector_vocabulary": list(self.detector_vocabulary),
             "candidate_regions": list(self.candidate_regions),
@@ -481,6 +522,14 @@ class FunctionalRequirementGraph:
             OperationGroup.from_dict(g)
             for g in data.get("operation_groups", ())
         )
+        provisional_relation_constraints = tuple(
+            ProvisionalRelationConstraint(**r)
+            for r in data.get("provisional_relation_constraints", ())
+        )
+        provisional_operation_constraints = tuple(
+            ProvisionalOperationConstraint(**o)
+            for o in data.get("provisional_operation_constraints", ())
+        )
         graph = cls(
             domain=str(data["domain"]),
             task_instruction=str(data["task_instruction"]),
@@ -489,6 +538,8 @@ class FunctionalRequirementGraph:
             task_causal_relations=task_causal_relations,
             task_effect_relations=task_effect_relations,
             operation_groups=operation_groups,
+            provisional_relation_constraints=provisional_relation_constraints,
+            provisional_operation_constraints=provisional_operation_constraints,
             cross_group_reuse_allowed=bool(data.get("cross_group_reuse_allowed", True)),
             detector_vocabulary=tuple(map(str, data.get("detector_vocabulary", ()))),
             candidate_regions=tuple(map(str, data.get("candidate_regions", ()))),
@@ -516,6 +567,8 @@ class GraphGroundingResult:
     unresolved_constraints: tuple[str, ...] = ()
     evidence: dict[str, Any] = field(default_factory=dict)
     failure_kind: str | None = None
+    resolved_role_types: dict[str, str] = field(default_factory=dict)
+    resolved_graph: dict[str, Any] | None = None
 
     # Backward compatibility properties
     @property
@@ -546,6 +599,8 @@ class GraphGroundingResult:
             "unresolved_constraints": list(self.unresolved_constraints),
             "evidence": self.evidence,
             "failure_kind": self.failure_kind,
+            "resolved_role_types": self.resolved_role_types,
+            "resolved_graph": self.resolved_graph,
         }
 
     @classmethod
@@ -560,6 +615,8 @@ class GraphGroundingResult:
             unresolved_constraints=tuple(map(str, data.get("unresolved_constraints", ()))),
             evidence=dict(data.get("evidence", {})),
             failure_kind=str(data["failure_kind"]) if data.get("failure_kind") else None,
+            resolved_role_types=dict(data.get("resolved_role_types", {})),
+            resolved_graph=dict(data["resolved_graph"]) if data.get("resolved_graph") else None,
         )
 
 

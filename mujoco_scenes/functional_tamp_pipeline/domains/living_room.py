@@ -462,6 +462,9 @@ def run_to_plan(
             ).category,
         )
 
+    from ..grounding import resolved_functional_graph
+    planning_specification = resolved_functional_graph(specification, ground_result)
+
     # Sync canonical assignment phi into planner input using exact operation_bindings
     personal_bindings = (
         ground_result.operation_bindings.get("personal_support_group")
@@ -575,9 +578,9 @@ def run_to_plan(
 
     if mode == "vlm":
         pred_pairs: dict[str, set[frozenset[str]]] = {}
-        for r in specification.relations:
+        for r in planning_specification.relations:
             pred_pairs.setdefault(r.predicate, set()).add(frozenset([r.subject_role, r.object_role]))
-        for group in specification.operation_groups:
+        for group in planning_specification.operation_groups:
             for p in group.required_relations:
                 pred_pairs.setdefault(p, set()).add(frozenset([group.tool_role, group.target_role]))
             if group.context_role:
@@ -666,7 +669,7 @@ def run_to_plan(
     )
     from ..audit import audit_plan_grounding
     plan_audit = audit_plan_grounding(
-        specification, graph_o, ground_result, list(actions), home_region="staging_tray"
+        planning_specification, graph_o, ground_result, list(actions), home_region="staging_tray"
     )
     (output_dir / "plan_grounding_audit.json").write_text(
         json.dumps(plan_audit, indent=2, sort_keys=True) + "\n",
@@ -674,7 +677,7 @@ def run_to_plan(
     )
     is_partial = planning.get("is_partial", False)
     is_full_plan = complete_planning_contract(
-        specification, ground_result,
+        planning_specification, ground_result,
         {"is_partial": is_partial},
         {"status": "VALID" if planning.get("status") == "SUCCESS" else "INVALID",
          "goal_status": planning.get("goal_status")},

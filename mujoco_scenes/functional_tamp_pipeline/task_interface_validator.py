@@ -84,6 +84,14 @@ def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
         elif name in selectable_roles:
             # Selectable functional role
             pass
+        elif (
+            name.startswith("fm_role__")
+            and node.canonical_role_candidates
+            and set(node.canonical_role_candidates).issubset(selectable_roles | fixed_anchors)
+        ):
+            # First-class provisional FM role. Ownership is the finite
+            # compiler-produced type domain; G_O must resolve it before A*.
+            pass
         else:
             raise MalformedVLMSpecificationError(
                 f"Unknown or unauthorized role {name!r} for domain {graph.domain!r}"

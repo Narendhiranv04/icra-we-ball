@@ -7,6 +7,7 @@ from mujoco_scenes.functional_tamp_pipeline.robot_capability_registry import (
     extract_operation_semantic_candidates,
 )
 from mujoco_scenes.functional_tamp_pipeline.semantic_compiler import (
+    compile_candidate_graph,
     resolve_role_type_hypotheses,
 )
 
@@ -67,6 +68,22 @@ def test_relation_only_ambiguity_is_retained_not_arbitrarily_selected():
     hypothesis = _resolved("kitchen", doc, "tool")
     assert hypothesis.canonical_role_candidates == ("coffee_stirrer", "soup_eating_utensil")
     assert hypothesis.status == "AMBIGUOUS_ROLE_TYPE"
+
+
+def test_finite_ambiguity_compiles_as_first_class_grounding_constraint():
+    doc = _doc(
+        [_role("tool", "OBJECT", "elongated preparation implement"),
+         _role("vessel", "OBJECT", "container")],
+        [{"subject_role": "tool", "relation": "fits inside container",
+          "object_role": "vessel", "required": True}],
+    )
+    doc.update(status="SUPPORTED", task_summary="use implement",
+               inspectable_regions=[], inspection_order=[])
+    graph = compile_candidate_graph("kitchen", "use implement", doc)
+    assert graph.metadata["canonicalization_status"] == "FULL"
+    assert graph.online_executable_contract_complete is True
+    assert len(graph.provisional_relation_constraints) == 1
+    assert graph.provisional_relation_constraints[0].allowed_canonical_role_pairs
 
 
 def test_operation_disambiguates_relation_hypothesis():

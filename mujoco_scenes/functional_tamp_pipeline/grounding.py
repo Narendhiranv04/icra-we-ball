@@ -14,6 +14,7 @@ from .models import (
     NumericConstraint,
     OperationGroup,
 )
+from . import role_semantic_ontology as semantic_ontology
 from .scene_graph import ObservedNode, ObservedRelation, ObservedSceneGraph
 
 
@@ -53,6 +54,15 @@ def project_functional_graph_to_roles(
             if group.tool_role in retained
             and group.target_role in retained
             and (group.context_role is None or group.context_role in retained)
+        ),
+        provisional_relation_constraints=tuple(
+            constraint for constraint in graph_f.provisional_relation_constraints
+            if constraint.subject_node in retained and constraint.object_node in retained
+        ),
+        provisional_operation_constraints=tuple(
+            constraint for constraint in graph_f.provisional_operation_constraints
+            if constraint.source_node in retained and constraint.target_node in retained
+            and (constraint.anchor_node is None or constraint.anchor_node in retained)
         ),
     )
     projected.validate()
@@ -532,6 +542,165 @@ def _evaluate_operation_group(
             return "FALSE", diagnostics, []
 
 
+def _materialize_type_hypothesis(
+    graph_f: FunctionalRequirementGraph,
+    selected_types: dict[str, str],
+) -> FunctionalRequirementGraph | None:
+    """Materialize one finite tau hypothesis as a conventional canonical G_F."""
+    rename = {name: selected_types.get(name, name) for name in graph_f.nodes}
+    if len(set(rename.values())) != len(rename):
+        return None
+    nodes = {}
+    for old_name, role in graph_f.nodes.items():
+        new_name = rename[old_name]
+        nodes[new_name] = replace(
+            role,
+            name=new_name,
+            semantic_categories=semantic_ontology.get_system_role_semantic_categories(
+                graph_f.domain, new_name
+            ),
+            canonical_role_candidates=(new_name,),
+            role_resolution_status=(
+                "SCENE_RELATION_RESOLVED"
+                if len(role.canonical_role_candidates) > 1 else role.role_resolution_status
+            ),
+        )
+
+    relations = [replace(r, subject_role=rename[r.subject_role], object_role=rename[r.object_role])
+                 for r in graph_f.relations]
+    causal = [replace(r, subject_role=rename[r.subject_role], object_role=rename[r.object_role])
+              for r in graph_f.task_causal_relations]
+    groups = [replace(g, tool_role=rename[g.tool_role], target_role=rename[g.target_role],
+                      context_role=rename[g.context_role] if g.context_role else None,
+                      physical_preconditions=tuple(
+                          (rename.get(s, s), p, rename.get(o, o))
+                          for s, p, o in g.physical_preconditions
+                      )) for g in graph_f.operation_groups]
+
+    for constraint in graph_f.provisional_relation_constraints:
+        s_type = rename[constraint.subject_node]
+        o_type = rename[constraint.object_node]
+        viable = [row for row in constraint.allowed_canonical_role_pairs
+                  if row[0] == s_type and row[1] == o_type]
+        if not viable:
+            return None
+        # Physical alternatives are resolved by G_O; causal alternatives only
+        # constrain tau and never claim geometric evidence.
+        physical = sorted(row for row in viable if row[3] == "PHYSICAL_VERIFIER")
+        chosen = physical[0] if physical else sorted(viable)[0]
+        rel = FunctionalRelation(
+            subject_role=s_type, predicate=chosen[2], object_role=o_type,
+            expected=constraint.expected, provenance=constraint.provenance,
+            category=chosen[3],
+        )
+        (relations if chosen[3] == "PHYSICAL_VERIFIER" else causal).append(rel)
+
+    for constraint in graph_f.provisional_operation_constraints:
+        s_type = rename[constraint.source_node]
+        t_type = rename[constraint.target_node]
+        a_type = rename[constraint.anchor_node] if constraint.anchor_node else None
+        viable = []
+        for cap in constraint.capability_candidates:
+            orientations = [(s_type, t_type)]
+            if graph_f.domain == "living_room":
+                orientations.append((t_type, s_type))
+            for effective_source, effective_target in orientations:
+                if (effective_source in cap["allowed_source_roles"]
+                        and effective_target in cap["allowed_target_roles"]
+                        and (a_type is None or a_type in cap["allowed_anchor_roles"])):
+                    viable.append((cap, effective_source, effective_target))
+        if len(viable) != 1:
+            return None
+        cap, source_type, target_type = viable[0]
+        endpoint = {"source": source_type, "target": target_type, "anchor": a_type}
+        templates = tuple(
+            (endpoint[s], predicate, endpoint[o])
+            for s, predicate, o in cap["required_relation_templates"]
+            if endpoint.get(s) and endpoint.get(o)
+        )
+        groups.append(OperationGroup(
+            id=constraint.raw_operation_id,
+            function=cap["planner_operation"], tool_role=source_type,
+            target_role=target_type, context_role=a_type,
+            required_target_count=constraint.required_count,
+            usage_policy=constraint.reuse_policy,
+            capability_id=cap["capability_id"], physical_preconditions=templates,
+            preconditions_provenance=({"source": "ROBOT_CAPABILITY_REGISTRY",
+                                       "capability_id": cap["capability_id"]},),
+        ))
+
+    return replace(
+        graph_f, nodes=nodes, relations=tuple(relations),
+        task_causal_relations=tuple(causal), operation_groups=tuple(groups),
+        provisional_relation_constraints=(), provisional_operation_constraints=(),
+    )
+
+
+def _ground_provisional_graph(
+    graph_f: FunctionalRequirementGraph,
+    graph_o: ObservedSceneGraph,
+    domain_context: dict[str, Any] | None,
+) -> GraphGroundingResult:
+    provisional = [
+        (name, tuple(role.canonical_role_candidates))
+        for name, role in sorted(graph_f.nodes.items())
+        if len(role.canonical_role_candidates) > 1
+    ]
+    candidates = []
+    failures = []
+    for types in product(*[domain for _, domain in provisional]):
+        tau_nodes = dict(zip((name for name, _ in provisional), types))
+        resolved = _materialize_type_hypothesis(graph_f, tau_nodes)
+        if resolved is None:
+            continue
+        result = ground_graph(resolved, graph_o, domain_context)
+        raw_tau = {
+            role.raw_role_id or old_name: rename_type
+            for old_name, role in graph_f.nodes.items()
+            for rename_type in [tau_nodes.get(old_name, old_name)]
+        }
+        if result.complete:
+            candidates.append((raw_tau, resolved, result))
+        else:
+            failures.append(result)
+    distinct_tau = {tuple(sorted(tau.items())) for tau, _, _ in candidates}
+    if len(distinct_tau) > 1:
+        return GraphGroundingResult(
+            status="INFEASIBLE" if (domain_context or {}).get("search_exhausted", True) else "INCOMPLETE",
+            complete=False,
+            unresolved_constraints=("AMBIGUOUS_FUNCTIONAL_ASSIGNMENT",),
+            evidence={"valid_type_assignments": [dict(item) for item in sorted(distinct_tau)]},
+            failure_kind="FUNCTIONAL_ASSIGNMENT_FAILURE",
+        )
+    if candidates:
+        tau, resolved, result = candidates[0]
+        evidence = dict(result.evidence)
+        evidence["type_resolution_provenance"] = "G_O_RELATION_AND_OPERATION_CONSTRAINTS"
+        return replace(result, resolved_role_types=tau, resolved_graph=resolved.to_dict(), evidence=evidence)
+    discovery_only = bool(failures) and all(
+        failure.failure_kind == "OBJECT_DISCOVERY_FAILURE" for failure in failures
+    )
+    return GraphGroundingResult(
+        status="INFEASIBLE" if (domain_context or {}).get("search_exhausted", True) else "INCOMPLETE",
+        complete=False,
+        unresolved_constraints=("NO_VALID_TYPE_OBJECT_ASSIGNMENT",),
+        evidence={"type_hypotheses_evaluated": len(failures)},
+        failure_kind="OBJECT_DISCOVERY_FAILURE" if discovery_only else "FUNCTIONAL_ASSIGNMENT_FAILURE",
+    )
+
+
+def resolved_functional_graph(
+    graph_f: FunctionalRequirementGraph,
+    grounding: GraphGroundingResult,
+) -> FunctionalRequirementGraph:
+    """Return the fully materialized G_F* selected by grounding, if present."""
+    if grounding.resolved_graph is None:
+        return graph_f
+    resolved = FunctionalRequirementGraph.from_dict(grounding.resolved_graph)
+    resolved.validate()
+    return resolved
+
+
 def ground_graph(
     graph_f: FunctionalRequirementGraph,
     graph_o: ObservedSceneGraph,
@@ -539,6 +708,8 @@ def ground_graph(
 ) -> GraphGroundingResult:
     """Perform constraint-aware graph grounding phi : G_F -> G_O."""
     graph_f.validate()
+    if any(len(role.canonical_role_candidates) > 1 for role in graph_f.nodes.values()):
+        return _ground_provisional_graph(graph_f, graph_o, domain_context)
     context = domain_context or {}
     roles = graph_f.nodes
     search_exhausted = bool(context.get("search_exhausted", True))

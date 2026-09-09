@@ -14,6 +14,8 @@ from .models import (
     FunctionalRole,
     FunctionalRelation,
     OperationGroup,
+    ProvisionalOperationConstraint,
+    ProvisionalRelationConstraint,
     RoleTypeHypothesis,
     TaskEffectRelation,
 )
@@ -222,7 +224,7 @@ def _explicit_incompatible_role_claim(domain: str, role: dict[str, Any], candida
     """Detect a clear function claim outside the candidate role family."""
     text = re.sub(r"[_-]+", " ", f"{role.get('function', '')} {role.get('description', '')}").lower()
     if domain == "living_room" and re.search(r"\b(television|tv screen|display screen|monitor)\b", text):
-        return bool(candidates.intersection({"REMOTE", "CUP_SAUCER_SET", "PERSONAL_CUP_SAUCER_REGION", "SHARED_REMOTE_REGION"}))
+        return bool(candidates)
     return False
 
 
@@ -350,7 +352,7 @@ def resolve_role_type_hypotheses(domain: str, document: dict[str, Any]) -> dict[
             changed |= before_s != candidates[raw_s] or before_o != candidates[raw_o]
 
     for rid, role in roles_by_id.items():
-        if direct[rid] is None and constrained_by[rid] and _explicit_incompatible_role_claim(domain, role, candidates[rid]):
+        if direct[rid] is None and _explicit_incompatible_role_claim(domain, role, candidates[rid]):
             contradictions.add(rid)
 
     result: dict[str, RoleTypeHypothesis] = {}
@@ -408,9 +410,6 @@ def check_required_contract_complete(
     if trace.get("unresolved_roles"):
         missing.append(f"Unresolved roles: {trace['unresolved_roles']}")
 
-    if trace.get("provisional_roles"):
-        missing.append(f"Provisional role hypotheses require grounding resolution: {trace['provisional_roles']}")
-
     if trace.get("disabled_groups"):
         missing.append(f"Disabled/unsupported operations: {trace['disabled_groups']}")
 
@@ -455,7 +454,8 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                                 unresolved_roles=[], merged_roles=[], disambiguated_roles=[], disabled_groups=[],
                                 unresolved_required_relations=[], unresolved_required_operations=[],
                                 task_causal_relations=[], role_operation_reconciliations=[],
-                                provisional_roles=[], provisional_relation_constraints=[])
+                                provisional_roles=[], provisional_relation_constraints=[],
+                                provisional_operation_constraints=[])
     nodes = {}
     id_map = {}
     planner_context_id_map = {}
@@ -487,7 +487,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             name, rule = direct_name, direct_rule
         elif hypothesis.status == 'AMBIGUOUS_ROLE_TYPE' and hypothesis.canonical_role_candidates:
             name = 'fm_role__' + re.sub(r'[^a-zA-Z0-9_]+', '_', rid).strip('_')
-            rule = 'AMBIGUOUS_ROLE_TYPE'
+            rule = hypothesis.status
         is_provisional = hypothesis.status == 'AMBIGUOUS_ROLE_TYPE' and bool(hypothesis.canonical_role_candidates)
         if name not in allowed and not is_provisional:
             if name in planner_constants:
@@ -547,10 +547,10 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 canonical_role_candidates=role_candidates,
                 role_resolution_status=hypothesis.status,
                 role_resolution_provenance=hypothesis.evidence)
-        role_status = 'PROVISIONAL_ROLE_HYPOTHESIS' if hypothesis.status == 'AMBIGUOUS_ROLE_TYPE' else 'CANONICAL_EXECUTABLE_SEMANTIC'
+        role_status = 'PROVISIONAL_ROLE_HYPOTHESIS' if is_provisional else 'CANONICAL_EXECUTABLE_SEMANTIC'
         trace['roles'].append({'raw_id': rid, 'canonical_role': name, 'canonical_role_candidates': list(hypothesis.canonical_role_candidates),
                                'rule': rule, 'status': role_status, 'resolution_status': hypothesis.status})
-        if hypothesis.status == 'AMBIGUOUS_ROLE_TYPE':
+        if is_provisional:
             trace['provisional_roles'].append(hypothesis.to_dict())
         if rule == 'CAUSAL_SOURCE_PROVIDER':
             trace['disambiguated_roles'].append({'code': 'RAW_ROLE_DISAMBIGUATED', 'raw_id': rid, 'canonical_role': name, 'evidence': sorted(causal_position(role, doc))})
@@ -585,6 +585,8 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     relations = []
     task_causal_relations = []
     task_effect_relations = []
+    provisional_relations: list[ProvisionalRelationConstraint] = []
+    provisional_operations: list[ProvisionalOperationConstraint] = []
 
     def add_relation(raw_subject: str, phrase: str, raw_target: str, *, grouped=False, expected=True) -> str | None:
         # Extract explicit role IDs if embedded in phrase (e.g. "role_3 manipulates role_2")
@@ -620,14 +622,38 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
 
             canon_s = id_map[raw_subject]
             canon_o = id_map[raw_target]
-            if nodes[canon_s].role_resolution_status == 'AMBIGUOUS_ROLE_TYPE' or nodes[canon_o].role_resolution_status == 'AMBIGUOUS_ROLE_TYPE':
+            if len(nodes[canon_s].canonical_role_candidates) > 1 or len(nodes[canon_o].canonical_role_candidates) > 1:
                 from .relation_interpreter import extract_relation_semantic_candidates
+                from .predicate_registry import get_predicate_signature
+                semantic_candidates = extract_relation_semantic_candidates(domain, phrase)
+                allowed_pairs = []
+                for item in semantic_candidates:
+                    if item.category == 'PHYSICAL_VERIFIER':
+                        signature = get_predicate_signature(domain, item.predicate_name)
+                        if signature:
+                            pairs = [(s, o) for s in signature.allowed_subject_roles for o in signature.allowed_object_roles]
+                            if item.direction == 'REVERSE':
+                                pairs = [(o, s) for s, o in pairs]
+                            allowed_pairs.extend((s, o, item.predicate_name, item.category) for s, o in pairs)
+                    elif item.category == 'TASK_CAUSAL_SEMANTICS':
+                        pairs = list(_causal_role_pairs(domain, item.predicate_name))
+                        if item.direction == 'REVERSE':
+                            pairs = [(o, s) for s, o in pairs]
+                        allowed_pairs.extend((s, o, item.predicate_name, item.category) for s, o in pairs)
                 evidence.update(
                     status='PROVISIONAL_RELATION_CONSTRAINT',
-                    semantic_candidates=[item.__dict__ for item in extract_relation_semantic_candidates(domain, phrase)],
+                    semantic_candidates=[item.__dict__ for item in semantic_candidates],
                 )
+                constraint = ProvisionalRelationConstraint(
+                    raw_subject_role=raw_subject, raw_object_role=raw_target,
+                    subject_node=canon_s, object_node=canon_o,
+                    semantic_candidates=tuple(item.__dict__ for item in semantic_candidates),
+                    allowed_canonical_role_pairs=tuple(sorted(set(allowed_pairs))),
+                    expected=expected,
+                )
+                provisional_relations.append(constraint)
                 trace['relations'].append(evidence)
-                trace['provisional_relation_constraints'].append(evidence)
+                trace['provisional_relation_constraints'].append(constraint.to_dict())
                 return None
             s_kind = nodes[canon_s].entity_kind
             o_kind = nodes[canon_o].entity_kind
@@ -811,15 +837,40 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             continue
 
         if (
-            nodes[id_map[tool_raw]].role_resolution_status == 'AMBIGUOUS_ROLE_TYPE'
-            or nodes[id_map[target_raw]].role_resolution_status == 'AMBIGUOUS_ROLE_TYPE'
+            len(nodes[id_map[tool_raw]].canonical_role_candidates) > 1
+            or len(nodes[id_map[target_raw]].canonical_role_candidates) > 1
         ):
             from .robot_capability_registry import extract_operation_semantic_candidates
+            capabilities = extract_operation_semantic_candidates(domain, raw_op)
+            capability_records = []
+            for capability in capabilities:
+                capability_records.append({
+                    'capability_id': capability.capability_id,
+                    'planner_operation': capability.planner_operation,
+                    'allowed_source_roles': list(capability.allowed_source_roles),
+                    'allowed_target_roles': list(capability.allowed_target_roles),
+                    'allowed_anchor_roles': list(capability.allowed_anchor_roles),
+                    'required_relation_templates': [list(row) for row in capability.required_relation_templates],
+                })
+            count = group.get('required_target_count', group.get('operation_count', 1))
+            policy = group.get('usage_policy') or group.get('reuse_policy') or 'DEDICATED_PER_TARGET'
+            if policy == 'REUSABLE_ACROSS_TARGETS':
+                policy = 'SEQUENTIAL_REUSE_ALLOWED'
+            constraint = ProvisionalOperationConstraint(
+                raw_operation_id=group.get('id', raw_op),
+                raw_source_role=tool_raw, raw_target_role=target_raw,
+                raw_anchor_role=ctx_raw, source_node=id_map[tool_raw],
+                target_node=id_map[target_raw], anchor_node=id_map.get(ctx_raw) if ctx_raw else None,
+                capability_candidates=tuple(capability_records), required_count=count,
+                reuse_policy=policy,
+            )
+            provisional_operations.append(constraint)
             trace['groups'].append({
                 'raw_group': group,
                 'status': 'PROVISIONAL_OPERATION_CONSTRAINT',
-                'capability_candidates': [c.capability_id for c in extract_operation_semantic_candidates(domain, raw_op)],
+                'capability_candidates': [c.capability_id for c in capabilities],
             })
+            trace['provisional_operation_constraints'].append(constraint.to_dict())
             continue
 
         tool_role_id = id_map[tool_raw]
@@ -1087,7 +1138,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                     region_ids[proposal.get('id')] = mapped
         ranking = list(dict.fromkeys(region_ids[r] for r in doc['inspection_order'] if isinstance(r, str) and r in region_ids))
         ranking.extend(r for r in proposed if r not in ranking)
-    partial = sanitized.semantically_incomplete or bool(unverified_required or unresolved or trace['unresolved_roles'] or trace['disabled_groups'] or trace['provisional_roles'])
+    partial = sanitized.semantically_incomplete or bool(unverified_required or unresolved or trace['unresolved_roles'] or trace['disabled_groups'])
     contract_complete, contract_missing_reasons = check_required_contract_complete(
         domain, nodes, relations, groups, trace, sanitized, unresolved
     )
@@ -1100,6 +1151,8 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         task_causal_relations=tuple(task_causal_relations),
         task_effect_relations=tuple(task_effect_relations),
         operation_groups=tuple(groups), source='VLM_CANONICAL_G_F', candidate_regions=tuple(proposed), region_ranking=tuple(ranking),
+        provisional_relation_constraints=tuple(provisional_relations),
+        provisional_operation_constraints=tuple(provisional_operations),
         detector_vocabulary=tuple(dict.fromkeys([c for r in doc['functional_roles'] for c in r['candidate_categories']] + [c.replace('_', ' ') for n in nodes.values() if n.entity_kind == 'OBJECT' for c in n.semantic_categories])),
         cross_group_reuse_allowed=doc.get('cross_group_reuse_allowed', domain == 'workshop' and not groups) is True,
         metadata={'role_semantic_ontology_version': ontology.PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION,

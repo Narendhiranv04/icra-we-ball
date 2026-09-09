@@ -878,9 +878,12 @@ def run_to_plan(
             ).category,
         )
 
+    from ..grounding import resolved_functional_graph
+    planning_specification = resolved_functional_graph(specification, ground_result)
+
     # Compile observed symbolic state from graph grounding assignment
     # Build compatibility witness from canonical graph grounding result & actual G_O relations
-    witness_payload = build_canonical_kitchen_witness(specification, ground_result, graph_o)
+    witness_payload = build_canonical_kitchen_witness(planning_specification, ground_result, graph_o)
 
     (session.run_dir / "latest_witness.json").write_text(
         json.dumps(witness_payload, indent=2, sort_keys=True) + "\n",
@@ -897,7 +900,7 @@ def run_to_plan(
             planned = plan_with_common_astar(
                 KitchenPlanningCompiler(), assignments,
                 {
-                    "specification": specification,
+                    "specification": planning_specification,
                     "graph_o": graph_o,
                     "ground_result": ground_result,
                     "operation_bindings": getattr(ground_result, "operation_bindings", {}),
@@ -926,7 +929,7 @@ def run_to_plan(
         from ..audit import audit_plan_grounding
 
         audit = audit_plan_grounding(
-            specification, graph_o, ground_result, planned.actions, home_region=contract.get("symbolic_task", {}).get("home_region", "countertop")
+            planning_specification, graph_o, ground_result, planned.actions, home_region=contract.get("symbolic_task", {}).get("home_region", "countertop")
         )
         (output_dir / "plan_grounding_audit.json").write_text(
             json.dumps(audit, indent=2, sort_keys=True) + "\n",
@@ -934,7 +937,7 @@ def run_to_plan(
         )
         is_partial = planned.search.statistics.get("is_partial", False)
         is_full_plan = complete_planning_contract(
-            specification, ground_result, planned.search.statistics, planned.validation
+            planning_specification, ground_result, planned.search.statistics, planned.validation
         )
         if is_full_plan:
             status = "ACTION_SEQUENCE_READY"

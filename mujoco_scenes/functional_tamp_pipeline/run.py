@@ -735,6 +735,8 @@ def _run_pipeline_impl(
     print("[5/5] A* planning", flush=True)
     _emit_event(guarded_observer, "stage_changed", {"stage": "planning"})
     try:
+        from .grounding import resolved_functional_graph
+        planning_specification = resolved_functional_graph(state.specification, satisfaction)
         from .errors import PlanningCompilationError
         from mujoco_scenes.symbolic_planning_core import NoSymbolicPlan
         planned = plan_with_common_astar(
@@ -742,7 +744,7 @@ def _run_pipeline_impl(
             satisfaction.assignment,
             {
                 **adapter.planning_context(),
-                "specification": state.specification,
+                "specification": planning_specification,
                 "graph_o": adapter.graph,
                 "ground_result": satisfaction,
                 "operation_bindings": getattr(satisfaction, "operation_bindings", {}),
@@ -757,7 +759,7 @@ def _run_pipeline_impl(
         })
         from .audit import audit_plan_grounding
         plan_audit = audit_plan_grounding(
-            state.specification, adapter.graph, satisfaction, planned.actions, home_region=SURFACE
+            planning_specification, adapter.graph, satisfaction, planned.actions, home_region=SURFACE
         )
         _write_json(state.run_dir / "plan_grounding_audit.json", plan_audit)
         _emit_event(guarded_observer, "plan_ready", {
@@ -773,7 +775,7 @@ def _run_pipeline_impl(
 
         is_partial = planned.search.statistics.get("is_partial", False)
         is_full_plan = complete_planning_contract(
-            state.specification, satisfaction, planned.search.statistics, planned.validation
+            planning_specification, satisfaction, planned.search.statistics, planned.validation
         )
         if is_full_plan:
             status = "ACTION_SEQUENCE_READY"

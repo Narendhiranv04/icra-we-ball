@@ -626,6 +626,8 @@ class WorkshopDomainAdapter:
             unsatisfied_relations=(),
             unresolved_constraints=(),
             evidence={"grounding": ground_result.to_dict(), "stage": self._stage},
+            resolved_role_types=ground_result.resolved_role_types,
+            resolved_graph=ground_result.resolved_graph,
         )
 
     @staticmethod
