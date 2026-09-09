@@ -99,6 +99,27 @@ def test_semantic_unknown_type_is_resolved_by_true_relation():
     assert provenance["grounding_mode"] == "RELATIONALLY_VERIFIED_GROUNDING"
 
 
+def test_multiple_predicate_interpretations_are_resolved_by_go_not_sort_order():
+    graph = _graph()
+    constraint = ProvisionalRelationConstraint(
+        raw_subject_role="implement", raw_object_role="vessel",
+        subject_node="fm_role__implement", object_node="fm_role__vessel",
+        semantic_candidates=(),
+        allowed_canonical_role_pairs=(
+            ("coffee_stirrer", "coffee_container", "INSERTABLE_IN", "PHYSICAL_VERIFIER"),
+            ("coffee_stirrer", "coffee_container", "REACHES_BOTTOM", "PHYSICAL_VERIFIER"),
+            ("soup_eating_utensil", "soup_container", "INSERTABLE_IN", "PHYSICAL_VERIFIER"),
+        ),
+    )
+    graph = FunctionalRequirementGraph(
+        domain=graph.domain, task_instruction=graph.task_instruction,
+        nodes=graph.nodes, provisional_relation_constraints=(constraint,),
+    )
+    result = ground_graph(graph, _scene("REACHES_BOTTOM"))
+    assert result.complete
+    assert result.resolved_graph["relations"][0]["predicate"] == "REACHES_BOTTOM"
+
+
 def test_provider_accepts_complete_provisional_graph(monkeypatch):
     graph = _graph()
     monkeypatch.setattr(

@@ -545,6 +545,7 @@ def _evaluate_operation_group(
 def _materialize_type_hypothesis(
     graph_f: FunctionalRequirementGraph,
     selected_types: dict[str, str],
+    relation_choices: dict[int, tuple[str, str, str, str]] | None = None,
 ) -> FunctionalRequirementGraph | None:
     """Materialize one finite tau hypothesis as a conventional canonical G_F."""
     rename = {name: selected_types.get(name, name) for name in graph_f.nodes}
@@ -577,17 +578,24 @@ def _materialize_type_hypothesis(
                           for s, p, o in g.physical_preconditions
                       )) for g in graph_f.operation_groups]
 
-    for constraint in graph_f.provisional_relation_constraints:
+    relation_choices = relation_choices or {}
+    for constraint_index, constraint in enumerate(graph_f.provisional_relation_constraints):
         s_type = rename[constraint.subject_node]
         o_type = rename[constraint.object_node]
         viable = [row for row in constraint.allowed_canonical_role_pairs
                   if row[0] == s_type and row[1] == o_type]
         if not viable:
             return None
-        # Physical alternatives are resolved by G_O; causal alternatives only
-        # constrain tau and never claim geometric evidence.
-        physical = sorted(row for row in viable if row[3] == "PHYSICAL_VERIFIER")
-        chosen = physical[0] if physical else sorted(viable)[0]
+        if constraint_index in relation_choices:
+            chosen = relation_choices[constraint_index]
+            if chosen not in viable:
+                return None
+        elif len(viable) == 1:
+            chosen = viable[0]
+        else:
+            # The caller must enumerate predicate interpretations; lexical sort
+            # order is never semantic evidence.
+            return None
         rel = FunctionalRelation(
             subject_role=s_type, predicate=chosen[2], object_role=o_type,
             expected=constraint.expected, provenance=constraint.provenance,
@@ -650,30 +658,51 @@ def _ground_provisional_graph(
     failures = []
     for types in product(*[domain for _, domain in provisional]):
         tau_nodes = dict(zip((name for name, _ in provisional), types))
-        resolved = _materialize_type_hypothesis(graph_f, tau_nodes)
-        if resolved is None:
+        rename = {name: tau_nodes.get(name, name) for name in graph_f.nodes}
+        relation_options = []
+        for constraint in graph_f.provisional_relation_constraints:
+            viable = tuple(row for row in constraint.allowed_canonical_role_pairs
+                           if row[0] == rename[constraint.subject_node]
+                           and row[1] == rename[constraint.object_node])
+            relation_options.append(viable)
+        if any(not choices for choices in relation_options):
             continue
-        result = ground_graph(resolved, graph_o, domain_context)
-        raw_tau = {
-            role.raw_role_id or old_name: rename_type
-            for old_name, role in graph_f.nodes.items()
-            for rename_type in [tau_nodes.get(old_name, old_name)]
-        }
-        if result.complete:
-            candidates.append((raw_tau, resolved, result))
-        else:
-            failures.append(result)
-    distinct_tau = {tuple(sorted(tau.items())) for tau, _, _ in candidates}
-    if len(distinct_tau) > 1:
+        choice_products = product(*relation_options) if relation_options else [()]
+        for chosen_rows in choice_products:
+            choices = dict(enumerate(chosen_rows))
+            resolved = _materialize_type_hypothesis(graph_f, tau_nodes, choices)
+            if resolved is None:
+                continue
+            result = ground_graph(resolved, graph_o, domain_context)
+            raw_tau = {
+                role.raw_role_id or old_name: rename_type
+                for old_name, role in graph_f.nodes.items()
+                for rename_type in [tau_nodes.get(old_name, old_name)]
+            }
+            interpretation = tuple((row[0], row[2], row[1], row[3]) for row in chosen_rows)
+            if result.complete:
+                candidates.append((raw_tau, interpretation, resolved, result))
+            else:
+                failures.append(result)
+    distinct_interpretations = {
+        (tuple(sorted(tau.items())), interpretation)
+        for tau, interpretation, _, _ in candidates
+    }
+    if len(distinct_interpretations) > 1:
         return GraphGroundingResult(
             status="INFEASIBLE" if (domain_context or {}).get("search_exhausted", True) else "INCOMPLETE",
             complete=False,
             unresolved_constraints=("AMBIGUOUS_FUNCTIONAL_ASSIGNMENT",),
-            evidence={"valid_type_assignments": [dict(item) for item in sorted(distinct_tau)]},
+            evidence={
+                "valid_type_relation_assignments": [
+                    {"role_types": dict(tau), "relations": [list(row) for row in relations]}
+                    for tau, relations in sorted(distinct_interpretations)
+                ]
+            },
             failure_kind="FUNCTIONAL_ASSIGNMENT_FAILURE",
         )
     if candidates:
-        tau, resolved, result = candidates[0]
+        tau, _, resolved, result = candidates[0]
         evidence = dict(result.evidence)
         evidence["type_resolution_provenance"] = "G_O_RELATION_AND_OPERATION_CONSTRAINTS"
         return replace(result, resolved_role_types=tau, resolved_graph=resolved.to_dict(), evidence=evidence)
