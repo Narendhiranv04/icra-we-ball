@@ -285,7 +285,7 @@ _TASK_CAUSAL_RELATION_CUES: dict[str, tuple[str, ...]] = {
         "arranged with", "provided for", "arranged for", "placed with",
         "must accompany", "accompanied by", "provided with", "accommodates eating utensil",
         "associated for serving", "is served with", "placed adjacent to serving of",
-        "associated with serving", "associated with soup", "assigned to serve",
+        "associated with serving", "associated with servicing", "associated with soup", "assigned to serve",
     ),
     "INSTALLED_AT": (
         "installed at", "installed in", "secured at", "secured in", "fastened at", "fastened in",
@@ -296,6 +296,9 @@ _TASK_CAUSAL_RELATION_CUES: dict[str, tuple[str, ...]] = {
     "CONNECTED_TO": (
         "connects to", "connected to", "joins with", "joined with", "fastened together",
     ),
+    "SITUATED_BETWEEN": (
+        "situated between", "located between", "positioned between", "between seats",
+    ),
 }
 
 _TASK_CAUSAL_INVERSE_CUES: dict[str, tuple[str, ...]] = {
@@ -305,6 +308,7 @@ _TASK_CAUSAL_INVERSE_CUES: dict[str, tuple[str, ...]] = {
         "supplied by", "receives liquid from",
         "receives transfer from", "receiving from", "transferred from",
         "requires contents from", "receives content from",
+        "receives ingredient from", "receives food from",
     ),
     "ACTS_ON": (
         "manipulated by", "operated by", "acted on by", "stirred by", "mixed by",

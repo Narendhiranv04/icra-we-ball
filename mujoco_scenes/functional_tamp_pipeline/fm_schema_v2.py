@@ -739,12 +739,13 @@ def validate_v2_live_contract(
         from mujoco_scenes.functional_tamp_pipeline.robot_capability_registry import (
             extract_operation_semantic_candidates,
         )
-        from mujoco_scenes.functional_tamp_pipeline.semantic_compiler import (
-            resolve_role_type_hypotheses,
+        from mujoco_scenes.functional_tamp_pipeline.semantic_typing import (
+            build_role_type_hypotheses,
+            operation_participant_satisfiable,
         )
 
         canonical = convert_v2_to_canonical_document(validated)
-        hypotheses = resolve_role_type_hypotheses(domain, canonical)
+        hypotheses = build_role_type_hypotheses(domain, canonical)
         for index, operation in enumerate(operations):
             capabilities = extract_operation_semantic_candidates(
                 domain, str(operation["operation"])
@@ -752,9 +753,7 @@ def validate_v2_live_contract(
             if len(capabilities) != 1:
                 continue
             capability = capabilities[0]
-            if not capability.required_relation_templates:
-                # Planner-owned restoration/support transitions do not impose
-                # a selectable physical participant signature.
+            if operation_participant_satisfiable(domain, operation, hypotheses):
                 continue
             source_types = set(hypotheses[operation["source_role"]].canonical_role_candidates)
             target_types = set(hypotheses[operation["target_role"]].canonical_role_candidates)
@@ -769,18 +768,7 @@ def validate_v2_live_contract(
             # support while the executable capability is support -> payload.
             if domain == "living_room":
                 orientations.append((orientations[0][1], orientations[0][0]))
-            endpoint_structure_valid = any(
-                source_types.intersection(allowed_sources)
-                and target_types.intersection(allowed_targets)
-                for allowed_sources, allowed_targets in orientations
-            )
-            if operation.get("anchor_role"):
-                endpoint_structure_valid = bool(
-                    endpoint_structure_valid
-                    and anchor_types.intersection(capability.allowed_anchor_roles)
-                )
-            if not endpoint_structure_valid:
-                diagnostic = {
+            diagnostic = {
                     "source": {
                         "role_id": operation["source_role"],
                         "candidate_types": sorted(source_types),
@@ -793,13 +781,13 @@ def validate_v2_live_contract(
                         "role_id": operation.get("anchor_role"),
                         "candidate_types": sorted(anchor_types),
                     },
-                }
-                raise TaskSpecificationValidationError(
-                    "INCOMPLETE_OPERATION_PARTICIPANT_STRUCTURE: "
-                    f"operation_pairings[{index}] {operation['id']!r} expresses "
-                    f"{capability.capability_id} but declared endpoints cannot instantiate "
-                    f"its participant signature: {diagnostic}"
-                )
+            }
+            raise TaskSpecificationValidationError(
+                "FM_INTERNAL_ROLE_OPERATION_CONTRADICTION: "
+                f"operation_pairings[{index}] {operation['id']!r} expresses "
+                f"{capability.capability_id} but no interpretation of the FM endpoint "
+                f"semantics satisfies its participant signature: {diagnostic}"
+            )
 
     return validated
 

@@ -36,7 +36,7 @@ def test_live_and_replay_use_identical_normalize_validate_boundary():
 @pytest.mark.parametrize("domain,variant,reason", [
     ("kitchen", "K1", "INCONSISTENT_OPERATION_REUSE_CARDINALITY"),
     ("kitchen", "K2", "serving_surface"),
-    ("workshop", "W9", "INCOMPLETE_OPERATION_PARTICIPANT_STRUCTURE"),
+    ("workshop", "W9", "FM_INTERNAL_ROLE_OPERATION_CONTRADICTION"),
 ])
 def test_archived_invalid_contract_stops_at_task_specification(domain, variant, reason):
     with pytest.raises(VLMSpecificationError) as caught:

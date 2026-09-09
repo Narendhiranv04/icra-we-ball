@@ -152,8 +152,8 @@ CANONICAL_ROBOT_CAPABILITIES: dict[str, tuple[RobotCapability, ...]] = {
             ),
             planner_operation="PROVIDE_SOUP_EATING_UTENSIL",
             semantic_cues=(
-                "soup", "soup serving", "eating utensil", "provide utensil",
-                "place utensil", "serve soup", "spoon soup", "eat soup",
+                "eating utensil", "provide utensil", "place utensil", "serve soup",
+                "spoon soup", "eat soup",
                 "utensil for soup", "provide eating utensil for each soup bowl",
                 "provide soup utensil", "soup eating utensil", "utensil in soup",
                 "place associated utensil", "associate eating utensil with soup",

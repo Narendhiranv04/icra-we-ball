@@ -217,6 +217,10 @@ def _causal_role_pairs(domain: str, predicate: str) -> tuple[tuple[str, str], ..
             return (("driver", "fastener"),)
         if predicate in {"INSTALLED_AT", "CONNECTED_TO"}:
             return (("fastener", "repair_target"),)
+    if domain == "living_room" and predicate == "SITUATED_BETWEEN":
+        return tuple((support, seating)
+                     for support in ("PERSONAL_CUP_SAUCER_REGION", "SHARED_REMOTE_REGION")
+                     for seating in ("SEATING_POSITION", "SEATING_PAIR"))
     return ()
 
 
@@ -381,6 +385,19 @@ def resolve_role_type_hypotheses(domain: str, document: dict[str, Any]) -> dict[
             evidence=tuple(evidence[rid]),
         )
     return result
+
+
+# Keep the public compiler entry point backed by the pure hypothesis layer.
+# The legacy implementation above remains temporarily local so downstream
+# imports retain compatibility while the shared layer owns all new decisions.
+_legacy_resolve_role_type_hypotheses = resolve_role_type_hypotheses
+
+
+def resolve_role_type_hypotheses(
+    domain: str, document: dict[str, Any]
+) -> dict[str, RoleTypeHypothesis]:
+    from .semantic_typing import build_role_type_hypotheses
+    return build_role_type_hypotheses(domain, document, weak_mapper=_map_role)
 
 
 def check_required_contract_complete(
