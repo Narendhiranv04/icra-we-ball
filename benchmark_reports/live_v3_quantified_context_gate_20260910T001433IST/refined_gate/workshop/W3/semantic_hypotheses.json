@@ -1,0 +1,150 @@
+{
+  "conversion_error": null,
+  "roles": {
+    "assembly_workpiece": {
+      "canonical_role_candidates": [
+        "fastener"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [],
+          "explicit_families": [],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [],
+          "source": "FUNCTION_TEXT",
+          "strength": "UNKNOWN"
+        },
+        {
+          "raw_phrase": "compatible_with",
+          "source": "RELATION_TEXT"
+        },
+        {
+          "capabilities": [
+            "FASTEN_JOINT"
+          ],
+          "raw_phrase": "perform_fastening",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "The yellow and blue object on the tray.",
+      "raw_function": "target_workpiece",
+      "raw_role_id": "assembly_workpiece",
+      "status": "JOINT_SEMANTIC_RESOLUTION"
+    },
+    "fastener": {
+      "canonical_role_candidates": [
+        "repair_target"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [],
+          "explicit_families": [],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [],
+          "source": "FUNCTION_TEXT",
+          "strength": "UNKNOWN"
+        },
+        {
+          "allowed_anchor_roles": [
+            "repair_target"
+          ],
+          "raw_phrase": "perform_fastening",
+          "source": "OPERATION_TEXT"
+        },
+        {
+          "raw_phrase": "compatible_with",
+          "source": "RELATION_TEXT"
+        }
+      ],
+      "raw_description": "The screw or bolt needed for the fastening.",
+      "raw_function": "joining_component",
+      "raw_role_id": "fastener",
+      "status": "JOINT_SEMANTIC_RESOLUTION"
+    },
+    "fastening_tool": {
+      "canonical_role_candidates": [
+        "driver"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "MAIN_WORKBENCH_ZONE",
+            "fastener",
+            "repair_target",
+            "workshop_frame_joint"
+          ],
+          "explicit_families": [
+            "INSTRUMENT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "driver"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "raw_phrase": "compatible_with",
+          "source": "RELATION_TEXT"
+        },
+        {
+          "capabilities": [
+            "FASTEN_JOINT"
+          ],
+          "raw_phrase": "perform_fastening",
+          "source": "OPERATION_TEXT"
+        },
+        {
+          "capabilities": [
+            "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+          ],
+          "raw_phrase": "place_object",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "The yellow blocky tool held by the robot.",
+      "raw_function": "fastening_instrument",
+      "raw_role_id": "fastening_tool",
+      "status": "JOINT_SEMANTIC_RESOLUTION"
+    },
+    "workbench": {
+      "canonical_role_candidates": [
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "entity_kind": "REGION",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "driver",
+            "fastener",
+            "repair_target",
+            "workshop_frame_joint"
+          ],
+          "explicit_families": [
+            "SUPPORT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "MAIN_WORKBENCH_ZONE"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "capabilities": [
+            "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+          ],
+          "raw_phrase": "place_object",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "The wooden desk surface where items are placed.",
+      "raw_function": "support_surface",
+      "raw_role_id": "workbench",
+      "status": "OPERATION_ASSISTED"
+    }
+  }
+}

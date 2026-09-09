@@ -1,0 +1,303 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "armchair_1": [
+        {
+          "label": "armchair_1",
+          "visual_description": "Armchair on the left side of the room."
+        }
+      ],
+      "armchair_2": [
+        {
+          "label": "armchair_2",
+          "visual_description": "Armchair on the right side of the room."
+        }
+      ],
+      "coffee_table": [
+        {
+          "label": "coffee_table",
+          "visual_description": "Low rectangular table with glass top in center."
+        }
+      ],
+      "desk": [
+        {
+          "label": "desk",
+          "visual_description": "Large wooden desk with items on top, located in foreground."
+        }
+      ],
+      "refreshment_setting_1": [
+        {
+          "label": "refreshment_setting_1",
+          "visual_description": "White plate and red cup on the desk."
+        }
+      ],
+      "refreshment_setting_2": [
+        {
+          "label": "refreshment_setting_2",
+          "visual_description": "Second white plate and red cup on the desk."
+        }
+      ],
+      "remote_control": [
+        {
+          "label": "remote_control",
+          "visual_description": "Black remote control on the desk."
+        }
+      ],
+      "side_table_1": [
+        {
+          "label": "side_table_1",
+          "visual_description": "Small wooden table next to left armchair."
+        }
+      ],
+      "side_table_2": [
+        {
+          "label": "side_table_2",
+          "visual_description": "Small wooden table next to right armchair."
+        }
+      ]
+    }
+  },
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_1",
+        "participant_roles": [
+          "refreshment_setting_1",
+          "side_table_1"
+        ],
+        "relation": "on",
+        "required": true
+      },
+      {
+        "id": "rel_2",
+        "participant_roles": [
+          "refreshment_setting_2",
+          "side_table_2"
+        ],
+        "relation": "on",
+        "required": true
+      },
+      {
+        "id": "rel_3",
+        "participant_roles": [
+          "remote_control",
+          "coffee_table"
+        ],
+        "relation": "on",
+        "required": true
+      },
+      {
+        "id": "rel_4",
+        "participant_roles": [
+          "side_table_1",
+          "armchair_1"
+        ],
+        "relation": "near",
+        "required": true
+      },
+      {
+        "id": "rel_5",
+        "participant_roles": [
+          "side_table_2",
+          "armchair_2"
+        ],
+        "relation": "near",
+        "required": true
+      },
+      {
+        "id": "rel_6",
+        "participant_roles": [
+          "coffee_table",
+          "armchair_1",
+          "armchair_2"
+        ],
+        "relation": "between",
+        "required": true
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "furniture",
+          "surface"
+        ],
+        "description": "Large desk holding cups, plates, and remote.",
+        "entity_kind": "OBJECT",
+        "function": "initial_storage_container",
+        "id": "desk",
+        "required_count": 1,
+        "required_properties": [
+          "flat_top",
+          "contains_items"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "furniture",
+          "seat"
+        ],
+        "description": "Left armchair for person 1.",
+        "entity_kind": "FIXED_TARGET",
+        "function": "seating_reference",
+        "id": "armchair_1",
+        "required_count": 1,
+        "required_properties": [
+          "upright",
+          "cushion"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "furniture",
+          "seat"
+        ],
+        "description": "Right armchair for person 2.",
+        "entity_kind": "FIXED_TARGET",
+        "function": "seating_reference",
+        "id": "armchair_2",
+        "required_count": 1,
+        "required_properties": [
+          "upright",
+          "cushion"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "furniture",
+          "table"
+        ],
+        "description": "Side table near armchair_1.",
+        "entity_kind": "REGION",
+        "function": "support_surface",
+        "id": "side_table_1",
+        "required_count": 1,
+        "required_properties": [
+          "flat_top",
+          "small"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "furniture",
+          "table"
+        ],
+        "description": "Side table near armchair_2.",
+        "entity_kind": "REGION",
+        "function": "support_surface",
+        "id": "side_table_2",
+        "required_count": 1,
+        "required_properties": [
+          "flat_top",
+          "small"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "furniture",
+          "table"
+        ],
+        "description": "Central table between armchairs.",
+        "entity_kind": "REGION",
+        "function": "support_surface",
+        "id": "coffee_table",
+        "required_count": 1,
+        "required_properties": [
+          "flat_top",
+          "central"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "dishware",
+          "container"
+        ],
+        "description": "Cup and plate for person 1.",
+        "entity_kind": "OBJECT",
+        "function": "payload",
+        "id": "refreshment_setting_1",
+        "required_count": 1,
+        "required_properties": [
+          "holds_fluid",
+          "holds_food"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "dishware",
+          "container"
+        ],
+        "description": "Cup and plate for person 2.",
+        "entity_kind": "OBJECT",
+        "function": "payload",
+        "id": "refreshment_setting_2",
+        "required_count": 1,
+        "required_properties": [
+          "holds_fluid",
+          "holds_food"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "tool",
+          "electronic"
+        ],
+        "description": "Entertainment control device.",
+        "entity_kind": "OBJECT",
+        "function": "joining_component",
+        "id": "remote_control",
+        "required_count": 1,
+        "required_properties": [
+          "button",
+          "wireless"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_1",
+        "operation": "transfer",
+        "operation_count": 1,
+        "participant_roles": [
+          "desk",
+          "refreshment_setting_1",
+          "side_table_1"
+        ]
+      },
+      {
+        "id": "op_2",
+        "operation": "transfer",
+        "operation_count": 1,
+        "participant_roles": [
+          "desk",
+          "refreshment_setting_2",
+          "side_table_2"
+        ]
+      },
+      {
+        "id": "op_3",
+        "operation": "transfer",
+        "operation_count": 1,
+        "participant_roles": [
+          "desk",
+          "remote_control",
+          "coffee_table"
+        ]
+      }
+    ]
+  },
+  "task_summary": "Distribute two refreshment settings from the desk to side tables adjacent to two armchairs, and move the remote control to the central coffee table.",
+  "unsupported_reason": ""
+}

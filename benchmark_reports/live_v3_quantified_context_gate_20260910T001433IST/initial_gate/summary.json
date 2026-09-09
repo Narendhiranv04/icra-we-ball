@@ -1,0 +1,96 @@
+{
+  "astar_invocations": 0,
+  "batch": "QUANTIFIED_CONTEXT_INITIAL_GATE",
+  "cases": [
+    {
+      "astar_invocations": 0,
+      "astar_reached": false,
+      "domain": "kitchen",
+      "failure_category": "TASK_SPECIFICATION_FAILURE",
+      "failure_reason": "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: operation 'op_1' ('pour_water') cannot instantiate any supported capability from participant_roles=['water_source', 'coffee_mug']",
+      "graph_compiled": false,
+      "grounding_complete": false,
+      "grounding_reached": false,
+      "outcome": "TASK_SPECIFICATION_FAILURE",
+      "semantic_vlm_requests": 1,
+      "strict_v3_valid": true,
+      "success": false,
+      "task_specification_valid": false,
+      "usage": {
+        "completion_tokens": 9733,
+        "completion_tokens_details": {
+          "reasoning_tokens": 7878
+        },
+        "prompt_tokens": 4729,
+        "prompt_tokens_details": null,
+        "total_tokens": 14462
+      },
+      "variant": "K1"
+    },
+    {
+      "astar_invocations": 0,
+      "astar_reached": false,
+      "domain": "living_room",
+      "failure_category": "TASK_SPECIFICATION_FAILURE",
+      "failure_reason": "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: operation 'OP1' ('place_refreshments') cannot instantiate any supported capability from participant_roles=['RefreshmentProps', 'LeftSideTable', 'RightSideTable']",
+      "graph_compiled": false,
+      "grounding_complete": false,
+      "grounding_reached": false,
+      "outcome": "TASK_SPECIFICATION_FAILURE",
+      "semantic_vlm_requests": 1,
+      "strict_v3_valid": true,
+      "success": false,
+      "task_specification_valid": false,
+      "usage": {
+        "completion_tokens": 8616,
+        "completion_tokens_details": {
+          "reasoning_tokens": 6802
+        },
+        "prompt_tokens": 4729,
+        "prompt_tokens_details": null,
+        "total_tokens": 13345
+      },
+      "variant": "L1"
+    },
+    {
+      "astar_invocations": 0,
+      "astar_reached": false,
+      "domain": "workshop",
+      "failure_category": "MALFORMED_VLM_SPECIFICATION",
+      "failure_reason": "UNDECLARED_PARTICIPANT: operation_pairings[0] references ['required_count_for_role_in_operation_pairing']",
+      "graph_compiled": false,
+      "grounding_complete": false,
+      "grounding_reached": false,
+      "outcome": "TASK_SPECIFICATION_FAILURE",
+      "semantic_vlm_requests": 1,
+      "strict_v3_valid": false,
+      "success": false,
+      "task_specification_valid": false,
+      "usage": {
+        "completion_tokens": 5930,
+        "completion_tokens_details": {
+          "reasoning_tokens": 4552
+        },
+        "prompt_tokens": 3768,
+        "prompt_tokens_details": null,
+        "total_tokens": 9698
+      },
+      "variant": "W3"
+    }
+  ],
+  "counts": {
+    "astar_reached": 0,
+    "graph_compiled": 0,
+    "grounding_complete": 0,
+    "grounding_reached": 0,
+    "strict_v3_valid": 2,
+    "success": 0,
+    "task_specification_valid": 0
+  },
+  "semantic_vlm_requests": 3,
+  "token_totals": {
+    "completion_tokens": 24279,
+    "prompt_tokens": 13226,
+    "reasoning_tokens": 19232
+  }
+}

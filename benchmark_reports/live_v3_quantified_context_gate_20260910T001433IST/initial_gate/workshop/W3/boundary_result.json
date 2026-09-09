@@ -1,0 +1,32 @@
+{
+  "batch": "QUANTIFIED_CONTEXT_INITIAL_GATE",
+  "content_sha256": "1a3ceaf51e79fc6a30659f068c89f85a54da0f3e87c412914b9dfc2950ee2465",
+  "failure_category": "MALFORMED_VLM_SPECIFICATION",
+  "failure_reason": "UNDECLARED_PARTICIPANT: operation_pairings[0] references ['required_count_for_role_in_operation_pairing']",
+  "finish_reason": "stop",
+  "image_views": [
+    "initial_iso_left.png",
+    "initial_iso_right.png",
+    "initial_detail.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [
+    {
+      "code": "HIDDEN_CONTENT_REASON_SANITIZED",
+      "region_id": "tray"
+    }
+  ],
+  "num_images": 3,
+  "strict_v3_valid": false,
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 5930,
+    "completion_tokens_details": {
+      "reasoning_tokens": 4552
+    },
+    "prompt_tokens": 3768,
+    "prompt_tokens_details": null,
+    "total_tokens": 9698
+  }
+}

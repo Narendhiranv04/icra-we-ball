@@ -1,0 +1,237 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "CoffeeTable": [
+        {
+          "label": "coffee_table",
+          "visual_description": "Rectangular table with glass top in the center"
+        }
+      ],
+      "LargeDesk": [
+        {
+          "label": "large_desk",
+          "visual_description": "Wooden desk in foreground with plates/cups"
+        }
+      ],
+      "LeftSeat": [
+        {
+          "label": "left_chair",
+          "visual_description": "Armchair on the left side of the image"
+        }
+      ],
+      "LeftSideTable": [
+        {
+          "label": "left_side_table",
+          "visual_description": "Small wooden table next to the left chair"
+        }
+      ],
+      "RefreshmentProps": [
+        {
+          "label": "plates_cups",
+          "visual_description": "Two white plates and two red cups on the desk"
+        }
+      ],
+      "RemoteControl": [
+        {
+          "label": "remote_control",
+          "visual_description": "Black remote on the desk"
+        }
+      ],
+      "RightSeat": [
+        {
+          "label": "right_chair",
+          "visual_description": "Armchair on the right side of the image"
+        }
+      ],
+      "RightSideTable": [
+        {
+          "label": "right_side_table",
+          "visual_description": "Small wooden table next to the right chair"
+        }
+      ]
+    }
+  },
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "R1",
+        "participant_roles": [
+          "RefreshmentProps",
+          "LargeDesk"
+        ],
+        "relation": "initially_on",
+        "required": true
+      },
+      {
+        "id": "R2",
+        "participant_roles": [
+          "RemoteControl",
+          "LargeDesk"
+        ],
+        "relation": "initially_on",
+        "required": true
+      },
+      {
+        "id": "R3",
+        "participant_roles": [
+          "LeftSideTable",
+          "LeftSeat"
+        ],
+        "relation": "adjacent_to",
+        "required": true
+      },
+      {
+        "id": "R4",
+        "participant_roles": [
+          "RightSideTable",
+          "RightSeat"
+        ],
+        "relation": "adjacent_to",
+        "required": true
+      },
+      {
+        "id": "R5",
+        "participant_roles": [
+          "CoffeeTable",
+          "LeftSeat",
+          "RightSeat"
+        ],
+        "relation": "accessible_to_both",
+        "required": true
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "FURNITURE",
+          "SUPPORT_SURFACE"
+        ],
+        "description": "The large wooden desk in the foreground containing the initial setup.",
+        "entity_kind": "REGION",
+        "function": "surface holding initial items",
+        "id": "LargeDesk",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "ELECTRONICS",
+          "TOOL"
+        ],
+        "description": "The remote control currently on the desk.",
+        "entity_kind": "OBJECT",
+        "function": "entertainment device",
+        "id": "RemoteControl",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "KITCHENWARE",
+          "FOOD_ITEM"
+        ],
+        "description": "The plates and cups currently on the desk.",
+        "entity_kind": "OBJECT",
+        "function": "plates and cups for consumption",
+        "id": "RefreshmentProps",
+        "required_count": 2,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "SEATING",
+          "FURNITURE"
+        ],
+        "description": "The left armchair.",
+        "entity_kind": "FIXED_TARGET",
+        "function": "seating reference for person one",
+        "id": "LeftSeat",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "SEATING",
+          "FURNITURE"
+        ],
+        "description": "The right armchair.",
+        "entity_kind": "FIXED_TARGET",
+        "function": "seating reference for person two",
+        "id": "RightSeat",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "FURNITURE",
+          "SUPPORT_SURFACE"
+        ],
+        "description": "The small table next to the left chair.",
+        "entity_kind": "REGION",
+        "function": "surface adjacent to left seat",
+        "id": "LeftSideTable",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "FURNITURE",
+          "SUPPORT_SURFACE"
+        ],
+        "description": "The small table next to the right chair.",
+        "entity_kind": "REGION",
+        "function": "surface adjacent to right seat",
+        "id": "RightSideTable",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "FURNITURE",
+          "SUPPORT_SURFACE"
+        ],
+        "description": "The coffee table in the center of the seating arrangement.",
+        "entity_kind": "REGION",
+        "function": "central surface between seats",
+        "id": "CoffeeTable",
+        "required_count": 1,
+        "required_properties": []
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "OP1",
+        "operation": "place_refreshments",
+        "operation_count": 1,
+        "participant_roles": [
+          "RefreshmentProps",
+          "LeftSideTable",
+          "RightSideTable"
+        ]
+      },
+      {
+        "id": "OP2",
+        "operation": "place_remote",
+        "operation_count": 1,
+        "participant_roles": [
+          "RemoteControl",
+          "CoffeeTable"
+        ]
+      }
+    ]
+  },
+  "task_summary": "Move refreshment items from the large desk to side tables near two chairs, and move the remote control to the central coffee table.",
+  "unsupported_reason": ""
+}

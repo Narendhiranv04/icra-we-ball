@@ -1,0 +1,168 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "tray_surface",
+        "label": "black_tray",
+        "reason": "Could be inspected for additional task-relevant candidates.",
+        "visual_description": "Black rectangular tray holding the assembly workpiece."
+      }
+    ],
+    "inspection_order": [
+      "tray_surface"
+    ],
+    "visible_candidates_per_role": {
+      "assembly_workpiece": [
+        {
+          "label": "yellow_blue_part",
+          "visual_description": "A rectangular object with yellow and blue sections sitting on a black tray."
+        }
+      ],
+      "fastener": [
+        {
+          "label": "hidden_fastener",
+          "visual_description": "Not clearly visible, assumed to be part of the assembly or on the tray."
+        }
+      ],
+      "fastening_tool": [],
+      "workbench": [
+        {
+          "label": "wooden_desk",
+          "visual_description": "Wooden table with drawers and a flat top surface."
+        }
+      ]
+    }
+  },
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_001",
+        "participant_roles": [
+          "assembly_workpiece",
+          "workbench"
+        ],
+        "relation": "on",
+        "required": true
+      },
+      {
+        "id": "rel_002",
+        "participant_roles": [
+          "fastening_tool",
+          "assembly_workpiece"
+        ],
+        "relation": "compatible_with",
+        "required": true
+      },
+      {
+        "id": "rel_003",
+        "participant_roles": [
+          "fastener",
+          "assembly_workpiece"
+        ],
+        "relation": "compatible_with",
+        "required": true
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "workbench",
+          "table"
+        ],
+        "description": "The wooden desk surface where items are placed.",
+        "entity_kind": "REGION",
+        "function": "support_surface",
+        "id": "workbench",
+        "required_count": 1,
+        "required_properties": [
+          "solid",
+          "horizontal"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "part",
+          "assembly",
+          "object"
+        ],
+        "description": "The yellow and blue object on the tray.",
+        "entity_kind": "OBJECT",
+        "function": "target_workpiece",
+        "id": "assembly_workpiece",
+        "required_count": 1,
+        "required_properties": [
+          "rigid"
+        ]
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "tool",
+          "instrument"
+        ],
+        "description": "The yellow blocky tool held by the robot.",
+        "entity_kind": "OBJECT",
+        "function": "fastening_instrument",
+        "id": "fastening_tool",
+        "required_count": 1,
+        "required_properties": [
+          "manipulable"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "pin"
+        ],
+        "description": "The screw or bolt needed for the fastening.",
+        "entity_kind": "OBJECT",
+        "function": "joining_component",
+        "id": "fastener",
+        "required_count": 1,
+        "required_properties": [
+          "small",
+          "rigid"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_001",
+        "operation": "identify_components",
+        "operation_count": 1,
+        "participant_roles": [
+          "assembly_workpiece",
+          "fastening_tool",
+          "fastener"
+        ]
+      },
+      {
+        "id": "op_002",
+        "operation": "perform_fastening",
+        "operation_count": 1,
+        "participant_roles": [
+          "fastening_tool",
+          "assembly_workpiece",
+          "fastener"
+        ]
+      },
+      {
+        "id": "op_003",
+        "operation": "place_object",
+        "operation_count": 1,
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ]
+      }
+    ]
+  },
+  "task_summary": "Inspect components, perform fastening, and place the tool.",
+  "unsupported_reason": ""
+}

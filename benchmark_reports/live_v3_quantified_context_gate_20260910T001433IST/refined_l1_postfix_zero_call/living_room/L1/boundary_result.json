@@ -1,0 +1,27 @@
+{
+  "batch": "QUANTIFIED_CONTEXT_L1_POSTFIX_ZERO_CALL",
+  "content_sha256": "b14f6afb4071e143a9cccf804ee42b85d5f88068d26117bdde6c6ab7a4604ac0",
+  "failure_category": "TASK_SPECIFICATION_FAILURE",
+  "failure_reason": "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: operation 'op_1' ('transfer') cannot instantiate any supported capability from participant_roles=['desk', 'refreshment_setting_1', 'side_table_1']",
+  "finish_reason": "stop",
+  "image_views": [
+    "l2_camera_left.png",
+    "l2_camera_right.png",
+    "l2_camera_top.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [],
+  "num_images": 3,
+  "strict_v3_valid": true,
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 10051,
+    "completion_tokens_details": {
+      "reasoning_tokens": 8194
+    },
+    "prompt_tokens": 4722,
+    "prompt_tokens_details": null,
+    "total_tokens": 14773
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "astar_invocations": 0,
+  "batch": "QUANTIFIED_CONTEXT_INITIAL_GATE",
+  "canonicalization_succeeded": false,
+  "domain": "living_room",
+  "failure_category": "TASK_SPECIFICATION_FAILURE",
+  "failure_reason": "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: operation 'OP1' ('place_refreshments') cannot instantiate any supported capability from participant_roles=['RefreshmentProps', 'LeftSideTable', 'RightSideTable']",
+  "finished_at_utc": "2026-09-09T18:48:19.647159+00:00",
+  "fm_schema_version": 3,
+  "functional_spec_complete": false,
+  "git_commit": "6abe15a749c513bc6e7ca8c17b5511ca73f981c7",
+  "git_dirty": false,
+  "high_level_replans": 0,
+  "image_views": [
+    "l2_camera_left.png",
+    "l2_camera_right.png",
+    "l2_camera_top.png"
+  ],
+  "inference_config": {
+    "max_tokens": 24000,
+    "model": "qwen35-9b",
+    "presence_penalty": 1.0,
+    "temperature": 0.6,
+    "top_k": 20,
+    "top_p": 0.95
+  },
+  "internal_variant": "F0_ALL_OBJECTS_IN_STAGING",
+  "pipeline_runtime_seconds": 98.5748,
+  "prompt_schema_hash": "980c8f98747c63ab113ceada9bf5f8fc5a173494adafd649299c7f79d0911972",
+  "provider_model": "qwen35-9b",
+  "semantic_vlm_requests": 1,
+  "started_at_utc": "2026-09-09T18:46:41.072351+00:00",
+  "terminal_status": "VLM_SPEC_FAILED",
+  "transport_retries": 0,
+  "variant": "L1"
+}

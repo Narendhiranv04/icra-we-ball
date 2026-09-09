@@ -1,0 +1,113 @@
+{
+  "canonical_roles": [
+    "workbench",
+    "assembly_workpiece",
+    "fastening_tool",
+    "fastener"
+  ],
+  "compiler_reached": true,
+  "conversion_error": null,
+  "function_alias_structural_overrides": 0,
+  "graph_compiled": true,
+  "operation_assisted_role_resolutions": 1,
+  "operation_participant_slot_resolutions": [
+    {
+      "id": "op_002",
+      "raw_operation": "perform_fastening",
+      "resolved_anchor": "fastener",
+      "resolved_source": "fastening_tool",
+      "resolved_target": "assembly_workpiece",
+      "slot_assignments": [
+        {
+          "anchor_role": "fastener",
+          "anchor_type": "repair_target",
+          "capability_id": "FASTEN_JOINT",
+          "planner_operation": "DRIVE_FASTENER_INTO_TARGET",
+          "source_role": "fastening_tool",
+          "source_type": "driver",
+          "target_role": "assembly_workpiece",
+          "target_type": "fastener",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "op_003",
+      "raw_operation": "place_object",
+      "resolved_anchor": null,
+      "resolved_source": "fastening_tool",
+      "resolved_target": "workbench",
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "RETURN_REUSABLE_ITEM_TO_SUPPORT",
+          "planner_operation": "PLACE",
+          "source_role": "fastening_tool",
+          "source_type": "driver",
+          "target_role": "workbench",
+          "target_type": "MAIN_WORKBENCH_ZONE",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  ],
+  "relation_assisted_role_resolutions": 0,
+  "relation_orientation_resolutions": [
+    {
+      "id": "rel_001",
+      "orientation_options": [],
+      "raw_relation": "on",
+      "resolved_object": "workbench",
+      "resolved_subject": "assembly_workpiece"
+    },
+    {
+      "id": "rel_002",
+      "orientation_options": [
+        {
+          "category": "PHYSICAL_VERIFIER",
+          "object_role": "assembly_workpiece",
+          "predicate": "COMPATIBLE_WITH",
+          "subject_role": "fastening_tool"
+        }
+      ],
+      "raw_relation": "compatible_with",
+      "resolved_object": "assembly_workpiece",
+      "resolved_subject": "fastening_tool"
+    },
+    {
+      "id": "rel_003",
+      "orientation_options": [
+        {
+          "category": "PHYSICAL_VERIFIER",
+          "object_role": "assembly_workpiece",
+          "predicate": "COMPATIBLE_WITH",
+          "subject_role": "fastener"
+        },
+        {
+          "category": "PHYSICAL_VERIFIER",
+          "object_role": "assembly_workpiece",
+          "predicate": "COMPATIBLE_WITH_TARGET",
+          "subject_role": "fastener"
+        },
+        {
+          "category": "PHYSICAL_VERIFIER",
+          "object_role": "fastener",
+          "predicate": "COMPATIBLE_WITH",
+          "subject_role": "assembly_workpiece"
+        },
+        {
+          "category": "PHYSICAL_VERIFIER",
+          "object_role": "fastener",
+          "predicate": "COMPATIBLE_WITH_TARGET",
+          "subject_role": "assembly_workpiece"
+        }
+      ],
+      "raw_relation": "compatible_with",
+      "resolved_object": "assembly_workpiece",
+      "resolved_subject": "fastener"
+    }
+  ]
+}

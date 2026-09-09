@@ -1,0 +1,184 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [
+      {
+        "id": "tray",
+        "label": "tray",
+        "reason": "Contains components to be identified",
+        "visual_description": "Black rectangular tray on the desk"
+      }
+    ],
+    "inspection_order": [
+      "tray"
+    ],
+    "visible_candidates_per_role": {
+      "fastener": [
+        {
+          "label": "small_part",
+          "visual_description": "Small component in tray"
+        }
+      ],
+      "screwdriver": [
+        {
+          "label": "yellow_tool",
+          "visual_description": "Yellow handle object in tray"
+        }
+      ],
+      "target_object": [
+        {
+          "label": "unspecified_target",
+          "visual_description": "Implied target at marked location on workbench"
+        }
+      ],
+      "tray": [
+        {
+          "label": "black_tray",
+          "visual_description": "Black rectangular tray on the desk"
+        }
+      ],
+      "workbench": [
+        {
+          "label": "wooden_table",
+          "visual_description": "Wooden desk surface with drawers"
+        }
+      ]
+    }
+  },
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_1",
+        "participant_roles": [
+          "tray",
+          "workbench"
+        ],
+        "relation": "on",
+        "required": true
+      },
+      {
+        "id": "rel_2",
+        "participant_roles": [
+          "screwdriver",
+          "tray"
+        ],
+        "relation": "in",
+        "required": true
+      },
+      {
+        "id": "rel_3",
+        "participant_roles": [
+          "fastener",
+          "tray"
+        ],
+        "relation": "in",
+        "required": true
+      },
+      {
+        "id": "rel_4",
+        "participant_roles": [
+          "target_object",
+          "workbench"
+        ],
+        "relation": "on",
+        "required": true
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk"
+        ],
+        "entity_kind": "REGION",
+        "function": "support surface for tray and target",
+        "id": "workbench",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "container",
+          "tray"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "source container for components",
+        "id": "tray",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "tool",
+          "screwdriver"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "implement for fastening",
+        "id": "screwdriver",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "joining component for fastening",
+        "id": "fastener",
+        "required_count": 1,
+        "required_properties": []
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "assembly",
+          "part"
+        ],
+        "entity_kind": "FIXED_TARGET",
+        "function": "receiving target for fastener",
+        "id": "target_object",
+        "required_count": 1,
+        "required_properties": []
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_1",
+        "operation": "inspect",
+        "operation_count": 1,
+        "participant_roles": [
+          "tray",
+          "required_count_for_role_in_operation_pairing"
+        ]
+      },
+      {
+        "id": "op_2",
+        "operation": "fasten",
+        "operation_count": 1,
+        "participant_roles": [
+          "screwdriver",
+          "fastener",
+          "target_object"
+        ]
+      },
+      {
+        "id": "op_3",
+        "operation": "place",
+        "operation_count": 1,
+        "participant_roles": [
+          "screwdriver",
+          "workbench"
+        ]
+      }
+    ]
+  },
+  "task_summary": "Identify components, perform fastening on a workbench target, and place the tool back on the workbench.",
+  "unsupported_reason": ""
+}

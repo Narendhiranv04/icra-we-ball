@@ -1,0 +1,309 @@
+{
+  "observation_guidance": {
+    "inspectable_regions": [],
+    "inspection_order": [],
+    "visible_candidates_per_role": {
+      "coffee_mug": [
+        {
+          "label": "blue_mug",
+          "visual_description": "blue cup on table"
+        },
+        {
+          "label": "grey_cup",
+          "visual_description": "grey cup on table"
+        }
+      ],
+      "coffee_source": [
+        {
+          "label": "canister",
+          "visual_description": "small cylindrical container on table"
+        }
+      ],
+      "eating_utensil": [
+        {
+          "label": "spoon_1",
+          "visual_description": "metal spoon on table"
+        },
+        {
+          "label": "spoon_2",
+          "visual_description": "metal spoon on table"
+        }
+      ],
+      "seating_pos_1": [
+        {
+          "label": "green_seat",
+          "visual_description": "green stool/chair near table"
+        }
+      ],
+      "seating_pos_2": [
+        {
+          "label": "implied_seat_2",
+          "visual_description": "area opposite green seat"
+        }
+      ],
+      "soup_bowl": [
+        {
+          "label": "blue_bowl",
+          "visual_description": "blue bowl with red liquid on table"
+        }
+      ],
+      "stirring_utensil": [
+        {
+          "label": "spoon_1",
+          "visual_description": "metal spoon on table"
+        }
+      ],
+      "table_surface": [
+        {
+          "label": "table_top",
+          "visual_description": "light colored rectangular surface"
+        }
+      ],
+      "water_source": [
+        {
+          "label": "teapot",
+          "visual_description": "white vessel with spout on table"
+        }
+      ]
+    }
+  },
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_contract": {
+    "functional_relations": [
+      {
+        "id": "rel_1",
+        "participant_roles": [
+          "coffee_source",
+          "table_surface"
+        ],
+        "relation": "on",
+        "required": true
+      },
+      {
+        "id": "rel_2",
+        "participant_roles": [
+          "water_source",
+          "table_surface"
+        ],
+        "relation": "on",
+        "required": true
+      },
+      {
+        "id": "rel_3",
+        "participant_roles": [
+          "stirring_utensil",
+          "table_surface"
+        ],
+        "relation": "on",
+        "required": true
+      },
+      {
+        "id": "rel_4",
+        "participant_roles": [
+          "seating_pos_1",
+          "table_surface"
+        ],
+        "relation": "adjacent_to",
+        "required": true
+      },
+      {
+        "id": "rel_5",
+        "participant_roles": [
+          "seating_pos_2",
+          "table_surface"
+        ],
+        "relation": "adjacent_to",
+        "required": true
+      }
+    ],
+    "functional_roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "container",
+          "package"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "material_source",
+        "id": "coffee_source",
+        "required_count": 1,
+        "required_properties": [
+          "contain_coffee"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "vessel",
+          "container"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "material_source",
+        "id": "water_source",
+        "required_count": 1,
+        "required_properties": [
+          "contain_water"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "mug"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "receiving_container",
+        "id": "coffee_mug",
+        "required_count": 2,
+        "required_properties": [
+          "hold_liquid"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bowl",
+          "dish"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "receiving_container",
+        "id": "soup_bowl",
+        "required_count": 2,
+        "required_properties": [
+          "hold_solid_or_liquid"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "fork"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "tool",
+        "id": "eating_utensil",
+        "required_count": 2,
+        "required_properties": [
+          "suitable_for_eating"
+        ]
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon"
+        ],
+        "entity_kind": "OBJECT",
+        "function": "tool",
+        "id": "stirring_utensil",
+        "required_count": 1,
+        "required_properties": [
+          "suitable_for_stirring"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "chair",
+          "seat"
+        ],
+        "entity_kind": "FIXED_TARGET",
+        "function": "seating_reference",
+        "id": "seating_pos_1",
+        "required_count": 1,
+        "required_properties": [
+          "human_scale"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "chair",
+          "seat"
+        ],
+        "entity_kind": "FIXED_TARGET",
+        "function": "seating_reference",
+        "id": "seating_pos_2",
+        "required_count": 1,
+        "required_properties": [
+          "human_scale"
+        ]
+      },
+      {
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "surface",
+          "desk"
+        ],
+        "entity_kind": "REGION",
+        "function": "shared_support",
+        "id": "table_surface",
+        "required_count": 1,
+        "required_properties": [
+          "flat",
+          "stable"
+        ]
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_1",
+        "operation": "pour_water",
+        "operation_count": 2,
+        "participant_roles": [
+          "water_source",
+          "coffee_mug"
+        ]
+      },
+      {
+        "id": "op_2",
+        "operation": "add_coffee",
+        "operation_count": 2,
+        "participant_roles": [
+          "coffee_source",
+          "coffee_mug"
+        ]
+      },
+      {
+        "id": "op_3",
+        "operation": "stir_coffee",
+        "operation_count": 2,
+        "participant_roles": [
+          "stirring_utensil",
+          "coffee_mug"
+        ]
+      },
+      {
+        "id": "op_4",
+        "operation": "place_coffee",
+        "operation_count": 2,
+        "participant_roles": [
+          "coffee_mug",
+          "seating_pos_1",
+          "seating_pos_2"
+        ]
+      },
+      {
+        "id": "op_5",
+        "operation": "place_soup",
+        "operation_count": 2,
+        "participant_roles": [
+          "soup_bowl",
+          "seating_pos_1",
+          "seating_pos_2"
+        ]
+      },
+      {
+        "id": "op_6",
+        "operation": "provide_utensil",
+        "operation_count": 2,
+        "participant_roles": [
+          "eating_utensil",
+          "soup_bowl"
+        ]
+      }
+    ]
+  },
+  "task_summary": "Prepare and serve coffee and soup for two people.",
+  "unsupported_reason": ""
+}

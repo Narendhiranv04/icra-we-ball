@@ -1,0 +1,46 @@
+{
+  "astar_invocations": 0,
+  "batch": "QUANTIFIED_CONTEXT_L1_POSTFIX_ZERO_CALL",
+  "cases": [
+    {
+      "astar_invocations": 0,
+      "astar_reached": false,
+      "domain": "living_room",
+      "failure_category": "TASK_SPECIFICATION_FAILURE",
+      "failure_reason": "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: operation 'op_1' ('transfer') cannot instantiate any supported capability from participant_roles=['desk', 'refreshment_setting_1', 'side_table_1']",
+      "graph_compiled": false,
+      "grounding_complete": false,
+      "grounding_reached": false,
+      "outcome": "TASK_SPECIFICATION_FAILURE",
+      "semantic_vlm_requests": 0,
+      "strict_v3_valid": true,
+      "success": false,
+      "task_specification_valid": false,
+      "usage": {
+        "completion_tokens": 10051,
+        "completion_tokens_details": {
+          "reasoning_tokens": 8194
+        },
+        "prompt_tokens": 4722,
+        "prompt_tokens_details": null,
+        "total_tokens": 14773
+      },
+      "variant": "L1"
+    }
+  ],
+  "counts": {
+    "astar_reached": 0,
+    "graph_compiled": 0,
+    "grounding_complete": 0,
+    "grounding_reached": 0,
+    "strict_v3_valid": 1,
+    "success": 0,
+    "task_specification_valid": 0
+  },
+  "semantic_vlm_requests": 0,
+  "token_totals": {
+    "completion_tokens": 10051,
+    "prompt_tokens": 4722,
+    "reasoning_tokens": 8194
+  }
+}

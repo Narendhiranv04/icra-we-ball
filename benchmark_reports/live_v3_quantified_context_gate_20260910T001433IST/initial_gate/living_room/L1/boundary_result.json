@@ -1,0 +1,27 @@
+{
+  "batch": "QUANTIFIED_CONTEXT_INITIAL_GATE",
+  "content_sha256": "979cb392ea247cee9f3f57bf1a8d04f68c4e65d766a126500f1408cedc9483ed",
+  "failure_category": "TASK_SPECIFICATION_FAILURE",
+  "failure_reason": "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: operation 'OP1' ('place_refreshments') cannot instantiate any supported capability from participant_roles=['RefreshmentProps', 'LeftSideTable', 'RightSideTable']",
+  "finish_reason": "stop",
+  "image_views": [
+    "l2_camera_left.png",
+    "l2_camera_right.png",
+    "l2_camera_top.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [],
+  "num_images": 3,
+  "strict_v3_valid": true,
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 8616,
+    "completion_tokens_details": {
+      "reasoning_tokens": 6802
+    },
+    "prompt_tokens": 4729,
+    "prompt_tokens_details": null,
+    "total_tokens": 13345
+  }
+}

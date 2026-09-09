@@ -1,0 +1,27 @@
+{
+  "batch": "QUANTIFIED_CONTEXT_REFINED_GATE",
+  "content_sha256": "8e4351162b4708e51b24d67fe9aaafde8e6326ae73329258eef8b6cee5b73e94",
+  "failure_category": "TASK_SPECIFICATION_FAILURE",
+  "failure_reason": "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: operation 'op4' ('serve_soup') cannot instantiate any supported capability from participant_roles=['soup_source', 'soup_bowl', 'eating_spoon', 'person_seat']",
+  "finish_reason": "stop",
+  "image_views": [
+    "left_shoulder_camera.png",
+    "right_shoulder_camera.png",
+    "overhead_camera.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [],
+  "num_images": 3,
+  "strict_v3_valid": true,
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 7899,
+    "completion_tokens_details": {
+      "reasoning_tokens": 5802
+    },
+    "prompt_tokens": 4722,
+    "prompt_tokens_details": null,
+    "total_tokens": 12621
+  }
+}

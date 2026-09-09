@@ -1,0 +1,36 @@
+{
+  "astar_invocations": 0,
+  "batch": "QUANTIFIED_CONTEXT_L1_POSTFIX_ZERO_CALL",
+  "canonicalization_succeeded": false,
+  "domain": "living_room",
+  "failure_category": "TASK_SPECIFICATION_FAILURE",
+  "failure_reason": "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: operation 'op_1' ('transfer') cannot instantiate any supported capability from participant_roles=['desk', 'refreshment_setting_1', 'side_table_1']",
+  "finished_at_utc": "2026-09-09T18:58:29.955354+00:00",
+  "fm_schema_version": 2,
+  "functional_spec_complete": false,
+  "git_commit": "e3b7d97311e940b0ab8f58f5f79051aea88c626c",
+  "git_dirty": true,
+  "high_level_replans": 0,
+  "image_views": [
+    "l2_camera_left.png",
+    "l2_camera_right.png",
+    "l2_camera_top.png"
+  ],
+  "inference_config": {
+    "max_tokens": null,
+    "model": null,
+    "presence_penalty": null,
+    "temperature": null,
+    "top_k": null,
+    "top_p": null
+  },
+  "internal_variant": "F0_ALL_OBJECTS_IN_STAGING",
+  "pipeline_runtime_seconds": 0.1861,
+  "prompt_schema_hash": "55965dcac2167b90de64182acc67597ea492f4baac6c544bf13f84f39cc7d00c",
+  "provider_model": null,
+  "semantic_vlm_requests": 0,
+  "started_at_utc": "2026-09-09T18:58:29.769250+00:00",
+  "terminal_status": "VLM_SPEC_FAILED",
+  "transport_retries": 0,
+  "variant": "L1"
+}

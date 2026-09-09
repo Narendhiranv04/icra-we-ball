@@ -1,0 +1,27 @@
+{
+  "batch": "QUANTIFIED_CONTEXT_REFINED_GATE",
+  "content_sha256": "b14f6afb4071e143a9cccf804ee42b85d5f88068d26117bdde6c6ab7a4604ac0",
+  "failure_category": "TASK_SPECIFICATION_FAILURE",
+  "failure_reason": "UNSUPPORTED_NARY_RELATION_PARTICIPANTS: relation 'rel_6' does not express a reviewed context-set semantic family",
+  "finish_reason": "stop",
+  "image_views": [
+    "l2_camera_left.png",
+    "l2_camera_right.png",
+    "l2_camera_top.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [],
+  "num_images": 3,
+  "strict_v3_valid": true,
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 10051,
+    "completion_tokens_details": {
+      "reasoning_tokens": 8194
+    },
+    "prompt_tokens": 4722,
+    "prompt_tokens_details": null,
+    "total_tokens": 14773
+  }
+}

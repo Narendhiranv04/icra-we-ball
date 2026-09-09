@@ -1,0 +1,40 @@
+{
+  "batch": "QUANTIFIED_CONTEXT_REFINED_GATE",
+  "content_sha256": "dbb29f8d5462db9415e81760d45b0e1a1e389711f1dce50581337bb93b1594e0",
+  "failure_category": null,
+  "failure_reason": null,
+  "finish_reason": "stop",
+  "image_views": [
+    "initial_iso_left.png",
+    "initial_iso_right.png",
+    "initial_detail.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [
+    {
+      "candidate": {
+        "label": "yellow_tool",
+        "visual_description": "A yellow blocky object held in the robot's gripper in the third view."
+      },
+      "code": "ROBOT_SELF_CANDIDATE_REMOVED",
+      "role_id": "fastening_tool"
+    },
+    {
+      "code": "HIDDEN_CONTENT_REASON_SANITIZED",
+      "region_id": "tray_surface"
+    }
+  ],
+  "num_images": 3,
+  "strict_v3_valid": true,
+  "task_specification_valid": true,
+  "usage": {
+    "completion_tokens": 3013,
+    "completion_tokens_details": {
+      "reasoning_tokens": 1903
+    },
+    "prompt_tokens": 3761,
+    "prompt_tokens_details": null,
+    "total_tokens": 6774
+  }
+}

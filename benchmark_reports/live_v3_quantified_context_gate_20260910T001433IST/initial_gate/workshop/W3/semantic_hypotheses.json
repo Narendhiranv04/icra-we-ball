@@ -1,0 +1,174 @@
+{
+  "conversion_error": null,
+  "roles": {
+    "fastener": {
+      "canonical_role_candidates": [
+        "repair_target"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [],
+          "explicit_families": [],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [],
+          "source": "FUNCTION_TEXT",
+          "strength": "UNKNOWN"
+        },
+        {
+          "allowed_anchor_roles": [
+            "repair_target"
+          ],
+          "raw_phrase": "fasten",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "joining component for fastening",
+      "raw_role_id": "fastener",
+      "status": "OPERATION_ASSISTED"
+    },
+    "screwdriver": {
+      "canonical_role_candidates": [
+        "driver"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "MAIN_WORKBENCH_ZONE",
+            "fastener",
+            "repair_target",
+            "workshop_frame_joint"
+          ],
+          "explicit_families": [
+            "INSTRUMENT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "driver"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "capabilities": [
+            "FASTEN_JOINT"
+          ],
+          "raw_phrase": "fasten",
+          "source": "OPERATION_TEXT"
+        },
+        {
+          "capabilities": [
+            "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+          ],
+          "raw_phrase": "place",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "implement for fastening",
+      "raw_role_id": "screwdriver",
+      "status": "OPERATION_ASSISTED"
+    },
+    "target_object": {
+      "canonical_role_candidates": [
+        "fastener"
+      ],
+      "entity_kind": "FIXED_TARGET",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "MAIN_WORKBENCH_ZONE",
+            "driver",
+            "repair_target",
+            "workshop_frame_joint"
+          ],
+          "explicit_families": [
+            "COMPONENT",
+            "DESTINATION"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "fastener"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "capabilities": [
+            "FASTEN_JOINT"
+          ],
+          "raw_phrase": "fasten",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "receiving target for fastener",
+      "raw_role_id": "target_object",
+      "status": "OPERATION_ASSISTED"
+    },
+    "tray": {
+      "canonical_role_candidates": [],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "MAIN_WORKBENCH_ZONE",
+            "driver",
+            "fastener",
+            "repair_target",
+            "workshop_frame_joint"
+          ],
+          "explicit_families": [
+            "SOURCE"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "source container for components",
+      "raw_role_id": "tray",
+      "status": "UNREPRESENTED_SEMANTIC"
+    },
+    "workbench": {
+      "canonical_role_candidates": [
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "entity_kind": "REGION",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "driver",
+            "fastener",
+            "repair_target",
+            "workshop_frame_joint"
+          ],
+          "explicit_families": [
+            "SUPPORT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "MAIN_WORKBENCH_ZONE"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "capabilities": [
+            "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+          ],
+          "raw_phrase": "place",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "support surface for tray and target",
+      "raw_role_id": "workbench",
+      "status": "OPERATION_ASSISTED"
+    }
+  }
+}

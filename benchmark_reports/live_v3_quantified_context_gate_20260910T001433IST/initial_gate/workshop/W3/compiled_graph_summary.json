@@ -1,0 +1,89 @@
+{
+  "canonical_roles": [
+    "workbench",
+    "tray",
+    "screwdriver",
+    "fastener",
+    "target_object"
+  ],
+  "compiler_reached": false,
+  "conversion_error": null,
+  "function_alias_structural_overrides": 0,
+  "graph_compiled": false,
+  "operation_assisted_role_resolutions": 4,
+  "operation_participant_slot_resolutions": [
+    {
+      "id": "op_2",
+      "raw_operation": "fasten",
+      "resolved_anchor": "fastener",
+      "resolved_source": "screwdriver",
+      "resolved_target": "target_object",
+      "slot_assignments": [
+        {
+          "anchor_role": "fastener",
+          "anchor_type": "repair_target",
+          "capability_id": "FASTEN_JOINT",
+          "planner_operation": "DRIVE_FASTENER_INTO_TARGET",
+          "source_role": "screwdriver",
+          "source_type": "driver",
+          "target_role": "target_object",
+          "target_type": "fastener",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    },
+    {
+      "id": "op_3",
+      "raw_operation": "place",
+      "resolved_anchor": null,
+      "resolved_source": "screwdriver",
+      "resolved_target": "workbench",
+      "slot_assignments": [
+        {
+          "anchor_role": null,
+          "anchor_type": null,
+          "capability_id": "RETURN_REUSABLE_ITEM_TO_SUPPORT",
+          "planner_operation": "PLACE",
+          "source_role": "screwdriver",
+          "source_type": "driver",
+          "target_role": "workbench",
+          "target_type": "MAIN_WORKBENCH_ZONE",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+    }
+  ],
+  "relation_assisted_role_resolutions": 0,
+  "relation_orientation_resolutions": [
+    {
+      "id": "rel_1",
+      "orientation_options": [],
+      "raw_relation": "on",
+      "resolved_object": "workbench",
+      "resolved_subject": "tray"
+    },
+    {
+      "id": "rel_2",
+      "orientation_options": [],
+      "raw_relation": "in",
+      "resolved_object": "tray",
+      "resolved_subject": "screwdriver"
+    },
+    {
+      "id": "rel_3",
+      "orientation_options": [],
+      "raw_relation": "in",
+      "resolved_object": "tray",
+      "resolved_subject": "fastener"
+    },
+    {
+      "id": "rel_4",
+      "orientation_options": [],
+      "raw_relation": "on",
+      "resolved_object": "workbench",
+      "resolved_subject": "target_object"
+    }
+  ]
+}
