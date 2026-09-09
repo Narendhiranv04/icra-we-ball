@@ -18,6 +18,9 @@ from typing import Any, Mapping
 import jsonschema
 
 from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+from mujoco_scenes.functional_tamp_pipeline.robot_capability_registry import (
+    is_non_physical_operation_phrase,
+)
 
 
 SYSTEM_PROMPT_V2 = """You are a vision-language functional-requirement specification generator.
@@ -467,6 +470,22 @@ def _validate_atomic_phrase(value: Any, code: str, location: str) -> str:
     return phrase
 
 
+def _normalized_role_phrase(role_id: str) -> str:
+    """Normalize an explicit FM role ID for conservative phrase matching."""
+    return re.sub(r"\s+", " ", re.sub(r"[_-]+", " ", role_id).casefold()).strip()
+
+
+def _phrase_mentions_role_id(operation_phrase: str, role_id: str) -> bool:
+    normalized_operation = re.sub(
+        r"\s+", " ", re.sub(r"[_-]+", " ", operation_phrase).casefold()
+    ).strip()
+    normalized_role = _normalized_role_phrase(role_id)
+    return bool(
+        normalized_role
+        and re.search(rf"(?<!\w){re.escape(normalized_role)}(?!\w)", normalized_operation)
+    )
+
+
 def _validate_live_response_schema(doc: Mapping[str, Any]) -> None:
     try:
         jsonschema.validate(instance=dict(doc), schema=LIVE_RESPONSE_SCHEMA_V2)
@@ -568,13 +587,14 @@ def validate_v2_live_contract(doc: Mapping[str, Any]) -> dict[str, Any]:
             relation["relation"], "NON_ATOMIC_RELATION_PHRASE", f"{location}.relation"
         )
 
+    operation_semantic_errors: list[str] = []
     for index, operation in enumerate(operations):
         location = f"operation_pairings[{index}]"
         if not isinstance(operation["id"], str) or not operation["id"].strip():
             raise MalformedVLMSpecificationError(
                 f"INVALID_LIVE_OPERATION_ID: {location}.id must be non-empty"
             )
-        _validate_atomic_phrase(
+        operation_phrase = _validate_atomic_phrase(
             operation["operation"], "NON_ATOMIC_OPERATION_PHRASE", f"{location}.operation"
         )
         for endpoint in ("source_role", "target_role"):
@@ -587,9 +607,36 @@ def validate_v2_live_contract(doc: Mapping[str, Any]) -> dict[str, Any]:
                 f"INVALID_OPERATION_REFERENCE: {location}.anchor_role must reference a declared role"
             )
         if operation["source_role"] == operation["target_role"]:
-            raise MalformedVLMSpecificationError(
+            operation_semantic_errors.append(
                 f"INVALID_OPERATION_SELF_PAIRING: {location} source_role equals target_role"
             )
+        anchor_role = operation.get("anchor_role")
+        if anchor_role is not None and anchor_role in (
+            operation["source_role"], operation["target_role"]
+        ):
+            duplicate = (
+                "source_role" if anchor_role == operation["source_role"] else "target_role"
+            )
+            operation_semantic_errors.append(
+                f"DUPLICATE_OPERATION_ENDPOINT: {location}.anchor_role equals {duplicate}"
+            )
+        if is_non_physical_operation_phrase(operation_phrase):
+            operation_semantic_errors.append(
+                f"NON_PHYSICAL_OPERATION: {location}.operation leads with a non-physical action"
+            )
+
+        bound_roles = {
+            operation["source_role"], operation["target_role"], anchor_role
+        }
+        for role_id in sorted(role_ids):
+            if role_id not in bound_roles and _phrase_mentions_role_id(operation_phrase, role_id):
+                operation_semantic_errors.append(
+                    f"OPERATION_MENTIONS_UNBOUND_ROLE: {location}.operation explicitly "
+                    f"mentions declared role {role_id!r} absent from its endpoints"
+                )
+
+    if operation_semantic_errors:
+        raise MalformedVLMSpecificationError("; ".join(operation_semantic_errors))
 
     return validated
 

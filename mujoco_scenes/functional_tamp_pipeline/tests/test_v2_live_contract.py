@@ -245,6 +245,111 @@ def test_live_contract_rejects_self_paired_physical_operation():
         validate_v2_live_contract(document)
 
 
+def _three_endpoint_operation_document(phrase: str = "install component") -> dict:
+    return _document(
+        [
+            _role("tool", "physical intervention tool", binding="REUSABLE"),
+            _role("component", "manipulated component"),
+            _role("fixed_location", "fixed operation location", kind="FIXED_TARGET"),
+        ],
+        operations=[
+            _operation(
+                "operation", phrase, "tool", "component", anchor="fixed_location"
+            )
+        ],
+    )
+
+
+def test_live_contract_accepts_distinct_three_endpoint_operation():
+    document = _three_endpoint_operation_document()
+    assert validate_v2_live_contract(document) == document
+
+
+@pytest.mark.parametrize(
+    ("source", "target", "anchor", "code"),
+    [
+        ("tool", "tool", "fixed_location", "INVALID_OPERATION_SELF_PAIRING"),
+        ("tool", "component", "tool", "DUPLICATE_OPERATION_ENDPOINT"),
+        ("tool", "component", "component", "DUPLICATE_OPERATION_ENDPOINT"),
+    ],
+)
+def test_live_contract_rejects_duplicate_operation_endpoints(source, target, anchor, code):
+    document = _three_endpoint_operation_document()
+    operation = document["task_contract"]["operation_pairings"][0]
+    operation.update(source_role=source, target_role=target, anchor_role=anchor)
+    with pytest.raises(MalformedVLMSpecificationError, match=code):
+        validate_v2_live_contract(document)
+
+
+@pytest.mark.parametrize(
+    "phrase",
+    [
+        "select compatible component",
+        "identify suitable tool",
+        "search for component",
+        "choose appropriate item",
+        "find usable object",
+        "inspect storage region",
+    ],
+)
+def test_live_contract_rejects_leading_non_physical_operation(phrase):
+    document = _three_endpoint_operation_document(phrase)
+    with pytest.raises(MalformedVLMSpecificationError, match="NON_PHYSICAL_OPERATION"):
+        validate_v2_live_contract(document)
+
+
+def test_live_contract_allows_selected_as_adjective_in_physical_operation():
+    document = _three_endpoint_operation_document("place selected component")
+    assert validate_v2_live_contract(document) == document
+
+
+def test_live_contract_rejects_explicit_unbound_role_mention():
+    document = _document(
+        [
+            _role("tool", "physical intervention tool"),
+            _role("manipulated_component", "manipulated component"),
+            _role("fixed_target", "fixed target", kind="FIXED_TARGET"),
+        ],
+        operations=[
+            _operation(
+                "install", "install manipulated component", "tool", "fixed_target"
+            )
+        ],
+    )
+    with pytest.raises(
+        MalformedVLMSpecificationError, match="OPERATION_MENTIONS_UNBOUND_ROLE"
+    ):
+        validate_v2_live_contract(document)
+
+
+def test_live_contract_accepts_explicit_bound_role_mention():
+    document = _document(
+        [
+            _role("tool", "physical intervention tool"),
+            _role("manipulated_component", "manipulated component"),
+            _role("fixed_target", "fixed target", kind="FIXED_TARGET"),
+        ],
+        operations=[
+            _operation(
+                "install",
+                "install manipulated component",
+                "tool",
+                "manipulated_component",
+                anchor="fixed_target",
+            )
+        ],
+    )
+    assert validate_v2_live_contract(document) == document
+
+
+def test_live_contract_does_not_bind_unmentioned_declared_role():
+    document = _three_endpoint_operation_document("apply tool")
+    document["task_contract"]["functional_roles"].append(
+        _role("unmentioned_participant", "unmentioned physical participant")
+    )
+    assert validate_v2_live_contract(document) == document
+
+
 @pytest.mark.parametrize(
     ("section", "field", "code"),
     [

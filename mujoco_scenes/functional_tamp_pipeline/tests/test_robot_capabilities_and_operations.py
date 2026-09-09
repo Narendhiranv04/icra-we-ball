@@ -76,6 +76,51 @@ def test_workshop_nonsensical_operation_fails_closed():
     assert res.capability is None
 
 
+def test_non_physical_workshop_phrase_cannot_match_fasten_capability():
+    res = interpret_operation(
+        domain="workshop",
+        raw_phrase="select compatible fastening component",
+        source_role="driver",
+        target_role="fastener",
+        anchor_role="repair_target",
+    )
+    assert res.status == "UNMAPPABLE_OPERATION"
+    assert res.capability is None
+    assert "NON_PHYSICAL_OPERATION" in res.reason
+
+
+@pytest.mark.parametrize(
+    ("domain", "phrase", "source", "target", "anchor", "capability", "relations"),
+    [
+        (
+            "workshop", "fasten component", "driver", "fastener", "repair_target",
+            "FASTEN_JOINT", {"COMPATIBLE_WITH", "REACHES_TARGET", "COMPATIBLE_WITH_TARGET"},
+        ),
+        (
+            "kitchen", "stir contents", "coffee_stirrer", "coffee_container", None,
+            "STIR_COFFEE", {"INSERTABLE_IN", "REACHES_BOTTOM"},
+        ),
+        (
+            "kitchen", "transfer material", "coffee_source", "coffee_container", None,
+            "TRANSFER_CONTENT_TO_CONTAINER", set(),
+        ),
+        (
+            "living_room", "support drinkware", "PERSONAL_CUP_SAUCER_REGION",
+            "CUP_SAUCER_SET", "SEATING_POSITION", "SUPPORT_DRINKWARE",
+            {"FITS_SET_ON", "NEAR_SEAT"},
+        ),
+    ],
+)
+def test_valid_physical_operation_phrases_remain_mappable(
+    domain, phrase, source, target, anchor, capability, relations
+):
+    res = interpret_operation(domain, phrase, source, target, anchor)
+    assert res.succeeded is True
+    assert res.capability is not None
+    assert res.capability.capability_id == capability
+    assert {predicate for _, predicate, _ in res.physical_preconditions} == relations
+
+
 def test_explicit_operation_derives_correct_physical_preconditions():
     """Explicit operation derives the complete physical feasibility precondition set."""
     # 1. Kitchen stirring

@@ -26,6 +26,33 @@ def _phrase(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+_NON_PHYSICAL_LEADING_ACTIONS = frozenset({
+    "choose", "chooses", "choosing", "chose", "chosen",
+    "detect", "detects", "detecting", "detected",
+    "find", "finds", "finding", "found",
+    "identify", "identifies", "identifying", "identified",
+    "inspect", "inspects", "inspecting", "inspected",
+    "locate", "locates", "locating", "located",
+    "recognize", "recognizes", "recognizing", "recognized",
+    "recognise", "recognises", "recognising", "recognised",
+    "search", "searches", "searching", "searched",
+    "select", "selects", "selecting", "selected",
+})
+
+
+def is_non_physical_operation_phrase(raw_phrase: str) -> bool:
+    """Return whether the phrase leads with an explicitly non-physical action.
+
+    Only the leading action token is considered.  This deliberately permits
+    physical operations containing later adjectival forms, such as
+    ``place selected component``.
+    """
+    normalized = _phrase(raw_phrase)
+    if not normalized:
+        return False
+    return normalized.split(maxsplit=1)[0] in _NON_PHYSICAL_LEADING_ACTIONS
+
+
 @dataclass(frozen=True)
 class RobotCapability:
     """A physical capability executable by the robot runtime in a domain."""
@@ -289,6 +316,20 @@ def interpret_operation(
             capability=None,
             status="UNMAPPABLE_OPERATION",
             reason="Empty operation phrase; operations must not be inferred from endpoints alone",
+        )
+
+    if is_non_physical_operation_phrase(raw_phrase):
+        return OperationInterpretationResult(
+            raw_operation=raw_phrase,
+            canonical_source=source_role,
+            canonical_target=target_role,
+            canonical_anchor=anchor_role,
+            capability=None,
+            status="UNMAPPABLE_OPERATION",
+            reason=(
+                "NON_PHYSICAL_OPERATION: operation phrase leads with a cognitive, "
+                "selection, search, or inspection action"
+            ),
         )
 
     # 1. Semantic candidates based on text evidence
