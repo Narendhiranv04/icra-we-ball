@@ -556,7 +556,63 @@ def resolve_v3_operation_slots(
     return [unique[key] for key in sorted(unique)]
 
 
-def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) -> dict[str, Any]:
+# ---------------------------------------------------------------------------
+# Requirement provenance: why is this element required?
+# ---------------------------------------------------------------------------
+# The single FM call sees the instruction and the images together, so nothing in
+# the returned contract says which of the two produced any given element.  That
+# distinction matters: an instruction clause may create a task requirement, but a
+# visual observation may only propose a candidate, a current location, or a place
+# worth searching.  Recovering the distinction after the fact is necessarily
+# evidential rather than certain, so it is recorded as evidence and not used to
+# silently delete anything.
+
+_PROVENANCE_STOPWORDS = frozenset({
+    "each", "every", "with", "their", "them", "they", "this", "that", "these",
+    "those", "then", "than", "from", "into", "onto", "over", "under", "near",
+    "have", "make", "made", "used", "using", "use", "when", "where", "which",
+    "while", "also", "both", "same", "other", "another", "must", "should",
+    "will", "would", "there", "here", "some", "any", "one", "two", "item",
+    "items", "thing", "things", "object", "objects", "area", "areas", "place",
+    "places", "part", "parts", "side", "left", "right", "front", "back",
+    "required", "requires", "require", "needed", "needs", "need", "task",
+    "instruction", "scene", "visible", "available", "suitable", "appropriate",
+    "for", "the", "and", "its", "it",
+})
+
+
+def _provenance_terms(text: str) -> set[str]:
+    """Content words usable as evidence of shared reference between two texts."""
+    words = re.findall(r"[a-zA-Z]+", str(text).replace("_", " ").lower())
+    return {w for w in words if len(w) > 3 and w not in _PROVENANCE_STOPWORDS}
+
+
+def classify_requirement_provenance(
+    element_terms: set[str],
+    *,
+    instruction_terms: set[str],
+    participates_in_expressed_operation: bool,
+) -> str:
+    """Classify why one contract element is required.
+
+    INSTRUCTION_CLAUSE_SUPPORT   the element's own wording shares content with
+                                 the instruction, so a clause can account for it.
+    DERIVED_FROM_EXPLICIT_OPERATION
+                                 no direct instruction wording, but the element
+                                 takes part in an operation the FM expressed, so
+                                 it is a semantic consequence of that operation.
+    OBSERVATION_ONLY             neither: nothing but the images accounts for it.
+    """
+    if instruction_terms and (element_terms & instruction_terms):
+        return "INSTRUCTION_CLAUSE_SUPPORT"
+    if participates_in_expressed_operation:
+        return "DERIVED_FROM_EXPLICIT_OPERATION"
+    return "OBSERVATION_ONLY"
+
+
+def convert_v3_to_canonical_document(
+    v3_doc: Mapping[str, Any], *, domain: str, task_instruction: str = ""
+) -> dict[str, Any]:
     canonical = _base_canonical_document(v3_doc)
     contract = v3_doc["task_contract"]
     roles_by_id: dict[str, Mapping[str, Any]] = {role["id"]: role for role in contract["functional_roles"]}
@@ -740,13 +796,29 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
     canonical["current_state_operation_context_roles"] = sorted(
         set(canonical.get("current_state_operation_context_roles", ())) | relation_only_context
     )
+    instruction_terms = _provenance_terms(task_instruction)
+    operation_participants = {
+        participant
+        for operation in contract["operation_pairings"]
+        for participant in operation.get("participant_roles", ())
+    }
     for role in contract["functional_roles"]:
         is_current_context = role["id"] in set(canonical.get("current_state_operation_context_roles", ()))
+        role_terms = _provenance_terms(" ".join((
+            str(role.get("function", "")),
+            str(role.get("description", "")),
+            " ".join(role.get("candidate_categories", ()) or ()),
+        )))
         canonical["fm_semantic_accounting"].append({
             "element_kind": "role", "raw_id": role["id"],
             "disposition": "CURRENT_STATE_CONTEXT" if is_current_context else "GROUNDED_TASK_PARTICIPANT",
             "canonical_representation": None if is_current_context else list(hypotheses[role["id"]].canonical_role_candidates),
             "provenance": "FM_EXPLICIT_ROLE",
+            "requirement_provenance": classify_requirement_provenance(
+                role_terms,
+                instruction_terms=instruction_terms,
+                participates_in_expressed_operation=role["id"] in operation_participants,
+            ),
         })
     relation_dispositions = {item["id"]: "CURRENT_STATE_CONTEXT" for item in current_state_relations}
     relation_dispositions.update({item["id"]: "GROUNDED_TASK_RELATION" for item in relations})
@@ -760,6 +832,13 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
             "disposition": relation_dispositions.get(relation["id"], "EXPLICIT_RUNTIME_CONTEXT"),
             "canonical_representation": relation.get("relation"),
             "provenance": "FM_EXPLICIT_RELATION",
+            "requirement_provenance": classify_requirement_provenance(
+                _provenance_terms(relation.get("relation", "")),
+                instruction_terms=instruction_terms,
+                participates_in_expressed_operation=bool(
+                    set(relation.get("participant_roles", ())) & operation_participants
+                ),
+            ),
         })
     for edge in canonical["functional_relations"]:
         effect = interpret_task_effect_predicate(edge["relation"])
@@ -775,7 +854,9 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
     return canonical
 
 
-def validate_v3_live_contract(doc: Mapping[str, Any], *, domain: str | None = None) -> dict[str, Any]:
+def validate_v3_live_contract(
+    doc: Mapping[str, Any], *, domain: str | None = None, task_instruction: str = ""
+) -> dict[str, Any]:
     try:
         jsonschema.validate(instance=dict(doc), schema=LIVE_RESPONSE_SCHEMA_V3)
     except jsonschema.ValidationError as exc:
@@ -788,7 +869,7 @@ def validate_v3_live_contract(doc: Mapping[str, Any], *, domain: str | None = No
             raise MalformedVLMSpecificationError("UNSUPPORTED V3 specification must have an empty contract")
         return deepcopy(dict(doc))
     if domain is not None:
-        convert_v3_to_canonical_document(doc, domain=domain)
+        convert_v3_to_canonical_document(doc, domain=domain, task_instruction=task_instruction)
     return deepcopy(dict(doc))
 
 
@@ -796,7 +877,8 @@ def normalize_and_validate_v3_contract(
     doc: Mapping[str, Any], *, domain: str | None = None, task_instruction: str = ""
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     normalized, trace = normalize_v3_live_document(doc, task_instruction=task_instruction, domain=domain)
-    return validate_v3_live_contract(normalized, domain=domain), trace
+    return validate_v3_live_contract(
+        normalized, domain=domain, task_instruction=task_instruction), trace
 
 
 def compute_v3_prompt_and_schema_hash() -> str:
