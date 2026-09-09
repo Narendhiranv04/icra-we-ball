@@ -23,6 +23,7 @@ from .structural_sanitizer import sanitize_functional_graph
 from . import role_semantic_ontology as ontology
 from .predicate_registry import validate_predicate_signature
 from .fm_schema_v2 import is_v2_document
+from .fm_schema_v3 import is_v3_document
 from .errors import VLMSpecificationError
 
 
@@ -463,16 +464,19 @@ def check_required_contract_complete(
 
 
 def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequirementGraph:
-    sanitized = sanitize_functional_graph(raw)
+    sanitized = sanitize_functional_graph(raw, domain=domain)
     if not sanitized.succeeded:
         raise VLMSpecificationError('No meaningful functional roles recovered', category='SANITIZER_UNRECOVERABLE')
     doc = sanitized.document
-    trace: dict[str, Any] = dict(roles=[], properties=[], relations=[], groups=[], context_only_roles=[],
-                                unresolved_roles=[], merged_roles=[], disambiguated_roles=[], disabled_groups=[],
-                                unresolved_required_relations=[], unresolved_required_operations=[],
-                                task_causal_relations=[], role_operation_reconciliations=[],
-                                provisional_roles=[], provisional_relation_constraints=[],
-                                provisional_operation_constraints=[])
+    trace: dict[str, Any] = dict(
+        roles=[], properties=[], relations=[], groups=[], context_only_roles=[],
+        unresolved_roles=[], merged_roles=[], disambiguated_roles=[], disabled_groups=[],
+        unresolved_required_relations=[], unresolved_required_operations=[],
+        task_causal_relations=[], role_operation_reconciliations=[],
+        provisional_roles=[], provisional_relation_constraints=[],
+        provisional_operation_constraints=[], relation_orientation_resolutions=[],
+        operation_participant_slot_resolutions=[],
+    )
     nodes = {}
     id_map = {}
     planner_context_id_map = {}
@@ -605,7 +609,8 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     provisional_relations: list[ProvisionalRelationConstraint] = []
     provisional_operations: list[ProvisionalOperationConstraint] = []
 
-    def add_relation(raw_subject: str, phrase: str, raw_target: str, *, grouped=False, expected=True) -> str | None:
+    def add_relation(raw_subject: str, phrase: str, raw_target: str, *, grouped=False,
+                     expected=True, unordered=False) -> str | None:
         # Extract explicit role IDs if embedded in phrase (e.g. "role_3 manipulates role_2")
         role_match = re.match(r'^(role_\w+)\s+(.+?)\s+(role_\w+)$', phrase.strip())
         if role_match:
@@ -651,11 +656,15 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                             pairs = [(s, o) for s in signature.allowed_subject_roles for o in signature.allowed_object_roles]
                             if item.direction == 'REVERSE':
                                 pairs = [(o, s) for s, o in pairs]
+                            if unordered:
+                                pairs += [(o, s) for s, o in pairs]
                             allowed_pairs.extend((s, o, item.predicate_name, item.category) for s, o in pairs)
                     elif item.category == 'TASK_CAUSAL_SEMANTICS':
                         pairs = list(_causal_role_pairs(domain, item.predicate_name))
                         if item.direction == 'REVERSE':
                             pairs = [(o, s) for s, o in pairs]
+                        if unordered:
+                            pairs += [(o, s) for s, o in pairs]
                         allowed_pairs.extend((s, o, item.predicate_name, item.category) for s, o in pairs)
                 evidence.update(
                     status='PROVISIONAL_RELATION_CONSTRAINT',
@@ -737,6 +746,12 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 )
                 if interp.category == "TASK_CAUSAL_SEMANTICS":
                     trace['task_causal_relations'].append(evidence)
+                if unordered:
+                    trace['relation_orientation_resolutions'].append({
+                        'raw_participants': [raw_subject, raw_target],
+                        'canonical': evidence.get('canonical', []),
+                        'direction_normalized': interp.direction_normalized,
+                    })
                 trace['relations'].append(evidence)
                 return first_pred if interp.category == "PHYSICAL_VERIFIER" else None
 
@@ -819,7 +834,10 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 'provenance': 'FM_EXPLICIT_SEMANTIC',
             })
             continue
-        add_relation(rel['subject_role'], rel.get('relation', rel.get('predicate')), rel['object_role'], expected=rel.get('expected', True))
+        add_relation(
+            rel['subject_role'], rel.get('relation', rel.get('predicate')), rel['object_role'],
+            expected=rel.get('expected', True), unordered=rel.get('unordered_participants', False),
+        )
     from .robot_capability_registry import interpret_operation
     raw_groups = doc.get('interaction_groups') or doc.get('operations') or []
     groups = []
@@ -853,7 +871,10 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             trace['disabled_groups'].append({'raw_group': group, 'status': 'UNINSTANTIABLE_MISSING_ROLE'})
             continue
 
+        v3_slot_assignments = group.get('v3_slot_assignments', [])
         if (
+            len(v3_slot_assignments) > 1
+            or
             len(nodes[id_map[tool_raw]].canonical_role_candidates) > 1
             or len(nodes[id_map[target_raw]].canonical_role_candidates) > 1
         ):
@@ -880,6 +901,12 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 target_node=id_map[target_raw], anchor_node=id_map.get(ctx_raw) if ctx_raw else None,
                 capability_candidates=tuple(capability_records), required_count=count,
                 reuse_policy=policy,
+                slot_assignments=tuple({
+                    **row,
+                    'source_node': id_map[row['source_role']],
+                    'target_node': id_map[row['target_role']],
+                    'anchor_node': id_map.get(row.get('anchor_role')) if row.get('anchor_role') else None,
+                } for row in v3_slot_assignments),
             )
             provisional_operations.append(constraint)
             trace['groups'].append({
@@ -889,6 +916,18 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             })
             trace['provisional_operation_constraints'].append(constraint.to_dict())
             continue
+
+        if v3_slot_assignments:
+            trace['operation_participant_slot_resolutions'].append({
+                'operation_id': group.get('id'),
+                'participant_roles': sorted({
+                    v3_slot_assignments[0]['source_role'], v3_slot_assignments[0]['target_role'],
+                    *([v3_slot_assignments[0]['anchor_role']] if v3_slot_assignments[0].get('anchor_role') else []),
+                }),
+                'source_role': tool_raw, 'target_role': target_raw, 'anchor_role': ctx_raw,
+                'capability_id': v3_slot_assignments[0]['capability_id'],
+                'usage_policy': v3_slot_assignments[0]['usage_policy'],
+            })
 
         tool_role_id = id_map[tool_raw]
         target_role_id = id_map[target_raw]
@@ -1184,6 +1223,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             'online_executable_contract_complete': contract_complete,
             'contract_missing_reasons': contract_missing_reasons,
             'is_v2_specification': is_v2_document(raw),
+            'is_v3_specification': is_v3_document(raw),
             'precondition_provenance': all_precond_prov,
             'task_causal_relations': [r.to_dict() for r in task_causal_relations],
             'task_effect_relations': [r.to_dict() for r in task_effect_relations],

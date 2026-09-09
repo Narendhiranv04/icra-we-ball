@@ -604,22 +604,38 @@ def _materialize_type_hypothesis(
         (relations if chosen[3] == "PHYSICAL_VERIFIER" else causal).append(rel)
 
     for constraint in graph_f.provisional_operation_constraints:
-        s_type = rename[constraint.source_node]
-        t_type = rename[constraint.target_node]
-        a_type = rename[constraint.anchor_node] if constraint.anchor_node else None
         viable = []
-        for cap in constraint.capability_candidates:
-            orientations = [(s_type, t_type)]
-            if graph_f.domain == "living_room":
-                orientations.append((t_type, s_type))
-            for effective_source, effective_target in orientations:
-                if (effective_source in cap["allowed_source_roles"]
-                        and effective_target in cap["allowed_target_roles"]
-                        and (a_type is None or a_type in cap["allowed_anchor_roles"])):
-                    viable.append((cap, effective_source, effective_target))
+        if constraint.slot_assignments:
+            capabilities = {cap["capability_id"]: cap for cap in constraint.capability_candidates}
+            for assignment in constraint.slot_assignments:
+                cap = capabilities.get(assignment["capability_id"])
+                source_type = rename[assignment["source_node"]]
+                target_type = rename[assignment["target_node"]]
+                anchor_node = assignment.get("anchor_node")
+                anchor_type = rename[anchor_node] if anchor_node else None
+                if (
+                    cap
+                    and source_type == assignment["source_type"]
+                    and target_type == assignment["target_type"]
+                    and anchor_type == assignment.get("anchor_type")
+                ):
+                    viable.append((cap, source_type, target_type, anchor_type, assignment["usage_policy"]))
+        else:
+            s_type = rename[constraint.source_node]
+            t_type = rename[constraint.target_node]
+            a_type = rename[constraint.anchor_node] if constraint.anchor_node else None
+            for cap in constraint.capability_candidates:
+                orientations = [(s_type, t_type)]
+                if graph_f.domain == "living_room":
+                    orientations.append((t_type, s_type))
+                for effective_source, effective_target in orientations:
+                    if (effective_source in cap["allowed_source_roles"]
+                            and effective_target in cap["allowed_target_roles"]
+                            and (a_type is None or a_type in cap["allowed_anchor_roles"])):
+                        viable.append((cap, effective_source, effective_target, a_type, constraint.reuse_policy))
         if len(viable) != 1:
             return None
-        cap, source_type, target_type = viable[0]
+        cap, source_type, target_type, a_type, reuse_policy = viable[0]
         endpoint = {"source": source_type, "target": target_type, "anchor": a_type}
         templates = tuple(
             (endpoint[s], predicate, endpoint[o])
@@ -631,7 +647,7 @@ def _materialize_type_hypothesis(
             function=cap["planner_operation"], tool_role=source_type,
             target_role=target_type, context_role=a_type,
             required_target_count=constraint.required_count,
-            usage_policy=constraint.reuse_policy,
+            usage_policy=reuse_policy,
             capability_id=cap["capability_id"], physical_preconditions=templates,
             preconditions_provenance=({"source": "ROBOT_CAPABILITY_REGISTRY",
                                        "capability_id": cap["capability_id"]},),

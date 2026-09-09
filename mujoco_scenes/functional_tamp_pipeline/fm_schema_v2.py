@@ -403,7 +403,11 @@ def normalize_v2_live_document(
 
 def is_v2_document(doc: Mapping[str, Any]) -> bool:
     """Return True if the document uses the V2 schema structure (has 'task_contract')."""
-    return isinstance(doc, Mapping) and "task_contract" in doc
+    return (
+        isinstance(doc, Mapping)
+        and "task_contract" in doc
+        and doc.get("schema_version") != 3
+    )
 
 
 LIVE_V2_EQUIVALENT = "LIVE_V2_EQUIVALENT"

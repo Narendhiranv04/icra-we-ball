@@ -271,6 +271,7 @@ class ProvisionalOperationConstraint:
     capability_candidates: tuple[dict[str, Any], ...]
     required_count: int
     reuse_policy: str
+    slot_assignments: tuple[dict[str, Any], ...] = ()
     provenance: str = "FM_EXPLICIT_OPERATION"
 
     def to_dict(self) -> dict[str, Any]:

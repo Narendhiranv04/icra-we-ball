@@ -28,11 +28,16 @@ def normalize_id(value: Any) -> str:
     return re.sub(r"[^a-z0-9_]+", "_", str(value).strip().lower()).strip("_")
 
 
-def sanitize_functional_graph(raw: Mapping[str, Any]) -> SanitizationResult:
+def sanitize_functional_graph(raw: Mapping[str, Any], *, domain: str | None = None) -> SanitizationResult:
     if not isinstance(raw, Mapping):
         return SanitizationResult({}, [{"code": "INVALID_DOCUMENT"}], True, False)
+    from .fm_schema_v3 import is_v3_document, convert_v3_to_canonical_document
     from .fm_schema_v2 import is_v2_document, convert_v2_to_canonical_document
-    if is_v2_document(raw):
+    if is_v3_document(raw):
+        if domain is None:
+            return SanitizationResult({}, [{"code": "V3_DOMAIN_REQUIRED"}], True, False)
+        doc = convert_v3_to_canonical_document(raw, domain=domain)
+    elif is_v2_document(raw):
         doc = convert_v2_to_canonical_document(raw)
     else:
         doc = deepcopy(dict(raw))

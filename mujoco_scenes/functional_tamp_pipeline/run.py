@@ -329,6 +329,7 @@ def _write_run_manifest(state: _RunState) -> None:
 
     manifest = {
         "schema_version": 1,
+        "fm_schema_version": int(os.environ.get("TAMP_FM_SCHEMA_VERSION", "2")),
         "domain": state.domain,
         "variant": state.variant,
         "internal_variant": state.internal_variant,

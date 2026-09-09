@@ -38,6 +38,14 @@ try:
         convert_v2_to_canonical_document,
         compute_v2_prompt_and_schema_hash,
     )
+    from mujoco_scenes.functional_tamp_pipeline.fm_schema_v3 import (
+        SYSTEM_PROMPT_V3,
+        USER_REQUEST_V3,
+        LIVE_RESPONSE_SCHEMA_V3,
+        is_v3_document,
+        normalize_and_validate_v3_contract,
+        compute_v3_prompt_and_schema_hash,
+    )
 except ImportError:
     class VLMSpecificationError(Exception):
         """Fallback base error for VLM specification failures."""
@@ -1463,7 +1471,7 @@ class FMAdapter:
         """Produce the complete Kitchen natural functional requirement specification."""
         del search_region_descriptors
         schema_version = int(os.environ.get("TAMP_FM_SCHEMA_VERSION", "2"))
-        if schema_version == 2:
+        if schema_version in (2, 3):
             return self.generate_task_requirements(
                 task_instruction, observation_images=observation_images
             )
@@ -1559,23 +1567,27 @@ class FMAdapter:
             _select_vlm_observation_images(observation_images)
         )
         transport = self._completion_transport()
-        user_prompt_data = {
-            "task_instruction": task_instruction.strip(),
-            "request": USER_REQUEST_V2,
-        }
-        user_text = json.dumps(
-            user_prompt_data,
-            separators=(",", ":"),
-        )
         schema_version = int(os.environ.get("TAMP_FM_SCHEMA_VERSION", "2"))
-        if schema_version == 2:
+        if schema_version == 3:
+            system_prompt = SYSTEM_PROMPT_V3
+            user_request = USER_REQUEST_V3
+            response_schema = LIVE_RESPONSE_SCHEMA_V3
+            schema_name = "functional_specification_v3"
+        elif schema_version == 2:
             system_prompt = SYSTEM_PROMPT_V2
+            user_request = USER_REQUEST_V2
             response_schema = LIVE_RESPONSE_SCHEMA_V2
             schema_name = "functional_specification"
         else:
             system_prompt = SYSTEM_PROMPT
+            user_request = USER_REQUEST_V2
             response_schema = RESPONSE_SCHEMA
             schema_name = "functional_specification"
+        user_prompt_data = {
+            "task_instruction": task_instruction.strip(),
+            "request": user_request,
+        }
+        user_text = json.dumps(user_prompt_data, separators=(",", ":"))
 
         sanitized_req = {
             "system_prompt": system_prompt,
@@ -1623,15 +1635,19 @@ class FMAdapter:
             response, call_kind="task_requirements", sanitized_request=sanitized_req
         )
         self.last_raw_requirement_response = deepcopy(raw_document)
-        live_v2_document = None
-        if schema_version == 2 and is_v2_document(raw_document):
-            live_v2_document, self.last_normalization_trace = normalize_and_validate_v2_contract(
+        live_wire_document = None
+        if schema_version == 3 and is_v3_document(raw_document):
+            live_wire_document, self.last_normalization_trace = normalize_and_validate_v3_contract(
+                raw_document
+            )
+        elif schema_version == 2 and is_v2_document(raw_document):
+            live_wire_document, self.last_normalization_trace = normalize_and_validate_v2_contract(
                 raw_document
             )
         if getattr(self, "return_raw_graph", False):
-            return live_v2_document if live_v2_document is not None else raw_document
-        if live_v2_document is not None:
-            return live_v2_document
+            return live_wire_document if live_wire_document is not None else raw_document
+        if live_wire_document is not None:
+            return live_wire_document
         return validate_requirement_response(raw_document)
 
     def generate_inspection_priors(

@@ -38,6 +38,7 @@ def canonical_role_family(domain: str, role: str) -> str:
             "coffee_source": "SOURCE", "water_source": "SOURCE",
             "coffee_container": "DESTINATION", "soup_container": "DESTINATION",
             "coffee_stirrer": "INSTRUMENT", "soup_eating_utensil": "INSTRUMENT",
+            "countertop": "SUPPORT", "serving_area": "SUPPORT", "dining_table": "SUPPORT",
         },
         "living_room": {
             "PERSONAL_CUP_SAUCER_REGION": "SUPPORT",
@@ -105,6 +106,13 @@ def function_semantic_evidence(
         if "INSTRUMENT" in families:
             if re.search(r"\b(stir|mix|agitat)\w*\b", text): preferred.add("coffee_stirrer")
             if re.search(r"\b(eat|consum|soup)\w*\b", text): preferred.add("soup_eating_utensil")
+        if "SUPPORT" in families:
+            if re.search(r"\b(serv(?:e|ing|ice)|delivery|handoff)\b", text):
+                preferred.add("serving_area")
+            elif re.search(r"\b(dining|meal)\b", text):
+                preferred.add("dining_table")
+            else:
+                preferred.add("countertop")
     elif domain == "living_room":
         if "SUPPORT" in families:
             if re.search(r"\b(shared|central|common|coffee table|both|remote)\b", text):
@@ -182,6 +190,20 @@ def _causal_pairs(domain: str, predicate: str) -> set[tuple[str, str]]:
     return set()
 
 
+def relation_canonical_role_pairs(
+    domain: str, predicate: str, category: str
+) -> set[tuple[str, str]]:
+    """Return registered endpoint-type pairs for a relation meaning."""
+    if category == "PHYSICAL_VERIFIER":
+        signature = get_predicate_signature(domain, predicate)
+        if not signature or signature.arity != 2 or not signature.active_in_functional_graph:
+            return set()
+        return {(s, o) for s in signature.allowed_subject_roles for o in signature.allowed_object_roles}
+    if category == "TASK_CAUSAL_SEMANTICS":
+        return _causal_pairs(domain, predicate)
+    return set()
+
+
 def build_role_type_hypotheses(
     domain: str,
     document: dict[str, Any],
@@ -230,16 +252,15 @@ def build_role_type_hypotheses(
             continue
         for meaning in meanings:
             if meaning.category == "PHYSICAL_VERIFIER":
-                sig = get_predicate_signature(domain, meaning.predicate_name)
-                current = set() if not sig or sig.arity != 2 or not sig.active_in_functional_graph else {
-                    (s, o) for s in sig.allowed_subject_roles for o in sig.allowed_object_roles
-                }
+                current = relation_canonical_role_pairs(domain, meaning.predicate_name, meaning.category)
                 if meaning.predicate_name in {"NEAR_SEAT", "ACCESSIBLE_FROM_BOTH_SEATS", "COMPATIBLE_WITH"}:
                     current |= {(o, s) for s, o in current}
             elif meaning.category == "TASK_CAUSAL_SEMANTICS":
-                current = _causal_pairs(domain, meaning.predicate_name)
+                current = relation_canonical_role_pairs(domain, meaning.predicate_name, meaning.category)
             else: continue
             if meaning.direction == "REVERSE": current = {(o, s) for s, o in current}
+            if relation.get("unordered_participants"):
+                current |= {(o, s) for s, o in current}
             pairs |= current
         if pairs:
             binary_constraints.append((rs, ro, pairs, {"source": "RELATION_TEXT", "raw_phrase": phrase}))
@@ -250,15 +271,28 @@ def build_role_type_hypotheses(
         if rs not in roles or ro not in roles: continue
         phrase = str(operation.get("function") or operation.get("operation") or "")
         capabilities = extract_operation_semantic_candidates(domain, phrase)
-        pairs = {(s, t) for cap in capabilities for s in cap.allowed_source_roles for t in cap.allowed_target_roles}
-        if domain == "living_room": pairs |= {(t, s) for s, t in pairs}
+        v3_assignments = operation.get("v3_slot_assignments", [])
+        if v3_assignments:
+            raw_layouts = {
+                (row.get("source_role"), row.get("target_role"), row.get("anchor_role"))
+                for row in v3_assignments
+            }
+            pairs = set() if len(raw_layouts) > 1 else {
+                (row["source_type"], row["target_type"])
+                for row in v3_assignments
+            }
+        else:
+            pairs = {(s, t) for cap in capabilities for s in cap.allowed_source_roles for t in cap.allowed_target_roles}
+            if domain == "living_room": pairs |= {(t, s) for s, t in pairs}
         pairs = {(s, t) for s, t in pairs if s in runtime_roles and t in runtime_roles}
         if pairs and rs != ro:
             binary_constraints.append((rs, ro, pairs, {
                 "source": "OPERATION_TEXT", "raw_phrase": phrase,
                 "capabilities": [cap.capability_id for cap in capabilities],
             }))
-        if ra in roles and capabilities:
+        if ra in roles and capabilities and not (
+            v3_assignments and len({row.get("anchor_role") for row in v3_assignments}) > 1
+        ):
             allowed_anchors = {a for cap in capabilities for a in cap.allowed_anchor_roles} & runtime_roles
             before = set(domains[ra])
             constrained[ra].add("OPERATION_TEXT")

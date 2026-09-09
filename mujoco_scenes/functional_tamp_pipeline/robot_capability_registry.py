@@ -237,7 +237,7 @@ CANONICAL_ROBOT_CAPABILITIES: dict[str, tuple[RobotCapability, ...]] = {
             semantic_description="Fasten or secure a frame joint hole using a compatible screw driven by a driving tool.",
             allowed_source_roles=("driver", "fastening_tool"),
             allowed_target_roles=("fastener",),
-            allowed_anchor_roles=("repair_target", "MAIN_WORKBENCH_ZONE"),
+            allowed_anchor_roles=("repair_target",),
             required_relation_templates=(
                 ("source", "COMPATIBLE_WITH", "target"),
                 ("source", "REACHES_TARGET", "anchor"),

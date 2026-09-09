@@ -39,6 +39,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
             is_v2_document,
             normalize_and_validate_v2_contract,
         )
+        from .fm_schema_v3 import is_v3_document, normalize_and_validate_v3_contract
 
         if domain not in {"kitchen", "living_room", "workshop"}:
             raise NotImplementedError(f"VLM specification adapter is not implemented for {domain}")
@@ -57,15 +58,25 @@ class VLMSpecProvider(FunctionalSpecProvider):
         # A V2 wire document always crosses the same production boundary,
         # regardless of whether it came from the live transport or replay.
         # Pre-V2 fixtures require an explicit LEGACY_FIXTURE mode.
-        if is_v2_document(raw_document):
+        wire_version = 1
+        if is_v3_document(raw_document):
+            raw_document, normalization_trace = normalize_and_validate_v3_contract(
+                raw_document, domain=domain
+            )
+            wire_version = 3
+        elif is_v2_document(raw_document):
             raw_document, normalization_trace = normalize_and_validate_v2_contract(
                 raw_document, domain=domain, validation_mode=validation_mode
             )
+            wire_version = 2
         else:
             normalization_trace = []
         graph = compile_candidate_graph(domain, task_instruction, raw_document)
-        graph.metadata["v2_validation_mode"] = validation_mode
-        graph.metadata["v2_boundary_normalization_trace"] = normalization_trace
+        graph.metadata["fm_schema_version"] = wire_version
+        graph.metadata[f"v{wire_version}_boundary_normalization_trace"] = normalization_trace
+        if wire_version == 2:
+            graph.metadata["v2_validation_mode"] = validation_mode
+            graph.metadata["v2_boundary_normalization_trace"] = normalization_trace
         graph.metadata["candidate_requirement_statuses"] = analyze_executability(graph)
         if not graph.online_executable_contract_complete:
             from .errors import GraphCompilationError

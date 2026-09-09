@@ -103,6 +103,7 @@ def get_git_info(repo_root: Path | str | None = None) -> dict[str, Any]:
 
 def compute_prompt_and_schema_hash() -> str:
     from .fm_schema_v2 import LIVE_RESPONSE_SCHEMA_V2, SYSTEM_PROMPT_V2, USER_REQUEST_V2
+    from .fm_schema_v3 import LIVE_RESPONSE_SCHEMA_V3, SYSTEM_PROMPT_V3, USER_REQUEST_V3
     schema_blob = json.dumps(
         {
             "system_prompt": SYSTEM_PROMPT,
@@ -110,6 +111,9 @@ def compute_prompt_and_schema_hash() -> str:
             "system_prompt_v2": SYSTEM_PROMPT_V2,
             "user_request_v2": USER_REQUEST_V2,
             "response_schema_v2": LIVE_RESPONSE_SCHEMA_V2,
+            "system_prompt_v3": SYSTEM_PROMPT_V3,
+            "user_request_v3": USER_REQUEST_V3,
+            "response_schema_v3": LIVE_RESPONSE_SCHEMA_V3,
             "inspection_policy_schema": INSPECTION_POLICY_SCHEMA,
             "kitchen_schema": KITCHEN_FUNCTIONAL_GRAPH_SCHEMA,
         },
@@ -140,7 +144,7 @@ def compute_provenance_fingerprint(
     )
 
     fingerprint_core = {
-        "schema_version": 2,
+        "schema_version": int(os.environ.get("TAMP_FM_SCHEMA_VERSION", "2")),
         "domain": domain,
         "variant": variant,
         "git_commit": git_info["git_commit"],
