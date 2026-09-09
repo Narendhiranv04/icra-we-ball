@@ -1,0 +1,35 @@
+{
+  "content_sha256": "c076e6de7dfe476e7d8d74eec312b38bcbe1aa862edfda7b2806d72d92948bac",
+  "finish_reason": "stop",
+  "image_views": [
+    "initial_iso_left.png",
+    "initial_iso_right.png",
+    "initial_detail.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [
+    {
+      "code": "REDUNDANT_ANCHOR_REMOVED",
+      "duplicate_of": "target_role",
+      "location": "task_contract.operation_pairings[1].anchor_role",
+      "operation_id": "op_02"
+    }
+  ],
+  "num_images": 3,
+  "response_schema_error": null,
+  "response_schema_valid": true,
+  "strict_v2_error": null,
+  "strict_v2_valid": true,
+  "task_specification_error": "FM_INTERNAL_ROLE_OPERATION_CONTRADICTION: operation_pairings[0] 'op_01' expresses FASTEN_JOINT but no interpretation of the FM endpoint semantics satisfies its participant signature: {'source': {'role_id': 'fastening_tool', 'candidate_types': ['driver']}, 'target': {'role_id': 'target_component', 'candidate_types': []}, 'anchor': {'role_id': 'workbench_surface', 'candidate_types': ['MAIN_WORKBENCH_ZONE']}}",
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 3836,
+    "completion_tokens_details": {
+      "reasoning_tokens": 2638
+    },
+    "prompt_tokens": 5042,
+    "prompt_tokens_details": null,
+    "total_tokens": 8878
+  }
+}

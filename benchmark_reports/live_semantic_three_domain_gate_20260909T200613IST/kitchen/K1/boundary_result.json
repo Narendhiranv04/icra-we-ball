@@ -1,0 +1,28 @@
+{
+  "content_sha256": "7a19faa4936512428b65056ff01cd267b84b6e5b1b9e2b2b43eaab5449e98a29",
+  "finish_reason": "stop",
+  "image_views": [
+    "left_shoulder_camera.png",
+    "right_shoulder_camera.png",
+    "overhead_camera.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [],
+  "num_images": 3,
+  "response_schema_error": null,
+  "response_schema_valid": true,
+  "strict_v2_error": "INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[0] requires 2 distinct source instances but role 'water_source' declares required_count=1 and binding_policy='REUSABLE'; INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[1] requires 2 distinct source instances but role 'coffee_powder_source' declares required_count=1 and binding_policy='REUSABLE'",
+  "strict_v2_valid": false,
+  "task_specification_error": "INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[0] requires 2 distinct source instances but role 'water_source' declares required_count=1 and binding_policy='REUSABLE'; INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[1] requires 2 distinct source instances but role 'coffee_powder_source' declares required_count=1 and binding_policy='REUSABLE'",
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 6968,
+    "completion_tokens_details": {
+      "reasoning_tokens": 4818
+    },
+    "prompt_tokens": 6003,
+    "prompt_tokens_details": null,
+    "total_tokens": 12971
+  }
+}

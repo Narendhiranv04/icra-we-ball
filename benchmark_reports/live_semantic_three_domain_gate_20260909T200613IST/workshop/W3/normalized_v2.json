@@ -1,0 +1,148 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Task involves identifying a fastening tool, performing fastening at a marked workbench location, and placing the tool on the workbench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "Device capable of applying fastening force",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "wrench",
+          "screwdriver",
+          "clamping_device",
+          "holding_tool",
+          "assembly_tool"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "target_component",
+        "entity_kind": "OBJECT",
+        "function": "Part receiving the fastening connection",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mounting_bracket",
+          "base_plate",
+          "mechanical_fixture",
+          "connector_part"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "workbench_surface",
+        "entity_kind": "REGION",
+        "function": "Flat support surface anchoring operation and tool storage",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wooden_table_top",
+          "work_station_plinth",
+          "bench_surface_area"
+        ],
+        "required_properties": []
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "rel_01",
+        "subject_role": "fastening_tool",
+        "relation": "operates upon",
+        "object_role": "target_component",
+        "required": true
+      },
+      {
+        "id": "rel_02",
+        "subject_role": "target_component",
+        "relation": "rests upon",
+        "object_role": "workbench_surface",
+        "required": true
+      },
+      {
+        "id": "rel_03",
+        "subject_role": "fastening_tool",
+        "relation": "operates_at",
+        "object_role": "workbench_surface",
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_01",
+        "operation": "apply_fastening_force",
+        "source_role": "fastening_tool",
+        "target_role": "target_component",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "anchor_role": "workbench_surface"
+      },
+      {
+        "id": "op_02",
+        "operation": "place_tool_on_surface",
+        "source_role": "fastening_tool",
+        "target_role": "workbench_surface",
+        "operation_count": 1,
+        "reuse_policy": "DEDICATED_PER_TARGET"
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastening_tool": [
+        {
+          "label": "yellow_blue_mechanism",
+          "visual_description": "Yellow and blue rectangular block lying on a grey mat on the desk"
+        },
+        {
+          "label": "end_effector_attachment",
+          "visual_description": "Gold colored blocky structure attached to the far right robot arm gripper"
+        }
+      ],
+      "target_component": [
+        {
+          "label": "grey_mat_with_object",
+          "visual_description": "Black mat under the yellow blue mechanism on the desk surface"
+        },
+        {
+          "label": "desk_drawers_front",
+          "visual_description": "Front handles of the blue drawers under the desk"
+        }
+      ],
+      "workbench_surface": [
+        {
+          "label": "desk_top_surface",
+          "visual_description": "Light brown wooden tabletop surface"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "region_drawer_left",
+        "label": "left_drawing_unit",
+        "visual_description": "Blue drawer unit underneath the left side of the desk",
+        "reason": "Closed storage containing potential fastening tools or components"
+      },
+      {
+        "id": "region_drawer_right",
+        "label": "right_drawing_unit",
+        "visual_description": "Blue drawer unit underneath the right side of the desk",
+        "reason": "Closed storage containing potential fastening tools or components"
+      },
+      {
+        "id": "region_cabinet_upper",
+        "label": "upper_storage_cabinet",
+        "visual_description": "Tall blue metal cabinet standing against the wall behind the desk",
+        "reason": "Closed storage space potentially holding compatible fastening equipment"
+      }
+    ],
+    "inspection_order": [
+      "region_drawer_left",
+      "region_drawer_right",
+      "region_cabinet_upper"
+    ]
+  },
+  "unsupported_reason": ""
+}

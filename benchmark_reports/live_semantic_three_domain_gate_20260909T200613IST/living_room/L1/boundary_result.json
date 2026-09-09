@@ -1,0 +1,28 @@
+{
+  "content_sha256": "efedbc456950b9bfaad5426dabc385c3780e9c03c1004fd468335818edc85771",
+  "finish_reason": "stop",
+  "image_views": [
+    "l2_camera_left.png",
+    "l2_camera_right.png",
+    "l2_camera_top.png"
+  ],
+  "json_parse_success": true,
+  "model": "qwen35-9b",
+  "normalization_trace": [],
+  "num_images": 3,
+  "response_schema_error": null,
+  "response_schema_valid": true,
+  "strict_v2_error": null,
+  "strict_v2_valid": true,
+  "task_specification_error": "FM_INTERNAL_ROLE_OPERATION_CONTRADICTION: operation_pairings[0] 'op_001' expresses SUPPORT_DRINKWARE but no interpretation of the FM endpoint semantics satisfies its participant signature: {'source': {'role_id': 'refreshment_station', 'candidate_types': ['CUP_SAUCER_SET']}, 'target': {'role_id': 'support_surface', 'candidate_types': ['PERSONAL_CUP_SAUCER_REGION']}, 'anchor': {'role_id': 'television_display', 'candidate_types': []}}",
+  "task_specification_valid": false,
+  "usage": {
+    "completion_tokens": 6100,
+    "completion_tokens_details": {
+      "reasoning_tokens": 5052
+    },
+    "prompt_tokens": 6003,
+    "prompt_tokens_details": null,
+    "total_tokens": 12103
+  }
+}

@@ -1,0 +1,275 @@
+{
+  "compiler_reached": false,
+  "function_alias_structural_overrides": 0,
+  "operation_assisted_role_resolutions": 4,
+  "reason": "TASK_SPECIFICATION_BOUNDARY_REJECTED",
+  "relation_assisted_role_resolutions": 0,
+  "role_type_hypotheses": {
+    "coffe_serving_vessels": {
+      "canonical_role_candidates": [
+        "coffee_container"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "coffee_source",
+            "coffee_stirrer",
+            "countertop",
+            "dining_table",
+            "serving_area",
+            "soup_eating_utensil",
+            "water_source"
+          ],
+          "explicit_families": [
+            "DESTINATION"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "coffee_container"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "capabilities": [
+            "TRANSFER_CONTENT_TO_CONTAINER"
+          ],
+          "raw_phrase": "transfer_liquid_into_cup",
+          "source": "OPERATION_TEXT"
+        },
+        {
+          "capabilities": [
+            "TRANSFER_CONTENT_TO_CONTAINER"
+          ],
+          "raw_phrase": "transfer_powder_into_cup",
+          "source": "OPERATION_TEXT"
+        },
+        {
+          "capabilities": [
+            "STIR_COFFEE"
+          ],
+          "raw_phrase": "agitate_contents_inside_cup",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Container for prepared coffee",
+      "raw_role_id": "coffe_serving_vessels",
+      "status": "OPERATION_ASSISTED"
+    },
+    "coffee_powder_source": {
+      "canonical_role_candidates": [
+        "coffee_source"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "coffee_container",
+            "coffee_stirrer",
+            "countertop",
+            "dining_table",
+            "serving_area",
+            "soup_container",
+            "soup_eating_utensil",
+            "water_source"
+          ],
+          "explicit_families": [
+            "SOURCE"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "coffee_source"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "capabilities": [
+            "TRANSFER_CONTENT_TO_CONTAINER"
+          ],
+          "raw_phrase": "transfer_powder_into_cup",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Source of coffee solid ingredient",
+      "raw_role_id": "coffee_powder_source",
+      "status": "OPERATION_ASSISTED"
+    },
+    "coffee_stirring_tool": {
+      "canonical_role_candidates": [
+        "coffee_stirrer"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "coffee_container",
+            "coffee_source",
+            "countertop",
+            "dining_table",
+            "serving_area",
+            "soup_container",
+            "water_source"
+          ],
+          "explicit_families": [
+            "INSTRUMENT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "coffee_stirrer"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "capabilities": [
+            "STIR_COFFEE"
+          ],
+          "raw_phrase": "agitate_contents_inside_cup",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Tool for agitating coffee mix",
+      "raw_role_id": "coffee_stirring_tool",
+      "status": "OPERATION_ASSISTED"
+    },
+    "service_surface": {
+      "canonical_role_candidates": [],
+      "entity_kind": "REGION",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "coffee_container",
+            "coffee_source",
+            "coffee_stirrer",
+            "countertop",
+            "dining_table",
+            "serving_area",
+            "soup_container",
+            "soup_eating_utensil",
+            "water_source"
+          ],
+          "explicit_families": [
+            "SUPPORT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Surface to hold items during service",
+      "raw_role_id": "service_surface",
+      "status": "UNREPRESENTED_SEMANTIC"
+    },
+    "soup_eating_utensils": {
+      "canonical_role_candidates": [
+        "soup_eating_utensil"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "coffee_container",
+            "coffee_source",
+            "countertop",
+            "dining_table",
+            "serving_area",
+            "soup_container",
+            "water_source"
+          ],
+          "explicit_families": [
+            "INSTRUMENT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "soup_eating_utensil"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Handheld tool for consuming soup",
+      "raw_role_id": "soup_eating_utensils",
+      "status": "DIRECT_FUNCTION_MATCH"
+    },
+    "soup_serving_vessels": {
+      "canonical_role_candidates": [
+        "soup_container"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "coffee_source",
+            "coffee_stirrer",
+            "countertop",
+            "dining_table",
+            "serving_area",
+            "soup_eating_utensil",
+            "water_source"
+          ],
+          "explicit_families": [
+            "DESTINATION"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "soup_container"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Container for prepared soup",
+      "raw_role_id": "soup_serving_vessels",
+      "status": "DIRECT_FUNCTION_MATCH"
+    },
+    "water_source": {
+      "canonical_role_candidates": [
+        "water_source"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "coffee_container",
+            "coffee_source",
+            "coffee_stirrer",
+            "countertop",
+            "dining_table",
+            "serving_area",
+            "soup_container",
+            "soup_eating_utensil"
+          ],
+          "explicit_families": [
+            "SOURCE"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "water_source"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "capabilities": [
+            "TRANSFER_CONTENT_TO_CONTAINER"
+          ],
+          "raw_phrase": "transfer_liquid_into_cup",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Source of liquid for coffee",
+      "raw_role_id": "water_source",
+      "status": "OPERATION_ASSISTED"
+    }
+  }
+}

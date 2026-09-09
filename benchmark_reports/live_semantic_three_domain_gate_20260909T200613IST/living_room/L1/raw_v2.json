@@ -1,0 +1,127 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Arrange living room seating areas with individual refreshment settings and a centrally accessible remote control.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "television_display",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Fixed visual orientation anchor",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": ["wall-mounted TV", "large screen", "projection"],
+        "required_properties": []
+      },
+      {
+        "id": "refreshment_station",
+        "entity_kind": "OBJECT",
+        "function": "Service setup for a single diner",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": ["cup and plate set", "beverage station", "snack tray"],
+        "required_properties": []
+      },
+      {
+        "id": "media_controller",
+        "entity_kind": "OBJECT",
+        "function": "Media controller interface",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": ["remote control", "smart home button", "mouse"],
+        "required_properties": []
+      },
+      {
+        "id": "support_surface",
+        "entity_kind": "REGION",
+        "function": "Horizontal resting area for items",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": ["coffee table", "side table", "desk surface"],
+        "required_properties": ["supports flat objects"]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "rel_001",
+        "subject_role": "refreshment_station",
+        "relation": "adjacent to fixed anchor",
+        "object_role": "television_display",
+        "required": true
+      },
+      {
+        "id": "rel_002",
+        "subject_role": "refreshment_station",
+        "relation": "supported by surface",
+        "object_role": "support_surface",
+        "required": true
+      },
+      {
+        "id": "rel_003",
+        "subject_role": "media_controller",
+        "relation": "placed upon surface",
+        "object_role": "support_surface",
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_001",
+        "operation": "place refreshment stations near anchor",
+        "source_role": "refreshment_station",
+        "target_role": "support_surface",
+        "operation_count": 2,
+        "reuse_policy": "DEDICATED_PER_TARGET",
+        "anchor_role": "television_display"
+      },
+      {
+        "id": "op_002",
+        "operation": "relocate remote control centrally",
+        "source_role": "media_controller",
+        "target_role": "support_surface",
+        "operation_count": 1,
+        "reuse_policy": "REUSABLE_ACROSS_TARGETS",
+        "anchor_role": "television_display"
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "television_display": [
+        {
+          "label": "Television Screen",
+          "visual_description": "Large black rectangular screen mounted on the upper back wall"
+        }
+      ],
+      "refreshment_station": [
+        {
+          "label": "Desk Setup (Left)",
+          "visual_description": "Two white plates and red cups arranged on the wooden desk surface"
+        }
+      ],
+      "media_controller": [
+        {
+          "label": "Remote Control",
+          "visual_description": "Black rectangular remote lying on the desk next to the plates"
+        }
+      ],
+      "support_surface": [
+        {
+          "label": "Coffee Table",
+          "visual_description": "Rectangular low table with green top situated in the center of the seating area"
+        },
+        {
+          "label": "Side Tables",
+          "visual_description": "Small wooden tables positioned adjacent to the armchairs"
+        },
+        {
+          "label": "Main Desk",
+          "visual_description": "Long wooden desk located against the foreground wall containing the current refreshments"
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  }
+,
+  "unsupported_reason": ""
+}

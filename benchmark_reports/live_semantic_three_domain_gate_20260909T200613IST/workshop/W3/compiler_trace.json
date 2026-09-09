@@ -1,0 +1,102 @@
+{
+  "compiler_reached": false,
+  "function_alias_structural_overrides": 0,
+  "operation_assisted_role_resolutions": 1,
+  "reason": "TASK_SPECIFICATION_BOUNDARY_REJECTED",
+  "relation_assisted_role_resolutions": 0,
+  "role_type_hypotheses": {
+    "fastening_tool": {
+      "canonical_role_candidates": [
+        "driver"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "MAIN_WORKBENCH_ZONE",
+            "fastener",
+            "repair_target",
+            "workshop_frame_joint"
+          ],
+          "explicit_families": [
+            "INSTRUMENT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "driver"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Device capable of applying fastening force",
+      "raw_role_id": "fastening_tool",
+      "status": "DIRECT_FUNCTION_MATCH"
+    },
+    "target_component": {
+      "canonical_role_candidates": [],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "MAIN_WORKBENCH_ZONE",
+            "driver",
+            "fastener",
+            "repair_target",
+            "workshop_frame_joint"
+          ],
+          "explicit_families": [
+            "DESTINATION"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Part receiving the fastening connection",
+      "raw_role_id": "target_component",
+      "status": "CONTRADICTORY_ROLE_TYPE"
+    },
+    "workbench_surface": {
+      "canonical_role_candidates": [
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "entity_kind": "REGION",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "fastener",
+            "repair_target",
+            "workshop_frame_joint"
+          ],
+          "explicit_families": [
+            "INSTRUMENT",
+            "SUPPORT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "MAIN_WORKBENCH_ZONE",
+            "driver"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "allowed_anchor_roles": [
+            "MAIN_WORKBENCH_ZONE",
+            "repair_target"
+          ],
+          "raw_phrase": "apply_fastening_force",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Flat support surface anchoring operation and tool storage",
+      "raw_role_id": "workbench_surface",
+      "status": "OPERATION_ASSISTED"
+    }
+  }
+}

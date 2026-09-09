@@ -1,0 +1,142 @@
+{
+  "compiler_reached": false,
+  "function_alias_structural_overrides": 0,
+  "operation_assisted_role_resolutions": 3,
+  "reason": "TASK_SPECIFICATION_BOUNDARY_REJECTED",
+  "relation_assisted_role_resolutions": 0,
+  "role_type_hypotheses": {
+    "media_controller": {
+      "canonical_role_candidates": [
+        "CUP_SAUCER_SET",
+        "PERSONAL_CUP_SAUCER_REGION",
+        "REMOTE",
+        "SEATING_PAIR",
+        "SEATING_POSITION",
+        "SHARED_REMOTE_REGION",
+        "staging_tray"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [],
+          "explicit_families": [],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [],
+          "source": "FUNCTION_TEXT",
+          "strength": "UNKNOWN"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Media controller interface",
+      "raw_role_id": "media_controller",
+      "status": "UNCONSTRAINED_ROLE_TYPE"
+    },
+    "refreshment_station": {
+      "canonical_role_candidates": [
+        "CUP_SAUCER_SET"
+      ],
+      "entity_kind": "OBJECT",
+      "evidence": [
+        {
+          "excluded_roles": [],
+          "explicit_families": [],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [],
+          "source": "FUNCTION_TEXT",
+          "strength": "UNKNOWN"
+        },
+        {
+          "capabilities": [
+            "SUPPORT_DRINKWARE"
+          ],
+          "raw_phrase": "place refreshment stations near anchor",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Service setup for a single diner",
+      "raw_role_id": "refreshment_station",
+      "status": "OPERATION_ASSISTED"
+    },
+    "support_surface": {
+      "canonical_role_candidates": [
+        "PERSONAL_CUP_SAUCER_REGION"
+      ],
+      "entity_kind": "REGION",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "CUP_SAUCER_SET",
+            "REMOTE",
+            "SEATING_PAIR",
+            "SEATING_POSITION"
+          ],
+          "explicit_families": [
+            "SUPPORT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [
+            "PERSONAL_CUP_SAUCER_REGION"
+          ],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "capabilities": [
+            "SUPPORT_DRINKWARE"
+          ],
+          "raw_phrase": "place refreshment stations near anchor",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Horizontal resting area for items",
+      "raw_role_id": "support_surface",
+      "status": "OPERATION_ASSISTED"
+    },
+    "television_display": {
+      "canonical_role_candidates": [],
+      "entity_kind": "FIXED_TARGET",
+      "evidence": [
+        {
+          "excluded_roles": [
+            "CUP_SAUCER_SET",
+            "PERSONAL_CUP_SAUCER_REGION",
+            "REMOTE",
+            "SEATING_PAIR",
+            "SEATING_POSITION",
+            "SHARED_REMOTE_REGION",
+            "staging_tray"
+          ],
+          "explicit_families": [
+            "DISPLAY_CONTEXT"
+          ],
+          "legacy_mapper_rule": "NONE",
+          "preferred_roles": [],
+          "source": "FUNCTION_TEXT",
+          "strength": "EXPLICIT_FAMILY"
+        },
+        {
+          "allowed_anchor_roles": [
+            "SEATING_PAIR",
+            "SEATING_POSITION"
+          ],
+          "raw_phrase": "place refreshment stations near anchor",
+          "source": "OPERATION_TEXT"
+        },
+        {
+          "allowed_anchor_roles": [
+            "SEATING_PAIR",
+            "SEATING_POSITION"
+          ],
+          "raw_phrase": "relocate remote control centrally",
+          "source": "OPERATION_TEXT"
+        }
+      ],
+      "raw_description": "",
+      "raw_function": "Fixed visual orientation anchor",
+      "raw_role_id": "television_display",
+      "status": "UNREPRESENTED_SEMANTIC"
+    }
+  }
+}

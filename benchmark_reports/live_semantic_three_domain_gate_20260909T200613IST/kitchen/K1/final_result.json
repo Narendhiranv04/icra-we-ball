@@ -1,0 +1,21 @@
+{
+  "assignment": null,
+  "astar_calls": 0,
+  "candidate_plan": [],
+  "candidate_search_statistics": {},
+  "canonicalization_succeeded": false,
+  "domain": "kitchen",
+  "failure_category": "MALFORMED_VLM_SPECIFICATION",
+  "failure_reason": "INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[0] requires 2 distinct source instances but role 'water_source' declares required_count=1 and binding_policy='REUSABLE'; INCONSISTENT_OPERATION_REUSE_CARDINALITY: operation_pairings[1] requires 2 distinct source instances but role 'coffee_powder_source' declares required_count=1 and binding_policy='REUSABLE'",
+  "finish_reason": "stop",
+  "fresh_fm_calls": 1,
+  "functional_spec_complete": false,
+  "inspected_regions": [],
+  "mode": "vlm",
+  "num_images": 3,
+  "outcome_category": "TASK_SPECIFICATION_FAILURE",
+  "plan": [],
+  "search_statistics": {},
+  "status": "VLM_SPEC_FAILED",
+  "variant": "K1"
+}

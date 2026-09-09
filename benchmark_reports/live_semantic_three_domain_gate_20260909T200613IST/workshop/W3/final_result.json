@@ -1,0 +1,21 @@
+{
+  "assignment": null,
+  "astar_calls": 0,
+  "candidate_plan": [],
+  "candidate_search_statistics": {},
+  "canonicalization_succeeded": false,
+  "domain": "workshop",
+  "failure_category": "TASK_SPECIFICATION_FAILURE",
+  "failure_reason": "FM_INTERNAL_ROLE_OPERATION_CONTRADICTION: operation_pairings[0] 'op_01' expresses FASTEN_JOINT but no interpretation of the FM endpoint semantics satisfies its participant signature: {'source': {'role_id': 'fastening_tool', 'candidate_types': ['driver']}, 'target': {'role_id': 'target_component', 'candidate_types': []}, 'anchor': {'role_id': 'workbench_surface', 'candidate_types': ['MAIN_WORKBENCH_ZONE']}}",
+  "finish_reason": "stop",
+  "fresh_fm_calls": 1,
+  "functional_spec_complete": false,
+  "inspected_regions": [],
+  "mode": "vlm",
+  "num_images": 3,
+  "outcome_category": "TASK_SPECIFICATION_FAILURE",
+  "plan": [],
+  "search_statistics": {},
+  "status": "VLM_SPEC_FAILED",
+  "variant": "W3"
+}
