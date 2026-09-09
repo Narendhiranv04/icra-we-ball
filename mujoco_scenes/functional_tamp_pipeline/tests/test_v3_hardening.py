@@ -2,7 +2,10 @@ import copy
 
 import pytest
 
-from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+from mujoco_scenes.functional_tamp_pipeline.errors import (
+    MalformedVLMSpecificationError,
+    TaskSpecificationValidationError,
+)
 from mujoco_scenes.functional_tamp_pipeline.fm_schema_v3 import (
     convert_v3_to_canonical_document,
     normalize_and_validate_v3_contract,
@@ -190,3 +193,130 @@ def test_entity_kind_payload_recovery_is_narrow_and_traced():
     normalized, trace = normalize_and_validate_v3_contract(raw, domain="living_room")
     assert normalized["task_contract"]["functional_roles"][0]["entity_kind"] == "OBJECT"
     assert any(row["code"] == "ENTITY_KIND_SEMANTIC_NORMALIZATION" for row in trace)
+
+
+def _living_context_roles(*, include_remote=True, include_extra=False):
+    roles = [
+        role("shared", "shared support accessible to both seats", kind="REGION", policy="SHARED"),
+        role("seat_left", "left seating position", kind="FIXED_TARGET", policy="SHARED"),
+        role("seat_right", "right seating position", kind="FIXED_TARGET", policy="SHARED"),
+    ]
+    if include_remote:
+        roles.append(role("remote", "entertainment control device", categories=["REMOTE"]))
+    if include_extra:
+        roles.append(role("display", "television display context", kind="FIXED_TARGET", policy="SHARED"))
+    return roles
+
+
+def test_quantified_relation_builds_explicit_seating_pair_context():
+    raw = document(
+        _living_context_roles(include_remote=False),
+        relations=[relation("access", "accessible to both", ["shared", "seat_left", "seat_right"])],
+    )
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    edge = canonical["functional_relations"][0]
+    assert edge["subject_role"] == "shared"
+    assert edge["object_role"].startswith("fm_context_set__")
+    context = canonical["explicit_context_sets"][0]
+    assert context["runtime_role"] == "SEATING_PAIR"
+    assert context["member_raw_roles"] == ["seat_left", "seat_right"]
+    assert context["code"] == "EXPLICIT_CONTEXT_SET_CANONICALIZATION"
+
+
+def test_quantified_relation_missing_member_fails_closed():
+    raw = document(
+        _living_context_roles(include_remote=False)[:2],
+        relations=[relation("access", "accessible to both", ["shared", "seat_left"])],
+    )
+    with pytest.raises(TaskSpecificationValidationError, match="FM_INTERNAL_RELATION_PARTICIPANT_CONTRADICTION"):
+        convert_v3_to_canonical_document(raw, domain="living_room")
+
+
+def test_quantified_relation_never_discards_unrelated_extra_participant():
+    raw = document(
+        _living_context_roles(include_remote=False, include_extra=True),
+        relations=[relation("access", "accessible to both", ["shared", "seat_left", "seat_right", "display"])],
+    )
+    with pytest.raises(TaskSpecificationValidationError, match="QUANTIFIED_RELATION_PARTICIPANT_CONTRADICTION"):
+        convert_v3_to_canonical_document(raw, domain="living_room")
+
+
+def test_seats_in_graph_without_quantified_text_do_not_create_pair():
+    raw = document(_living_context_roles(include_remote=False))
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    assert not canonical.get("explicit_context_sets")
+    assert all(r["id"] != "SEATING_PAIR" for r in canonical["functional_roles"])
+
+
+def test_quantified_operation_uses_explicit_seating_pair_anchor_and_capability_preconditions():
+    raw = document(
+        _living_context_roles(),
+        operations=[operation(
+            "place_remote", "place entertainment control where accessible from both",
+            ["remote", "shared", "seat_left", "seat_right"],
+        )],
+    )
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    group = canonical["interaction_groups"][0]
+    assert len(group["v3_slot_assignments"]) == 1
+    assert group["v3_slot_assignments"][0]["anchor_type"] == "SEATING_PAIR"
+    graph = compile_candidate_graph("living_room", "place the remote for both seats", raw)
+    compiled = graph.operation_groups[0]
+    assert compiled.capability_id == "SUPPORT_ENTERTAINMENT_CONTROL"
+    assert compiled.context_role == "SEATING_PAIR"
+    assert {p[1] for p in compiled.physical_preconditions} == {"FITS_ON", "ACCESSIBLE_FROM_BOTH_SEATS"}
+    assert graph.metadata["explicit_context_sets"][0]["member_raw_roles"] == ["seat_left", "seat_right"]
+    assert graph.nodes["SEATING_PAIR"].role_resolution_status == "EXPLICIT_CONTEXT_SET_CANONICALIZATION"
+
+
+def test_personal_placement_operation_supplies_robot_owned_preconditions():
+    raw = document([
+        role("payload", "personal refreshment setting", categories=["CUP", "PLATE"]),
+        role("support", "personal support beside seat", kind="REGION", policy="SHARED"),
+        role("seat", "seating position", kind="FIXED_TARGET", policy="SHARED"),
+    ], operations=[operation("place", "place refreshment setting near seat", ["payload", "support", "seat"])])
+    graph = compile_candidate_graph("living_room", "place the setting near the seat", raw)
+    group = graph.operation_groups[0]
+    assert group.capability_id == "SUPPORT_DRINKWARE"
+    assert {p[1] for p in group.physical_preconditions} == {"FITS_SET_ON", "NEAR_SEAT"}
+    assert all(row["provenance"] == "ROBOT_CAPABILITY_PRECONDITION" for row in group.preconditions_provenance)
+
+
+def test_explicit_raw_personal_pairings_survive_count_consolidation():
+    raw = document([
+        role("payload_1", "personal refreshment payload", categories=["CUP"]),
+        role("payload_2", "personal refreshment payload", categories=["CUP"]),
+        role("support_1", "personal support", kind="REGION", policy="SHARED"),
+        role("support_2", "personal support", kind="REGION", policy="SHARED"),
+        role("seat_1", "seating position", kind="FIXED_TARGET", policy="SHARED"),
+        role("seat_2", "seating position", kind="FIXED_TARGET", policy="SHARED"),
+    ], operations=[
+        operation("pair_1", "place refreshment setting near seat", ["payload_1", "support_1", "seat_1"]),
+        operation("pair_2", "place refreshment setting near seat", ["payload_2", "support_2", "seat_2"]),
+    ])
+    graph = compile_candidate_graph("living_room", "place each setting by its seat", raw)
+    assert graph.nodes["CUP_SAUCER_SET"].count == 2
+    assert graph.nodes["PERSONAL_CUP_SAUCER_REGION"].count == 2
+    assert graph.nodes["SEATING_POSITION"].count == 2
+    assert graph.nodes["SEATING_POSITION"].binding_policy == "DISTINCT"
+    pairings = graph.metadata["explicit_role_pairings"]
+    assert [row["raw_participant_roles"] for row in pairings] == [
+        ["payload_1", "support_1", "seat_1"],
+        ["payload_2", "support_2", "seat_2"],
+    ]
+
+
+def test_kitchen_operation_rejects_meal_utensil_as_beverage_stirrer():
+    invalid = document([
+        role("container", "receiving vessel for beverage"),
+        role("meal_utensil", "eating utensil for consuming soup", categories=["SPOON"]),
+    ], operations=[operation("stir", "stir beverage", ["meal_utensil", "container"])])
+    with pytest.raises(TaskSpecificationValidationError, match="MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS"):
+        normalize_and_validate_v3_contract(invalid, domain="kitchen")
+
+    valid = document([
+        role("container", "receiving vessel for coffee beverage"),
+        role("stirrer", "instrument for stirring coffee beverage", categories=["SPOON"]),
+    ], operations=[operation("stir", "stir beverage", ["stirrer", "container"])])
+    canonical = convert_v3_to_canonical_document(valid, domain="kitchen")
+    assert canonical["interaction_groups"][0]["v3_slot_assignments"][0]["capability_id"] == "STIR_COFFEE"

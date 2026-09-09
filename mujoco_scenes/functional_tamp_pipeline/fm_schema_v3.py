@@ -32,14 +32,14 @@ Entity kinds: OBJECT is an independently selectable/manipulable item; REGION is 
 Binding policies: DISTINCT requires different physical instances; REUSABLE permits an instance to participate in multiple operation applications; SHARED denotes one intentionally common object, context, or region. Multiple independent payloads with required_count greater than one are normally DISTINCT, not SHARED. required_count never means operation count.
 
 Reason silently in this order:
-1. Clause audit: for every task clause identify its physical participants, required binary relations, and required physical operations.
+1. Clause audit: for every task clause identify its physical participants, required relations, and required physical operations.
 2. Participant ledger: declare every independently groundable object, support region, or fixed anchor required by the task before considering visibility. Hidden participants remain required.
 3. Function audit: distinguish material sources, receiving containers, reusable instruments, manipulated joining components, fixed receiving targets, personal supports, shared supports, and seating/context anchors. Roles with different causal functions remain distinct even if they share a broad object category.
-4. Operation audit: use one atomic operation per transformation and list only its directly participating roles in participant_roles. Array order has no source/target/anchor meaning. Do not combine multiple material sources into one transfer. Placement relative to seating needs payload, support, and a seating/context role that actually represents the referenced seat set. Fastening needs an implement, manipulated joining component, and fixed receiving target; never substitute the robot or an undeclared abstract collection. A generic workbench is not automatically that target. A display is not automatically a seating/accessibility anchor.
+4. Operation audit: for every operation silently make a matrix of its required causal participant functions, selected role IDs, and function-consistency PASS/FAIL. Every participant must play a causal function compatible with its declared role.function. If a required function has no role, declare a separate role before output; never silently reuse a differently functioning role. A beverage-stirring instrument differs from a meal-eating utensil even when both might be spoons; likewise driver differs from joining component, personal support from shared support, support from seating reference, and fixed receiving target from manipulated component. Use one atomic operation per transformation and list only its directly participating roles. Array order has no source/target/anchor meaning. Do not combine multiple material sources into one transfer. Placement relative to seating needs payload, support, and the declared seating roles. Fastening needs an implement, joining component, and fixed receiving target; never substitute the robot or an undeclared collection.
 5. Count audit: required_count is the minimum number of distinct physical instances; operation_count is the number of operation applications. REUSABLE or SHARED roles may participate repeatedly.
-6. Consistency audit: every exact participant ID is declared; no relation or operation uses an abstract undeclared plural; every clause is represented; equivalent interchangeable instances use one counted role rather than numbered duplicate roles; personal and shared supports remain distinct when their functions differ; a relation saying "both" uses a declared context role representing both; and no robot arm, body, gripper, or end effector is declared or proposed as a task object unless the instruction explicitly asks to manipulate that robot component.
+6. Consistency audit: every exact participant ID is declared; no relation or operation uses an abstract undeclared plural; every clause is represented; equivalent interchangeable instances use one counted role rather than numbered duplicate roles; personal and shared supports remain distinct; and no robot arm, body, gripper, or end effector is a task object unless the instruction explicitly targets it. For quantified relation words such as both, all, pair, each, or between, include every declared role defining that set directly in participant_roles; do not invent a synthetic pair role. For example, shared support accessible from both seating positions lists the support, left seat, and right seat.
 
-Represent only participants required by the actual instruction. Do not invent ingredients, material sources, or preparation mechanisms merely to explain a broad end-state verb.
+Represent only participants required by the actual instruction. Do not invent ingredients, material sources, or preparation mechanisms merely to explain a broad end-state verb. A person/user mentioned only for quantity, ownership, one-each, servings, or settings is not a physical role or serve-to-human operation. Include a person or calibrated seating reference only when the instruction requires a geometric relation to it. Abstract words such as serve, provide, or prepare are not physical operations unless they express an actual transformation or placement.
 
 Use short atomic natural-language role functions, relations, operations, and unary properties, not uppercase backend-style predicate names. Relation participant order is not directional. Initial-location statements such as currently on, located initially, or stored on are observation context, not automatically required final relations. Required relations express compatibility, functional dependency, final state, or a physical relation needed by an operation. Do not add operations merely to describe an already satisfied state unless the instruction requires the transformation. Do not estimate numeric geometry. Observation candidates are visible evidence only. Inspectable regions must be visible closed/storage structures; inspection_order must contain every exact declared region id once and nothing else. Region reasons may say they could be inspected for task-relevant candidates but must not claim hidden contents."""
 
@@ -47,8 +47,9 @@ Use short atomic natural-language role functions, relations, operations, and una
 USER_REQUEST_V3 = (
     "Derive the complete functional task contract from the instruction, then use the "
     "three initial views only for observation guidance. Declare all physical participants "
-    "before visibility analysis. For each relation provide exactly two unordered declared "
-    "participant roles. For each physical operation provide every directly involved declared "
+    "before visibility analysis. For each relation provide two to four unordered declared "
+    "participant roles, including every declared member named by both/all/pair/each/between. "
+    "For each physical operation provide every directly involved declared "
     "role as an unordered participant set. Keep physical-instance counts separate from "
     "operation-application counts. Output only the final JSON."
 )
@@ -69,7 +70,7 @@ _contract["properties"]["functional_relations"]["items"] = {
         "id": {"type": "string", "minLength": 1, "pattern": "^[a-zA-Z0-9_]+$"},
         "relation": {"type": "string", "minLength": 1},
         "participant_roles": {
-            "type": "array", "minItems": 2, "maxItems": 2,
+            "type": "array", "minItems": 2, "maxItems": 4,
             "items": {"type": "string", "minLength": 1},
         },
         "required": {"type": "boolean"},
@@ -282,6 +283,109 @@ def _base_canonical_document(doc: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+_QUANTIFIED_CONTEXT_TEXT = re.compile(
+    r"\b(both|all|pair|each|between(?:\s+the)?\s+two|accessible\s+from\s+both)\b",
+    re.IGNORECASE,
+)
+
+
+def _role_has_candidate(hypotheses: Mapping[str, Any], role_id: str, candidate: str) -> bool:
+    hypothesis = hypotheses.get(role_id)
+    return bool(hypothesis and candidate in hypothesis.canonical_role_candidates)
+
+
+def _explicit_seating_context(
+    *,
+    domain: str,
+    entry: Mapping[str, Any],
+    hypotheses: Mapping[str, Any],
+    canonical: dict[str, Any],
+    roles_by_id: dict[str, Mapping[str, Any]],
+    bundles: dict[tuple[str, str], str],
+    source_kind: str,
+) -> tuple[dict[str, Any], bool]:
+    """Replace an explicitly enumerated two-seat set with a runtime context role.
+
+    This adapter is intentionally limited to Living Room quantified accessibility
+    semantics.  It never searches the scene for omitted seats: both member role
+    IDs must occur in the FM participant set and must type as seating positions.
+    """
+    item = deepcopy(dict(entry))
+    participants = list(item.get("participant_roles", ()))
+    phrase = str(item.get("relation") or item.get("operation") or "")
+    quantified = bool(_QUANTIFIED_CONTEXT_TEXT.search(re.sub(r"[_-]+", " ", phrase)))
+    if domain != "living_room" or not quantified:
+        return item, False
+
+    seats = [p for p in participants if _role_has_candidate(hypotheses, p, "SEATING_POSITION")]
+    if len(seats) != 2:
+        raise TaskSpecificationValidationError(
+            "INCOMPLETE_QUANTIFIED_CONTEXT_SET: quantified Living Room semantics "
+            f"requires exactly two explicitly declared seating participants; entry={item.get('id')!r}, "
+            f"participant_roles={participants}"
+        )
+    members = tuple(sorted(seats))
+    bundle_id = bundles.get(members)
+    if bundle_id is None:
+        suffix = "__".join(re.sub(r"[^a-zA-Z0-9_]+", "_", member).strip("_") for member in members)
+        bundle_id = f"fm_context_set__{suffix}"
+        bundles[members] = bundle_id
+        role = {
+            "id": bundle_id,
+            "entity_kind": "FIXED_TARGET",
+            "function": "explicit two-seat seating pair context",
+            "description": "Runtime context bundle derived only from explicitly enumerated FM seating roles.",
+            "required_count": 1,
+            "binding_policy": "SHARED",
+            "candidate_categories": ["SEATING_CONTEXT"],
+            "required_properties": [],
+            "visible_candidates": [],
+            "context_set_members": list(members),
+            "provenance": "EXPLICIT_CONTEXT_SET_CANONICALIZATION",
+        }
+        canonical["functional_roles"].append(role)
+        roles_by_id[bundle_id] = role
+
+    remaining = [p for p in participants if p not in seats]
+    support = [p for p in remaining if _role_has_candidate(hypotheses, p, "SHARED_REMOTE_REGION")]
+    payload = [p for p in remaining if _role_has_candidate(hypotheses, p, "REMOTE")]
+    if source_kind == "relation":
+        meanings = extract_relation_semantic_candidates(domain, phrase)
+        if not any(m.predicate_name == "ACCESSIBLE_FROM_BOTH_SEATS" for m in meanings):
+            raise TaskSpecificationValidationError(
+                f"UNSUPPORTED_QUANTIFIED_RELATION_FAMILY: relation {item.get('id')!r} ({phrase!r})"
+            )
+        if len(support) != 1 or len(remaining) not in {1, 2} or (len(remaining) == 2 and len(payload) != 1):
+            raise TaskSpecificationValidationError(
+                "FM_INTERNAL_QUANTIFIED_RELATION_PARTICIPANT_CONTRADICTION: "
+                f"relation {item.get('id')!r} cannot assign every participant consistently; "
+                f"participant_roles={participants}"
+            )
+        item["participant_roles"] = [support[0], bundle_id]
+    else:
+        if len(remaining) != 2 or len(support) != 1 or len(payload) != 1:
+            raise TaskSpecificationValidationError(
+                "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: quantified Living Room "
+                f"operation {item.get('id')!r} cannot assign every participant consistently; "
+                f"participant_roles={participants}"
+            )
+        item["participant_roles"] = [payload[0], support[0], bundle_id]
+
+    item["explicit_participant_roles"] = participants
+    item["explicit_context_set_id"] = bundle_id
+    canonical.setdefault("explicit_context_sets", []).append({
+        "code": "EXPLICIT_CONTEXT_SET_CANONICALIZATION",
+        "source_kind": source_kind,
+        "source_id": item.get("id"),
+        "runtime_role": "SEATING_PAIR",
+        "bundle_role_id": bundle_id,
+        "member_raw_roles": list(members),
+        "primary_raw_roles": remaining,
+        "provenance": "FM_EXPLICIT_SEMANTIC" if source_kind == "relation" else "FM_EXPLICIT_OPERATION",
+    })
+    return item, True
+
+
 def _relation_options(domain: str, relation: Mapping[str, Any], hypotheses: Mapping[str, Any]) -> list[dict[str, Any]]:
     left, right = relation["participant_roles"]
     options: list[dict[str, Any]] = []
@@ -358,13 +462,42 @@ def resolve_v3_operation_slots(
 def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) -> dict[str, Any]:
     canonical = _base_canonical_document(v3_doc)
     contract = v3_doc["task_contract"]
-    roles_by_id = {role["id"]: role for role in contract["functional_roles"]}
+    roles_by_id: dict[str, Mapping[str, Any]] = {role["id"]: role for role in contract["functional_roles"]}
+    hypotheses = build_role_type_hypotheses(domain, canonical)
+    bundles: dict[tuple[str, str], str] = {}
+
+    normalized_relations = []
+    for relation in contract["functional_relations"]:
+        if len(relation["participant_roles"]) > 2:
+            normalized, handled = _explicit_seating_context(
+                domain=domain, entry=relation, hypotheses=hypotheses, canonical=canonical,
+                roles_by_id=roles_by_id, bundles=bundles, source_kind="relation",
+            )
+            if not handled:
+                raise TaskSpecificationValidationError(
+                    f"UNSUPPORTED_NARY_RELATION_PARTICIPANTS: relation {relation['id']!r} "
+                    f"does not express a reviewed context-set semantic family"
+                )
+            normalized_relations.append(normalized)
+        else:
+            normalized_relations.append(relation)
+
+    normalized_operations = []
+    for operation in contract["operation_pairings"]:
+        if len(operation["participant_roles"]) == 4 and domain == "living_room":
+            normalized, handled = _explicit_seating_context(
+                domain=domain, entry=operation, hypotheses=hypotheses, canonical=canonical,
+                roles_by_id=roles_by_id, bundles=bundles, source_kind="operation",
+            )
+            normalized_operations.append(normalized if handled else operation)
+        else:
+            normalized_operations.append(operation)
     hypotheses = build_role_type_hypotheses(domain, canonical)
 
     relations = []
     current_state_relations = []
-    operation_pairs = [set(item.get("participant_roles", [])) for item in contract["operation_pairings"]]
-    for relation in contract["functional_relations"]:
+    operation_pairs = [set(item.get("participant_roles", [])) for item in normalized_operations]
+    for relation in normalized_relations:
         phrase_norm = re.sub(r"[_\-/]+", " ", str(relation["relation"])).lower()
         pair = set(relation["participant_roles"])
         role_texts = [" ".join(str(roles_by_id[p].get(key, "")) for key in ("function", "description")) for p in pair]
@@ -399,7 +532,7 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
     hypotheses = build_role_type_hypotheses(domain, canonical)
 
     groups = []
-    for operation in contract["operation_pairings"]:
+    for operation in normalized_operations:
         from .robot_capability_registry import is_non_physical_operation_phrase
         operation_norm = re.sub(r"[_-]+", " ", str(operation["operation"])).lower().strip()
         if is_non_physical_operation_phrase(str(operation["operation"])) or operation_norm.split(maxsplit=1)[0] in {
@@ -411,6 +544,16 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
             continue
         capabilities = extract_operation_semantic_candidates(domain, operation["operation"])
         options = resolve_v3_operation_slots(domain, operation, roles_by_id, hypotheses)
+        canonical.setdefault("role_operation_consistency_audit", []).append({
+            "operation_id": operation["id"],
+            "raw_operation": operation["operation"],
+            "explicit_participant_roles": list(operation.get("explicit_participant_roles", operation["participant_roles"])),
+            "normalized_participant_roles": list(operation["participant_roles"]),
+            "semantic_capability_candidates": [cap.capability_id for cap in capabilities],
+            "viable_slot_assignments": len(options),
+            "status": "PASS" if options or not capabilities else "FAIL",
+            "provenance": "FM_EXPLICIT_OPERATION",
+        })
         if capabilities and not options:
             raise TaskSpecificationValidationError(
                 "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: "
@@ -431,6 +574,8 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
             "required_relations": [], "context_relations": [],
             "v3_slot_assignments": options,
             "v3_participant_roles": list(operation["participant_roles"]),
+            "v3_explicit_participant_roles": list(operation.get("explicit_participant_roles", operation["participant_roles"])),
+            "v3_explicit_context_set_id": operation.get("explicit_context_set_id"),
         })
     canonical["interaction_groups"] = groups
     for edge in canonical["functional_relations"]:

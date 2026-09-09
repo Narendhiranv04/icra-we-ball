@@ -56,6 +56,13 @@ def test_v3_operation_schema_has_participant_set_and_no_reuse_or_slots():
     assert not {"source_role", "target_role", "anchor_role", "reuse_policy"} & set(props)
 
 
+def test_v3_relation_schema_accepts_two_to_four_manual_unique_participants():
+    props = LIVE_RESPONSE_SCHEMA_V3["properties"]["task_contract"]["properties"]["functional_relations"]["items"]["properties"]
+    assert props["participant_roles"]["minItems"] == 2
+    assert props["participant_roles"]["maxItems"] == 4
+    assert "uniqueItems" not in props["participant_roles"]
+
+
 def test_reusable_transfer_count_is_derived_without_redundant_policy():
     raw = document(
         [role("water", "water material source"), role("cup", "receiving coffee container", count=2, policy="DISTINCT")],

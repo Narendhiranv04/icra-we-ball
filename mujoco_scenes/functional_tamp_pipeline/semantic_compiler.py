@@ -57,10 +57,10 @@ def causal_position(role: dict, document: dict) -> set[str]:
     return positions
 
 
-def can_merge_roles(a: dict, b: dict, document: dict) -> bool:
+def can_merge_roles(a: dict, b: dict, document: dict, *, allow_counted_context: bool = False) -> bool:
     if any(a.get(k) != b.get(k) for k in ('entity_kind', 'binding_policy', 'binding_cardinality', 'min_count', 'max_count')):
         return False
-    if a.get('entity_kind') == 'FIXED_TARGET' or b.get('entity_kind') == 'FIXED_TARGET':
+    if (a.get('entity_kind') == 'FIXED_TARGET' or b.get('entity_kind') == 'FIXED_TARGET') and not allow_counted_context:
         return False
     pos_a = causal_position(a, document)
     pos_b = causal_position(b, document)
@@ -491,6 +491,8 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         provisional_roles=[], provisional_relation_constraints=[],
         provisional_operation_constraints=[], relation_orientation_resolutions=[],
         operation_participant_slot_resolutions=[],
+        explicit_context_set_canonicalizations=list(doc.get('explicit_context_sets', [])),
+        explicit_role_pairings=[],
     )
     nodes = {}
     id_map = {}
@@ -519,6 +521,8 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         rule = hypothesis.status
         if direct_name == name and direct_name is not None:
             rule = direct_rule
+        if role.get('provenance') == 'EXPLICIT_CONTEXT_SET_CANONICALIZATION':
+            rule = 'EXPLICIT_CONTEXT_SET_CANONICALIZATION'
         if direct_name in planner_constants:
             name, rule = direct_name, direct_rule
         elif hypothesis.status == 'AMBIGUOUS_ROLE_TYPE' and hypothesis.canonical_role_candidates:
@@ -529,7 +533,9 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             if name in planner_constants:
                 planner_context_id_map[rid] = name
                 context_provenance = (
-                    'TASK_EXPRESSED_SYSTEM_CONTEXT'
+                    'EXPLICIT_CONTEXT_SET_CANONICALIZATION'
+                    if role.get('provenance') == 'EXPLICIT_CONTEXT_SET_CANONICALIZATION'
+                    else 'TASK_EXPRESSED_SYSTEM_CONTEXT'
                     if rule == 'TASK_EXPRESSED_SYSTEM_CONTEXT'
                     else 'PLANNER_CONTEXT_CONSTANT'
                 )
@@ -548,7 +554,10 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             trace[field].append({'raw_role': role, 'status': 'CONTEXT_ONLY_ROLE' if context else 'UNRESOLVED_SEMANTIC'})
             continue
         if name in nodes:
-            if can_merge_roles(owners[name], role, doc):
+            if can_merge_roles(
+                owners[name], role, doc,
+                allow_counted_context=(domain == 'living_room' and name == 'SEATING_POSITION'),
+            ):
                 id_map[rid] = name
                 trace['merged_roles'].append({'code': 'CONSOLIDATED_EQUIVALENT_FM_INSTANCES', 'raw_ids': [owners[name]['id'], rid], 'canonical_role': name})
                 node = nodes[name]
@@ -588,6 +597,15 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 canonical_role_candidates=role_candidates,
                 role_resolution_status=hypothesis.status,
                 role_resolution_provenance=hypothesis.evidence)
+            if role.get('provenance') == 'EXPLICIT_CONTEXT_SET_CANONICALIZATION':
+                nodes[name] = replace(
+                    nodes[name],
+                    role_resolution_status='EXPLICIT_CONTEXT_SET_CANONICALIZATION',
+                    role_resolution_provenance=({
+                        'source': 'EXPLICIT_CONTEXT_SET_CANONICALIZATION',
+                        'member_raw_roles': list(role.get('context_set_members', [])),
+                    },),
+                )
         role_status = 'PROVISIONAL_ROLE_HYPOTHESIS' if is_provisional else 'CANONICAL_EXECUTABLE_SEMANTIC'
         trace['roles'].append({'raw_id': rid, 'canonical_role': name, 'canonical_role_candidates': list(hypothesis.canonical_role_candidates),
                                'rule': rule, 'status': role_status, 'resolution_status': hypothesis.status})
@@ -891,7 +909,10 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                     **row,
                     'source_node': id_map[row['source_role']],
                     'target_node': id_map[row['target_role']],
-                    'anchor_node': id_map.get(row.get('anchor_role')) if row.get('anchor_role') else None,
+                    'anchor_node': (
+                        id_map.get(row.get('anchor_role'))
+                        or planner_context_id_map.get(row.get('anchor_role'))
+                    ) if row.get('anchor_role') else None,
                 } for row in v3_slot_assignments),
             )
             provisional_operations.append(constraint)
@@ -998,7 +1019,25 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
 
         tool_role_id = id_map[tool_raw]
         target_role_id = id_map[target_raw]
-        ctx_role_id = id_map.get(ctx_raw) if ctx_raw else None
+        ctx_role_id = (
+            id_map.get(ctx_raw) or planner_context_id_map.get(ctx_raw)
+        ) if ctx_raw else None
+
+        if ctx_raw in planner_context_id_map and ctx_role_id not in nodes:
+            nodes[ctx_role_id] = FunctionalRole(
+                name=ctx_role_id,
+                entity_kind='FIXED_TARGET',
+                count=1,
+                binding_policy='SHARED',
+                semantic_categories=ontology.get_system_role_semantic_categories(domain, ctx_role_id),
+                verification_mode='GEOMETRIC_ONLY',
+                role_resolution_status='EXPLICIT_CONTEXT_SET_CANONICALIZATION',
+                canonical_role_candidates=(ctx_role_id,),
+                role_resolution_provenance=({
+                    'source': 'EXPLICIT_CONTEXT_SET_CANONICALIZATION',
+                    'raw_context_role': ctx_raw,
+                },),
+            )
 
         if domain == 'living_room':
             if nodes[tool_role_id].entity_kind == 'OBJECT' and nodes[target_role_id].entity_kind == 'REGION':
@@ -1226,6 +1265,16 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             preconditions_provenance=tuple(grp_precond_provenance),
             physical_preconditions=op_interp.physical_preconditions,
         ))
+        if domain == 'living_room' and group.get('v3_explicit_participant_roles'):
+            trace['explicit_role_pairings'].append({
+                'operation_id': group.get('id'),
+                'raw_participant_roles': list(group['v3_explicit_participant_roles']),
+                'canonical_source_role': tool_role_id,
+                'canonical_target_role': target_role_id,
+                'canonical_context_role': executable_context_role,
+                'context_set_id': group.get('v3_explicit_context_set_id'),
+                'provenance': 'FM_EXPLICIT_OPERATION',
+            })
         trace['groups'].append({
             'raw_group': group,
             'status': 'CANONICAL_OPERATION_GROUP',
@@ -1293,6 +1342,9 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             'is_v3_specification': is_v3_document(raw),
             'precondition_provenance': all_precond_prov,
             'task_causal_relations': [r.to_dict() for r in task_causal_relations],
+            'explicit_context_sets': list(doc.get('explicit_context_sets', [])),
+            'explicit_role_pairings': trace['explicit_role_pairings'],
+            'role_operation_consistency_audit': list(doc.get('role_operation_consistency_audit', [])),
             'task_effect_relations': [r.to_dict() for r in task_effect_relations],
             'role_type_hypotheses': {rid: hypothesis.to_dict() for rid, hypothesis in role_hypotheses.items()},
             'provisional_relation_constraints': trace['provisional_relation_constraints'],

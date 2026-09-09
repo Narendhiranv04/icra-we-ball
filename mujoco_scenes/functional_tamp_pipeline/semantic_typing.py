@@ -157,7 +157,12 @@ def function_semantic_evidence(
                 preferred.add("SHARED_REMOTE_REGION")
             else:
                 preferred.add("PERSONAL_CUP_SAUCER_REGION")
-        if "SEATING" in families: preferred.add("SEATING_POSITION")
+        if "SEATING" in families:
+            preferred.add(
+                "SEATING_PAIR"
+                if re.search(r"\b(explicit|both|pair|two|all)\b", text)
+                else "SEATING_POSITION"
+            )
         if "PAYLOAD" in families:
             preferred.add("REMOTE" if re.search(r"\b(remote|control)\b", text) else "CUP_SAUCER_SET")
     elif domain == "workshop":
