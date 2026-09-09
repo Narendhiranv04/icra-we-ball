@@ -284,7 +284,7 @@ def _base_canonical_document(doc: Mapping[str, Any]) -> dict[str, Any]:
 
 
 _QUANTIFIED_CONTEXT_TEXT = re.compile(
-    r"\b(both|all|pair|each|between(?:\s+the)?\s+two|accessible\s+from\s+both)\b",
+    r"\b(both|all|pair|each|between(?:\s+(?:the\s+)?two)?|accessible\s+from\s+both)\b",
     re.IGNORECASE,
 )
 
@@ -347,21 +347,37 @@ def _explicit_seating_context(
         roles_by_id[bundle_id] = role
 
     remaining = [p for p in participants if p not in seats]
-    support = [p for p in remaining if _role_has_candidate(hypotheses, p, "SHARED_REMOTE_REGION")]
+    support = [p for p in remaining if any(
+        _role_has_candidate(hypotheses, p, candidate)
+        for candidate in ("SHARED_REMOTE_REGION", "PERSONAL_CUP_SAUCER_REGION")
+    )]
     payload = [p for p in remaining if _role_has_candidate(hypotheses, p, "REMOTE")]
     if source_kind == "relation":
         meanings = extract_relation_semantic_candidates(domain, phrase)
-        if not any(m.predicate_name == "ACCESSIBLE_FROM_BOTH_SEATS" for m in meanings):
+        relation_family = next(
+            (m.predicate_name for m in meanings if m.predicate_name in {
+                "ACCESSIBLE_FROM_BOTH_SEATS", "SITUATED_BETWEEN",
+            }),
+            "SITUATED_BETWEEN" if re.fullmatch(r"\s*between\s*", re.sub(r"[_-]+", " ", phrase), re.I) else None,
+        )
+        if relation_family is None:
             raise TaskSpecificationValidationError(
                 f"UNSUPPORTED_QUANTIFIED_RELATION_FAMILY: relation {item.get('id')!r} ({phrase!r})"
             )
-        if len(support) != 1 or len(remaining) not in {1, 2} or (len(remaining) == 2 and len(payload) != 1):
+        if (
+            len(support) != 1
+            or len(remaining) not in {1, 2}
+            or (len(remaining) == 2 and (relation_family != "ACCESSIBLE_FROM_BOTH_SEATS" or len(payload) != 1))
+        ):
             raise TaskSpecificationValidationError(
                 "FM_INTERNAL_QUANTIFIED_RELATION_PARTICIPANT_CONTRADICTION: "
                 f"relation {item.get('id')!r} cannot assign every participant consistently; "
                 f"participant_roles={participants}"
             )
         item["participant_roles"] = [support[0], bundle_id]
+        item["relation"] = (
+            "situated between" if relation_family == "SITUATED_BETWEEN" else item["relation"]
+        )
     else:
         if len(remaining) != 2 or len(support) != 1 or len(payload) != 1:
             raise TaskSpecificationValidationError(

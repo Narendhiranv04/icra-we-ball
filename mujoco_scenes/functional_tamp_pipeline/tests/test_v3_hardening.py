@@ -223,6 +223,21 @@ def test_quantified_relation_builds_explicit_seating_pair_context():
     assert context["code"] == "EXPLICIT_CONTEXT_SET_CANONICALIZATION"
 
 
+def test_between_relation_builds_explicit_seating_pair_context():
+    raw = document(
+        _living_context_roles(include_remote=False),
+        relations=[relation("between", "between", ["shared", "seat_left", "seat_right"])],
+    )
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    edge = canonical["functional_relations"][0]
+    assert edge["relation"] == "situated between"
+    assert edge["subject_role"] == "shared"
+    assert edge["object_role"].startswith("fm_context_set__")
+    graph = compile_candidate_graph("living_room", "place shared support between both seats", raw)
+    assert graph.task_causal_relations[0].predicate == "SITUATED_BETWEEN"
+    assert graph.task_causal_relations[0].object_role == "SEATING_PAIR"
+
+
 def test_quantified_relation_missing_member_fails_closed():
     raw = document(
         _living_context_roles(include_remote=False)[:2],

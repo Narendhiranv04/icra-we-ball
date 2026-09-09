@@ -107,7 +107,7 @@ def function_semantic_evidence(
         families.add("INSTRUMENT")
     if re.search(r"\b(table|tabletop|surface|platform|support|placement area|central area|staging area|storage area|storage region)\b", text):
         families.add("SUPPORT")
-    if re.search(r"\b(chair|armchair|seat|seating (?:fixture|position|context)|occupant support)\b", text):
+    if re.search(r"\b(chair|armchair|seat|seating (?:fixture|position|context|reference)|occupant support)\b", text):
         families.add("SEATING")
     if re.search(r"\b(screw|bolt|fastener|joining element|connecting element|connector|installed component|component to be installed)\b", text):
         families.add("COMPONENT")
