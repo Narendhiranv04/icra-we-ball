@@ -34,8 +34,7 @@ try:
         LIVE_RESPONSE_SCHEMA_V2,
         is_v2_document,
         validate_v2_functional_specification,
-        validate_v2_live_contract,
-        normalize_v2_live_document,
+        normalize_and_validate_v2_contract,
         convert_v2_to_canonical_document,
         compute_v2_prompt_and_schema_hash,
     )
@@ -1626,10 +1625,9 @@ class FMAdapter:
         self.last_raw_requirement_response = deepcopy(raw_document)
         live_v2_document = None
         if schema_version == 2 and is_v2_document(raw_document):
-            normalized_document, self.last_normalization_trace = normalize_v2_live_document(
+            live_v2_document, self.last_normalization_trace = normalize_and_validate_v2_contract(
                 raw_document
             )
-            live_v2_document = validate_v2_live_contract(normalized_document)
         if getattr(self, "return_raw_graph", False):
             return live_v2_document if live_v2_document is not None else raw_document
         if live_v2_document is not None:

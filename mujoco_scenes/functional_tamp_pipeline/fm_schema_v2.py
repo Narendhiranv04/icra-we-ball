@@ -17,7 +17,10 @@ from copy import deepcopy
 from typing import Any, Mapping
 import jsonschema
 
-from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+from mujoco_scenes.functional_tamp_pipeline.errors import (
+    MalformedVLMSpecificationError,
+    TaskSpecificationValidationError,
+)
 from mujoco_scenes.functional_tamp_pipeline.robot_capability_registry import (
     is_non_physical_operation_phrase,
 )
@@ -403,6 +406,26 @@ def is_v2_document(doc: Mapping[str, Any]) -> bool:
     return isinstance(doc, Mapping) and "task_contract" in doc
 
 
+LIVE_V2_EQUIVALENT = "LIVE_V2_EQUIVALENT"
+LEGACY_FIXTURE = "LEGACY_FIXTURE"
+
+
+def normalize_and_validate_v2_contract(
+    doc: Mapping[str, Any],
+    *,
+    domain: str | None = None,
+    validation_mode: str = LIVE_V2_EQUIVALENT,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Apply the single production V2 boundary used by live and replay paths."""
+    if validation_mode == LEGACY_FIXTURE:
+        return deepcopy(dict(doc)), []
+    if validation_mode != LIVE_V2_EQUIVALENT:
+        raise ValueError(f"Unknown V2 validation mode: {validation_mode!r}")
+    normalized, trace = normalize_v2_live_document(doc)
+    validated = validate_v2_live_contract(normalized, domain=domain)
+    return validated, trace
+
+
 def validate_v2_functional_specification(doc: Mapping[str, Any]) -> dict[str, Any]:
     """Validate a V2 specification document against RESPONSE_SCHEMA_V2."""
     if not isinstance(doc, Mapping):
@@ -551,7 +574,9 @@ def _validate_live_response_schema(doc: Mapping[str, Any]) -> None:
         ) from err
 
 
-def validate_v2_live_contract(doc: Mapping[str, Any]) -> dict[str, Any]:
+def validate_v2_live_contract(
+    doc: Mapping[str, Any], *, domain: str | None = None
+) -> dict[str, Any]:
     """Enforce invariants required of newly generated live V2 documents.
 
     The base validator intentionally remains backward compatible for archived
@@ -706,6 +731,75 @@ def validate_v2_live_contract(doc: Mapping[str, Any]) -> dict[str, Any]:
 
     if operation_semantic_errors:
         raise MalformedVLMSpecificationError("; ".join(operation_semantic_errors))
+
+    if domain is not None:
+        # This is semantic coherence validation of the FM's own endpoint
+        # structure. It only constrains explicitly expressed operations and
+        # never creates a missing participant.
+        from mujoco_scenes.functional_tamp_pipeline.robot_capability_registry import (
+            extract_operation_semantic_candidates,
+        )
+        from mujoco_scenes.functional_tamp_pipeline.semantic_compiler import (
+            resolve_role_type_hypotheses,
+        )
+
+        canonical = convert_v2_to_canonical_document(validated)
+        hypotheses = resolve_role_type_hypotheses(domain, canonical)
+        for index, operation in enumerate(operations):
+            capabilities = extract_operation_semantic_candidates(
+                domain, str(operation["operation"])
+            )
+            if len(capabilities) != 1:
+                continue
+            capability = capabilities[0]
+            if not capability.required_relation_templates:
+                # Planner-owned restoration/support transitions do not impose
+                # a selectable physical participant signature.
+                continue
+            source_types = set(hypotheses[operation["source_role"]].canonical_role_candidates)
+            target_types = set(hypotheses[operation["target_role"]].canonical_role_candidates)
+            anchor_types = (
+                set(hypotheses[operation["anchor_role"]].canonical_role_candidates)
+                if operation.get("anchor_role") else set()
+            )
+            orientations = [
+                (set(capability.allowed_source_roles), set(capability.allowed_target_roles))
+            ]
+            # Living-room FM transformations are commonly phrased payload ->
+            # support while the executable capability is support -> payload.
+            if domain == "living_room":
+                orientations.append((orientations[0][1], orientations[0][0]))
+            endpoint_structure_valid = any(
+                source_types.intersection(allowed_sources)
+                and target_types.intersection(allowed_targets)
+                for allowed_sources, allowed_targets in orientations
+            )
+            if operation.get("anchor_role"):
+                endpoint_structure_valid = bool(
+                    endpoint_structure_valid
+                    and anchor_types.intersection(capability.allowed_anchor_roles)
+                )
+            if not endpoint_structure_valid:
+                diagnostic = {
+                    "source": {
+                        "role_id": operation["source_role"],
+                        "candidate_types": sorted(source_types),
+                    },
+                    "target": {
+                        "role_id": operation["target_role"],
+                        "candidate_types": sorted(target_types),
+                    },
+                    "anchor": {
+                        "role_id": operation.get("anchor_role"),
+                        "candidate_types": sorted(anchor_types),
+                    },
+                }
+                raise TaskSpecificationValidationError(
+                    "INCOMPLETE_OPERATION_PARTICIPANT_STRUCTURE: "
+                    f"operation_pairings[{index}] {operation['id']!r} expresses "
+                    f"{capability.capability_id} but declared endpoints cannot instantiate "
+                    f"its participant signature: {diagnostic}"
+                )
 
     return validated
 

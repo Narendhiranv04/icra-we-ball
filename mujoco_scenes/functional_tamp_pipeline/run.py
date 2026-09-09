@@ -284,7 +284,7 @@ def _acquire_spec_or_fail(
             state.functional_spec_complete = False
             task_specification_valid = cat not in {
                 "MALFORMED_VLM_SPECIFICATION", "TRANSPORT_OR_STRUCTURED_OUTPUT_FAILURE",
-                "SANITIZER_UNRECOVERABLE",
+                "SANITIZER_UNRECOVERABLE", "TASK_SPECIFICATION_FAILURE",
             }
             outcome = classify_pipeline_outcome(
                 task_specification_valid=task_specification_valid,

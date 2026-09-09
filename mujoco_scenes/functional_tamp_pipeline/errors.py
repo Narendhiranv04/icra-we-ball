@@ -22,6 +22,20 @@ class MalformedVLMSpecificationError(VLMSpecificationError):
         super().__init__(message, category="MALFORMED_VLM_SPECIFICATION")
 
 
+class TaskSpecificationValidationError(VLMSpecificationError):
+    """Raised when an FM-authored contract is semantically incoherent."""
+
+    def __init__(self, message: str):
+        super().__init__(message, category="TASK_SPECIFICATION_FAILURE")
+
+
+class GraphCompilationError(VLMSpecificationError):
+    """Raised when a coherent FM contract has no complete runtime representation."""
+
+    def __init__(self, message: str):
+        super().__init__(message, category="GRAPH_COMPILATION_FAILURE")
+
+
 class UnmappedFunctionalConceptError(VLMSpecificationError):
     """Raised when a VLM natural-language phrase cannot be mapped to any reviewed functional grammar."""
 

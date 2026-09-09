@@ -30,13 +30,14 @@ class VLMSpecProvider(FunctionalSpecProvider):
         task_instruction: str,
         observation_images: list[Path] | None = None,
         raw_document: dict[str, Any] | None = None,
+        validation_mode: str = "LIVE_V2_EQUIVALENT",
     ) -> FunctionalRequirementGraph:
         from .semantic_compiler import compile_candidate_graph
         from .executability import analyze_executability
         from mujoco_scenes.workshop_phase1.fm_adapter import (
             FMAdapter,
             is_v2_document,
-            validate_v2_live_contract,
+            normalize_and_validate_v2_contract,
         )
 
         if domain not in {"kitchen", "living_room", "workshop"}:
@@ -53,13 +54,31 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 raw_document = adapter.generate_task_requirements(
                     task_instruction, observation_images=observation_images or []
                 )
-            # The adapter returns raw output for compiler provenance. Ensure the
-            # live V2 path still performs schema and semantic cross-field checks.
-            # Legacy adapter fixtures remain compiler inputs, not V2 wire data.
-            if is_v2_document(raw_document):
-                raw_document = validate_v2_live_contract(raw_document)
+        # A V2 wire document always crosses the same production boundary,
+        # regardless of whether it came from the live transport or replay.
+        # Pre-V2 fixtures require an explicit LEGACY_FIXTURE mode.
+        if is_v2_document(raw_document):
+            raw_document, normalization_trace = normalize_and_validate_v2_contract(
+                raw_document, domain=domain, validation_mode=validation_mode
+            )
+        else:
+            normalization_trace = []
         graph = compile_candidate_graph(domain, task_instruction, raw_document)
+        graph.metadata["v2_validation_mode"] = validation_mode
+        graph.metadata["v2_boundary_normalization_trace"] = normalization_trace
         graph.metadata["candidate_requirement_statuses"] = analyze_executability(graph)
+        if not graph.online_executable_contract_complete:
+            from .errors import GraphCompilationError
+            trace = graph.metadata.get("canonicalization_trace", {})
+            unresolved = (
+                trace.get("unresolved_roles", [])
+                + trace.get("unresolved_required_relations", [])
+                + trace.get("unresolved_required_operations", [])
+            )
+            raise GraphCompilationError(
+                "INCOMPLETE_CANONICAL_GRAPH: coherent FM contract could not be fully "
+                f"represented; unresolved={unresolved}"
+            )
         return graph
 
     @staticmethod
