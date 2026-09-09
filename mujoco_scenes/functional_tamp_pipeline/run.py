@@ -127,6 +127,22 @@ def _emit_event(observer: EventCallback | None, event_type: str, payload: dict[s
         observer(event_type, payload)
 
 
+def _individual_candidates_sufficient(grounding_result: Any) -> bool:
+    """Whether every required role had enough individually-plausible observed candidates.
+
+    Prefers the explicit per-role plausibility evidence emitted by grounding, which is
+    computed independently of any joint assignment.  This is what separates
+    OBJECT_DISCOVERY_FAILURE (too few plausible individuals for some role) from
+    FUNCTIONAL_ASSIGNMENT_FAILURE (enough individuals, but no consistent joint choice).
+    Falls back to the coarse failure_kind signal when evidence is unavailable.
+    """
+    evidence = getattr(grounding_result, "evidence", None) or {}
+    explicit = evidence.get("individual_candidates_sufficient")
+    if isinstance(explicit, bool):
+        return explicit
+    return getattr(grounding_result, "failure_kind", None) != "OBJECT_DISCOVERY_FAILURE"
+
+
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
@@ -720,7 +736,7 @@ def _run_pipeline_impl(
             outcome_category=classify_pipeline_outcome(
                 task_specification_valid=True, graph_compiled=True,
                 search_exhausted=True,
-                individual_candidates_sufficient=satisfaction.failure_kind != "OBJECT_DISCOVERY_FAILURE",
+                individual_candidates_sufficient=_individual_candidates_sufficient(satisfaction),
                 functional_assignment_complete=False,
                 reason=reason,
             ).category,

@@ -390,6 +390,9 @@ def search_until_satisfied(
             unsatisfied_relations=result.unsatisfied_relations,
             unresolved_constraints=result.unresolved_constraints,
             evidence=evidence,
+            failure_kind=result.failure_kind,
+            resolved_role_types=dict(result.resolved_role_types),
+            resolved_graph=result.resolved_graph,
         )
         return ret, tuple(inspected)
 
@@ -464,6 +467,9 @@ def search_until_satisfied(
                     unsatisfied_relations=result.unsatisfied_relations,
                     unresolved_constraints=result.unresolved_constraints,
                     evidence=evidence,
+                    failure_kind=result.failure_kind,
+                    resolved_role_types=dict(result.resolved_role_types),
+                    resolved_graph=result.resolved_graph,
                 )
                 return ret, tuple(inspected)
             break
@@ -512,5 +518,8 @@ def search_until_satisfied(
         unsatisfied_relations=final_result.unsatisfied_relations,
         unresolved_constraints=final_result.unresolved_constraints,
         evidence=evidence,
+        failure_kind=final_result.failure_kind,
+        resolved_role_types=dict(final_result.resolved_role_types),
+        resolved_graph=final_result.resolved_graph,
     ), tuple(inspected)
 
