@@ -82,7 +82,8 @@ class FunctionalConstraintInterpreter:
         return unique[0] if len(unique) == 1 else None
 
     def _join_living_context(self, operation: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
-        if self.domain != "living_room" or not self._MOVE.search(str(operation.get("operation", ""))):
+        operation_text = str(operation.get("operation", "")).replace("_", " ").replace("-", " ")
+        if self.domain != "living_room" or not self._MOVE.search(operation_text):
             return None
         original = list(operation["participant_roles"])
         removals = [None]

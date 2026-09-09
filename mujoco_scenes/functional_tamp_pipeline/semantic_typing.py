@@ -118,7 +118,7 @@ def function_semantic_evidence(
         families.add("SEATING")
     if re.search(r"\b(screw|bolt|fastener|joining element|connecting element|connector|installed component|component to be installed)\b", text):
         families.add("COMPONENT")
-    if re.search(r"\b(fixed (?:workpiece|point|target|receiving (?:location|site|target))|repair target|fixture|marked (?:target|joint|site|location)|target joint|joint hole|fastening site|location[^.]*requiring fastening|assembly receiv(?:ing|er)|workpiece assembly|object to be secured|primary object to be secured)\b", text):
+    if re.search(r"\b(fixed (?:workpiece|point|target|receiving (?:location|site|target))|repair target|fixture|marked (?:target|joint|site|location)|target joint|joint hole|fastening site|location[^.]*requiring fastening|assembly receiv(?:ing|er)|workpiece assembly|object receiv(?:ing|es) (?:the )?fasten\w*|object to be secured|primary object to be secured)\b", text):
         families.add("FIXED_TARGET")
     if re.search(r"\b(payload|refreshment set(?:ting)?|cup and saucer|drinkware|remote control|media control|entertainment control(?:ler)?|device (?:used to|for controlling|to control)|controlling (?:television|tv|display)|(?:remote|media|entertainment|television|tv) controller?|control(?:ler)? (?:television|tv|display)|consumables)\b", all_text):
         families.add("PAYLOAD")
@@ -168,6 +168,8 @@ def function_semantic_evidence(
             families.add("PAYLOAD")
             evidence_source = "CANDIDATE_CATEGORY_TEXT"
         if "SUPPORT" in families:
+            if role.get("entity_kind") == "REGION":
+                families.discard("PAYLOAD")
             if re.search(r"\b(shared|central|common|coffee table|both|remote)\b", all_text):
                 preferred.add("SHARED_REMOTE_REGION")
             elif re.search(r"\b(personal|side table|end table|individual)\b", all_text):
@@ -175,7 +177,7 @@ def function_semantic_evidence(
         if "SEATING" in families:
             preferred.add(
                 "SEATING_PAIR"
-                if re.search(r"\b(explicit|both|pair|two|all)\b", text)
+                if re.search(r"\b(explicit|both|pair|all)\b", text)
                 else "SEATING_POSITION"
             )
         if "PAYLOAD" in families:

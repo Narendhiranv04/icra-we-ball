@@ -25,6 +25,7 @@ from .predicate_registry import validate_predicate_signature
 from .fm_schema_v2 import is_v2_document
 from .fm_schema_v3 import is_v3_document
 from .errors import VLMSpecificationError
+from .robot_capability_registry import extract_operation_semantic_candidates
 
 
 def causal_position(role: dict, document: dict) -> set[str]:
@@ -895,7 +896,6 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         v3_participants = group.get('v3_participant_roles', [])
 
         if len(v3_slot_assignments) > 1:
-            from .robot_capability_registry import extract_operation_semantic_candidates
             capabilities = extract_operation_semantic_candidates(domain, raw_op)
             capability_records = [{
                 'capability_id': capability.capability_id,
@@ -973,7 +973,6 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             len(nodes[id_map[tool_raw]].canonical_role_candidates) > 1
             or len(nodes[id_map[target_raw]].canonical_role_candidates) > 1
         ):
-            from .robot_capability_registry import extract_operation_semantic_candidates
             capabilities = extract_operation_semantic_candidates(domain, raw_op)
             capability_records = []
             for capability in capabilities:
@@ -1052,8 +1051,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 tool_raw, target_raw = target_raw, tool_raw
 
         is_v2 = is_v2_document(raw)
-        if not ctx_role_id:
-            from .robot_capability_registry import extract_operation_semantic_candidates
+        if not ctx_role_id and not is_v3_document(raw):
             semantic_capabilities = extract_operation_semantic_candidates(domain, raw_op)
             capability_anchors = {
                 anchor for capability in semantic_capabilities
@@ -1089,6 +1087,22 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                             'capability_ids': [cap.capability_id for cap in semantic_capabilities],
                         },),
                     )
+
+        if is_v3_document(raw) and not ctx_role_id:
+            explicit_capability_ids = {
+                row.get('capability_id') for row in v3_slot_assignments if row.get('capability_id')
+            }
+            requires_explicit_context = any(
+                capability.capability_id in explicit_capability_ids and capability.allowed_anchor_roles
+                for capability in extract_operation_semantic_candidates(domain, raw_op)
+            )
+            if requires_explicit_context:
+                trace['disabled_groups'].append({
+                    'raw_group': group,
+                    'status': 'MISSING_EXPLICIT_OPERATION_CONTEXT',
+                    'reason': 'V3 operation capability requires FM-expressed anchor/context evidence',
+                })
+                continue
 
         op_interp = interpret_operation(
             domain=domain,

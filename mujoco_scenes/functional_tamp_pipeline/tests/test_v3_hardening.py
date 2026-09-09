@@ -179,6 +179,17 @@ def test_fixed_receiving_location_is_a_repair_target_family():
     assert hypothesis.canonical_role_candidates == ("repair_target",)
 
 
+def test_object_receiving_fastening_attachment_is_fixed_target_family():
+    raw = document([role(
+        "workpiece", "object receiving the fastening attachment",
+        kind="FIXED_TARGET", policy="SHARED", categories=["ASSEMBLY"],
+    )])
+    hypothesis = build_role_type_hypotheses(
+        "workshop", convert_v3_to_canonical_document(raw, domain="workshop")
+    )["workpiece"]
+    assert hypothesis.canonical_role_candidates == ("repair_target",)
+
+
 @pytest.mark.parametrize("kind", ["relation", "operation"])
 def test_duplicate_participants_fail_manual_structural_validation(kind):
     raw = document([role("tool", "tool")],
@@ -362,6 +373,9 @@ def test_missing_explicit_shared_context_is_not_invented():
     assert canonical["interaction_groups"][0]["v3_slot_assignments"]
     assert canonical["interaction_groups"][0]["context_role"] is None
     assert not canonical.get("explicit_context_sets")
+    graph = compile_candidate_graph("living_room", "move remote to shared support", raw)
+    assert not graph.online_executable_contract_complete
+    assert "SEATING_PAIR" not in graph.nodes
 
 
 def test_beverage_macro_has_unique_two_transfer_lowering_and_accounting():
