@@ -61,7 +61,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
         wire_version = 1
         if is_v3_document(raw_document):
             raw_document, normalization_trace = normalize_and_validate_v3_contract(
-                raw_document, domain=domain
+                raw_document, domain=domain, task_instruction=task_instruction
             )
             wire_version = 3
         elif is_v2_document(raw_document):

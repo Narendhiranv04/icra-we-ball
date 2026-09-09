@@ -32,6 +32,7 @@ _NON_PHYSICAL_LEADING_ACTIONS = frozenset({
     "find", "finds", "finding", "found",
     "identify", "identifies", "identifying", "identified",
     "inspect", "inspects", "inspecting", "inspected",
+    "inspector",
     "locate", "locates", "locating", "located",
     "recognize", "recognizes", "recognizing", "recognized",
     "recognise", "recognises", "recognising", "recognised",
@@ -316,6 +317,19 @@ def extract_operation_semantic_candidates(
             for cue in capability.semantic_cues
         ):
             matched.append(capability)
+    leading = norm_text.split(maxsplit=1)[0]
+    if not matched and domain == "living_room" and leading in {
+        "transfer", "move", "relocate", "place", "position", "transport",
+    }:
+        matched.extend(get_robot_capabilities(domain))
+    elif not matched and domain == "workshop" and leading in {
+        "secure", "fasten", "tighten", "drive", "install",
+    }:
+        matched.extend(cap for cap in get_robot_capabilities(domain) if cap.capability_id == "FASTEN_JOINT")
+    elif not matched and domain == "workshop" and leading in {
+        "return", "deposit", "restore", "store", "put", "place",
+    }:
+        matched.extend(cap for cap in get_robot_capabilities(domain) if cap.capability_id == "RETURN_REUSABLE_ITEM_TO_SUPPORT")
     return tuple(sorted(set(matched), key=lambda item: item.capability_id))
 
 

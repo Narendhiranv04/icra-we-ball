@@ -85,14 +85,16 @@ def test_kitchen_service_surface_resolves_to_existing_context():
     assert build_role_type_hypotheses("kitchen", canonical)["service"].canonical_role_candidates == ("serving_area",)
 
 
-def test_living_operation_omitting_seating_context_fails_closed():
+def test_living_two_participant_relocation_remains_a_capability_candidate():
     raw = document(
         [role("payload", "personal refreshment drinkware set"),
          role("support", "personal side table support", kind="REGION", policy="SHARED")],
         operations=[operation("place", "place drinkware", ["payload", "support"], 2)],
     )
-    with pytest.raises(TaskSpecificationValidationError, match="MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS"):
-        normalize_and_validate_v3_contract(raw, domain="living_room")
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    group = canonical["interaction_groups"][0]
+    assert (group["tool_role"], group["target_role"]) == ("support", "payload")
+    assert group["context_role"] is None
 
 
 def test_living_personal_and_shared_slots_resolve():

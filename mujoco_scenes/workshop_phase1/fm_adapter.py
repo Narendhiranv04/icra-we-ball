@@ -1638,7 +1638,7 @@ class FMAdapter:
         live_wire_document = None
         if schema_version == 3 and is_v3_document(raw_document):
             live_wire_document, self.last_normalization_trace = normalize_and_validate_v3_contract(
-                raw_document
+                raw_document, task_instruction=task_instruction
             )
         elif schema_version == 2 and is_v2_document(raw_document):
             live_wire_document, self.last_normalization_trace = normalize_and_validate_v2_contract(

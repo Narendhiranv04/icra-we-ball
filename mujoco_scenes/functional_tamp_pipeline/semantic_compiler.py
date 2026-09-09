@@ -58,7 +58,9 @@ def causal_position(role: dict, document: dict) -> set[str]:
 
 
 def can_merge_roles(a: dict, b: dict, document: dict) -> bool:
-    if any(a.get(k) != b.get(k) for k in ('entity_kind', 'binding_policy', 'required_count', 'binding_cardinality', 'min_count', 'max_count')):
+    if any(a.get(k) != b.get(k) for k in ('entity_kind', 'binding_policy', 'binding_cardinality', 'min_count', 'max_count')):
+        return False
+    if a.get('entity_kind') == 'FIXED_TARGET' or b.get('entity_kind') == 'FIXED_TARGET':
         return False
     pos_a = causal_position(a, document)
     pos_b = causal_position(b, document)
@@ -74,8 +76,16 @@ def can_merge_roles(a: dict, b: dict, document: dict) -> bool:
     if any({g.get('tool_role'), g.get('target_role')} == pair for g in document.get('interaction_groups', [])):
         return False
     # Equal canonical names alone do not establish equal causal function.
-    normalize = lambda x: re.sub(r'\W+', ' ', (x or '').lower()).strip()
-    return normalize(a.get('function', '')) == normalize(b.get('function', '')) and normalize(a.get('description', '')) == normalize(b.get('description', ''))
+    def normalize_function(value):
+        text = re.sub(r'\b(?:first|second|third|fourth|one|two|three|[0-9]+|[a-z])\b', ' ', (value or '').lower())
+        return re.sub(r'\W+', ' ', text).strip()
+    if normalize_function(a.get('function', '')) != normalize_function(b.get('function', '')):
+        return False
+    if set(a.get('candidate_categories', ())) != set(b.get('candidate_categories', ())):
+        return False
+    if set(a.get('required_properties', ())) != set(b.get('required_properties', ())):
+        return False
+    return True
 
 
 def _map_role(domain: str, role: dict, doc: dict) -> tuple[str | None, str]:
@@ -105,6 +115,11 @@ def _map_role(domain: str, role: dict, doc: dict) -> tuple[str | None, str]:
         role_text = re.sub(
             r"\s+", " ", re.sub(r"[_-]+", " ", f"{role.get('function', '')} {role.get('description', '')}".lower())
         ).strip()
+        category_text = ' '.join(role.get('candidate_categories', [])).lower()
+        if re.search(r'\b(initial|current|original)\b.*\b(source|location|storage)\b', role_text) and re.search(
+            r'\b(table|desk|surface|staging|support)\b', role_text + ' ' + category_text
+        ):
+            return None, 'CURRENT_STATE_CONTEXT_ONLY'
         seating = map_living_room_fixed_target_role(role)
         if seating:
             return seating, 'FIXED_TARGET_SEMANTICS'
@@ -535,9 +550,14 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         if name in nodes:
             if can_merge_roles(owners[name], role, doc):
                 id_map[rid] = name
-                trace['merged_roles'].append({'code': 'RAW_ROLE_MERGED', 'raw_ids': [owners[name]['id'], rid], 'canonical_role': name})
+                trace['merged_roles'].append({'code': 'CONSOLIDATED_EQUIVALENT_FM_INSTANCES', 'raw_ids': [owners[name]['id'], rid], 'canonical_role': name})
                 node = nodes[name]
-                nodes[name] = replace(node, semantic_hints=tuple(dict.fromkeys(node.semantic_hints + tuple(role['required_properties']))))
+                total = node.count + int(role.get('required_count', 1))
+                nodes[name] = replace(
+                    node, count=total, min_count=total, max_count=total,
+                    binding_policy='DISTINCT',
+                    semantic_hints=tuple(dict.fromkeys(node.semantic_hints + tuple(role['required_properties']))),
+                )
                 # Process additional property evidence below.
             else:
                 trace['unresolved_roles'].append({'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': role, 'collision_with': owners[name]['id']})
@@ -846,11 +866,56 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         target_raw = group.get('target_role')
         ctx_raw = group.get('context_role') or group.get('anchor_role')
         raw_op = group.get('function') or group.get('operation') or ''
+        v3_slot_assignments = group.get('v3_slot_assignments', [])
+        v3_participants = group.get('v3_participant_roles', [])
+
+        if len(v3_slot_assignments) > 1:
+            from .robot_capability_registry import extract_operation_semantic_candidates
+            capabilities = extract_operation_semantic_candidates(domain, raw_op)
+            capability_records = [{
+                'capability_id': capability.capability_id,
+                'planner_operation': capability.planner_operation,
+                'allowed_source_roles': list(capability.allowed_source_roles),
+                'allowed_target_roles': list(capability.allowed_target_roles),
+                'allowed_anchor_roles': list(capability.allowed_anchor_roles),
+                'required_relation_templates': [list(row) for row in capability.required_relation_templates],
+            } for capability in capabilities]
+            first = v3_slot_assignments[0]
+            count = group.get('required_target_count', group.get('operation_count', 1))
+            constraint = ProvisionalOperationConstraint(
+                raw_operation_id=group.get('id', raw_op), raw_source_role='', raw_target_role='',
+                raw_anchor_role=None, source_node='', target_node='', anchor_node=None,
+                capability_candidates=tuple(capability_records), required_count=count,
+                reuse_policy=first['usage_policy'],
+                slot_assignments=tuple({
+                    **row,
+                    'source_node': id_map[row['source_role']],
+                    'target_node': id_map[row['target_role']],
+                    'anchor_node': id_map.get(row.get('anchor_role')) if row.get('anchor_role') else None,
+                } for row in v3_slot_assignments),
+            )
+            provisional_operations.append(constraint)
+            trace['groups'].append({'raw_group': group, 'status': 'PROVISIONAL_OPERATION_CONSTRAINT',
+                                    'capability_candidates': [c.capability_id for c in capabilities]})
+            trace['provisional_operation_constraints'].append(constraint.to_dict())
+            continue
 
         # Explicit final placement/restoration to a registered planner constant
         # is audited but is not a selectable G_F operation.  The domain planner
         # owns that context transition.  Other operations with unresolved
         # context endpoints still fail closed below.
+        participant_contexts = [p for p in v3_participants if p in planner_context_id_map]
+        participant_objects = [p for p in v3_participants if p in id_map]
+        if (
+            len(participant_contexts) == 1 and participant_objects
+            and re.search(r'\b(place|return|leave|restore|set down|put|deposit|store|release|transport|deliver)\b', re.sub(r'[_-]+', ' ', raw_op.lower()))
+        ):
+            trace['groups'].append({
+                'raw_group': group, 'status': 'ABSORBED_INTO_PLANNER_CONTEXT',
+                'planner_context': planner_context_id_map[participant_contexts[0]],
+                'provenance': planner_context_provenance[participant_contexts[0]],
+            })
+            continue
         context_endpoint = planner_context_id_map.get(tool_raw) or planner_context_id_map.get(target_raw)
         non_context_endpoint = target_raw if tool_raw in planner_context_id_map else tool_raw
         if (
@@ -868,13 +933,15 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             continue
 
         if not tool_raw or not target_raw or tool_raw not in id_map or target_raw not in id_map:
+            if v3_participants:
+                trace['unresolved_required_operations'].append({
+                    'raw_group': group, 'status': 'UNSUPPORTED_RUNTIME_OPERATION_SEMANTIC',
+                    'reason': 'V3 participant order cannot supply source/target slots',
+                })
             trace['disabled_groups'].append({'raw_group': group, 'status': 'UNINSTANTIABLE_MISSING_ROLE'})
             continue
 
-        v3_slot_assignments = group.get('v3_slot_assignments', [])
         if (
-            len(v3_slot_assignments) > 1
-            or
             len(nodes[id_map[tool_raw]].canonical_role_candidates) > 1
             or len(nodes[id_map[target_raw]].canonical_role_candidates) > 1
         ):

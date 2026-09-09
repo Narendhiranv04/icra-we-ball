@@ -25,6 +25,12 @@ from .semantic_typing import build_role_type_hypotheses, relation_canonical_role
 
 SYSTEM_PROMPT_V3 = """You generate one open-ended functional task contract from an instruction and initial RGB views. Return only JSON matching the schema. Do not output an action sequence or backend predicate names.
 
+SUPPORTED means the task can be represented as roles, relations, and operations. Hidden objects, missing visibility, unknown inventory, closed storage, or required inspection/search are not reasons for UNSUPPORTED. Use UNSUPPORTED only when the task itself cannot be represented by this abstraction; then emit an empty contract and explain why. A supported contract is non-empty and unsupported_reason is empty.
+
+Entity kinds: OBJECT is an independently selectable/manipulable item; REGION is a spatial area, support surface, or selectable destination; FIXED_TARGET is a non-manipulated contextual reference or fixed interaction target. Cups, plates, remotes, tools, and fasteners are normally OBJECT. Support areas are normally REGION. Marked workpiece features and seating references may be FIXED_TARGET.
+
+Binding policies: DISTINCT requires different physical instances; REUSABLE permits an instance to participate in multiple operation applications; SHARED denotes one intentionally common object, context, or region. Multiple independent payloads with required_count greater than one are normally DISTINCT, not SHARED. required_count never means operation count.
+
 Reason silently in this order:
 1. Clause audit: for every task clause identify its physical participants, required binary relations, and required physical operations.
 2. Participant ledger: declare every independently groundable object, support region, or fixed anchor required by the task before considering visibility. Hidden participants remain required.
@@ -33,7 +39,9 @@ Reason silently in this order:
 5. Count audit: required_count is the minimum number of distinct physical instances; operation_count is the number of operation applications. REUSABLE or SHARED roles may participate repeatedly.
 6. Consistency audit: every exact participant ID is declared; no relation or operation uses an abstract undeclared plural; every clause is represented; equivalent interchangeable instances use one counted role rather than numbered duplicate roles; personal and shared supports remain distinct when their functions differ; a relation saying "both" uses a declared context role representing both; and no robot arm, body, gripper, or end effector is declared or proposed as a task object unless the instruction explicitly asks to manipulate that robot component.
 
-Use short atomic natural-language role functions, relations, operations, and unary properties, not uppercase backend-style predicate names. Relation participant order is not directional. Do not add operations merely to describe an already satisfied state unless the instruction requires the transformation. Do not estimate numeric geometry. Observation candidates are visible evidence only. Inspectable regions must be visible closed/storage structures; inspection_order must contain every exact declared region id once and nothing else. Region reasons may say they could be inspected for task-relevant candidates but must not claim hidden contents."""
+Represent only participants required by the actual instruction. Do not invent ingredients, material sources, or preparation mechanisms merely to explain a broad end-state verb.
+
+Use short atomic natural-language role functions, relations, operations, and unary properties, not uppercase backend-style predicate names. Relation participant order is not directional. Initial-location statements such as currently on, located initially, or stored on are observation context, not automatically required final relations. Required relations express compatibility, functional dependency, final state, or a physical relation needed by an operation. Do not add operations merely to describe an already satisfied state unless the instruction requires the transformation. Do not estimate numeric geometry. Observation candidates are visible evidence only. Inspectable regions must be visible closed/storage structures; inspection_order must contain every exact declared region id once and nothing else. Region reasons may say they could be inspected for task-relevant candidates but must not claim hidden contents."""
 
 
 USER_REQUEST_V3 = (
@@ -102,19 +110,85 @@ def is_v3_document(doc: Mapping[str, Any]) -> bool:
 
 
 _ROBOT_SELF = re.compile(
-    r"\b(robot(?:ic)?\s+(?:arm|body|platform)|gripper|end[ -]?effector(?:\s+attachment)?)\b",
+    r"\b(robot(?:ic)?(?:\s+(?:arm|body|platform|system))?|manipulator|gripper|end[ -]?effector(?:\s+attachment)?)\b",
     re.IGNORECASE,
 )
 
 
-def normalize_v3_live_document(doc: Mapping[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def normalize_v3_live_document(
+    doc: Mapping[str, Any], *, task_instruction: str = "", domain: str | None = None
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     if not isinstance(doc, Mapping):
         raise MalformedVLMSpecificationError("Live V3 specification must be a JSON object")
     normalized = deepcopy(dict(doc))
     trace: list[dict[str, Any]] = []
     contract = normalized.get("task_contract", {})
+    reason = str(normalized.get("unsupported_reason", ""))
+    if (
+        normalized.get("status") == "UNSUPPORTED"
+        and any(contract.get(key) for key in ("functional_roles", "functional_relations", "operation_pairings"))
+        and re.search(r"\b(hidden|visibility|visible|inventory|closed|inspect|search|initial (?:image|view)|rgb)\b", reason, re.I)
+        and not re.search(r"\b(cannot be represented|unrepresentable|unsupported (?:process|abstraction)|outside (?:the )?abstraction)\b", reason, re.I)
+    ):
+        normalized["status"] = "SUPPORTED"
+        normalized["unsupported_reason"] = ""
+        trace.append({"code": "OBSERVABILITY_UNSUPPORTED_NORMALIZED_TO_SUPPORTED", "raw_reason": reason})
+
+    roles_list = contract.get("functional_roles", [])
+    instruction_targets_robot = bool(
+        re.search(r"\b(robot|robotic arm|gripper|end[ -]?effector|manipulator)\b", task_instruction, re.I)
+        and re.search(r"\b(inspect|repair|replace|remove|install|manipulate|service|calibrate)\b", task_instruction, re.I)
+    )
+    executor_ids: set[str] = set()
+    if not instruction_targets_robot:
+        for role in roles_list:
+            text = " ".join(str(role.get(key, "")) for key in ("id", "function"))
+            if _ROBOT_SELF.search(text) or re.search(r"\b(active agent|manipulation agent|executor)\b", text, re.I):
+                executor_ids.add(str(role.get("id")))
+        if executor_ids:
+            contract["functional_roles"] = [role for role in roles_list if role.get("id") not in executor_ids]
+            operations = []
+            from .robot_capability_registry import is_non_physical_operation_phrase
+            for operation in contract.get("operation_pairings", []):
+                participants = [p for p in operation.get("participant_roles", []) if p not in executor_ids]
+                if len(participants) < 2 and is_non_physical_operation_phrase(str(operation.get("operation", ""))):
+                    trace.append({"code": "IMPLICIT_ROBOT_EXECUTOR_REMOVED", "removed_role_ids": sorted(executor_ids), "removed_operation": operation.get("id")})
+                    continue
+                item = deepcopy(operation)
+                item["participant_roles"] = participants
+                operations.append(item)
+            contract["operation_pairings"] = operations
+            kept_relations = []
+            for relation in contract.get("functional_relations", []):
+                if executor_ids.intersection(relation.get("participant_roles", [])):
+                    trace.append({"code": "IMPLICIT_ROBOT_EXECUTOR_REMOVED", "removed_role_ids": sorted(executor_ids), "removed_relation": relation.get("id")})
+                else:
+                    kept_relations.append(relation)
+            contract["functional_relations"] = kept_relations
+            trace.append({"code": "IMPLICIT_ROBOT_EXECUTOR_REMOVED", "removed_role_ids": sorted(executor_ids)})
+
+    if domain == "living_room":
+        op_participants = {
+            participant
+            for operation in contract.get("operation_pairings", [])
+            if re.search(r"\b(move|transfer|relocate|place|position|transport)\b", str(operation.get("operation", "")), re.I)
+            for participant in operation.get("participant_roles", [])
+        }
+        for role in contract.get("functional_roles", []):
+            categories = re.sub(r"[_-]+", " ", " ".join(role.get("candidate_categories", [])).lower())
+            text = re.sub(r"[_-]+", " ", f"{role.get('function', '')} {role.get('description', '')}".lower())
+            old_kind = role.get("entity_kind")
+            if role.get("id") in op_participants and re.search(r"\b(cup|plate|saucer|drinkware|remote|controller|electronic device)\b", categories + " " + text):
+                role["entity_kind"] = "OBJECT"
+            elif role.get("id") in op_participants and re.search(r"\b(personal|shared|central)\s+support\b", text) and re.search(r"\b(table|surface|support)\b", categories + " " + text):
+                role["entity_kind"] = "REGION"
+            if role.get("entity_kind") != old_kind:
+                trace.append({"code": "ENTITY_KIND_SEMANTIC_NORMALIZATION", "role_id": role.get("id"), "old": old_kind, "new": role.get("entity_kind")})
+
     roles = {role.get("id"): role for role in contract.get("functional_roles", []) if isinstance(role, dict)}
     visible = normalized.get("observation_guidance", {}).get("visible_candidates_per_role", {})
+    for executor_id in executor_ids:
+        visible.pop(executor_id, None)
     for role_id, candidates in list(visible.items()):
         function = str(roles.get(role_id, {}).get("function", ""))
         if _ROBOT_SELF.search(function):
@@ -127,6 +201,27 @@ def normalize_v3_live_document(doc: Mapping[str, Any]) -> tuple[dict[str, Any], 
             else:
                 kept.append(candidate)
         visible[role_id] = kept
+    guidance = normalized.get("observation_guidance", {})
+    regions = guidance.get("inspectable_regions", [])
+    kept_regions = []
+    for region in regions:
+        region_text = " ".join(str(region.get(key, "")) for key in ("id", "label", "visual_description"))
+        if re.search(r"\b(open|visible)\b.*\b(tabletop|desk top|surface)\b|\b(tabletop|desk top)\b.*\b(open|visible)\b", region_text, re.I):
+            trace.append({"code": "NON_STORAGE_INSPECTION_REGION_REMOVED", "region_id": region.get("id")})
+            continue
+        item = deepcopy(region)
+        if re.search(r"\b(contains?|holds?|likely|exact|missing)\b", str(item.get("reason", "")), re.I):
+            item["reason"] = "Could be inspected for additional task-relevant candidates."
+            trace.append({"code": "HIDDEN_CONTENT_REASON_SANITIZED", "region_id": item.get("id")})
+        kept_regions.append(item)
+    guidance["inspectable_regions"] = kept_regions
+    region_ids = [str(region.get("id")) for region in kept_regions]
+    raw_order = guidance.get("inspection_order", [])
+    repaired_order = [item for item in raw_order if item in region_ids]
+    repaired_order.extend(item for item in region_ids if item not in repaired_order)
+    if repaired_order != raw_order:
+        guidance["inspection_order"] = repaired_order
+        trace.append({"code": "INSPECTION_ORDER_NORMALIZED", "raw": raw_order, "normalized": repaired_order})
     return normalized, trace
 
 
@@ -143,6 +238,10 @@ def _validate_declared_references(doc: Mapping[str, Any]) -> None:
         if len(entry_ids) != len(set(entry_ids)):
             raise MalformedVLMSpecificationError(f"DUPLICATE_ENTRY_ID: {collection} IDs must be unique")
         for index, entry in enumerate(entries):
+            participants = entry["participant_roles"]
+            if len(set(participants)) != len(participants):
+                code = "DUPLICATE_RELATION_PARTICIPANT" if collection == "functional_relations" else "DUPLICATE_OPERATION_PARTICIPANT"
+                raise MalformedVLMSpecificationError(f"{code}: {collection}[{index}]")
             missing = sorted(set(entry["participant_roles"]) - declared)
             if missing:
                 raise MalformedVLMSpecificationError(
@@ -214,7 +313,11 @@ def resolve_v3_operation_slots(
     participants = tuple(operation["participant_roles"])
     options: list[dict[str, Any]] = []
     for capability in capabilities:
-        slot_names = ("source", "target", "anchor") if capability.allowed_anchor_roles else ("source", "target")
+        slot_names = (
+            ("source", "target")
+            if not capability.allowed_anchor_roles or (domain == "living_room" and len(participants) == 2)
+            else ("source", "target", "anchor")
+        )
         if len(participants) != len(slot_names):
             continue
         allowed = {
@@ -259,7 +362,18 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
     hypotheses = build_role_type_hypotheses(domain, canonical)
 
     relations = []
+    current_state_relations = []
+    operation_pairs = [set(item.get("participant_roles", [])) for item in contract["operation_pairings"]]
     for relation in contract["functional_relations"]:
+        phrase_norm = re.sub(r"[_\-/]+", " ", str(relation["relation"])).lower()
+        pair = set(relation["participant_roles"])
+        role_texts = [" ".join(str(roles_by_id[p].get(key, "")) for key in ("function", "description")) for p in pair]
+        is_current = bool(re.search(r"\b(currently|initially|initial|starts?|stored|located at)\b", phrase_norm))
+        if not is_current and re.search(r"\bsupported by\b", phrase_norm) and pair not in operation_pairs:
+            is_current = any(re.search(r"\b(support|surface|workbench|context)\b", text, re.I) for text in role_texts)
+        if is_current:
+            current_state_relations.append({**dict(relation), "category": "CURRENT_STATE_CONTEXT", "provenance": "FM_EXPLICIT_SEMANTIC"})
+            continue
         options = _relation_options(domain, relation, hypotheses)
         semantic_candidates = extract_relation_semantic_candidates(domain, relation["relation"])
         if semantic_candidates and not options:
@@ -281,10 +395,20 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
             "v3_orientation_options": options,
         })
     canonical["functional_relations"] = relations
+    canonical["current_state_relations"] = current_state_relations
     hypotheses = build_role_type_hypotheses(domain, canonical)
 
     groups = []
     for operation in contract["operation_pairings"]:
+        from .robot_capability_registry import is_non_physical_operation_phrase
+        operation_norm = re.sub(r"[_-]+", " ", str(operation["operation"])).lower().strip()
+        if is_non_physical_operation_phrase(str(operation["operation"])) or operation_norm.split(maxsplit=1)[0] in {
+            "associate", "associates", "associating", "associated",
+        }:
+            canonical.setdefault("non_physical_operations", []).append({
+                **dict(operation), "category": "NON_PHYSICAL_TASK_DIRECTIVE",
+            })
+            continue
         capabilities = extract_operation_semantic_candidates(domain, operation["operation"])
         options = resolve_v3_operation_slots(domain, operation, roles_by_id, hypotheses)
         if capabilities and not options:
@@ -293,20 +417,20 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
                 f"operation {operation['id']!r} ({operation['operation']!r}) cannot instantiate "
                 f"any supported capability from participant_roles={operation['participant_roles']}"
             )
-        if options:
+        if len(options) == 1:
             first = options[0]
             source, target, anchor = first["source_role"], first["target_role"], first["anchor_role"]
             usage = first["usage_policy"]
         else:
-            source, target = operation["participant_roles"][:2]
-            anchor = operation["participant_roles"][2] if len(operation["participant_roles"]) > 2 else None
-            usage = "SEQUENTIAL_REUSE_ALLOWED" if roles_by_id[source]["binding_policy"] in {"REUSABLE", "SHARED"} else "DEDICATED_PER_TARGET"
+            source = target = anchor = None
+            usage = None
         groups.append({
             "id": operation["id"], "function": operation["operation"],
             "tool_role": source, "target_role": target, "context_role": anchor,
             "required_target_count": operation["operation_count"], "usage_policy": usage,
             "required_relations": [], "context_relations": [],
             "v3_slot_assignments": options,
+            "v3_participant_roles": list(operation["participant_roles"]),
         })
     canonical["interaction_groups"] = groups
     for edge in canonical["functional_relations"]:
@@ -341,9 +465,9 @@ def validate_v3_live_contract(doc: Mapping[str, Any], *, domain: str | None = No
 
 
 def normalize_and_validate_v3_contract(
-    doc: Mapping[str, Any], *, domain: str | None = None
+    doc: Mapping[str, Any], *, domain: str | None = None, task_instruction: str = ""
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    normalized, trace = normalize_v3_live_document(doc)
+    normalized, trace = normalize_v3_live_document(doc, task_instruction=task_instruction, domain=domain)
     return validate_v3_live_contract(normalized, domain=domain), trace
 
 

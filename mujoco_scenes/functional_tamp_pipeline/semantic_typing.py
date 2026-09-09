@@ -24,12 +24,39 @@ class FunctionSemanticEvidence:
     explicit_families: tuple[str, ...] = ()
     evidence_strength: str = "UNKNOWN"
     provenance: str = "FM_FUNCTION_TEXT"
+    evidence_source: str = "FUNCTION_TEXT"
 
 
 def _text(role: dict[str, Any]) -> str:
-    return re.sub(r"\s+", " ", re.sub(
-        r"[_-]+", " ", f"{role.get('id', '')} {role.get('function', '')} {role.get('description', '')}"
-    ).lower()).strip()
+    fields = (
+        ("FUNCTION_TEXT", str(role.get("function", ""))),
+        ("ROLE_ID_TEXT", str(role.get("id", ""))),
+        ("CANDIDATE_CATEGORY_TEXT", " ".join(role.get("candidate_categories", []))),
+        ("DESCRIPTION_TEXT", str(role.get("description", ""))),
+    )
+    signal = re.compile(
+        r"\b(source|provider|ingredient|receiv|destination|tool|implement|instrument|utensil|driver|"
+        r"table|surface|support|platform|seat|chair|component|fastener|target|fixture|refreshment|"
+        r"drinkware|remote|control|television|display|cup|plate|saucer)\w*\b", re.I
+    )
+    for _, value in fields:
+        normalized = re.sub(r"\s+", " ", re.sub(r"[_-]+", " ", value).lower()).strip()
+        if signal.search(normalized):
+            return normalized
+    return re.sub(r"\s+", " ", re.sub(r"[_-]+", " ", " ".join(value for _, value in fields)).lower()).strip()
+
+
+def _evidence_source(role: dict[str, Any], selected_text: str) -> str:
+    for source, value in (
+        ("FUNCTION_TEXT", str(role.get("function", ""))),
+        ("ROLE_ID_TEXT", str(role.get("id", ""))),
+        ("CANDIDATE_CATEGORY_TEXT", " ".join(role.get("candidate_categories", []))),
+        ("DESCRIPTION_TEXT", str(role.get("description", ""))),
+    ):
+        normalized = re.sub(r"\s+", " ", re.sub(r"[_-]+", " ", value).lower()).strip()
+        if normalized == selected_text:
+            return source
+    return "COMBINED_FALLBACK_TEXT"
 
 
 def canonical_role_family(domain: str, role: str) -> str:
@@ -64,6 +91,7 @@ def function_semantic_evidence(
 ) -> FunctionSemanticEvidence:
     """Extract positive preferences and explicit family exclusions without scores."""
     text = _text(role)
+    evidence_source = _evidence_source(role, text)
     families: set[str] = set()
     # Keep a legacy lexical hit available as a fallback, but do not mix it
     # with preferences derived from explicit causal/function language.  Mixing
@@ -79,13 +107,13 @@ def function_semantic_evidence(
         families.add("INSTRUMENT")
     if re.search(r"\b(table|tabletop|surface|platform|support|placement area|central area|staging area|storage area|storage region)\b", text):
         families.add("SUPPORT")
-    if re.search(r"\b(chair|armchair|seat for|seating fixture|occupant support)\b", text):
+    if re.search(r"\b(chair|armchair|seat|seating (?:fixture|position|context)|occupant support)\b", text):
         families.add("SEATING")
     if re.search(r"\b(screw|bolt|fastener|joining element|connecting element|connector|installed component|component to be installed)\b", text):
         families.add("COMPONENT")
-    if re.search(r"\b(fixed workpiece|repair target|fixture|marked (?:target|joint|site|location)|target joint|joint hole|fastening site|location[^.]*requiring fastening|assembly receiving|workpiece assembly|object to be secured|primary object to be secured)\b", text):
+    if re.search(r"\b(fixed (?:workpiece|point|target)|repair target|fixture|marked (?:target|joint|site|location)|target joint|joint hole|fastening site|location[^.]*requiring fastening|assembly receiv(?:ing|er)|workpiece assembly|object to be secured|primary object to be secured)\b", text):
         families.add("FIXED_TARGET")
-    if re.search(r"\b(refreshment set|cup and saucer|drinkware|remote control|media control|entertainment control(?:ler)?|device (?:used )?to control|consumables)\b", text):
+    if re.search(r"\b(refreshment set|cup and saucer|drinkware|remote control|media control|entertainment control(?:ler)?|device (?:used to|for controlling|to control)|controlling (?:television|tv|display)|(?:remote|media|entertainment|television|tv) controller?|control(?:ler)? (?:television|tv|display)|consumables)\b", text):
         families.add("PAYLOAD")
     if re.search(r"\b(television|tv screen|display|monitor)\b", text):
         families.add("DISPLAY_CONTEXT")
@@ -114,6 +142,16 @@ def function_semantic_evidence(
             else:
                 preferred.add("countertop")
     elif domain == "living_room":
+        categories = " ".join(role.get("candidate_categories", [])).lower()
+        description = str(role.get("description", "")).lower()
+        if "SOURCE" in families and re.search(r"\b(cup|plate|saucer|drinkware)\b", categories):
+            families.discard("SOURCE")
+            families.add("PAYLOAD")
+            evidence_source = "CANDIDATE_CATEGORY_TEXT"
+        if "COMPONENT" in families and re.search(r"\b(electronic|remote|controller|device)\b", categories + " " + description) and re.search(r"\b(control|remote|television|tv)\b", description):
+            families.discard("COMPONENT")
+            families.add("PAYLOAD")
+            evidence_source = "CANDIDATE_CATEGORY_TEXT"
         if "SUPPORT" in families:
             if re.search(r"\b(shared|central|common|coffee table|both|remote)\b", text):
                 preferred.add("SHARED_REMOTE_REGION")
@@ -135,6 +173,10 @@ def function_semantic_evidence(
     # in a vessel). Causal SOURCE/DESTINATION and Workshop participant families
     # take precedence over physical-shape words.
     authoritative = set(families)
+    if "SUPPORT" in authoritative and "SEATING" in authoritative and re.search(
+        r"\b(table|surface|support|platform)\b.*\b(near|beside|adjacent)\b|\b(near|beside|adjacent)\b.*\b(seat|chair|seating)\b", text
+    ):
+        authoritative.discard("SEATING")
     if "INSTRUMENT" in authoritative and re.search(r"\b(tool|implement|instrument|driver|wrench|drill|applicator)\b", text):
         authoritative.discard("COMPONENT")
         authoritative.discard("FIXED_TARGET")
@@ -171,6 +213,7 @@ def function_semantic_evidence(
         excluded_roles=tuple(sorted(excluded)),
         explicit_families=tuple(sorted(authoritative)),
         evidence_strength="EXPLICIT_FAMILY" if authoritative else ("WEAK_ALIAS" if preferred else "UNKNOWN"),
+        evidence_source=evidence_source,
     )
 
 
@@ -234,7 +277,7 @@ def build_role_type_hypotheses(
         functions[rid] = evidence
         domains[rid] = runtime_roles - set(evidence.excluded_roles)
         evidences[rid].append({
-            "source": "FUNCTION_TEXT", "preferred_roles": list(evidence.preferred_roles),
+            "source": evidence.evidence_source, "preferred_roles": list(evidence.preferred_roles),
             "excluded_roles": list(evidence.excluded_roles),
             "explicit_families": list(evidence.explicit_families),
             "strength": evidence.evidence_strength, "legacy_mapper_rule": rule,
