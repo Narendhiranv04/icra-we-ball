@@ -111,7 +111,7 @@ def function_semantic_evidence(
         families.add("SEATING")
     if re.search(r"\b(screw|bolt|fastener|joining element|connecting element|connector|installed component|component to be installed)\b", text):
         families.add("COMPONENT")
-    if re.search(r"\b(fixed (?:workpiece|point|target)|repair target|fixture|marked (?:target|joint|site|location)|target joint|joint hole|fastening site|location[^.]*requiring fastening|assembly receiv(?:ing|er)|workpiece assembly|object to be secured|primary object to be secured)\b", text):
+    if re.search(r"\b(fixed (?:workpiece|point|target|receiving (?:location|site|target))|repair target|fixture|marked (?:target|joint|site|location)|target joint|joint hole|fastening site|location[^.]*requiring fastening|assembly receiv(?:ing|er)|workpiece assembly|object to be secured|primary object to be secured)\b", text):
         families.add("FIXED_TARGET")
     if re.search(r"\b(refreshment set|cup and saucer|drinkware|remote control|media control|entertainment control(?:ler)?|device (?:used to|for controlling|to control)|controlling (?:television|tv|display)|(?:remote|media|entertainment|television|tv) controller?|control(?:ler)? (?:television|tv|display)|consumables)\b", text):
         families.add("PAYLOAD")

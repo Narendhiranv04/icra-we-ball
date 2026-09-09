@@ -146,6 +146,12 @@ def test_broad_workshop_fasten_and_return_families():
     ]
 
 
+def test_fixed_receiving_location_is_a_repair_target_family():
+    raw = document([role("target", "fixed receiving location for component", kind="REGION", policy="SHARED")])
+    hypothesis = build_role_type_hypotheses("workshop", convert_v3_to_canonical_document(raw, domain="workshop"))["target"]
+    assert hypothesis.canonical_role_candidates == ("repair_target",)
+
+
 @pytest.mark.parametrize("kind", ["relation", "operation"])
 def test_duplicate_participants_fail_manual_structural_validation(kind):
     raw = document([role("tool", "tool")],
