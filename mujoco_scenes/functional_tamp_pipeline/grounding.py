@@ -205,6 +205,56 @@ def extract_plausible_labels(belief: dict[str, Any] | None) -> list[str]:
     return []
 
 
+def _resolve_accepted_vocabulary(accepted_categories) -> tuple[set[str], set[str], bool]:
+    """Return (literal_forms, canonical_forms, fully_known) for a role's acceptance set."""
+    from .role_semantic_ontology import normalize_semantic_label, _normalize_label_text
+    literal: set[str] = set()
+    canonical: set[str] = set()
+    fully_known = True
+    for category in accepted_categories:
+        literal.add(_normalize_label_text(category))
+        resolved = normalize_semantic_label(category)
+        if resolved is None:
+            fully_known = False
+        else:
+            canonical.add(resolved)
+    return literal, canonical, fully_known
+
+
+def _observed_label_verdict(
+    observed_label: str,
+    accepted_categories,
+    *,
+    confident: bool,
+) -> tuple[str, str | None]:
+    """Tri-state semantic verdict for one observed label against a role's categories.
+
+    Open-world rule.  A label matches when it is literally accepted or when it
+    normalizes, through the runtime ontology's synonym groups, onto an accepted
+    canonical category.  A mismatch is only FALSE when the runtime can actually
+    *justify* incompatibility: the observed label and every accepted category must
+    resolve inside the known vocabulary, and be disjoint there.  If either side is
+    open-vocabulary the runtime has no grounds to reject, so the verdict is
+    UNKNOWN and later physical/relational evidence decides.  UNKNOWN is never
+    promoted to TRUE without such evidence.
+    """
+    from .role_semantic_ontology import normalize_semantic_label, _normalize_label_text
+    literal, canonical, accepted_fully_known = _resolve_accepted_vocabulary(accepted_categories)
+    observed_norm = _normalize_label_text(observed_label)
+    if observed_norm in literal:
+        return "TRUE", str(observed_label)
+    observed_canonical = normalize_semantic_label(observed_label)
+    if observed_canonical is not None and observed_canonical in canonical:
+        return "TRUE", str(observed_label)
+    if not confident:
+        return "UNKNOWN", None
+    if observed_canonical is not None and accepted_fully_known and canonical:
+        # Both sides are inside the runtime's known vocabulary and do not intersect:
+        # this is a justified incompatibility rather than a vocabulary gap.
+        return "FALSE", None
+    return "UNKNOWN", None
+
+
 def check_semantic_role_compatibility(
     node_or_belief: ObservedNode | dict[str, Any] | None,
     accepted_categories: Sequence[str],
@@ -238,17 +288,18 @@ def check_semantic_role_compatibility(
                 pass
             elif node.canonical_category:
                 # Synthetic/legacy graph input without explicit belief contract
-                norm_canonical = node.canonical_category.strip().lower().replace(" ", "_")
-                if norm_canonical in accepted_set:
-                    return "TRUE", node.canonical_category
-                return "FALSE", None
+                return _observed_label_verdict(
+                    node.canonical_category, accepted_categories, confident=True
+                )
         else:
             # For REGION / FIXED_TARGET:
             if node.canonical_category:
-                norm_canonical = node.canonical_category.strip().lower().replace(" ", "_")
-                if norm_canonical in accepted_set:
-                    return "TRUE", node.canonical_category
-                return "FALSE", None
+                verdict, matched = _observed_label_verdict(
+                    node.canonical_category, accepted_categories, confident=True
+                )
+                if verdict != "UNKNOWN":
+                    return verdict, matched
+                # fall through to instance-id containment for regions/fixed targets
     else:
         node = None
         entity_kind = "OBJECT"
@@ -287,10 +338,9 @@ def check_semantic_role_compatibility(
                 or latest.get("canonical_label")
             )
             if canonical:
-                norm_canonical = str(canonical).strip().lower().replace(" ", "_")
-                if norm_canonical in accepted_set:
-                    return "TRUE", str(canonical)
-                return "FALSE", None
+                return _observed_label_verdict(
+                    str(canonical), accepted_categories, confident=True
+                )
 
         # If status == UNKNOWN or no supported canonical:
         if has_lack_of_evidence:
@@ -298,18 +348,21 @@ def check_semantic_role_compatibility(
 
         plausible = extract_plausible_labels(belief)
         if plausible:
-            norm_plausible = {lbl.strip().lower().replace(" ", "_") for lbl in plausible}
-            # S_sem(o, r) = TRUE iff H(o) != ∅ and H(o) ⊆ C(r)
-            if norm_plausible.issubset(accepted_set):
+            # S_sem(o, r) = TRUE iff H(o) != empty and every hypothesis is accepted.
+            verdicts = [
+                _observed_label_verdict(lbl, accepted_categories, confident=True)[0]
+                for lbl in plausible
+            ]
+            if verdicts and all(v == "TRUE" for v in verdicts):
                 return "TRUE", plausible[0]
-            # S_sem(o, r) = FALSE iff H(o) != ∅ and H(o) ∩ C(r) = ∅
-            if norm_plausible.isdisjoint(accepted_set):
+            # S_sem(o, r) = FALSE only when every hypothesis is *justifiably*
+            # incompatible.  A hypothesis the runtime cannot resolve leaves the
+            # verdict open rather than rejecting the candidate outright.
+            if verdicts and all(v == "FALSE" for v in verdicts):
                 return "FALSE", None
-            # Mixed overlap (some in C(r), some not)
+            # Partial support, or open-vocabulary hypotheses: undecided.
             return "UNKNOWN", None
 
-        if status == "SUPPORTED":
-            return "FALSE", None
         return "UNKNOWN", None
 
     # Only check instance_id if entity_kind is NOT OBJECT (e.g. REGION, FIXED_TARGET)
@@ -794,6 +847,30 @@ def ground_graph(
             else:
                 missing_roles_definitive.append(role_name)
 
+    # Per-role individual plausibility, independent of any joint assignment.
+    # A role is individually satisfiable when the number of observed individuals that
+    # are semantically TRUE or UNKNOWN for it meets its minimum count.  This is the
+    # signal that separates OBJECT_DISCOVERY_FAILURE (too few plausible individuals)
+    # from FUNCTIONAL_ASSIGNMENT_FAILURE (enough individuals, no consistent joint choice).
+    role_plausibility: dict[str, dict[str, Any]] = {}
+    for role_name, role in roles.items():
+        n_true = len(role_candidates_true[role_name])
+        n_unknown = len(role_candidates_unknown[role_name])
+        role_plausibility[role_name] = {
+            "true": n_true,
+            "unknown": n_unknown,
+            "plausible": n_true + n_unknown,
+            "minimum_count": role.minimum_count,
+            "sufficient": (n_true + n_unknown) >= role.minimum_count,
+        }
+    individual_candidates_sufficient = all(
+        entry["sufficient"] for entry in role_plausibility.values()
+    )
+    plausibility_evidence: dict[str, Any] = {
+        "role_plausibility": role_plausibility,
+        "individual_candidates_sufficient": individual_candidates_sufficient,
+    }
+
     if missing_roles_definitive:
         return GraphGroundingResult(
             status="INFEASIBLE" if search_exhausted else "INCOMPLETE",
@@ -803,7 +880,8 @@ def ground_graph(
             missing_roles=tuple(missing_roles_definitive),
             unsatisfied_relations=(),
             unresolved_constraints=tuple(missing_roles_definitive),
-            evidence={"candidate_evaluations": {f"{k[0]}:{k[1]}": v for k, v in evaluations.items()}},
+            evidence={"candidate_evaluations": {f"{k[0]}:{k[1]}": v for k, v in evaluations.items()},
+                      **plausibility_evidence},
             failure_kind="OBJECT_DISCOVERY_FAILURE" if search_exhausted else None,
         )
 
@@ -826,7 +904,8 @@ def ground_graph(
             missing_roles=tuple(missing_roles_definitive),
             unsatisfied_relations=(),
             unresolved_constraints=("INSUFFICIENT_SCENE_OBJECTS_FOR_ROLES",),
-            evidence={"candidate_evaluations": {f"{k[0]}:{k[1]}": v for k, v in evaluations.items()}},
+            evidence={"candidate_evaluations": {f"{k[0]}:{k[1]}": v for k, v in evaluations.items()},
+                      **plausibility_evidence},
             failure_kind="OBJECT_DISCOVERY_FAILURE" if search_exhausted else None,
         )
 
@@ -1144,7 +1223,7 @@ def ground_graph(
             unsatisfied_relations=(),
             unresolved_constraints=(),
             evidence={"valid_assignment_count": len(valid_assignments), "binding_provenance": chosen_provenance,
-                      "operation_binding_complete": True},
+                      "operation_binding_complete": True, **plausibility_evidence},
         )
 
     if not search_exhausted:
@@ -1164,6 +1243,7 @@ def ground_graph(
                 "search_exhausted": False,
                 "unresolved_relations": unresolved_relations_recorded,
                 "unsatisfied_relations": unsatisfied_relations_recorded,
+                **plausibility_evidence,
             },
             failure_kind=None,
         )
@@ -1183,6 +1263,7 @@ def ground_graph(
             evidence={
                 "search_exhausted": True,
                 "unresolved_relations": unresolved_relations_recorded,
+                **plausibility_evidence,
             },
             failure_kind="FUNCTIONAL_ASSIGNMENT_FAILURE",
         )
@@ -1203,8 +1284,13 @@ def ground_graph(
         evidence={
             "search_exhausted": True,
             "unsatisfied_relations": unsatisfied_relations_recorded,
+            **plausibility_evidence,
         },
-        failure_kind="FUNCTIONAL_ASSIGNMENT_FAILURE",
+        failure_kind=(
+            "FUNCTIONAL_ASSIGNMENT_FAILURE"
+            if individual_candidates_sufficient
+            else "OBJECT_DISCOVERY_FAILURE"
+        ),
     )
 
 

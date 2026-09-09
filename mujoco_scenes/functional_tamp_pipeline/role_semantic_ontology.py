@@ -29,9 +29,11 @@ _CACHED_ONTOLOGY_HASH: str | None = None
 def clear_cached_ontology() -> None:
     """Clear cached system ontology for test isolation."""
     global _CACHED_ONTOLOGY, _CACHED_DETECTOR_ALIASES, _CACHED_ONTOLOGY_HASH
+    global _CACHED_LABEL_NORMALIZER
     _CACHED_ONTOLOGY = None
     _CACHED_DETECTOR_ALIASES = None
     _CACHED_ONTOLOGY_HASH = None
+    _CACHED_LABEL_NORMALIZER = None
 
 
 reset_cached_ontology = clear_cached_ontology
@@ -369,3 +371,55 @@ def build_task_detector_vocabulary(
             existing_aliases.add(raw_space)
 
     return task_vocab
+
+
+# ---------------------------------------------------------------------------
+# Open-world semantic label normalization
+# ---------------------------------------------------------------------------
+# Grounding compares open-vocabulary perception labels against role acceptance
+# categories.  Both sides are free text, so a literal string comparison turns an
+# ordinary vocabulary mismatch ("coffee mug" vs "cup") into a hard rejection.
+# The runtime ontology already declares detector synonym groups; folding those
+# into an alias -> canonical map lets grounding recognise a known synonym, and
+# lets it tell a *known incompatibility* apart from a merely unrecognised label.
+
+_CACHED_LABEL_NORMALIZER: dict[str, str] | None = None
+
+
+def _normalize_label_text(label: str) -> str:
+    """Lexically normalize a free-text semantic label for lookup."""
+    return " ".join(str(label).strip().lower().replace("_", " ").split()).replace(" ", "_")
+
+
+def get_semantic_label_normalizer() -> dict[str, str]:
+    """Map every known alias (and canonical label) to its canonical detector label.
+
+    Built from the declarative runtime ontology's ``detector_aliases`` groups plus
+    every category named in a domain role's acceptance set.  Labels absent from
+    this map are *open-vocabulary*: the runtime has no basis to judge them, which
+    is distinct from judging them incompatible.
+    """
+    global _CACHED_LABEL_NORMALIZER
+    if _CACHED_LABEL_NORMALIZER is not None:
+        return dict(_CACHED_LABEL_NORMALIZER)
+    mapping: dict[str, str] = {}
+    for canonical, aliases in get_runtime_detector_aliases().items():
+        canon_norm = _normalize_label_text(canonical)
+        mapping.setdefault(canon_norm, canon_norm)
+        for alias in aliases:
+            mapping.setdefault(_normalize_label_text(alias), canon_norm)
+    # Role acceptance categories are themselves part of the known vocabulary.
+    for domain_roles in _get_cached_ontology().values():
+        for categories in domain_roles.values():
+            for category in categories:
+                cat_norm = _normalize_label_text(category)
+                mapping.setdefault(cat_norm, cat_norm)
+    _CACHED_LABEL_NORMALIZER = mapping
+    return dict(mapping)
+
+
+def normalize_semantic_label(label: str) -> str | None:
+    """Resolve one free-text label to its canonical form, or None if unknown to the runtime."""
+    if not label:
+        return None
+    return get_semantic_label_normalizer().get(_normalize_label_text(label))
