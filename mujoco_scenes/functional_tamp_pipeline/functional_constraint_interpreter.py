@@ -63,23 +63,38 @@ class FunctionalConstraintInterpreter:
         ).replace("_", " ")
         return bool(self._CURRENT_LOCATION.search(text)) and role.get("entity_kind") in {"REGION", "FIXED_TARGET", "OBJECT"}
 
-    def _explicit_anchor(self, support: str, capability_id: str) -> tuple[str, str] | None:
+    def _explicit_anchor(
+        self, support: str, capability_id: str, *, payload: str | None = None,
+    ) -> tuple[str, str, bool] | None:
         candidates = []
         for relation in self.relations:
             participants = list(relation.get("participant_roles", ()))
-            if len(participants) != 2 or support not in participants:
+            mediated = False
+            endpoint = support
+            if len(participants) != 2:
                 continue
-            anchor = participants[1] if participants[0] == support else participants[0]
+            if support not in participants:
+                if capability_id != "SUPPORT_DRINKWARE" or payload is None or payload not in participants:
+                    continue
+                endpoint = payload
+                mediated = True
+            anchor = participants[1] if participants[0] == endpoint else participants[0]
             phrase = str(relation.get("relation", "")).replace("_", " ")
             anchor_types = self._types(anchor)
             if capability_id == "SUPPORT_DRINKWARE":
-                valid = "SEATING_POSITION" in anchor_types and re.search(r"\b(near|beside|adjacent|close)\b", phrase, re.I)
+                valid = "SEATING_POSITION" in anchor_types and re.search(
+                    r"\b(?:near(?:by)?|beside|adjacent|close)\b", phrase, re.I,
+                )
             else:
                 valid = "SEATING_PAIR" in anchor_types and re.search(r"\b(between|both|accessible)\b", phrase, re.I)
             if valid:
-                candidates.append((anchor, str(relation.get("id", ""))))
-        unique = sorted(set(candidates))
-        return unique[0] if len(unique) == 1 else None
+                candidates.append((anchor, str(relation.get("id", "")), mediated, relation))
+        unique = {(anchor, relation_id, mediated): relation
+                  for anchor, relation_id, mediated, relation in candidates}
+        if len(unique) != 1:
+            return None
+        anchor, relation_id, mediated = next(iter(unique))
+        return anchor, relation_id, mediated
 
     def _join_living_context(self, operation: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
         operation_text = str(operation.get("operation", "")).replace("_", " ").replace("-", " ")
@@ -89,7 +104,7 @@ class FunctionalConstraintInterpreter:
         removals = [None]
         if len(original) == 3:
             removals += [p for p in original if self._is_current_location(p)]
-        candidates: list[tuple[dict[str, Any], list[dict[str, Any]], str | None, str]] = []
+        candidates: list[tuple[dict[str, Any], list[dict[str, Any]], str | None, str, bool, str, str]] = []
         for removed in removals:
             direct = [p for p in original if p != removed] if removed else list(original)
             if len(direct) != 2:
@@ -97,20 +112,38 @@ class FunctionalConstraintInterpreter:
             base = deepcopy(operation)
             base["participant_roles"] = direct
             for option in self.resolve_slots(self.domain, base, self.roles, self.hypotheses):
-                anchor = self._explicit_anchor(option["source_role"], option["capability_id"])
+                anchor = self._explicit_anchor(
+                    option["source_role"], option["capability_id"], payload=option["target_role"],
+                )
                 if anchor is None:
                     continue
-                anchor_role, relation_id = anchor
+                anchor_role, relation_id, mediated = anchor
                 joined = deepcopy(operation)
                 joined["participant_roles"] = [*direct, anchor_role]
                 resolved = [row for row in self.resolve_slots(self.domain, joined, self.roles, self.hypotheses)
                             if row["capability_id"] == option["capability_id"]]
                 if resolved:
-                    candidates.append((joined, resolved, removed, relation_id))
+                    candidates.append((joined, resolved, removed, relation_id, mediated,
+                                       option["target_role"], option["source_role"]))
         unique = {(tuple(item[0]["participant_roles"]), item[1][0]["capability_id"], item[2], item[3]): item for item in candidates}
         if len(unique) != 1:
             return None
-        joined, options, removed, relation_id = next(iter(unique.values()))
+        joined, options, removed, relation_id, mediated, payload, support = next(iter(unique.values()))
+        if mediated:
+            relation = next(item for item in self.relations if str(item.get("id", "")) == relation_id)
+            raw_participants = list(relation["participant_roles"])
+            anchor_role = next(participant for participant in raw_participants if participant != payload)
+            relation["participant_roles"] = [support, anchor_role]
+            relation["raw_fm_participant_roles"] = raw_participants
+            relation["operation_mediated_payload_role"] = payload
+            self.trace.append({
+                "code": "OPERATION_MEDIATED_RELATION_TARGET_NORMALIZATION",
+                "operation_id": operation["id"],
+                "relation_id": relation_id,
+                "raw_participant_roles": raw_participants,
+                "normalized_participant_roles": [support, anchor_role],
+                "provenance": "FM_EXPLICIT_RELATION_AND_OPERATION",
+            })
         joined["explicit_participant_roles"] = list(joined["participant_roles"])
         joined["raw_fm_participant_roles"] = original
         joined["graph_join_relation_id"] = relation_id

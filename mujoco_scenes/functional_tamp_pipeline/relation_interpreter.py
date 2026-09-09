@@ -90,7 +90,7 @@ _SEMANTIC_PREDICATE_CUES: dict[tuple[str, str], tuple[str, ...]] = {
         "near seat", "near seating", "beside seat", "adjacent to seat", "close to seat",
         "accessible to seat", "convenient to seat", "at seating position", "viewer seating position",
         "near viewer", "beside viewer", "adjacent to viewer",
-        "near", "located near", "located adjacent", "located adjacent to", "is adjacent to",
+        "near", "nearby", "located near", "located adjacent", "located adjacent to", "is adjacent to",
         "physically adjacent to", "positioned adjacent to", "placed near", "placed adjacent to",
     ),
     ("living_room", "ACCESSIBLE_FROM_BOTH_SEATS"): (

@@ -35,13 +35,13 @@ Reason silently in this order:
 1. Clause audit: for every task clause identify its physical participants, required relations, and required physical operations.
 2. Participant ledger: declare every independently groundable object, support region, or fixed anchor required by the task before considering visibility. Hidden participants remain required.
 3. Function audit: distinguish material sources, receiving containers, reusable instruments, manipulated joining components, fixed receiving targets, personal supports, shared supports, and seating/context anchors. Roles with different causal functions remain distinct even if they share a broad object category.
-4. Operation audit: audit every operation's causal functions against selected role IDs. Every participant must play a causal function compatible with its declared role.function. If a required function has no role, declare a separate role before output; never reuse a differently functioning role. Never substitute meal utensil for stirrer, component for driver, shared for personal support, seat for support, or component for fixed target. Use one atomic operation per transformation and list only its directly participating roles. Array order has no source/target/anchor meaning. Do not combine multiple material sources into one transfer. Placement relative to seating needs payload, support, and the declared seating roles. Fastening needs an implement, joining component, and fixed receiving target; never substitute the robot or an undeclared collection.
+4. Operation audit: audit every operation's causal functions against selected role IDs. Every participant must play a causal function compatible with its declared role.function. If a required function has no role, declare a separate role before output; never reuse a differently functioning role. Never substitute meal utensil for stirrer, component for driver, shared for personal support, seat for support, or component for fixed target. Use one atomic operation per transformation and list only its directly participating roles. Array order has no source/target/anchor meaning. Each transfer has exactly one material source and one receiver; emit separate transfers for multiple sources. Placement relative to seating needs payload, support, and required seating anchors. Fastening needs an implement, joining component, and one fixed receiving target.
 5. Count audit: required_count counts physical instances; operation_count counts applications. Repeated use requires REUSABLE or enough DISTINCT instances. Distributing counted payloads to distinct destinations requires one operation per pairing or one unambiguous repeated pattern; never combine alternative destinations.
 6. Consistency audit: every participant is an exact declared role ID—not a count, field, placeholder, or undeclared plural. Represent every clause; use counted roles for interchangeable instances; keep personal and shared supports distinct. Robot components are not task objects unless targeted. Required relations describe task results or compatibility, never incidental initial locations. Inspection/search and initial storage belong only in observation guidance. For both, all, pair, each, or between, include all declared set roles; do not invent a synthetic pair role.
 
-Declare material sources or preparation processes only when explicitly specified; an end product never implies hidden ingredients or containers. A quantity-only person/user is not a physical role or serve target and must not duplicate an explicit seat role. Include people or seats only for required geometry. Serve, provide, or prepare is physical only when it expresses a transformation or placement. A payload's current surface is observation context, not normally a placement participant. Every placement operation includes its payload and destination support plus required spatial anchors; never replace the destination with anchors.
+Declare material sources or preparation processes only when explicitly specified; an end product never implies ingredients or source containers. Serving count changes receiver count and operation_count, not source count: one named material source is normally REUSABLE unless distinct sources are required. A quantity-only person/user is neither a role nor a serve target. Include seats only for required geometry, and never put seating anchors into serving/preparation operations. Serve or prepare is physical only when it specifies a transformation or destination. A payload's current surface is observation context, not a placement participant. Every placement includes payload and destination support plus required spatial anchors.
 
-Final audit: quantity-only people are counts, never roles. Visible contents are not unspecified sources. Quantified text says both/all/between. Use one fixed receiving-target role. Include required placement/accessibility relations; omit incidental viewing context.
+Final audit: no source from an end product, quantity-only recipients, or seats in non-placement operations. Express two-seat accessibility as one both-seat relation or one relation per seat. Use one fixed receiving-target role. Omit incidental viewing context.
 
 Use short atomic natural-language role functions, relations, operations, and unary properties, not uppercase backend-style predicate names. Relation participant order is not directional. Initial-location statements such as currently on, located initially, or stored on are observation context, not automatically required final relations. Required relations express compatibility, functional dependency, final state, or a physical relation needed by an operation. Do not add operations merely to describe an already satisfied state unless the instruction requires the transformation. Do not estimate numeric geometry. Observation candidates are visible evidence only. Inspectable regions must be visible closed/storage structures; inspection_order must contain every exact declared region id once and nothing else. Region reasons may say they could be inspected for task-relevant candidates but must not claim hidden contents."""
 
@@ -303,6 +303,77 @@ def _role_has_candidate(hypotheses: Mapping[str, Any], role_id: str, candidate: 
     return bool(hypothesis and candidate in hypothesis.canonical_role_candidates)
 
 
+def _aggregate_explicit_binary_seat_access(
+    *,
+    domain: str,
+    relations: list[Mapping[str, Any]],
+    operations: list[Mapping[str, Any]],
+    hypotheses: Mapping[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Conjoin two explicit per-seat accessibility edges into one pair edge.
+
+    This is intentionally stricter than merely noticing two seat roles.  The FM
+    must assert the same payload accessible to each of exactly two explicit
+    seating roles and must explicitly move that payload to one uniquely typed
+    shared support.  Thus the support and both context members all come from the
+    FM graph; no scene or implicit seating context is introduced.
+    """
+    copied = [deepcopy(dict(item)) for item in relations]
+    if domain != "living_room":
+        return copied, []
+
+    by_payload: dict[str, list[tuple[int, str]]] = {}
+    for index, relation in enumerate(copied):
+        participants = list(relation.get("participant_roles", ()))
+        meanings = extract_relation_semantic_candidates(domain, str(relation.get("relation", "")))
+        if len(participants) != 2 or not any(
+            item.predicate_name == "ACCESSIBLE_FROM_BOTH_SEATS" for item in meanings
+        ):
+            continue
+        payloads = [p for p in participants if _role_has_candidate(hypotheses, p, "REMOTE")]
+        seats = [p for p in participants if _role_has_candidate(hypotheses, p, "SEATING_POSITION")]
+        if len(payloads) == 1 and len(seats) == 1:
+            by_payload.setdefault(payloads[0], []).append((index, seats[0]))
+
+    consumed: set[int] = set()
+    additions: list[dict[str, Any]] = []
+    trace: list[dict[str, Any]] = []
+    for payload, members in sorted(by_payload.items()):
+        unique_seats = sorted({seat for _, seat in members})
+        if len(members) != 2 or len(unique_seats) != 2:
+            continue
+        supports = {
+            participant
+            for operation in operations
+            if payload in operation.get("participant_roles", ())
+            and re.search(r"\b(move|transfer|relocate|place|position|transport)\b",
+                          re.sub(r"[_-]+", " ", str(operation.get("operation", ""))), re.I)
+            for participant in operation.get("participant_roles", ())
+            if _role_has_candidate(hypotheses, participant, "SHARED_REMOTE_REGION")
+        }
+        if len(supports) != 1:
+            continue
+        source_ids = [str(copied[index].get("id")) for index, _ in members]
+        aggregate_id = "__".join(source_ids)
+        additions.append({
+            "id": aggregate_id,
+            "relation": "accessible from both",
+            "participant_roles": [next(iter(supports)), *unique_seats],
+            "required": all(bool(copied[index].get("required")) for index, _ in members),
+            "source_relation_ids": source_ids,
+        })
+        consumed.update(index for index, _ in members)
+        trace.append({
+            "code": "EXPLICIT_BINARY_RELATION_SET_CONJUNCTION",
+            "source_relation_ids": source_ids,
+            "payload_role": payload,
+            "support_role": next(iter(supports)),
+            "member_raw_roles": unique_seats,
+            "provenance": "FM_EXPLICIT_RELATIONS_AND_OPERATION",
+        })
+    return [item for index, item in enumerate(copied) if index not in consumed] + additions, trace
+
+
 def _explicit_seating_context(
     *,
     domain: str,
@@ -492,8 +563,14 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
 
     bundles: dict[tuple[str, str], str] = {}
 
+    relation_inputs, relation_conjunction_trace = _aggregate_explicit_binary_seat_access(
+        domain=domain,
+        relations=contract["functional_relations"],
+        operations=contract["operation_pairings"],
+        hypotheses=hypotheses,
+    )
     normalized_relations = []
-    for relation in contract["functional_relations"]:
+    for relation in relation_inputs:
         if len(relation["participant_roles"]) > 2:
             normalized, handled = _explicit_seating_context(
                 domain=domain, entry=relation, hypotheses=hypotheses, canonical=canonical,
@@ -529,7 +606,9 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
         slot_resolver=resolve_v3_operation_slots,
     )
     normalized_operations = constraint_interpreter.interpret(normalized_operations)
-    canonical["functional_constraint_interpretation"] = list(constraint_interpreter.trace)
+    canonical["functional_constraint_interpretation"] = [
+        *relation_conjunction_trace, *constraint_interpreter.trace,
+    ]
     canonical["fm_semantic_accounting"] = list(constraint_interpreter.accounting)
     canonical["current_state_operation_context_roles"] = sorted({
         str(row["raw_role"])
@@ -670,6 +749,10 @@ def convert_v3_to_canonical_document(v3_doc: Mapping[str, Any], *, domain: str) 
         })
     relation_dispositions = {item["id"]: "CURRENT_STATE_CONTEXT" for item in current_state_relations}
     relation_dispositions.update({item["id"]: "GROUNDED_TASK_RELATION" for item in relations})
+    for item in normalized_relations:
+        if item.get("source_relation_ids") and item["id"] in relation_dispositions:
+            relation_dispositions.update({source_id: relation_dispositions[item["id"]]
+                                          for source_id in item["source_relation_ids"]})
     for relation in contract["functional_relations"]:
         canonical["fm_semantic_accounting"].append({
             "element_kind": "relation", "raw_id": relation["id"],

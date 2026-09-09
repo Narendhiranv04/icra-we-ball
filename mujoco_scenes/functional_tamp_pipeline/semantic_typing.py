@@ -151,6 +151,10 @@ def function_semantic_evidence(
     elif domain == "living_room":
         categories = " ".join(role.get("candidate_categories", [])).lower()
         description = str(role.get("description", "")).lower()
+        if role.get("entity_kind") == "REGION" and re.search(
+            r"\b(table|tabletop|surface|support|platform|placement area)\b", all_text
+        ):
+            families.add("SUPPORT")
         if "SOURCE" in families and re.search(r"\b(cup|plate|saucer|drinkware)\b", categories):
             families.discard("SOURCE")
             families.add("PAYLOAD")

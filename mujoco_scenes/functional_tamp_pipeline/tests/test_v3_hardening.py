@@ -268,6 +268,57 @@ def test_quantified_relation_builds_explicit_seating_pair_context():
     assert context["code"] == "EXPLICIT_CONTEXT_SET_CANONICALIZATION"
 
 
+def test_two_explicit_per_seat_access_edges_conjoin_via_explicit_move_target():
+    roles = _living_context_roles()
+    for item in roles:
+        if item["id"].startswith("seat_"):
+            item["binding_policy"] = "DISTINCT"
+            item["function"] = "seating reference"
+    raw = document(
+        roles,
+        relations=[
+            relation("left_access", "accessible to", ["remote", "seat_left"]),
+            relation("right_access", "accessible to", ["remote", "seat_right"]),
+        ],
+        operations=[operation("move", "move to", ["remote", "shared"])],
+    )
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    assert len(canonical["functional_relations"]) == 1
+    edge = canonical["functional_relations"][0]
+    assert edge["subject_role"] == "shared"
+    assert edge["object_role"].startswith("fm_context_set__")
+    trace = canonical["functional_constraint_interpretation"]
+    conjunction = next(row for row in trace if row["code"] == "EXPLICIT_BINARY_RELATION_SET_CONJUNCTION")
+    assert conjunction["source_relation_ids"] == ["left_access", "right_access"]
+    graph = compile_candidate_graph("living_room", "move remote where both seats can access it", raw)
+    assert graph.online_executable_contract_complete
+    assert graph.operation_groups[0].capability_id == "SUPPORT_ENTERTAINMENT_CONTROL"
+    accounting = {row["raw_id"]: row["disposition"] for row in canonical["fm_semantic_accounting"]}
+    assert accounting["left_access"] == accounting["right_access"] == "GROUNDED_TASK_RELATION"
+
+
+def test_single_per_seat_access_edge_does_not_invent_missing_pair_member():
+    raw = document(
+        _living_context_roles(),
+        relations=[relation("left_access", "accessible to", ["remote", "seat_left"])],
+        operations=[operation("move", "move to", ["remote", "shared"])],
+    )
+    with pytest.raises(TaskSpecificationValidationError, match="FM_INTERNAL_RELATION_PARTICIPANT_CONTRADICTION"):
+        convert_v3_to_canonical_document(raw, domain="living_room")
+
+
+def test_per_seat_access_edges_without_explicit_shared_move_target_do_not_create_pair():
+    raw = document(
+        _living_context_roles(),
+        relations=[
+            relation("left_access", "accessible to", ["remote", "seat_left"]),
+            relation("right_access", "accessible to", ["remote", "seat_right"]),
+        ],
+    )
+    with pytest.raises(TaskSpecificationValidationError, match="FM_INTERNAL_RELATION_PARTICIPANT_CONTRADICTION"):
+        convert_v3_to_canonical_document(raw, domain="living_room")
+
+
 def test_between_relation_builds_explicit_seating_pair_context():
     raw = document(
         _living_context_roles(include_remote=False),
@@ -361,6 +412,28 @@ def test_current_storage_context_is_elided_and_explicit_anchor_is_graph_joined()
     graph = compile_candidate_graph("living_room", "move refreshment from storage beside seat", raw)
     assert graph.operation_groups[0].capability_id == "SUPPORT_DRINKWARE"
     assert graph.operation_groups[0].context_role == "SEATING_POSITION"
+
+
+def test_payload_near_seat_effect_joins_unique_explicit_placement_support():
+    raw = document([
+        role("payload", "personal refreshment payload", categories=["CUP"]),
+        role("support", "personal support", kind="REGION", policy="SHARED"),
+        role("seat", "seating reference", kind="FIXED_TARGET", policy="SHARED"),
+    ], relations=[relation("near", "nearby", ["payload", "seat"])], operations=[
+        operation("move", "place on", ["payload", "support"]),
+    ])
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    edge = canonical["functional_relations"][0]
+    assert {edge["subject_role"], edge["object_role"]} == {"support", "seat"}
+    normalized = next(
+        row for row in canonical["functional_constraint_interpretation"]
+        if row["code"] == "OPERATION_MEDIATED_RELATION_TARGET_NORMALIZATION"
+    )
+    assert normalized["raw_participant_roles"] == ["payload", "seat"]
+    assert normalized["normalized_participant_roles"] == ["support", "seat"]
+    graph = compile_candidate_graph("living_room", "place refreshment near the seat", raw)
+    assert graph.online_executable_contract_complete
+    assert graph.operation_groups[0].capability_id == "SUPPORT_DRINKWARE"
 
 
 def test_explicit_relation_completes_missing_shared_operation_context():
