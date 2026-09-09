@@ -504,6 +504,45 @@ def _relation_options(domain: str, relation: Mapping[str, Any], hypotheses: Mapp
     return [dict(row) for row in sorted({tuple(sorted(item.items())) for item in options})]
 
 
+def _decompose_nary_relation(
+    domain: str, relation: Mapping[str, Any], hypotheses: Mapping[str, Any]
+) -> list[dict[str, Any]]:
+    """Split a relation over more than two participants into legal binary edges.
+
+    The wire contract admits two to four participants and the prompt asks the
+    model to name every member a quantified phrase covers, so n-ary relations are
+    expected rather than exceptional.  Those that match a declared context-set
+    family are handled by that family.  For the rest, a relation holding over a
+    set is represented as the conjunction of the pairwise edges that have a legal
+    reading under the same predicate, which preserves the expressed meaning
+    without inventing an orientation.  Pairs with no legal reading are simply not
+    emitted; if no pair has one the caller still fails.
+    """
+    participants = list(dict.fromkeys(relation["participant_roles"]))
+    # A binary relation whose predicate the runtime does not recognise is carried
+    # through and handled downstream as context.  An n-ary one is decomposed the
+    # same way rather than aborting the contract, so arity alone never decides
+    # whether an uninterpretable relation is fatal.
+    interpretable = bool(extract_relation_semantic_candidates(domain, relation["relation"]))
+    decomposed: list[dict[str, Any]] = []
+    for index, left in enumerate(participants):
+        for right in participants[index + 1:]:
+            if left not in hypotheses or right not in hypotheses:
+                continue
+            probe = {**dict(relation), "participant_roles": [left, right]}
+            if interpretable and not _relation_options(domain, probe, hypotheses):
+                continue
+            decomposed.append({
+                **dict(relation),
+                "id": f"{relation['id']}__{left}__{right}",
+                "participant_roles": [left, right],
+                "source_relation_ids": list(
+                    relation.get("source_relation_ids", ()) or [relation["id"]]
+                ),
+            })
+    return decomposed
+
+
 def resolve_v3_operation_slots(
     domain: str,
     operation: Mapping[str, Any],
@@ -634,10 +673,15 @@ def convert_v3_to_canonical_document(
                 roles_by_id=roles_by_id, bundles=bundles, source_kind="relation",
             )
             if not handled:
-                raise TaskSpecificationValidationError(
-                    f"UNSUPPORTED_NARY_RELATION_PARTICIPANTS: relation {relation['id']!r} "
-                    f"does not express a reviewed context-set semantic family"
-                )
+                decomposed = _decompose_nary_relation(domain, relation, hypotheses)
+                if not decomposed:
+                    raise TaskSpecificationValidationError(
+                        f"UNSUPPORTED_NARY_RELATION_PARTICIPANTS: relation {relation['id']!r} "
+                        f"expresses a recognised predicate with no legal reading "
+                        f"for any participant pair"
+                    )
+                normalized_relations.extend(decomposed)
+                continue
             normalized_relations.append(normalized)
         else:
             normalized_relations.append(relation)
