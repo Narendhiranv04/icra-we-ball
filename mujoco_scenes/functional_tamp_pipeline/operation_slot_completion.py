@@ -202,7 +202,30 @@ class ExpressedSemantics:
     seating_roles: tuple[dict[str, Any], ...] = ()   # the FM's seating-typed roles
     # anchor canonical role -> ids of the expressed operations whose capability admits it
     anchor_admitting_operations: dict[str, frozenset[str]] = field(default_factory=dict)
+    # the model's own restatement of the task, and what each operation is about
+    task_summary: str = ""
+    operation_participant_words: dict[str, frozenset[str]] = field(default_factory=dict)
     trace: list[dict[str, Any]] = field(default_factory=list)
+
+    def _summary_names_only(self, operation_id: str) -> bool:
+        """Whether the summary names this operation's participants and no other's.
+
+        The connection has to be unique for a task-level phrase to be evidence
+        about one operation, and there are two ways for it to be: the anchor is
+        admissible for only this operation, or the summary's own words pick out
+        this operation's participants and nobody else's.  "Position the remote
+        control for shared access" names the control, so it is about the
+        placement the control takes part in even where both operations are
+        worded alike.
+        """
+        words = _content_words(self.task_summary)
+        if not words:
+            return False
+        named = {
+            other for other, participant_words in self.operation_participant_words.items()
+            if words & participant_words
+        }
+        return named == {operation_id}
 
     def _in_scope(self, origin: str, about: frozenset[str], semantics: FixedAnchorSemantics,
                   operation_id: str, participants: frozenset[str]) -> bool:
@@ -212,7 +235,9 @@ class ExpressedSemantics:
             return True
         if origin == "TASK_SUMMARY":
             admitting = self.anchor_admitting_operations.get(semantics.canonical_role, frozenset())
-            return admitting == frozenset({operation_id})
+            if admitting == frozenset({operation_id}):
+                return True
+            return self._summary_names_only(operation_id)
         return False
 
     @property
@@ -276,6 +301,24 @@ def _normalized(value: Any) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[_-]+", " ", str(value)).lower()).strip()
 
 
+# Words too common to establish that two phrases are about the same thing.
+_UNDISTINGUISHING_WORDS = frozenset({
+    "the", "a", "an", "and", "or", "for", "with", "to", "of", "on", "in", "at",
+    "each", "every", "both", "all", "two", "one", "their", "its", "it", "is",
+    "be", "must", "should", "place", "places", "put", "set", "area", "areas",
+    "position", "positions", "item", "items", "thing", "things", "surface",
+    "surfaces", "people", "person", "task", "room", "shared", "access",
+})
+
+
+def _content_words(text: Any) -> frozenset[str]:
+    """Words distinctive enough to say two phrases are about the same participant."""
+    return frozenset(
+        word for word in re.findall(r"[a-z]+", _normalized(text))
+        if len(word) > 3 and word not in _UNDISTINGUISHING_WORDS
+    )
+
+
 def collect_expressed_semantics(
     domain: str,
     contract: Mapping[str, Any],
@@ -290,6 +333,7 @@ def collect_expressed_semantics(
     """
     texts: list[tuple[str, str, frozenset[str]]] = []
     seating: list[dict[str, Any]] = []
+    roles_by_id = {str(role.get("id")): dict(role) for role in contract.get("functional_roles", ()) or ()}
     for role in contract.get("functional_roles", ()) or ():
         scopes = role_text_scopes(dict(role))
         about = frozenset({str(role.get("id"))})
@@ -350,6 +394,15 @@ def collect_expressed_semantics(
         domain=domain, texts=tuple(texts), seating_roles=tuple(seating),
         anchor_admitting_operations={
             anchor: frozenset(ids) for anchor, ids in admitting.items()
+        },
+        task_summary=summary,
+        operation_participant_words={
+            str(operation.get("id")): frozenset().union(*[
+                _content_words(f"{participant} "
+                               f"{(roles_by_id.get(str(participant)) or {}).get('function', '')}")
+                for participant in operation.get("participant_roles", ()) or ()
+            ] or [frozenset()])
+            for operation in operations
         },
     )
 

@@ -150,12 +150,62 @@ _UNDECLARED_ROBOT_SELF = re.compile(
 )
 
 
+def _wire_schema_field_words() -> frozenset[str]:
+    """Every word the wire schema's own field names are made of."""
+    names: set[str] = set()
+
+    def walk(node: Any) -> None:
+        if isinstance(node, Mapping):
+            for key, value in node.items():
+                if key == "properties" and isinstance(value, Mapping):
+                    names.update(str(name) for name in value)
+                walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(LIVE_RESPONSE_SCHEMA_V3)
+    words: set[str] = set()
+    for name in names:
+        words.update(part for part in re.split(r"[^a-z]+", name.lower()) if part)
+    return frozenset(words)
+
+
+_WIRE_SCHEMA_FIELD_WORDS = _wire_schema_field_words()
+_SCHEMA_ECHO_JOINERS = frozenset({"in", "of", "the", "a", "an", "for", "per", "and", "to"})
+
+
+def _names_only_wire_schema_fields(participant: str) -> bool:
+    """Whether this participant name is built entirely out of our own field names.
+
+    The model occasionally answers the schema instead of the task, naming a
+    participant "required_count_in_operation_pairing".  That is a description of
+    a field of this very contract, so it denotes nothing in the world and
+    removing it takes no semantics with it -- unlike an undeclared participant
+    that names a real thing, a person or a part, which stays a wire failure
+    because declaring one would assert a role the model never gave.
+
+    The vocabulary is read off the schema itself rather than listed by hand, so
+    it cannot drift from the contract the model was actually shown.
+    """
+    words = [word for word in re.split(r"[^a-zA-Z]+", str(participant).lower()) if word]
+    content = [word for word in words if word not in _SCHEMA_ECHO_JOINERS]
+    if not content:
+        return False
+    return all(
+        word in _WIRE_SCHEMA_FIELD_WORDS
+        or word.rstrip("s") in _WIRE_SCHEMA_FIELD_WORDS
+        or f"{word}s" in _WIRE_SCHEMA_FIELD_WORDS
+        for word in content
+    )
+
+
 def _repair_structural_wire_noise(
     normalized: dict[str, Any], trace: list[dict[str, Any]]
 ) -> None:
     """Repair the wire noise that carries no semantics, and nothing else.
 
-    Two repairs, both deterministic and both recorded:
+    Three repairs, all deterministic and all recorded:
 
     An exact duplicate participant says nothing the single mention did not --
     "accessible to person, person" is one accessibility claim -- so the list is
@@ -166,6 +216,10 @@ def _repair_structural_wire_noise(
     definitionally not one of the task's participants; the same removal already
     happens for a robot role the model declared, and an undeclared reference to
     it is the same thing written more loosely.
+
+    A participant named entirely out of this contract's own field names is the
+    model answering the schema instead of the task, so it denotes nothing in the
+    world and removing it takes no semantics with it.
 
     Nothing else is repaired.  An undeclared participant that names a real
     thing -- a person, a part -- is missing semantics and stays a wire failure,
@@ -203,6 +257,15 @@ def _repair_structural_wire_noise(
                     "code": "UNDECLARED_ROBOT_SELF_PARTICIPANT_REMOVED",
                     "collection": collection, "element_id": entry.get("id"),
                     "removed_participants": robots,
+                })
+            echoes = [p for p in deduplicated
+                      if p not in declared and _names_only_wire_schema_fields(p)]
+            if echoes:
+                deduplicated = [p for p in deduplicated if p not in echoes]
+                trace.append({
+                    "code": "WIRE_SCHEMA_FIELD_ECHO_PARTICIPANT_REMOVED",
+                    "collection": collection, "element_id": entry.get("id"),
+                    "removed_participants": echoes,
                 })
             item = deepcopy(entry)
             item["participant_roles"] = deduplicated

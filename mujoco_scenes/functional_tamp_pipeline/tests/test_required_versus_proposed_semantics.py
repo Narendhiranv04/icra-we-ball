@@ -276,21 +276,41 @@ def test_a_shared_access_phrase_about_something_else_licenses_nothing_for_the_co
     assert not executable(graph)
 
 
-def test_the_task_summary_is_refused_when_two_operations_could_take_the_anchor():
-    """"Accessible to both" in the summary does not say which placement it is about.
+def test_the_task_summary_is_refused_when_it_does_not_say_which_placement():
+    """A summary naming both placements' participants is about neither in particular.
 
-    Both placements are worded so that either capability could seat them, so
-    the connection is not unique and the summary licenses neither.
+    Both operations are worded so either capability could seat them, and the
+    summary names the refreshments and the control alike, so nothing connects
+    its shared-access clause to one of them and it licenses neither.
     """
     contract = _living_contract(
         shared_phrase_on=None,
-        summary="the control must be accessible to both people on the sofa")
+        summary="arrange the refreshment settings and the entertainment control "
+                "so everything is accessible to both people")
     canonical, _graph = compile_v3(contract, "living_room", LIVING)
     completions = {
         row.get("operation_id"): row.get("slot_resolution", {})
         for row in canonical.get("operation_induced_slot_completions", ())
     }
     assert completions.get("shared", {}).get("anchor", {}).get("canonical_role") != "SEATING_PAIR"
+
+
+def test_the_task_summary_counts_when_it_names_one_placement_and_not_the_other():
+    """"Position the remote control for shared access" is about the control.
+
+    Where both operations read alike, the summary's own words are what connect
+    the requirement to one of them.
+    """
+    contract = _living_contract(
+        shared_phrase_on=None,
+        summary="position the entertainment control for shared access")
+    canonical, _graph = compile_v3(contract, "living_room", LIVING)
+    completions = {
+        row.get("operation_id"): row.get("slot_resolution", {})
+        for row in canonical.get("operation_induced_slot_completions", ())
+    }
+    assert completions.get("shared", {}).get("anchor", {}).get("canonical_role") == "SEATING_PAIR"
+    assert completions.get("personal", {}).get("anchor", {}).get("canonical_role") != "SEATING_PAIR"
 
 
 def test_the_task_summary_counts_where_only_one_operation_could_take_the_anchor():
