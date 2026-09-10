@@ -255,3 +255,52 @@ def test_one_personal_placement_with_one_seat_still_succeeds():
     assert result.complete, result.unresolved_constraints
     binding = next(iter(result.operation_bindings.values()))[0]
     assert binding["context"]["SEATING_POSITION"] in {"seat_0001", "seat_0002"}
+
+
+# ---------------------------------------------------------------------------
+# The reuse declaration must stay in step with the roles it is about
+# ---------------------------------------------------------------------------
+
+
+def test_every_bindable_role_declares_whether_it_may_be_reused():
+    """A role with no declaration silently defaults to one-per-application.
+
+    Every path that reasons about counts reads this table, so a role missing
+    from it is a role whose cardinality is decided by omission.
+    """
+    from mujoco_scenes.functional_tamp_pipeline.system_context_registry import (
+        get_domain_selectable_roles,
+        get_domain_system_fixed_anchors,
+    )
+    missing = {
+        (domain, role)
+        for domain in ("kitchen", "living_room", "workshop")
+        for role in set(get_domain_selectable_roles(domain)) | set(get_domain_system_fixed_anchors(domain))
+        if role_reuse_admissibility(domain, role) is None
+    }
+    assert missing == set(), f"roles with no reuse declaration: {sorted(missing)}"
+
+
+def test_the_reuse_declaration_names_no_role_the_domain_does_not_have():
+    from mujoco_scenes.functional_tamp_pipeline.role_semantic_ontology import (
+        _ROLE_REUSE_ADMISSIBILITY,
+    )
+    from mujoco_scenes.functional_tamp_pipeline.system_context_registry import (
+        get_domain_planner_context_constants,
+        get_domain_selectable_roles,
+        get_domain_system_fixed_anchors,
+    )
+    for domain, declared in _ROLE_REUSE_ADMISSIBILITY.items():
+        known = (set(get_domain_selectable_roles(domain))
+                 | set(get_domain_system_fixed_anchors(domain))
+                 | set(get_domain_planner_context_constants(domain)))
+        unknown = set(declared) - known
+        assert unknown == set(), f"{domain} declares reuse for roles it does not have: {sorted(unknown)}"
+
+
+def test_only_the_two_admissibility_values_are_used():
+    from mujoco_scenes.functional_tamp_pipeline.role_semantic_ontology import (
+        _ROLE_REUSE_ADMISSIBILITY,
+    )
+    values = {value for declared in _ROLE_REUSE_ADMISSIBILITY.values() for value in declared.values()}
+    assert values <= {REUSABLE_ACROSS_APPLICATIONS, ONE_PER_APPLICATION}
