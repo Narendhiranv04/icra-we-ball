@@ -42,6 +42,7 @@ from .robot_capability_registry import (
     RobotCapability,
     extract_operation_semantic_candidates,
 )
+from .role_semantic_ontology import role_may_be_reused_across_applications
 from .semantic_typing import canonical_role_family, role_text_scopes
 from .system_context_registry import (
     get_domain_selectable_roles,
@@ -306,16 +307,34 @@ def _slot_role_kind(domain: str, canonical_role: str) -> str:
     return "OBJECT"
 
 
-def _slot_cardinality(slot: str, operation_count: int) -> tuple[int, str]:
+def _slot_cardinality(
+    domain: str, slot: str, canonical_role: str, operation_count: int,
+) -> tuple[int, str]:
     """How many instances an induced slot needs, and whether they must differ.
 
-    A target is acted on once per application, so repeated applications need
-    separate targets.  An instrument or support serving a single application may
-    be one reusable thing; serving several dedicated applications it must be as
-    many as there are applications.  An anchor is a single shared reference.
+    How many times the task applies the operation is ``operation_count``.  How
+    many separate physical things that needs is a different question, and its
+    answer belongs to the role, not to the slot: the runtime declares, per
+    canonical role, whether one instance may serve several applications.  A
+    material source or an implement may; a serving container, a personal
+    support, or the seat that makes a support personal may not.
+
+    Deciding this from the slot name alone was wrong in both directions.  Every
+    anchor was made a single shared reference, so two personal placements were
+    anchored to the same seat and the second one's proximity requirement had
+    nothing left to check.  Every repeated non-anchor slot was made distinct, so
+    one coffee source poured twice was recorded as a demand for two jars.
     """
+    reusable = role_may_be_reused_across_applications(domain, canonical_role)
     if slot == "anchor":
+        # A reference standing for one thing per application must be supplied
+        # once per application; one standing for all of them is shared.
+        if not reusable and operation_count > 1:
+            return operation_count, "DISTINCT"
         return 1, "SHARED"
+    if reusable:
+        # Needed for every application, satisfiable by a single instance.
+        return max(1, operation_count), "REUSABLE"
     if operation_count > 1:
         return operation_count, "DISTINCT"
     return 1, "REUSABLE"
@@ -329,7 +348,7 @@ def _synthesized_role(
     canonical_role: str,
     operation_count: int,
 ) -> dict[str, Any]:
-    count, policy = _slot_cardinality(slot, operation_count)
+    count, policy = _slot_cardinality(domain, slot, canonical_role, operation_count)
     family = canonical_role_family(domain, canonical_role)
     return {
         "id": f"op_slot__{operation.get('id')}__{slot}",

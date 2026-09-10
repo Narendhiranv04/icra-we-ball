@@ -446,6 +446,51 @@ def evaluate_node_for_role(node: ObservedNode, role: FunctionalRole) -> tuple[st
     return "TRUE", details
 
 
+def _operation_context_is_verified(grp: OperationGroup) -> bool:
+    """Whether this group's own preconditions actually check its context role."""
+    if not grp.context_role:
+        return False
+    if grp.physical_preconditions:
+        return any(
+            grp.context_role in (subject_role, object_role)
+            for subject_role, _predicate, object_role in grp.physical_preconditions
+        )
+    return bool(grp.context_relations)
+
+
+def _operation_context_schedules(
+    grp: OperationGroup,
+    selected_contexts: list[str] | None,
+    applications: int,
+) -> tuple[list[tuple[str | None, ...]], str | None]:
+    """Which context each application acts in, or why no schedule is admissible.
+
+    A context the group's own preconditions check may never simply go missing.
+    Reading the context positionally and falling back to ``None`` past the end of
+    the list did exactly that: a personal placement applied twice with one seat
+    selected evaluated its second application with no seat at all, so the
+    proximity precondition was not checked and the binding was reported
+    satisfied with an empty context.  That is how a two-person task was
+    completed against one person's seat.
+
+    So: no context available for a checked context role is a refusal; one
+    context is shared by every application; and as many contexts as
+    applications are matched to them in every order, since which seat belongs to
+    which placement is for the verifier to settle, not for list position.  Any
+    other shortfall is refused rather than guessed at.
+    """
+    contexts = [item for item in (selected_contexts or ()) if item is not None]
+    if not _operation_context_is_verified(grp):
+        return [tuple([None] * applications)], None
+    if not contexts:
+        return [], "MISSING_REQUIRED_OPERATION_CONTEXT"
+    if len(contexts) == 1:
+        return [tuple(contexts * applications)], None
+    if len(contexts) >= applications:
+        return list(permutations(sorted(contexts), applications)), None
+    return [], "TOO_FEW_OPERATION_CONTEXTS_FOR_APPLICATIONS"
+
+
 def _evaluate_operation_group(
     grp: OperationGroup,
     selected_tools: list[str],
@@ -512,21 +557,29 @@ def _evaluate_operation_group(
 
         has_unknown_matching = False
         sorted_tools = sorted(selected_tools)
+        schedules, refusal = _operation_context_schedules(
+            grp, selected_contexts, num_targets)
+        if refusal:
+            return "FALSE", [{
+                "group": grp.id, "status": refusal,
+                "context_role": grp.context_role,
+                "applications": num_targets,
+                "selected_contexts": list(selected_contexts or ()),
+            }], []
 
         for tool_perm in permutations(sorted_tools, num_targets):
-            perm_checks = []
-            for i in range(num_targets):
-                u = tool_perm[i]
-                t = selected_targets[i]
-                c = selected_contexts[i] if (selected_contexts and i < len(selected_contexts)) else None
-                perm_checks.append(check_pair(u, t, c))
+            for context_schedule in schedules:
+                perm_checks = []
+                for i in range(num_targets):
+                    perm_checks.append(
+                        check_pair(tool_perm[i], selected_targets[i], context_schedule[i]))
 
-            perm_statuses = [chk[0] for chk in perm_checks]
-            if all(s == "TRUE" for s in perm_statuses):
-                matching = [chk[1] for chk in perm_checks]
-                return "TRUE", [], matching
-            if all(s in {"TRUE", "UNKNOWN"} for s in perm_statuses) and "UNKNOWN" in perm_statuses:
-                has_unknown_matching = True
+                perm_statuses = [chk[0] for chk in perm_checks]
+                if all(s == "TRUE" for s in perm_statuses):
+                    matching = [chk[1] for chk in perm_checks]
+                    return "TRUE", [], matching
+                if all(s in {"TRUE", "UNKNOWN"} for s in perm_statuses) and "UNKNOWN" in perm_statuses:
+                    has_unknown_matching = True
 
         if has_unknown_matching:
             return "UNKNOWN", diagnostics, []
@@ -535,6 +588,15 @@ def _evaluate_operation_group(
     else:  # SEQUENTIAL_REUSE_ALLOWED
         sorted_tools = sorted(selected_tools)
         required_distinct_tools = min(required_distinct_tools, len(selected_targets))
+        schedules, refusal = _operation_context_schedules(
+            grp, selected_contexts, len(selected_targets))
+        if refusal:
+            return "FALSE", [{
+                "group": grp.id, "status": refusal,
+                "context_role": grp.context_role,
+                "applications": len(selected_targets),
+                "selected_contexts": list(selected_contexts or ()),
+            }], []
         if grp.same_tool_must_cover_all_targets:
             if required_distinct_tools > 1:
                 return "FALSE", [{
@@ -546,52 +608,54 @@ def _evaluate_operation_group(
             # Must find a single tool that satisfies all targets
             has_unknown_single = False
             for u in sorted_tools:
-                tool_checks = []
-                for i, t in enumerate(selected_targets):
-                    c = selected_contexts[i] if (selected_contexts and i < len(selected_contexts)) else None
-                    tool_checks.append(check_pair(u, t, c))
-                statuses = [chk[0] for chk in tool_checks]
-                if all(s == "TRUE" for s in statuses):
-                    matching = [chk[1] for chk in tool_checks]
-                    return "TRUE", [], matching
-                if all(s in {"TRUE", "UNKNOWN"} for s in statuses) and "UNKNOWN" in statuses:
-                    has_unknown_single = True
+                for context_schedule in schedules:
+                    tool_checks = [
+                        check_pair(u, t, context_schedule[i])
+                        for i, t in enumerate(selected_targets)
+                    ]
+                    statuses = [chk[0] for chk in tool_checks]
+                    if all(s == "TRUE" for s in statuses):
+                        matching = [chk[1] for chk in tool_checks]
+                        return "TRUE", [], matching
+                    if all(s in {"TRUE", "UNKNOWN"} for s in statuses) and "UNKNOWN" in statuses:
+                        has_unknown_single = True
             if has_unknown_single:
                 return "UNKNOWN", diagnostics, []
             return "FALSE", diagnostics, []
         else:
             # Reuse is optional: first satisfy explicit DISTINCT source-role
             # participation, then reuse any selected source for extra targets.
-            per_target_checks: list[list[tuple[str, dict[str, Any]]]] = []
-            for i, t in enumerate(selected_targets):
-                c = selected_contexts[i] if (selected_contexts and i < len(selected_contexts)) else None
-                checks = []
-                for u in sorted_tools:
-                    checks.append(check_pair(u, t, c))
-                per_target_checks.append(checks)
-
             def covers_distinct_minimum(
                 matching: tuple[tuple[str, dict[str, Any]], ...]
             ) -> bool:
                 return len({item[1]["tool_id"] for item in matching}) >= required_distinct_tools
 
-            true_options = [
-                [item for item in checks if item[0] == "TRUE"]
-                for checks in per_target_checks
-            ]
-            if all(true_options):
-                for matching in product(*true_options):
-                    if covers_distinct_minimum(matching):
-                        return "TRUE", [], [item[1] for item in matching]
+            has_viable_matching = False
+            for context_schedule in schedules:
+                per_target_checks: list[list[tuple[str, dict[str, Any]]]] = [
+                    [check_pair(u, t, context_schedule[i]) for u in sorted_tools]
+                    for i, t in enumerate(selected_targets)
+                ]
+                true_options = [
+                    [item for item in checks if item[0] == "TRUE"]
+                    for checks in per_target_checks
+                ]
+                if all(true_options):
+                    for matching in product(*true_options):
+                        if covers_distinct_minimum(matching):
+                            return "TRUE", [], [item[1] for item in matching]
 
-            viable_options = [
-                [item for item in checks if item[0] in {"TRUE", "UNKNOWN"}]
-                for checks in per_target_checks
-            ]
-            if all(viable_options):
-                for matching in product(*viable_options):
-                    if covers_distinct_minimum(matching):
-                        return "UNKNOWN", diagnostics, []
+                viable_options = [
+                    [item for item in checks if item[0] in {"TRUE", "UNKNOWN"}]
+                    for checks in per_target_checks
+                ]
+                if all(viable_options):
+                    for matching in product(*viable_options):
+                        if covers_distinct_minimum(matching):
+                            has_viable_matching = True
+                            break
+            if has_viable_matching:
+                return "UNKNOWN", diagnostics, []
             return "FALSE", diagnostics, []
 
 

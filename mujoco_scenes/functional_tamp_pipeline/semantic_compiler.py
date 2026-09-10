@@ -19,6 +19,7 @@ from .models import (
     RoleTypeHypothesis,
     TaskEffectRelation,
 )
+from .role_semantic_ontology import role_may_be_reused_across_applications
 from .structural_sanitizer import sanitize_functional_graph
 from . import role_semantic_ontology as ontology
 from .predicate_registry import validate_predicate_signature
@@ -1573,6 +1574,42 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 'provenance': 'FM_EXPLICIT_OPERATION_PAIRINGS',
             })
         groups = merged_groups
+        # A context reference the runtime holds one-per-application needs one
+        # instance per application.  The FM may name the same thing
+        # collectively -- "the area where the people will sit", one region,
+        # shared -- while the runtime represents it as an individual seat and
+        # the verifier checks each placement against its own seat.  Compiling
+        # one instance for several dedicated applications left the later
+        # applications with no context to check, which is how a two-person task
+        # was reported complete against one person's seat.
+        for group in groups:
+            context_role = group.context_role
+            if not context_role or context_role not in nodes:
+                continue
+            applications = int(group.required_target_count or 1)
+            if applications <= 1:
+                continue
+            if role_may_be_reused_across_applications(domain, context_role):
+                continue
+            node = nodes[context_role]
+            if node.minimum_count >= applications:
+                continue
+            nodes[context_role] = replace(
+                node, count=applications, min_count=applications,
+                max_count=max(applications, node.maximum_count),
+                binding_policy='DISTINCT',
+            )
+            trace['roles'].append({
+                'canonical_role': context_role,
+                'raw_role': node.raw_role_id,
+                'status': 'PER_APPLICATION_CONTEXT_CARDINALITY',
+                'rule': 'ONE_CONTEXT_INSTANCE_PER_DEDICATED_APPLICATION',
+                'operation_id': group.id,
+                'applications': applications,
+                'declared_count': node.count,
+                'declared_binding_policy': node.binding_policy,
+                'provenance': 'RUNTIME_ROLE_REUSE_ADMISSIBILITY',
+            })
         # Group pairing governs these edges, not unconstrained all-to-all checks.
         grouped_triples = {(g.tool_role, p, g.target_role) for g in groups for p in g.required_relations}
         grouped_triples |= {(g.tool_role, p, g.context_role) for g in groups for p in g.context_relations}

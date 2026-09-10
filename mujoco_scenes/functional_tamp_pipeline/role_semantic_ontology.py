@@ -449,3 +449,80 @@ def get_role_semantic_categories_or_empty(domain: str, canonical_role_id: str) -
         return tuple(get_system_role_semantic_categories(domain, canonical_role_id))
     except KeyError:
         return ()
+
+
+# ---------------------------------------------------------------------------
+# Reuse admissibility: may one physical instance serve several applications?
+# ---------------------------------------------------------------------------
+#
+# Three different quantities keep getting written as one number, and conflating
+# them has been wrong in both directions:
+#
+#   how many *applications* of an operation the task needs,
+#   how many *physical instances* must exist for that, and
+#   whether one instance may serve more than one application.
+#
+# Only the third is a fact about the runtime's own role, and it is a physical
+# one: pouring from a jar twice does not consume the jar, so one jar serves both
+# coffees; but a coffee cup is what an application produces, so two servings need
+# two cups.  The FM is asked for the task's meaning, not for this convention, so
+# its ``binding_policy`` word is evidence about the task and not the authority on
+# reuse.  Declaring the answer once, per canonical role, keeps every code path
+# that has to reason about counts -- compilation, candidate sufficiency, the
+# pigeonhole capacity check, operation binding -- from drifting apart.
+#
+# This is runtime role metadata.  It says nothing about any benchmark variant,
+# any scene, or any expected answer.
+
+REUSABLE_ACROSS_APPLICATIONS = "REUSABLE_ACROSS_APPLICATIONS"
+ONE_PER_APPLICATION = "ONE_PER_APPLICATION"
+
+_ROLE_REUSE_ADMISSIBILITY: dict[str, dict[str, str]] = {
+    "kitchen": {
+        # A material source dispenses without being consumed.
+        "coffee_source": REUSABLE_ACROSS_APPLICATIONS,
+        "water_source": REUSABLE_ACROSS_APPLICATIONS,
+        # An implement is used and set down again.
+        "coffee_stirrer": REUSABLE_ACROSS_APPLICATIONS,
+        # What a serving *is*: one per serving, and an eating utensil belongs to
+        # the serving it accompanies.
+        "coffee_container": ONE_PER_APPLICATION,
+        "soup_container": ONE_PER_APPLICATION,
+        "soup_eating_utensil": ONE_PER_APPLICATION,
+    },
+    "living_room": {
+        # A personal setting and the surface it sits on belong to one person, and
+        # the seat that makes it personal is that person's seat.
+        "CUP_SAUCER_SET": ONE_PER_APPLICATION,
+        "PERSONAL_CUP_SAUCER_REGION": ONE_PER_APPLICATION,
+        "SEATING_POSITION": ONE_PER_APPLICATION,
+        # Deliberately shared: one control, one place both people can reach, and
+        # the seating pair is a single compound reference to both seats.
+        "REMOTE": REUSABLE_ACROSS_APPLICATIONS,
+        "SHARED_REMOTE_REGION": REUSABLE_ACROSS_APPLICATIONS,
+        "SEATING_PAIR": REUSABLE_ACROSS_APPLICATIONS,
+    },
+    "workshop": {
+        # A driver drives many fasteners; a fastener is consumed by its joint.
+        "driver": REUSABLE_ACROSS_APPLICATIONS,
+        "fastener": ONE_PER_APPLICATION,
+        # One marked location, however many fastenings are asked for there.
+        "repair_target": REUSABLE_ACROSS_APPLICATIONS,
+    },
+}
+
+
+def role_reuse_admissibility(domain: str, canonical_role: str) -> str | None:
+    """Whether one instance of this runtime role may serve several applications.
+
+    Returns None for a role the runtime declares nothing about -- a planner
+    context constant, or a provisional name that is not a canonical role yet --
+    so callers can tell "no declaration" from "one per application".
+    """
+    return _ROLE_REUSE_ADMISSIBILITY.get(
+        str(domain).strip().lower(), {}).get(str(canonical_role))
+
+
+def role_may_be_reused_across_applications(domain: str, canonical_role: str) -> bool:
+    """True only when the runtime positively declares the role reusable."""
+    return role_reuse_admissibility(domain, canonical_role) == REUSABLE_ACROSS_APPLICATIONS
