@@ -92,7 +92,8 @@ def test_kitchen_service_surface_resolves_to_existing_context():
     assert build_role_type_hypotheses("kitchen", canonical)["service"].canonical_role_candidates == ("serving_area",)
 
 
-def test_living_two_participant_relocation_remains_a_capability_candidate():
+def test_living_two_participant_relocation_gains_its_seating_anchor():
+    """The personal proximity the model stated is what licenses the seat anchor."""
     raw = document(
         [role("payload", "personal refreshment drinkware set"),
          role("support", "personal side table support", kind="REGION", policy="SHARED")],
@@ -101,7 +102,10 @@ def test_living_two_participant_relocation_remains_a_capability_candidate():
     canonical = convert_v3_to_canonical_document(raw, domain="living_room")
     group = canonical["interaction_groups"][0]
     assert (group["tool_role"], group["target_role"]) == ("support", "payload")
-    assert group["context_role"] is None
+    completion = canonical["operation_induced_slot_completions"][0]
+    assert completion["slot_resolution"]["anchor"]["canonical_role"] == "SEATING_POSITION"
+    assert completion["fm_semantic_witnesses"]["anchor"]
+    assert group["context_role"] == completion["slot_resolution"]["anchor"]["role"]
 
 
 def test_living_personal_and_shared_slots_resolve():
@@ -143,13 +147,52 @@ def _operation_unresolved_and_incomplete(raw, domain, instruction=""):
     )
 
 
-def test_workshop_missing_fastener_fails_but_complete_slots_resolve():
+def test_workshop_missing_fastener_becomes_an_induced_existential_requirement():
+    """A fastening needs something to fasten, whether or not the model named it."""
     missing = document(
         [role("tool", "reusable fastening tool"),
          role("target", "fixed assembly receiving installed component", kind="FIXED_TARGET", policy="SHARED")],
         operations=[operation("fasten", "fasten component at target", ["tool", "target"])],
     )
-    assert _operation_unresolved_and_incomplete(missing, "workshop", "complete the fastening")
+    canonical = convert_v3_to_canonical_document(
+        missing, domain="workshop", task_instruction="complete the fastening")
+    completion = canonical["operation_induced_slot_completions"][0]
+    assert completion["slot_resolution"]["target"]["canonical_role"] == "fastener"
+    assert completion["slot_resolution"]["target"]["how"] == (
+        "SELECTABLE_FUNCTIONAL_ASSET_SENT_TO_GROUNDING")
+    induced = next(r for r in canonical["functional_roles"]
+                   if r["id"] == completion["slot_resolution"]["target"]["role"])
+    # Existential, not bound: a role type and a count, no object and no category.
+    assert induced["candidate_categories"] == []
+    assert induced["provenance"] == "OPERATION_INDUCED_ABSTRACT_ROLE_REQUIREMENT"
+    from mujoco_scenes.functional_tamp_pipeline.semantic_compiler import compile_candidate_graph
+    graph = compile_candidate_graph("workshop", "complete the fastening", canonical)
+    assert "fastener" in graph.nodes
+    assert graph.operation_groups[0].capability_id == "FASTEN_JOINT"
+
+
+def test_workshop_non_physical_directive_induces_no_participants():
+    """Nothing is induced from a phrase that is not a physical operation."""
+    raw = document(
+        [role("tool", "reusable fastening tool"),
+         role("target", "fixed assembly receiving installed component", kind="FIXED_TARGET", policy="SHARED")],
+        operations=[operation("pick", "identify the compatible component", ["tool", "target"])],
+    )
+    canonical = convert_v3_to_canonical_document(
+        raw, domain="workshop", task_instruction="complete the fastening")
+    assert not canonical.get("operation_induced_slot_completions")
+    assert canonical["interaction_groups"] == []
+    assert "fastener" not in {
+        r.get("canonical_role") for r in canonical["functional_roles"]
+    }
+
+
+def test_workshop_complete_slots_resolve_without_induction():
+    missing = document(
+        [role("tool", "reusable fastening tool"),
+         role("target", "fixed assembly receiving installed component", kind="FIXED_TARGET", policy="SHARED")],
+        operations=[operation("fasten", "fasten component at target", ["tool", "target"])],
+    )
     complete = copy.deepcopy(missing)
     complete["task_contract"]["functional_roles"].append(role("fastener", "manipulated joining component"))
     complete["task_contract"]["operation_pairings"][0]["participant_roles"].append("fastener")

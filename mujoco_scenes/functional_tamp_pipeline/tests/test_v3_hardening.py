@@ -63,7 +63,14 @@ def test_function_semantics_dominate_incidental_description_neighbors():
     s = build_role_type_hypotheses("living_room", convert_v3_to_canonical_document(seating, domain="living_room"))["seat"]
     assert p.canonical_role_candidates == ("PERSONAL_CUP_SAUCER_REGION",)
     assert s.canonical_role_candidates == ("SEATING_POSITION",)
-    assert p.evidence[0]["source"] == "FUNCTION_TEXT"
+    # The support resolved from its own wording, and the armchair its description
+    # mentions is recorded as a neighbour rather than as a competing claim.
+    assert "PURPOSE_TEXT" in p.evidence[0]["source"]
+    assert p.evidence[0]["family_precedence_rules"], "a precedence rule settled support vs seating"
+    assert any(
+        rule.endswith(("OVER_AMBIGUOUS_SEATING_CATEGORY", "RELATIVE_TO_SEATING"))
+        for rule in p.evidence[0]["family_precedence_rules"]
+    )
 
 
 def test_initial_location_source_is_context_not_material_source():
@@ -140,11 +147,14 @@ def test_unknown_operation_never_falls_back_to_participant_order():
 
 
 def test_multiple_slot_assignments_are_not_committed_to_first_option():
+    # Two roles the model described identically are each plausible in the same
+    # slot, so the operation has more than one legal reading.
     raw = document([
-        role("support", "shared support surface", kind="REGION", policy="SHARED"),
+        role("support_a", "shared central support surface", kind="REGION", policy="SHARED"),
+        role("support_b", "shared central support surface", kind="REGION", policy="SHARED"),
         role("payload", "entertainment remote control"),
-        role("context", "contextual reference", kind="FIXED_TARGET", policy="SHARED"),
-    ], operations=[operation("x", "place remote control", ["payload", "support", "context"])])
+        role("seats", "shared seating context", kind="FIXED_TARGET", policy="SHARED"),
+    ], operations=[operation("x", "place remote control", ["payload", "support_a", "support_b", "seats"])])
     group = convert_v3_to_canonical_document(raw, domain="living_room")["interaction_groups"][0]
     assert len(group["v3_slot_assignments"]) > 1
     # Every assignment travels with the group, so nothing is chosen by position.
@@ -310,23 +320,41 @@ def _no_pair_invented(canonical):
     return not invented and not canonical.get("explicit_context_sets")
 
 
-def test_single_per_seat_access_edge_does_not_invent_missing_pair_member():
-    """One access edge cannot become a seat pair; the missing member is not supplied.
-
-    The edge has no legal orientation, so it is recorded as an unresolved
-    required semantic rather than aborting the contract. What must never happen
-    is the runtime inventing the second seat to make the edge fit.
-    """
+def test_single_seat_and_no_shared_wording_does_not_invent_a_seat_pair():
+    """Reaching one named seat is not a claim about reaching both of them."""
     raw = document(
-        _living_context_roles(),
+        [role("remote", "entertainment control device", categories=["REMOTE"]),
+         role("low_table", "low table", kind="REGION", policy="REUSABLE", categories=["TABLE"]),
+         role("seat_left", "left seating position", kind="FIXED_TARGET", policy="REUSABLE")],
         relations=[relation("left_access", "accessible to", ["remote", "seat_left"])],
-        operations=[operation("move", "move to", ["remote", "shared"])],
+        operations=[operation("move", "move to", ["remote", "low_table"])],
     )
     canonical = convert_v3_to_canonical_document(raw, domain="living_room")
     assert _no_pair_invented(canonical)
-    assert [u["id"] for u in canonical["unresolved_relation_semantics"]] == ["left_access"]
-    accounting = {row["raw_id"]: row["disposition"] for row in canonical["fm_semantic_accounting"]}
-    assert accounting["left_access"] == "UNRESOLVED_REQUIRED_SEMANTIC"
+    assert not canonical.get("operation_induced_slot_completions")
+    graph = compile_candidate_graph("living_room", "move the remote", raw)
+    assert "SEATING_PAIR" not in graph.nodes
+    assert not graph.online_executable_contract_complete
+
+
+def test_shared_access_wording_with_one_named_seat_realizes_the_pair():
+    """The model said "accessible from both seats"; that is the requirement.
+
+    Which seats those are is the scene's business, and the runtime holds them as
+    its registered pair.  The wording is what licenses it -- the previous test
+    shows the same graph refusing without it.
+    """
+    raw = document(
+        [role("remote", "entertainment control device", categories=["REMOTE"]),
+         role("low_table", "low table", kind="REGION", policy="REUSABLE", categories=["TABLE"]),
+         role("seat_left", "left seating position", kind="FIXED_TARGET", policy="REUSABLE")],
+        relations=[relation("both_access", "accessible from both seats", ["remote", "seat_left"])],
+        operations=[operation("move", "move to", ["remote", "low_table"])],
+    )
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    completion = canonical["operation_induced_slot_completions"][0]
+    assert completion["slot_resolution"]["anchor"]["canonical_role"] == "SEATING_PAIR"
+    assert completion["fm_semantic_witnesses"]["anchor"]
 
 
 def test_per_seat_access_edges_without_explicit_shared_move_target_do_not_create_pair():
@@ -378,12 +406,29 @@ def test_quantified_relation_missing_member_fails_closed():
 
 
 def test_quantified_relation_never_discards_unrelated_extra_participant():
+    """An extra participant is not quietly dropped to make a phrase fit.
+
+    The seat-set adapter declines the relation rather than assigning three of
+    its four participants, and the relation is then recorded -- previously the
+    conversion aborted, taking every other coherent semantic with it.
+    """
     raw = document(
         _living_context_roles(include_remote=False, include_extra=True),
         relations=[relation("access", "accessible to both", ["shared", "seat_left", "seat_right", "display"])],
     )
-    with pytest.raises(TaskSpecificationValidationError, match="QUANTIFIED_RELATION_PARTICIPANT_CONTRADICTION"):
-        convert_v3_to_canonical_document(raw, domain="living_room")
+    instruction = (
+        "place the entertainment control where it is accessible to both people"
+    )
+    canonical = convert_v3_to_canonical_document(
+        raw, domain="living_room", task_instruction=instruction)
+    assert not canonical.get("explicit_context_sets")
+    accounted = {
+        row["raw_id"]: row["disposition"] for row in canonical["fm_semantic_accounting"]
+        if row["element_kind"] == "relation"
+    }
+    assert accounted["access"] != "GROUNDED_TASK_RELATION"
+    graph = compile_candidate_graph("living_room", instruction, canonical)
+    assert not graph.online_executable_contract_complete
 
 
 def test_seats_in_graph_without_quantified_text_do_not_create_pair():
@@ -482,17 +527,35 @@ def test_explicit_relation_completes_missing_shared_operation_context():
     assert group["v3_slot_assignments"][0]["anchor_type"] == "SEATING_PAIR"
 
 
-def test_missing_explicit_shared_context_is_not_invented():
+def test_shared_access_stated_anywhere_realizes_the_seating_pair_anchor():
+    """The support's own wording states the requirement, so the anchor stands for it."""
     raw = document(_living_context_roles()[:1] + _living_context_roles()[3:], operations=[
         operation("move", "move remote", ["remote", "shared"]),
     ])
     canonical = convert_v3_to_canonical_document(raw, domain="living_room")
-    assert canonical["interaction_groups"][0]["v3_slot_assignments"]
-    assert canonical["interaction_groups"][0]["context_role"] is None
-    assert not canonical.get("explicit_context_sets")
+    group = canonical["interaction_groups"][0]
+    assert group["v3_slot_assignments"]
+    completion = canonical["operation_induced_slot_completions"][0]
+    assert completion["slot_resolution"]["anchor"]["canonical_role"] == "SEATING_PAIR"
+    assert completion["fm_semantic_witnesses"]["anchor"], "the FM said it, and the trace says where"
     graph = compile_candidate_graph("living_room", "move remote to shared support", raw)
+    assert "SEATING_PAIR" in graph.nodes
+
+
+def test_missing_shared_access_semantics_is_not_invented():
+    """Placing something on a surface does not by itself demand shared access."""
+    raw = document([
+        role("remote", "entertainment control device", categories=["REMOTE"]),
+        role("table", "low table", kind="REGION", policy="SHARED", categories=["TABLE"]),
+    ], operations=[operation("move", "move remote", ["remote", "table"])])
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    assert not canonical.get("operation_induced_slot_completions")
+    assert canonical["interaction_groups"] == []
+    assert canonical["unresolved_operation_semantics"]
+    graph = compile_candidate_graph("living_room", "move remote to table", raw)
     assert not graph.online_executable_contract_complete
     assert "SEATING_PAIR" not in graph.nodes
+    assert "SEATING_POSITION" not in graph.nodes
 
 
 def test_beverage_macro_has_unique_two_transfer_lowering_and_accounting():
@@ -538,9 +601,12 @@ def test_beverage_macro_with_incompatible_participant_does_not_lower():
         role("container", "receiving vessel for coffee", count=2, policy="DISTINCT"),
     ], operations=[operation("prepare", "prepare coffee beverage", ["source", "utensil", "container"], count=2)])
     canonical = convert_v3_to_canonical_document(raw, domain="kitchen")
-    assert len(canonical["interaction_groups"]) == 1
-    assert canonical["interaction_groups"][0]["v3_slot_assignments"] == []
-    assert canonical["fm_semantic_accounting"][0]["disposition"] == "UNRESOLVED_REQUIRED_OPERATION"
+    # No lowering, and no group either: an operation the runtime can neither
+    # seat nor decompose is recorded as unrepresented rather than emitted as a
+    # group with empty slots for a later stage to discover.
+    assert canonical["interaction_groups"] == []
+    assert canonical["fm_semantic_accounting"][0]["disposition"] == "UNRESOLVED_REQUIRED_SEMANTIC"
+    assert [item["id"] for item in canonical["unresolved_operation_semantics"]] == ["prepare"]
 
 
 def test_every_raw_fm_element_has_semantic_accounting_disposition():
@@ -567,8 +633,11 @@ def test_unique_multi_channel_remote_evidence_overrides_isolated_bad_function():
         "living_room", convert_v3_to_canonical_document(raw, domain="living_room")
     )["remote_control"]
     assert hypothesis.canonical_role_candidates == ("REMOTE",)
-    assert hypothesis.status == "GLOBAL_GRAPH_CONSISTENCY_OVERRIDE"
-    assert any(row.get("status") == "UNIQUE_MINIMAL_REPAIR" for row in hypothesis.evidence)
+    # The stray function phrase names no family this domain realizes, while the
+    # categories and the description independently name the remote.  The
+    # resolution therefore rests on more of the role than its function sentence.
+    sources = {row.get("source") or "" for row in hypothesis.evidence}
+    assert any("IDENTITY_TEXT" in source and "PURPOSE_TEXT" in source for source in sources)
 
 
 def test_explicit_raw_personal_pairings_survive_count_consolidation():

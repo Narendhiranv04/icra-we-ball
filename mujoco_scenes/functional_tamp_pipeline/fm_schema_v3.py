@@ -24,7 +24,18 @@ from .robot_capability_registry import (
     get_robot_capabilities,
     is_non_physical_operation_phrase,
 )
-from .semantic_typing import build_role_type_hypotheses, relation_canonical_role_pairs
+from .operation_slot_completion import (
+    ExpressedSemantics,
+    capability_anchor_roles,
+    collect_expressed_semantics,
+    complete_operation_slots,
+    probe_named_participant_slots,
+)
+from .semantic_typing import (
+    build_role_type_hypotheses,
+    canonical_role_family,
+    relation_canonical_role_pairs,
+)
 
 
 SYSTEM_PROMPT_V3 = """You turn one instruction and three photographs of the starting scene into a single functional task contract. Return only JSON matching the schema. Never output an action sequence, a plan, or backend predicate names.
@@ -404,11 +415,12 @@ def _explicit_seating_context(
 
     seats = [p for p in participants if _role_has_candidate(hypotheses, p, "SEATING_POSITION")]
     if len(seats) != 2:
-        raise TaskSpecificationValidationError(
-            "INCOMPLETE_QUANTIFIED_CONTEXT_SET: quantified Living Room semantics "
-            f"requires exactly two explicitly declared seating participants; entry={item.get('id')!r}, "
-            f"participant_roles={participants}"
-        )
+        # Not an enumerated two-seat set.  That is a statement this adapter has
+        # nothing to say about, not a contradictory contract: aborting the whole
+        # conversion discarded every other coherent relation and operation the
+        # model had expressed, over one phrase.  Decline and let the general
+        # n-ary handling and completeness checking decide.
+        return item, False
     members = tuple(sorted(seats))
     bundle_id = bundles.get(members)
     if bundle_id is None:
@@ -446,30 +458,22 @@ def _explicit_seating_context(
             "SITUATED_BETWEEN" if re.fullmatch(r"\s*between\s*", re.sub(r"[_-]+", " ", phrase), re.I) else None,
         )
         if relation_family is None:
-            raise TaskSpecificationValidationError(
-                f"UNSUPPORTED_QUANTIFIED_RELATION_FAMILY: relation {item.get('id')!r} ({phrase!r})"
-            )
+            # A quantified phrase whose relation family this adapter does not
+            # recognise is left to the general handling below.
+            return item, False
         if (
             len(support) != 1
             or len(remaining) not in {1, 2}
             or (len(remaining) == 2 and (relation_family != "ACCESSIBLE_FROM_BOTH_SEATS" or len(payload) != 1))
         ):
-            raise TaskSpecificationValidationError(
-                "FM_INTERNAL_QUANTIFIED_RELATION_PARTICIPANT_CONTRADICTION: "
-                f"relation {item.get('id')!r} cannot assign every participant consistently; "
-                f"participant_roles={participants}"
-            )
+            return item, False
         item["participant_roles"] = [support[0], bundle_id]
         item["relation"] = (
             "situated between" if relation_family == "SITUATED_BETWEEN" else item["relation"]
         )
     else:
         if len(remaining) != 2 or len(support) != 1 or len(payload) != 1:
-            raise TaskSpecificationValidationError(
-                "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: quantified Living Room "
-                f"operation {item.get('id')!r} cannot assign every participant consistently; "
-                f"participant_roles={participants}"
-            )
+            return item, False
         item["participant_roles"] = [payload[0], support[0], bundle_id]
 
     item["explicit_participant_roles"] = participants
@@ -493,10 +497,23 @@ def _relation_options(domain: str, relation: Mapping[str, Any], hypotheses: Mapp
     for semantic in extract_relation_semantic_candidates(domain, relation["relation"]):
         pairs = relation_canonical_role_pairs(domain, semantic.predicate_name, semantic.category)
         if semantic.category == "TASK_EFFECT_SEMANTICS":
-            # Effect carrier orientation is linguistic; both raw arrangements are
-            # retained until an explicit operation can corroborate the state edge.
-            pairs = {(s, o) for s in hypotheses[left].canonical_role_candidates
-                     for o in hypotheses[right].canonical_role_candidates}
+            # Carrier orientation is linguistic, so both arrangements are kept
+            # until an operation corroborates the state edge -- but one endpoint
+            # still has to be able to carry the other.  Accepting every pair let
+            # "the cup contains coffee and water" decompose into a claim that
+            # the coffee contains the water, which the model never made and
+            # which then blocked the contract as unrepresentable.
+            carriers = {
+                role for side in (left, right)
+                for role in hypotheses[side].canonical_role_candidates
+                if canonical_role_family(domain, role) in {"DESTINATION", "SUPPORT", "PAYLOAD"}
+            }
+            pairs = {
+                (subject, object_)
+                for subject in hypotheses[left].canonical_role_candidates
+                for object_ in hypotheses[right].canonical_role_candidates
+                if {subject, object_} & carriers
+            }
         for subject_raw, object_raw in ((left, right), (right, left)):
             subject_types = set(hypotheses[subject_raw].canonical_role_candidates)
             object_types = set(hypotheses[object_raw].canonical_role_candidates)
@@ -614,8 +631,15 @@ def resolve_v3_operation_slots(
     roles_by_id: Mapping[str, Mapping[str, Any]],
     hypotheses: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
+    # An operation naming a participant that is not a declared role cannot be
+    # seated.  Strict wire validation rejects such a contract before this point;
+    # reaching here anyway used to raise a bare KeyError instead of reporting an
+    # operation the runtime could not seat.
+    participants_named = list(dict.fromkeys(operation.get("participant_roles", ()) or ()))
+    if any(p not in hypotheses or p not in roles_by_id for p in participants_named):
+        return []
     phrase = str(operation["operation"])
-    capabilities = extract_operation_semantic_candidates(domain, phrase)
+    capabilities = extract_operation_semantic_candidates(domain, phrase, participants_named)
     # The model often names an operation with a bare noun or a generic verb --
     # "manipulation", "placement", "combine" -- which identifies no capability by
     # wording alone.  The participants still do: a driver, a fastener and a fixed
@@ -631,17 +655,20 @@ def resolve_v3_operation_slots(
     participants = tuple(operation["participant_roles"])
     options: list[dict[str, Any]] = []
     for capability in capabilities:
-        slot_names = (
-            ("source", "target")
-            if not capability.allowed_anchor_roles or (domain == "living_room" and len(participants) == 2)
-            else ("source", "target", "anchor")
-        )
+        # A capability whose physical preconditions check an anchor is not
+        # executable without one.  Living Room used to be allowed to drop the
+        # anchor whenever the model named only two participants, which produced
+        # a support group with no seating context and then discarded it a stage
+        # later for exactly that reason.  The anchor is supplied by slot
+        # completion instead, on the model's own evidence, or not at all.
+        anchor_roles = capability_anchor_roles(domain, capability)
+        slot_names = ("source", "target", "anchor") if anchor_roles else ("source", "target")
         if len(participants) != len(slot_names):
             continue
         allowed = {
             "source": set(capability.allowed_source_roles),
             "target": set(capability.allowed_target_roles),
-            "anchor": set(capability.allowed_anchor_roles),
+            "anchor": set(anchor_roles),
         }
         for assigned in permutations(participants):
             raw_slots = dict(zip(slot_names, assigned))
@@ -738,6 +765,49 @@ def classify_requirement_provenance(
     return "OBSERVATION_ONLY"
 
 
+_PLACEMENT_VERB = re.compile(
+    r"\b(place|placing|put|set|serve|serving|deliver|deposit|position|return|leave|"
+    r"restore|store|move|transfer|bring|hand)\w*\b", re.I
+)
+
+
+def _planner_context_transition(
+    domain: str,
+    operation: Mapping[str, Any],
+    hypotheses: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    """Whether this operation just moves something to a planner-owned place.
+
+    The symbolic compilers own the transitions to their fixed contexts, so an
+    expressed "serve the coffee on the dining table" needs no functional
+    operation of its own.  Recognising that here keeps it from being counted as
+    an operation the runtime failed to represent.
+    """
+    from .system_context_registry import get_domain_planner_context_constants
+    constants = set(get_domain_planner_context_constants(domain))
+    if not constants or not _PLACEMENT_VERB.search(str(operation.get("operation", ""))):
+        return None
+    destinations, movable = [], []
+    for participant in dict.fromkeys(operation.get("participant_roles", ()) or ()):
+        candidates = set(getattr(hypotheses.get(participant), "canonical_role_candidates", ()) or ())
+        if candidates and candidates <= constants:
+            destinations.append(participant)
+        elif candidates:
+            movable.append(participant)
+        else:
+            return None
+    if len(destinations) != 1 or not movable:
+        return None
+    return {
+        "code": "ABSORBED_INTO_PLANNER_CONTEXT",
+        "operation_id": operation.get("id"),
+        "raw_operation": operation.get("operation"),
+        "planner_context_role": destinations[0],
+        "moved_roles": movable,
+        "provenance": "FM_EXPLICIT_OPERATION",
+    }
+
+
 def convert_v3_to_canonical_document(
     v3_doc: Mapping[str, Any], *, domain: str, task_instruction: str = ""
 ) -> dict[str, Any]:
@@ -764,11 +834,18 @@ def convert_v3_to_canonical_document(
             if not handled:
                 decomposed = _decompose_nary_relation(domain, relation, hypotheses)
                 if not decomposed:
-                    raise TaskSpecificationValidationError(
-                        f"UNSUPPORTED_NARY_RELATION_PARTICIPANTS: relation {relation['id']!r} "
-                        f"expresses a recognised predicate with no legal reading "
-                        f"for any participant pair"
-                    )
+                    # A recognised predicate the runtime can give no legal
+                    # reading over these participants is one relation it cannot
+                    # represent, recorded below with the binary cases.  Aborting
+                    # the conversion threw away every other coherent semantic in
+                    # the contract over a single phrase.
+                    normalized_relations.append({
+                        **dict(relation),
+                        "participant_roles": list(relation["participant_roles"])[:2],
+                        "nary_reading_unavailable": True,
+                        "raw_fm_participant_roles": list(relation["participant_roles"]),
+                    })
+                    continue
                 normalized_relations.extend(decomposed)
                 continue
             normalized_relations.append(normalized)
@@ -787,13 +864,32 @@ def convert_v3_to_canonical_document(
             normalized_operations.append(operation)
     hypotheses = build_role_type_hypotheses(domain, canonical)
 
+    expressed = collect_expressed_semantics(domain, {
+        "task_summary": v3_doc.get("task_summary", ""),
+        "functional_roles": contract["functional_roles"],
+        "functional_relations": normalized_relations,
+        "operation_pairings": normalized_operations,
+        "explicit_context_sets": canonical.get("explicit_context_sets", []),
+    }, hypotheses)
+
+    def _resolve_or_probe(dom, operation, roles, hyps):
+        """Seat an operation, or report which capability its named roles could be.
+
+        The probe introduces nothing.  It exists so the graph join below can look
+        for a missing anchor among the FM's own relations, which names the actual
+        seating role the model wrote, before slot completion falls back to the
+        registered anchor.
+        """
+        direct = resolve_v3_operation_slots(dom, operation, roles, hyps)
+        return direct or probe_named_participant_slots(dom, operation, roles, hyps)
+
     from .functional_constraint_interpreter import FunctionalConstraintInterpreter
     constraint_interpreter = FunctionalConstraintInterpreter(
         domain=domain,
         roles_by_id=roles_by_id,
         hypotheses=hypotheses,
         relations=normalized_relations,
-        slot_resolver=resolve_v3_operation_slots,
+        slot_resolver=_resolve_or_probe,
     )
     normalized_operations = constraint_interpreter.interpret(normalized_operations)
     canonical["functional_constraint_interpretation"] = [
@@ -814,7 +910,10 @@ def convert_v3_to_canonical_document(
     for relation in normalized_relations:
         phrase_norm = re.sub(r"[_\-/]+", " ", str(relation["relation"])).lower()
         pair = set(relation["participant_roles"])
-        role_texts = [" ".join(str(roles_by_id[p].get(key, "")) for key in ("function", "description")) for p in pair]
+        role_texts = [
+            " ".join(str((roles_by_id.get(p) or {}).get(key, "")) for key in ("function", "description"))
+            for p in pair
+        ]
         is_current = bool(re.search(r"\b(currently|initially|initial|starts?|stored|located at)\b", phrase_norm))
         if not is_current and re.fullmatch(r"\s*(?:is\s+)?(?:on|at)\s*", phrase_norm):
             pair_has_physical_placement = any(
@@ -870,6 +969,7 @@ def convert_v3_to_canonical_document(
     hypotheses = build_role_type_hypotheses(domain, canonical)
 
     groups = []
+    induced_roles: list[dict[str, Any]] = []
     for operation in normalized_operations:
         operation_norm = re.sub(r"[_-]+", " ", str(operation["operation"])).lower().strip()
         if is_non_physical_operation_phrase(str(operation["operation"])) or operation_norm.split(maxsplit=1)[0] in {
@@ -879,10 +979,33 @@ def convert_v3_to_canonical_document(
                 **dict(operation), "category": "NON_PHYSICAL_TASK_DIRECTIVE",
             })
             continue
-        capabilities = extract_operation_semantic_candidates(domain, operation["operation"])
+        capabilities = extract_operation_semantic_candidates(
+            domain, operation["operation"], operation["participant_roles"])
         options, slot_participants, context_participants = _resolve_operation_slots_with_subsets(
             domain, operation, roles_by_id, hypotheses
         )
+        if not options:
+            # The model expressed the operation but named only some of the
+            # participants its capability structurally involves.  Supply the
+            # rest as typed existential requirements, which search and grounding
+            # resolve, rather than discarding an operation the task needs.
+            completed = complete_operation_slots(
+                domain, operation, roles_by_id, hypotheses, expressed)
+            if completed is not None:
+                for role in completed.synthesized_roles:
+                    canonical["functional_roles"].append(role)
+                    roles_by_id[role["id"]] = role
+                    induced_roles.append(role)
+                options = list(completed.options)
+                slot_participants = list(dict.fromkeys([
+                    *operation["participant_roles"],
+                    *(role["id"] for role in completed.synthesized_roles),
+                ]))
+                context_participants = []
+                operation = {**dict(operation), "participant_roles": slot_participants}
+                canonical.setdefault("operation_induced_slot_completions", []).append(completed.trace)
+                canonical["functional_constraint_interpretation"].append(completed.trace)
+                hypotheses = build_role_type_hypotheses(domain, canonical)
         if context_participants:
             operation = {
                 **dict(operation),
@@ -932,6 +1055,24 @@ def convert_v3_to_canonical_document(
         else:
             source = target = anchor = None
             usage = None
+        if not options:
+            absorbed = _planner_context_transition(domain, operation, hypotheses)
+            if absorbed is not None:
+                # Moving something to a fixed place the planner already owns --
+                # a serving area, a work surface -- is a domain transition, not a
+                # selectable functional operation.  It is audited rather than
+                # compiled, and it is not a semantic the runtime lost.
+                canonical.setdefault("planner_context_transitions", []).append(absorbed)
+                canonical["functional_constraint_interpretation"].append(absorbed)
+                continue
+            unresolved_operation_semantics.append({
+                "id": operation["id"],
+                "operation": operation["operation"],
+                "participant_roles": list(operation["participant_roles"]),
+                "semantic_capability_candidates": [],
+                "reason": "NO_RUNTIME_CAPABILITY_MATCHES_THIS_OPERATION_PHRASE",
+            })
+            continue
         groups.append({
             "id": operation["id"], "function": operation["operation"],
             "tool_role": source, "target_role": target, "context_role": anchor,
@@ -941,11 +1082,94 @@ def convert_v3_to_canonical_document(
             "v3_participant_roles": list(operation["participant_roles"]),
             "v3_explicit_participant_roles": list(operation.get("explicit_participant_roles", operation["participant_roles"])),
             "v3_raw_fm_participant_roles": list(operation.get("raw_fm_participant_roles", operation.get("explicit_participant_roles", operation["participant_roles"]))),
+            "v3_witness_roles": sorted({
+                str(role["fm_witness_role"])
+                for role in induced_roles
+                if role.get("induced_by_operation") == operation["id"]
+                and role.get("fm_witness_role")
+            }),
             "v3_current_state_context_roles": list(operation.get("current_state_context_roles", [])),
             "v3_graph_join_relation_id": operation.get("graph_join_relation_id"),
             "v3_explicit_context_set_id": operation.get("explicit_context_set_id"),
         })
     canonical["interaction_groups"] = groups
+    # A relation the model wrote to state the very requirement a compiled
+    # operation already carries is not a second constraint the runtime failed to
+    # represent.  Once SUPPORT_DRINKWARE is identified the runtime owns
+    # FITS_SET_ON and NEAR_SEAT and verifies them physically; the model saying
+    # "the setting is near the seat" in its own words is the evidence that
+    # justified the capability, not extra vocabulary it must also get right.
+    # Only a predicate the compiled capability itself enforces, over that same
+    # operation's participants, is treated this way.
+    subsumed_relations = []
+    if unresolved_relation_semantics:
+        capability_by_id = {
+            capability.capability_id: capability
+            for capability in get_robot_capabilities(domain)
+        }
+        surviving = []
+        for item in unresolved_relation_semantics:
+            meanings = {
+                candidate.predicate_name
+                for candidate in extract_relation_semantic_candidates(domain, item["relation"])
+            }
+            participants = set(item.get("participant_roles", ()))
+            enforced_by = None
+            for group in groups:
+                witnesses = set(group.get("v3_witness_roles", ()))
+                named = set(group.get("v3_participant_roles", ())) | witnesses
+                slot_families = {
+                    canonical_role_family(domain, row[key])
+                    for row in group.get("v3_slot_assignments", ())
+                    for key in ("source_type", "target_type", "anchor_type")
+                    if row.get(key)
+                }
+                slot_families.discard("OTHER")
+
+                def _talks_about_this_operation(participant: str) -> bool:
+                    """Whether the relation's participant is one this operation involves.
+
+                    Named outright, or of the same functional kind as one of the
+                    operation's slots: the model may state the requirement about
+                    its own seating role while the operation's anchor is the
+                    registered seating reference standing for it.
+                    """
+                    if participant in named:
+                        return True
+                    families = {
+                        canonical_role_family(domain, candidate)
+                        for candidate in getattr(
+                            hypotheses.get(participant), "canonical_role_candidates", ()) or ()
+                    }
+                    return bool(families & slot_families)
+
+                if not all(_talks_about_this_operation(p) for p in participants):
+                    continue
+                for row in group.get("v3_slot_assignments", ()):
+                    capability = capability_by_id.get(row.get("capability_id"))
+                    if capability is None:
+                        continue
+                    owned = {predicate for _, predicate, _ in capability.required_relation_templates}
+                    if meanings & owned:
+                        enforced_by = (group["id"], capability.capability_id,
+                                       sorted(meanings & owned))
+                        break
+                if enforced_by:
+                    break
+            if enforced_by:
+                subsumed_relations.append({
+                    **dict(item),
+                    "code": "RELATION_ENFORCED_BY_COMPILED_OPERATION",
+                    "operation_id": enforced_by[0],
+                    "capability_id": enforced_by[1],
+                    "enforced_predicates": enforced_by[2],
+                    "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+                })
+            else:
+                surviving.append(item)
+        unresolved_relation_semantics = surviving
+        canonical["relations_enforced_by_operations"] = subsumed_relations
+        canonical["functional_constraint_interpretation"].extend(subsumed_relations)
     primitive_participants = {
         participant
         for operation in normalized_operations
@@ -980,7 +1204,17 @@ def convert_v3_to_canonical_document(
     canonical["unresolved_relation_semantics"] = [
         {"id": item["id"], "relation": item["relation"],
          "participant_roles": list(item.get("participant_roles", ())),
-         "reason": item.get("reason", "")}
+         "reason": item.get("reason", ""),
+         "requirement_provenance": classify_requirement_provenance(
+             _provenance_terms(item.get("relation", "")),
+             instruction_terms=_provenance_terms(task_instruction),
+             participates_in_expressed_operation=bool(
+                 set(item.get("participant_roles", ())) & {
+                     participant
+                     for operation in contract["operation_pairings"]
+                     for participant in operation.get("participant_roles", ())
+                 }),
+         )}
         for item in unresolved_relation_semantics
     ]
     instruction_terms = _provenance_terms(task_instruction)
@@ -989,6 +1223,25 @@ def convert_v3_to_canonical_document(
         for operation in contract["operation_pairings"]
         for participant in operation.get("participant_roles", ())
     }
+    # Operations need the same provenance record as roles and relations.  Without
+    # it, an operation the runtime could not represent had nothing to say about
+    # why it was required, and downstream completeness checking had no basis for
+    # deciding whether losing it mattered.
+    operation_provenance = {
+        operation["id"]: classify_requirement_provenance(
+            _provenance_terms(operation.get("operation", "")),
+            instruction_terms=instruction_terms,
+            participates_in_expressed_operation=True,
+        )
+        for operation in contract["operation_pairings"]
+    }
+    for row in canonical["fm_semantic_accounting"]:
+        if row.get("element_kind") == "operation" and "requirement_provenance" not in row:
+            row["requirement_provenance"] = operation_provenance.get(
+                row.get("raw_id"), "DERIVED_FROM_EXPLICIT_OPERATION")
+    for item in unresolved_operation_semantics:
+        item["requirement_provenance"] = operation_provenance.get(
+            item["id"], "DERIVED_FROM_EXPLICIT_OPERATION")
     for role in contract["functional_roles"]:
         is_current_context = role["id"] in set(canonical.get("current_state_operation_context_roles", ()))
         role_terms = _provenance_terms(" ".join((

@@ -29,10 +29,6 @@ class FunctionalConstraintInterpreter:
         r"\b(initial|current(?:ly)?|starting|staging|storage|source location|holds? the (?:items?|payload))\b",
         re.I,
     )
-    _BEVERAGE_MACRO = re.compile(
-        r"\b(?:prepare|make|mix|combine)\b.*\b(?:beverage|coffee|drink|mixture)\b|\bfill\b.*\bmix\b",
-        re.I,
-    )
 
     def __init__(
         self,
@@ -163,32 +159,68 @@ class FunctionalConstraintInterpreter:
         })
         return joined, options
 
-    def _lower_beverage_macro(self, operation: Mapping[str, Any]) -> list[dict[str, Any]] | None:
-        if self.domain != "kitchen" or not self._BEVERAGE_MACRO.search(str(operation.get("operation", "")).replace("_", " ")):
+    _STIR_CUE = re.compile(r"\b(stir|mix|agitat|blend|whisk|combin)\w*\b", re.I)
+
+    def _lower_composite_transfer(self, operation: Mapping[str, Any]) -> list[dict[str, Any]] | None:
+        """Split one bundled preparation into the primitives the runtime has.
+
+        The prompt asks for one operation per distinct change, and the model
+        routinely bundles them anyway: "fill the mug with coffee and water, then
+        stir".  Its participant signature says exactly how it comes apart -- two
+        materials to supply into one receiving vessel, and an implement to work
+        that vessel with -- so the decomposition is read off the operation the
+        model expressed rather than guessed from the phrase.
+
+        Nothing is added that the operation did not already involve.  A stirring
+        primitive is emitted only when the model named an implement *and* said
+        the contents are stirred or mixed.
+        """
+        if self.domain != "kitchen":
             return None
-        participants = list(operation["participant_roles"])
-        sources = [p for p in participants if self._types(p) & {"coffee_source", "water_source"}]
-        containers = [p for p in participants if "coffee_container" in self._types(p)]
-        if len(sources) != 2 or len(containers) != 1 or len(participants) != 3:
+        participants = list(dict.fromkeys(operation["participant_roles"]))
+        phrase = str(operation.get("operation", "")).replace("_", " ")
+        sources = [p for p in participants if self._types(p) <= {"coffee_source", "water_source"}
+                   and self._types(p)]
+        containers = [p for p in participants if self._types(p) <= {"coffee_container", "soup_container"}
+                      and self._types(p)]
+        instruments = [p for p in participants
+                       if self._types(p) <= {"coffee_stirrer", "soup_eating_utensil"} and self._types(p)]
+        if len(containers) != 1:
+            return None
+        if len(sources) + len(containers) + len(instruments) != len(participants):
+            return None
+        stirs = instruments if self._STIR_CUE.search(phrase) else []
+        # One primitive is not a composite; the ordinary resolver owns those.
+        if len(sources) + len(stirs) < 2:
             return None
         lowered = []
         for index, source in enumerate(sorted(sources), 1):
-            primitive = {
+            lowered.append({
                 "id": f"{operation['id']}__primitive_{index}",
                 "operation": "transfer material into receiving container",
                 "participant_roles": [source, containers[0]],
                 "operation_count": operation["operation_count"],
                 "lowered_from_operation_id": operation["id"],
                 "explicit_participant_roles": participants,
-            }
+            })
+        for index, instrument in enumerate(sorted(stirs), len(lowered) + 1):
+            lowered.append({
+                "id": f"{operation['id']}__primitive_{index}",
+                "operation": "stir contents",
+                "participant_roles": [instrument, containers[0]],
+                "operation_count": operation["operation_count"],
+                "lowered_from_operation_id": operation["id"],
+                "explicit_participant_roles": participants,
+            })
+        for primitive in lowered:
             if not self.resolve_slots(self.domain, primitive, self.roles, self.hypotheses):
                 return None
-            lowered.append(primitive)
         self.trace.append({
             "code": "DETERMINISTIC_COMPOSITE_OPERATION_LOWERING",
             "operation_id": operation["id"],
             "primitive_operation_ids": [item["id"] for item in lowered],
             "participant_union": sorted(participants),
+            "stirring_primitive_emitted": bool(stirs),
             "provenance": "FM_EXPLICIT_OPERATION_AND_ROLE_FUNCTIONS",
         })
         return lowered
@@ -226,7 +258,7 @@ class FunctionalConstraintInterpreter:
                     "provenance": "FM_EXPLICIT_OPERATION",
                 })
                 continue
-            lowered = self._lower_beverage_macro(operation)
+            lowered = self._lower_composite_transfer(operation)
             if lowered is not None:
                 interpreted.extend(lowered)
                 self.accounting.append({
