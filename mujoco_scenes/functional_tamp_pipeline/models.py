@@ -231,6 +231,12 @@ class RoleTypeHypothesis:
     canonical_role_candidates: tuple[str, ...]
     status: str
     evidence: tuple[dict[str, Any], ...] = ()
+    # True when the role's own wording put it wholly in families this domain
+    # recognizes as context rather than realizes with a functional role -- a
+    # cupboard to search, a television being watched.  Having no canonical role
+    # then means the runtime understood the role and holds it as context, which
+    # is a different thing from not understanding it at all.
+    runtime_context_only: bool = False
 
     @property
     def resolved_role(self) -> str | None:

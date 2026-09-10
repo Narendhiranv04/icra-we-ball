@@ -18,7 +18,11 @@ import jsonschema
 
 from .errors import MalformedVLMSpecificationError, TaskSpecificationValidationError
 from .fm_schema_v2 import RESPONSE_SCHEMA_V2
-from .relation_interpreter import extract_relation_semantic_candidates, interpret_task_effect_predicate
+from .relation_interpreter import (
+    extract_relation_semantic_candidates,
+    interpret_task_effect_predicate,
+    relation_states_where_things_currently_are,
+)
 from .robot_capability_registry import (
     ABSTRACT_ROLE_PROVENANCE,
     leads_with_abstract_task_directive,
@@ -327,7 +331,8 @@ def normalize_v3_live_document(
             from .robot_capability_registry import is_non_physical_operation_phrase
             for operation in contract.get("operation_pairings", []):
                 participants = [p for p in operation.get("participant_roles", []) if p not in executor_ids]
-                if len(participants) < 2 and is_non_physical_operation_phrase(str(operation.get("operation", ""))):
+                if len(participants) < 2 and is_non_physical_operation_phrase(
+                    str(operation.get("operation", "")), participants):
                     trace.append({"code": "IMPLICIT_ROBOT_EXECUTOR_REMOVED", "removed_role_ids": sorted(executor_ids), "removed_operation": operation.get("id")})
                     continue
                 item = deepcopy(operation)
@@ -706,6 +711,8 @@ def _contextual_participants(
     with no role, or the runtime could type it as nothing at all.
     """
     from .semantic_typing import context_only_families, role_text_scopes, canonical_role_family
+    from .system_context_registry import get_domain_planner_context_constants
+    planner_constants = set(get_domain_planner_context_constants(domain))
     elided = set(operation.get("current_state_context_roles", ()) or ())
     contextual: set[str] = set()
     context_families = context_only_families(domain)
@@ -714,9 +721,21 @@ def _contextual_participants(
         candidates = tuple(getattr(hypotheses.get(rid), "canonical_role_candidates", ()) or ())
         families = {canonical_role_family(domain, candidate) for candidate in candidates}
         text = " ".join(value for value in role_text_scopes(dict(role)).values() if value)
+        # A participant the runtime holds only as a fixed place the planner owns
+        # -- a work surface, a serving area -- is not a functional participant
+        # that grounding selects.  The model names it as the coarse whereabouts
+        # of a change ("attach the component to the workbench"), and refusing
+        # the operation on that account lost a fastening the model plainly
+        # expressed.  Set aside only as a fallback, so an operation that really
+        # does act on that place, such as leaving the tool on the bench, keeps
+        # it as its own target.
+        planner_context_only = bool(candidates) and all(
+            candidate in planner_constants for candidate in candidates
+        )
         if (
             rid in elided
             or not candidates
+            or planner_context_only
             or (context_families and families and families <= set(context_families))
             or _CURRENT_LOCATION_WORDING.search(text)
         ):
@@ -1006,10 +1025,48 @@ def resolve_v3_operation_slots(
     # physical operation at all is left alone, and an ambiguous fit is refused
     # rather than guessed.
     inferred_from_participants = False
-    if not capabilities and not is_non_physical_operation_phrase(phrase):
+    if not capabilities and not is_non_physical_operation_phrase(phrase, participants_named):
         capabilities = tuple(get_robot_capabilities(domain))
         inferred_from_participants = True
     participants = tuple(operation["participant_roles"])
+    resolved = _slot_options_for_capabilities(
+        domain, operation, roles_by_id, hypotheses, capabilities, participants)
+    if not resolved and not inferred_from_participants and not is_non_physical_operation_phrase(
+        phrase, participants_named
+    ):
+        # A reading the participants cannot support is not a reading.  The model
+        # coordinates two acts in one phrase -- "place soup and add utensil" --
+        # and the word the wording offers is the one belonging to the other act,
+        # so honouring it alone seats nothing.  Falling back to what the
+        # participants themselves identify is the same admission as for a phrase
+        # that said nothing: accepted only when exactly one capability can seat
+        # them, so nothing is guessed.
+        resolved = _slot_options_for_capabilities(
+            domain, operation, roles_by_id, hypotheses,
+            tuple(get_robot_capabilities(domain)), participants)
+        inferred_from_participants = bool(resolved)
+    if inferred_from_participants:
+        # Inference is only admissible when the participants pick out a single
+        # capability.  If several could seat them, the operation is genuinely
+        # undetermined and choosing one would invent semantics the model never
+        # expressed.
+        identified = {row.get("capability_id") for row in resolved}
+        if len(identified) != 1:
+            return []
+        for row in resolved:
+            row["capability_provenance"] = "INFERRED_FROM_PARTICIPANT_SIGNATURE"
+    return resolved
+
+
+def _slot_options_for_capabilities(
+    domain: str,
+    operation: Mapping[str, Any],
+    roles_by_id: Mapping[str, Mapping[str, Any]],
+    hypotheses: Mapping[str, Any],
+    capabilities: Sequence[Any],
+    participants: tuple[str, ...],
+) -> list[dict[str, Any]]:
+    """Every legal seating of these participants in any of these capabilities."""
     options: list[dict[str, Any]] = []
     for capability in capabilities:
         # A capability whose physical preconditions check an anchor is not
@@ -1054,18 +1111,7 @@ def resolve_v3_operation_slots(
                     "usage_policy": "SEQUENTIAL_REUSE_ALLOWED" if binding in {"REUSABLE", "SHARED"} else "DEDICATED_PER_TARGET",
                 })
     unique = {json.dumps(item, sort_keys=True): item for item in options}
-    resolved = [unique[key] for key in sorted(unique)]
-    if inferred_from_participants:
-        # Inference is only admissible when the participants pick out a single
-        # capability.  If several could seat them, the operation is genuinely
-        # undetermined and choosing one would invent semantics the model never
-        # expressed.
-        identified = {row.get("capability_id") for row in resolved}
-        if len(identified) != 1:
-            return []
-        for row in resolved:
-            row["capability_provenance"] = "INFERRED_FROM_PARTICIPANT_SIGNATURE"
-    return resolved
+    return [unique[key] for key in sorted(unique)]
 
 
 # ---------------------------------------------------------------------------
@@ -1313,7 +1359,10 @@ def convert_v3_to_canonical_document(
             " ".join(str((roles_by_id.get(p) or {}).get(key, "")) for key in ("function", "description"))
             for p in pair
         ]
-        is_current = bool(re.search(r"\b(currently|initially|initial|starts?|stored|located at)\b", phrase_norm))
+        is_current = bool(
+            re.search(r"\b(currently|initially|initial|starts?|stored|located at)\b", phrase_norm)
+            or relation_states_where_things_currently_are(str(relation["relation"]))
+        )
         if not is_current and re.fullmatch(r"\s*(?:is\s+)?(?:on|at)\s*", phrase_norm):
             pair_has_physical_placement = any(
                 pair <= set(operation.get("participant_roles", ()))
@@ -1369,9 +1418,13 @@ def convert_v3_to_canonical_document(
 
     groups = []
     induced_roles: list[dict[str, Any]] = []
+    from .system_context_registry import get_domain_selectable_roles
+    selectable_roles = set(get_domain_selectable_roles(domain))
     for operation in normalized_operations:
         operation_norm = re.sub(r"[_-]+", " ", str(operation["operation"])).lower().strip()
-        if is_non_physical_operation_phrase(str(operation["operation"])) or operation_norm.split(maxsplit=1)[0] in {
+        if is_non_physical_operation_phrase(
+            str(operation["operation"]), operation.get("participant_roles", ())
+        ) or operation_norm.split(maxsplit=1)[0] in {
             "associate", "associates", "associating", "associated",
         }:
             canonical.setdefault("non_physical_operations", []).append({
@@ -1422,6 +1475,26 @@ def convert_v3_to_canonical_document(
                     completed = complete_operation_slots(
                         domain, {**dict(operation), "participant_roles": reduced},
                         roles_by_id, hypotheses, expressed)
+                    # Setting a participant aside and inventing a selectable one
+                    # in the same step compiles an operation that shares almost
+                    # nothing with what the model wrote.  A fastening whose bench
+                    # is set aside may still have its receiving site entailed by
+                    # the capability -- that site is not something to go and find
+                    # -- but if the *fastener* is what is missing, the model
+                    # omitted a participant and the operation must say so.
+                    if completed is not None and any(
+                        role.get("canonical_role") in selectable_roles
+                        for role in completed.synthesized_roles
+                    ):
+                        canonical["functional_constraint_interpretation"].append({
+                            "code": "REDUCED_OPERATION_WOULD_ALSO_NEED_AN_INVENTED_PARTICIPANT",
+                            "operation_id": operation["id"],
+                            "set_aside": sorted(elided),
+                            "would_have_synthesized": [
+                                role.get("canonical_role") for role in completed.synthesized_roles
+                            ],
+                        })
+                        completed = None
                     if completed is not None:
                         operation = {
                             **dict(operation), "participant_roles": reduced,
@@ -1561,6 +1634,32 @@ def convert_v3_to_canonical_document(
             "v3_explicit_context_set_id": operation.get("explicit_context_set_id"),
         })
     canonical["interaction_groups"] = groups
+    # Setting a participant aside is a decision about one operation, and it used
+    # to be recorded against the whole document.  A fastening that sets the bench
+    # aside so its receiving site can be entailed then silently removed the bench
+    # from the tool return the model wrote next, and an operation that resolved
+    # perfectly well was reported as naming a participant with no runtime role.
+    # A role some compiled operation seats in a slot of its own is not present
+    # state, whatever another operation made of it.
+    seated_in_a_slot = {
+        group.get(field)
+        for group in groups
+        for field in ("tool_role", "target_role", "context_role")
+        if group.get(field)
+    }
+    if seated_in_a_slot & set(canonical.get("current_state_operation_context_roles", ()) or ()):
+        kept = [
+            rid for rid in canonical.get("current_state_operation_context_roles", ())
+            if rid not in seated_in_a_slot
+        ]
+        canonical["functional_constraint_interpretation"].append({
+            "code": "CURRENT_STATE_ELISION_WITHDRAWN_FOR_ROLE_AN_OPERATION_SEATS",
+            "withdrawn": sorted(
+                set(canonical.get("current_state_operation_context_roles", ())) & seated_in_a_slot),
+            "still_elided": kept,
+            "provenance": "FM_EXPLICIT_OPERATION",
+        })
+        canonical["current_state_operation_context_roles"] = kept
     form_roles = _split_generic_participant_per_operation_form(
         domain, canonical, roles_by_id, hypotheses)
     if form_roles:
@@ -1599,15 +1698,19 @@ def convert_v3_to_canonical_document(
                 }
                 slot_families.discard("OTHER")
 
+                stood_aside = set(group.get("v3_current_state_context_roles", ()) or ())
+
                 def _talks_about_this_operation(participant: str) -> bool:
                     """Whether the relation's participant is one this operation involves.
 
-                    Named outright, or of the same functional kind as one of the
-                    operation's slots: the model may state the requirement about
-                    its own seating role while the operation's anchor is the
-                    registered seating reference standing for it.
+                    Named outright, set aside by this very operation so the slot
+                    it stood for could be supplied, or of the same functional
+                    kind as one of the operation's slots: the model may state the
+                    requirement about its own seating role while the operation's
+                    anchor is the registered seating reference standing for it,
+                    and it may write one role for both a bench and the site on it.
                     """
-                    if participant in named:
+                    if participant in named or participant in stood_aside:
                         return True
                     families = {
                         canonical_role_family(domain, candidate)
@@ -1646,7 +1749,8 @@ def convert_v3_to_canonical_document(
     primitive_participants = {
         participant
         for operation in normalized_operations
-        if not is_non_physical_operation_phrase(str(operation.get("operation", "")))
+        if not is_non_physical_operation_phrase(
+            str(operation.get("operation", "")), operation.get("participant_roles", ()))
         for participant in operation.get("participant_roles", ())
     }
     relation_only_context = {

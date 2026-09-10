@@ -315,6 +315,17 @@ _EXPLICIT_RECEIVING = re.compile(
 _EXPLICIT_TOOL = re.compile(
     r"\b(tools?|implements?|instruments?|drivers?|screwdrivers?|wrench(?:es)?|drills?|pliers?|applicators?)\b"
 )
+# A surface the task says something is put back, left or rested on is stating a
+# support function outright, not merely carrying a surface noun in passing.
+_STATES_IT_RECEIVES_A_RETURNED_ITEM = re.compile(
+    r"\b(?:tool|equipment|item|implement|instrument|driver|screwdriver|part|object)s?\b"
+    r"[^.;:]{0,40}?\b(?:is|are|to be|must be|should be|gets?|being)\s+"
+    r"(?:\w+\s+){0,2}?(?:return|replac|rest|left|stow|put back|set down|plac|store)\w*"
+    r"|\b(?:return|replac|rest|leav\w*|stow|stash|put back|set down|stor)\w*\s+"
+    r"(?:the\s+|a\s+|any\s+)?(?:\w+\s+){0,2}?"
+    r"(?:tool|equipment|item|implement|instrument|driver|screwdriver)s?\b",
+    re.I,
+)
 _SUPPORT_NEAR_SEAT = re.compile(
     r"\b(tables?|surfaces?|supports?|platforms?)\b[^.]{0,40}\b(near|nearby|beside|adjacent|next to)\b"
     r"|\b(near|nearby|beside|adjacent|next to)\b[^.]{0,40}\b(seat|seats|seating|chair|chairs|sofa|couch)\b"
@@ -630,9 +641,19 @@ def _resolve_family_precedence(
     elif "FIXED_TARGET" in authoritative and _in_any_scope(_RECEIVES_FASTENING, scopes):
         drop("COMPONENT", "RECEIVING_ASSEMBLY_OVER_COMPONENT")
     # The place where the work must happen is an interaction point, not the
-    # bench it happens to sit on.
+    # bench it happens to sit on.  But a role that states both functions at once
+    # -- "surface where the fastening occurs and the tool is returned" -- has
+    # expressed the support function explicitly, and erasing it here left the
+    # stated tool return with no destination and no way to recover one.  Both
+    # readings survive as candidates so the operations the model wrote can
+    # decide which one this role fills.
     if "FIXED_TARGET" in authoritative:
-        drop("SUPPORT", "FASTENING_SITE_OVER_SUPPORT_SURFACE")
+        if "SUPPORT" in authoritative and _in_any_scope(
+            _STATES_IT_RECEIVES_A_RETURNED_ITEM, scopes
+        ):
+            applied.append("STATED_RETURN_SURFACE_KEEPS_SUPPORT_READING")
+        else:
+            drop("SUPPORT", "FASTENING_SITE_OVER_SUPPORT_SURFACE")
         drop("DESTINATION", "FASTENING_SITE_OVER_CONTAINER_SHAPE")
     # A payload named as a device or as drinkware is not the screen it controls.
     if "PAYLOAD" in authoritative:
@@ -838,6 +859,11 @@ def function_semantic_evidence(
         family_precedence_rules=tuple(precedence_rules),
         runtime_context_only=runtime_context_only,
     )
+
+
+def causal_predicate_endpoint_pairs(domain: str, predicate: str) -> set[tuple[str, str]]:
+    """Runtime role pairs a task-causal predicate can relate, for meaning selection."""
+    return _causal_pairs(domain, predicate)
 
 
 def _causal_pairs(domain: str, predicate: str) -> set[tuple[str, str]]:
@@ -1097,6 +1123,7 @@ def build_role_type_hypotheses(
             raw_role_id=rid, raw_function=str(role.get("function", "")),
             raw_description=str(role.get("description", "")), entity_kind=str(role.get("entity_kind", "OBJECT")),
             canonical_role_candidates=values, status=status, evidence=tuple(evidences[rid]),
+            runtime_context_only=functions[rid].runtime_context_only,
         )
     return result
 

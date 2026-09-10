@@ -38,20 +38,82 @@ _NON_PHYSICAL_LEADING_ACTIONS = frozenset({
     "recognise", "recognises", "recognising", "recognised",
     "search", "searches", "searching", "searched",
     "select", "selects", "selecting", "selected",
+    # Getting hold of something that is stowed away is the search the runtime
+    # already performs: it opens the regions it was told about and looks in
+    # them.  Read as a final capability instead, "retrieve_from_storage" became
+    # an operation nothing in the runtime could represent, and the trial failed
+    # for lacking a capability whose work the runtime does elsewhere.  Opening
+    # and examining are the same phase.
+    "retrieve", "retrieves", "retrieving", "retrieved",
+    "collect", "collects", "collecting", "collected",
+    "fetch", "fetches", "fetching", "fetched",
+    "gather", "gathers", "gathering", "gathered",
+    "obtain", "obtains", "obtaining", "obtained",
+    "acquire", "acquires", "acquiring", "acquired",
+    "open", "opens", "opening", "opened",
+    "examine", "examines", "examining", "examined",
+    "check", "checks", "checking", "checked",
+    "verify", "verifies", "verifying", "verified",
+    "scan", "scans", "scanning", "scanned",
+    "look", "looks", "looking", "looked",
+    "confirm", "confirms", "confirming", "confirmed",
+    "determine", "determines", "determining", "determined",
+    "assess", "assesses", "assessing", "assessed",
 })
 
 
-def is_non_physical_operation_phrase(raw_phrase: str) -> bool:
+# The model often writes the actor into the operation phrase.  The actor is
+# always this robot, so the words naming it are not part of the action, and
+# leaving them in front made the leading-action tests read "the" as the verb.
+_LEADING_AGENT_PHRASE = re.compile(
+    r"^(?:the\s+)?(?:robot(?:ic)?(?:\s+(?:arm|manipulator|hand|gripper))?|arm|"
+    r"manipulator|gripper|end\s+effector|system|agent)\s+", re.I)
+
+
+# A coordinator, then a physical action word: the mark of a phrase that names a
+# perception step and a physical change together.
+_COORDINATED_PHYSICAL_ACTION = re.compile(
+    r"\b(?:and|then|before|after|so as to|in order to|to)\b[^.;]{0,40}?"
+    r"\b(?:place\w*|put\w*|insert\w*|pour\w*|fill\w*|transfer\w*|move\w*|"
+    r"stir\w*|mix\w*|fasten\w*|screw\w*|driv\w*|tighten\w*|attach\w*|"
+    r"return\w*|deposit\w*|position\w*|set down|lay\w*|combin\w*|"
+    r"secur\w*|instal\w*|join\w*|assembl\w*|mount\w*|affix\w*|connect\w*|"
+    r"relocat\w*|bolt\w*|rivet\w*|decant\w*|dispens\w*)\b",
+    re.I,
+)
+
+
+def is_non_physical_operation_phrase(
+    raw_phrase: str, participant_roles: Sequence[str] = ()
+) -> bool:
     """Return whether the phrase leads with an explicitly non-physical action.
 
     Only the leading action token is considered.  This deliberately permits
     physical operations containing later adjectival forms, such as
     ``place selected component``.
     """
-    normalized = _phrase(raw_phrase)
+    normalized = _LEADING_AGENT_PHRASE.sub("", _phrase(raw_phrase))
     if not normalized:
         return False
-    return normalized.split(maxsplit=1)[0] in _NON_PHYSICAL_LEADING_ACTIONS
+    if normalized.split(maxsplit=1)[0] not in _NON_PHYSICAL_LEADING_ACTIONS:
+        return False
+    # The participants' own names are not the action.  "Search for and verify
+    # the fastening_component" contains the word "fastening" only because that
+    # is what the model called the part, and reading it as a fastening turned a
+    # search directive into a requirement the runtime could not represent.
+    action_only = operation_action_phrase(raw_phrase, participant_roles)
+    # Leading with a perception verb does not make the whole phrase perception.
+    # "Locate the parts and perform the fastening", "find the screw then drive
+    # it into the joint": the model has named an acquisition step and a physical
+    # change in one breath, and dismissing the phrase on its first word threw
+    # the change away with the search.  The acquisition half is the runtime's
+    # own business; the physical half is an operation it must not lose.
+    #
+    # What makes such a phrase compound is the coordination, and that is what is
+    # tested -- not the mere presence of a physical word.  "Select the
+    # compatible fastening component" names one act, selection, and the word
+    # "fastening" in it modifies a noun; nothing is coordinated with it.
+    return not _COORDINATED_PHYSICAL_ACTION.search(action_only or normalized)
 
 
 # Words that state what must be true when the task is done, rather than a
@@ -80,8 +142,10 @@ _ABSTRACT_TASK_DIRECTIVE_ACTIONS = frozenset({
 # directive that also says how it is to be carried out is not reinterpreted.
 _PHYSICAL_MOTION_WORD = re.compile(
     r"\b(place\w*|put\w*|insert\w*|pour\w*|fill\w*|transfer\w*|move\w*|"
-    r"stir\w*|mix\w*|fasten\w*|screw\w*|drive\w*|tighten\w*|attach\w*|"
-    r"return\w*|deposit\w*|position\w*|set down|lay\w*|combine\w*|add\w*)\b",
+    r"stir\w*|mix\w*|fasten\w*|screw\w*|driv\w*|tighten\w*|attach\w*|"
+    r"return\w*|deposit\w*|position\w*|set down|lay\w*|combin\w*|add\w*|"
+    r"secur\w*|instal\w*|join\w*|assembl\w*|mount\w*|affix\w*|connect\w*|"
+    r"relocat\w*|bolt\w*|rivet\w*|decant\w*|dispens\w*)\b",
     re.I,
 )
 
@@ -387,7 +451,7 @@ def extract_operation_semantic_candidates(
 ) -> tuple[RobotCapability, ...]:
     """Extract physical capability meanings from text without endpoint filtering."""
     norm_text = operation_action_phrase(raw_phrase, participant_roles)
-    if not norm_text or is_non_physical_operation_phrase(raw_phrase):
+    if not norm_text or is_non_physical_operation_phrase(raw_phrase, participant_roles):
         return ()
     matched: list[RobotCapability] = []
     for capability in get_robot_capabilities(domain):
@@ -403,20 +467,87 @@ def extract_operation_semantic_candidates(
             for cue in capability.semantic_cues
         ):
             matched.append(capability)
-    leading = norm_text.split(maxsplit=1)[0] if norm_text else ""
-    if not matched and domain == "living_room" and leading in {
-        "transfer", "move", "relocate", "place", "position", "transport",
-    }:
-        matched.extend(get_robot_capabilities(domain))
-    elif not matched and domain == "workshop" and leading in {
-        "secure", "fasten", "tighten", "drive", "install",
-    }:
-        matched.extend(cap for cap in get_robot_capabilities(domain) if cap.capability_id == "FASTEN_JOINT")
-    elif not matched and domain == "workshop" and leading in {
-        "return", "deposit", "restore", "store", "put", "place",
-    }:
-        matched.extend(cap for cap in get_robot_capabilities(domain) if cap.capability_id == "RETURN_REUSABLE_ITEM_TO_SUPPORT")
+    if not matched:
+        # Fallback on the leading action word, by stem rather than by exact
+        # token.  The model inflects and nominalizes freely -- "tightened",
+        # "inserted_into", "placement" -- and an exact match read every one of
+        # those as naming no action at all.  A stem that several capabilities
+        # share proposes all of them; which one can actually seat the named
+        # participants is settled by the slot resolution, and an operation two
+        # capabilities could seat stays ambiguous rather than being guessed.
+        matched.extend(_capabilities_by_leading_action_stem(domain, norm_text))
     return tuple(sorted(set(matched), key=lambda item: item.capability_id))
+
+
+# Action stems, per domain, mapped to the capabilities they could name.  Stems
+# rather than words, so inflections and nominalizations of the same action are
+# one entry; ambiguous stems deliberately name more than one capability.
+_LEADING_ACTION_STEMS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
+    "living_room": (
+        (r"transfer|mov|relocat|plac|position|transport|set|plce", ("__ALL__",)),
+    ),
+    "workshop": (
+        (r"secur|fasten|tighten|driv|instal|screw|bolt|insert|affix|rivet",
+         ("FASTEN_JOINT",)),
+        (r"return|deposit|restor|stor|put|leav|rest|stow|park",
+         ("RETURN_REUSABLE_ITEM_TO_SUPPORT",)),
+        # Genuinely ambiguous in this domain: a component may be placed into the
+        # joint, and a tool may be placed back on the bench.
+        (r"plac|attach|join|appl|mount|assembl|fit|connect",
+         ("FASTEN_JOINT", "RETURN_REUSABLE_ITEM_TO_SUPPORT")),
+    ),
+    "kitchen": (
+        (r"pour|transfer|dispens|fill|decant|combin|add",
+         ("TRANSFER_CONTENT_TO_CONTAINER",)),
+        # Genuinely ambiguous in this domain: ingredients are mixed *into* a cup,
+        # and the drink already in the cup is mixed *with* an implement.  Naming
+        # both leaves the endpoints to say which one a phrase meant, instead of
+        # reading "use the stirrer to mix the coffee in the mug" as a transfer.
+        (r"mix|blend", ("TRANSFER_CONTENT_TO_CONTAINER", "STIR_COFFEE")),
+        (r"stir|agitat|swirl|whisk", ("STIR_COFFEE",)),
+        (r"provid|accompan|pair", ("PROVIDE_SOUP_EATING_UTENSIL",)),
+    ),
+}
+
+
+# Words that can stand in front of the action without being it.
+_PRE_ACTION_FUNCTION_WORDS = frozenset({
+    "is", "are", "was", "were", "be", "been", "being", "get", "gets", "got",
+    "must", "should", "shall", "will", "would", "can", "could", "may", "might",
+    "to", "the", "a", "an", "then", "also", "now", "next", "first", "finally",
+    "and", "or", "it", "its", "their", "them", "that", "this", "which", "who",
+    "carefully", "safely", "gently", "firmly", "securely", "properly", "neatly",
+})
+
+
+def _capabilities_by_leading_action_stem(domain: str, norm_text: str) -> list[RobotCapability]:
+    """Capabilities named by the first word in the phrase that names an action.
+
+    Only the very first token used to be examined, which read the passive voice
+    as actionless: "fastening_tool is placed on workbench" leads with "is", and
+    the tool return the model plainly expressed matched nothing at all.  Leading
+    auxiliaries, determiners, modals and manner adverbs are skipped, and the
+    first token that does name an action decides -- so a later noun cannot
+    reinterpret an operation whose verb was already found.
+    """
+    available = get_robot_capabilities(domain)
+    stem_rules = _LEADING_ACTION_STEMS.get(domain, ())
+    for token in norm_text.split():
+        if token in _PRE_ACTION_FUNCTION_WORDS:
+            continue
+        found: list[RobotCapability] = []
+        for stems, capability_ids in stem_rules:
+            if not re.fullmatch(rf"(?:{stems})\w*", token):
+                continue
+            if capability_ids == ("__ALL__",):
+                found.extend(available)
+            else:
+                found.extend(cap for cap in available if cap.capability_id in capability_ids)
+        if found:
+            return found
+        # A content word that names no action at all is a participant the model
+        # wrote into the phrase; keep looking rather than stopping on it.
+    return []
 
 
 def interpret_operation(
@@ -505,6 +636,21 @@ def interpret_operation(
 
     # 3. Intersect semantic candidates with endpoint-valid capabilities
     intersection = semantic_matches.intersection(endpoint_matches)
+
+    # A wording the endpoints refuse is not a reading of this operation.  The
+    # model coordinates two acts in one phrase -- "place soup and add utensil"
+    # -- and the action word the phrase offers belongs to the other act, so
+    # insisting on it discarded an operation whose participants identify exactly
+    # one capability.  The hint is only consulted once the text's own reading has
+    # been found unusable here, and only if it is itself endpoint-valid, so text
+    # evidence still wins wherever the endpoints can carry it.
+    if not intersection and capability_hint:
+        hinted = {
+            capability for capability in endpoint_matches
+            if capability.capability_id == capability_hint
+        }
+        if len(hinted) == 1:
+            intersection = hinted
 
     if not intersection:
         return OperationInterpretationResult(

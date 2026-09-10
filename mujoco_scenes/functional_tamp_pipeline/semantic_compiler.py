@@ -41,6 +41,21 @@ DEMOTABLE_REQUIREMENT_PROVENANCE = frozenset({
 })
 
 
+# Role-type statuses that were reached by reading the role together with the
+# relations and operations it participates in, rather than by matching its
+# function wording alone.  A conclusion drawn from the whole graph outranks the
+# isolated function-alias mapper, which cannot see that a role is an operation
+# participant and therefore sometimes calls a manipulable target a fixed piece
+# of planner context.
+STRUCTURALLY_EVIDENCED_ROLE_TYPE_STATUSES = frozenset({
+    "STRUCTURAL_OVERRIDE_OF_WEAK_FUNCTION_ALIAS",
+    "GLOBAL_GRAPH_CONSISTENCY_OVERRIDE",
+    "RELATION_ASSISTED",
+    "OPERATION_ASSISTED",
+    "JOINT_SEMANTIC_RESOLUTION",
+})
+
+
 def causal_position(role: dict, document: dict) -> set[str]:
     """Causal types from role language and graph position, without material names."""
     text = re.sub(r"[_-]", " ", f"{role.get('function', '')} {role.get('description', '')}").lower()
@@ -703,7 +718,20 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             rule = direct_rule
         if role.get('provenance') == 'EXPLICIT_CONTEXT_SET_CANONICALIZATION':
             rule = 'EXPLICIT_CONTEXT_SET_CANONICALIZATION'
-        if direct_name in planner_constants:
+        # The isolated alias mapper answering "planner context constant" used to
+        # win unconditionally, which threw away a joint reading that had already
+        # placed the role inside an operation.  A marked fastening site read as
+        # the repair target by the operation it anchors was rewritten to the
+        # workbench zone and elided as context, leaving the fastening with no
+        # anchor and no compiled operation at all.  Information has to be able to
+        # flow back from relations and operations to role typing, so the alias
+        # answer now applies only where the joint reading did not already reach a
+        # bindable runtime role on graph-structural evidence.
+        joint_reading_is_bindable = (
+            name in allowed
+            and hypothesis.status in STRUCTURALLY_EVIDENCED_ROLE_TYPE_STATUSES
+        )
+        if direct_name in planner_constants and not joint_reading_is_bindable:
             name, rule = direct_name, direct_rule
         elif hypothesis.status == 'AMBIGUOUS_ROLE_TYPE' and hypothesis.canonical_role_candidates:
             name = 'fm_role__' + re.sub(r'[^a-zA-Z0-9_]+', '_', rid).strip('_')
@@ -729,9 +757,29 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 continue
             # Only non-manipulated anchors/support context can be context-only.
             is_operation_participant = any(rid in (g.get('tool_role'), g.get('target_role')) for g in doc['interaction_groups'])
-            context = role['entity_kind'] in {'FIXED_TARGET', 'REGION'} and not is_operation_participant
-            field = 'context_only_roles' if context else 'unresolved_roles'
-            trace[field].append({'raw_role': role, 'status': 'CONTEXT_ONLY_ROLE' if context else 'UNRESOLVED_SEMANTIC'})
+            # A role whose own wording put it wholly in a family this domain
+            # recognizes as context -- a cupboard to look in, the television
+            # being watched -- was understood, and having no canonical role is
+            # the answer rather than a failure to reach one.  Reporting it as an
+            # unresolved semantic said the runtime could not read a sentence it
+            # read correctly, and made somewhere to search look like a missing
+            # functional participant.
+            context = (
+                (role['entity_kind'] in {'FIXED_TARGET', 'REGION'} and not is_operation_participant)
+                or (hypothesis.runtime_context_only and not is_operation_participant)
+            )
+            status = (
+                'RECOGNIZED_CONTEXT_FAMILY_WITH_NO_FUNCTIONAL_ROLE'
+                if context and hypothesis.runtime_context_only
+                else 'CONTEXT_ONLY_ROLE' if context else 'UNRESOLVED_SEMANTIC'
+            )
+            trace['context_only_roles' if context else 'unresolved_roles'].append({
+                'raw_role': role, 'status': status,
+                'recognized_families': list(
+                    next((row.get('explicit_families') or []
+                          for row in hypothesis.evidence if 'explicit_families' in row), [])
+                ) if context and hypothesis.runtime_context_only else None,
+            })
             continue
         if name in nodes:
             if can_merge_roles(
@@ -1870,11 +1918,99 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             return False, "INSTRUCTION_NAMED_TASK_INPUT"
         return False, provenance
 
+    # A relation the converter could not orient may still be a *stated end
+    # state* that one of the compiled operations brings about: "the coffee is
+    # contained in the cup" has no physical verifier between a material and a
+    # vessel, but the transfer the model also wrote is exactly what puts it
+    # there.  Corroborating it here, against the compiled operation, keeps a
+    # requirement the task genuinely satisfies from being reported as one the
+    # runtime cannot represent.  An end state no compiled operation achieves
+    # falls through unchanged and still blocks.
+    from .relation_interpreter import (
+        interpret_task_effect_predicate,
+        relation_states_a_hedged_possibility,
+    )
+
+    selectable_roles = set(get_domain_selectable_roles(domain))
+    unresolved_relations, effect_corroborated = [], []
+    reclassified_context: list[dict[str, Any]] = []
+    for item in list(doc.get("unresolved_relation_semantics", ()) or ()):
+        phrase = str(item.get("raw_phrase") or item.get("relation") or "")
+        predicate = interpret_task_effect_predicate(phrase)
+        participants = list(item.get("participant_roles") or ())
+        raws = (
+            (item.get("raw_subject"), item.get("raw_object"))
+            if item.get("raw_subject") and item.get("raw_object")
+            else tuple(participants[:2]) if len(participants) == 2 else (None, None)
+        )
+        canonical = tuple(id_map.get(raw) for raw in raws)
+        # A statement the model hedged is a guess about the scene as it already
+        # is; a statement relating two things the robot cannot move is a claim
+        # about the fixed layout it works in.  Neither is a requirement the task
+        # imposes, and reporting either as an unmet requirement invented one.
+        # A statement about something the robot *can* place is never reclassified
+        # here, so this cannot quietly delete a real placement requirement.
+        placement = tuple(
+            canonical[index] or planner_context_id_map.get(raws[index]) for index in (0, 1)
+        )
+        both_fixed = all(placement) and not (set(placement) & selectable_roles)
+        context_reason = (
+            "FM_HEDGED_STATEMENT_ABOUT_CURRENT_SCENE"
+            if all(raws) and relation_states_a_hedged_possibility(phrase)
+            else "STATEMENT_ABOUT_FIXED_LAYOUT_THE_ROBOT_CANNOT_CHANGE"
+            if both_fixed and predicate == "PLACED_ON"
+            else None
+        )
+        if context_reason is not None:
+            reclassified_context.append({
+                **dict(item),
+                "requirement_provenance": "FM_EXPRESSED_CURRENT_STATE_CONTEXT",
+                "status": "CURRENT_STATE_CONTEXT_NOT_A_REQUIREMENT",
+                "reason": context_reason,
+            })
+            continue
+        achieved_by, oriented = None, None
+        if predicate and all(canonical):
+            # The converter reported that neither orientation was legal, so
+            # both are offered to the capability's declared effect and the
+            # capability signature -- not a text heuristic -- settles which way
+            # round the model's sentence has to be read.
+            for subject, obj in (canonical, canonical[::-1]):
+                achieved_by = effect_achieved_by_compiled_operation(
+                    domain, predicate, subject, obj, groups)
+                if achieved_by is not None:
+                    oriented = (subject, obj)
+                    break
+        if achieved_by is None:
+            unresolved_relations.append(item)
+            continue
+        effect = TaskEffectRelation(
+            subject_role=oriented[0], predicate=predicate, object_value=oriented[1],
+            object_is_literal=False, source_operation_id=achieved_by,
+            raw_subject=str(raws[0]), raw_phrase=phrase, raw_object=str(raws[1]),
+        )
+        task_effect_relations.append(effect)
+        evidence = {
+            'raw_subject': raws[0], 'raw_phrase': phrase, 'raw_object': raws[1],
+            'status': 'TASK_EFFECT_SEMANTICS',
+            'category': 'TASK_EFFECT_SEMANTICS',
+            'canonical': effect.to_dict(),
+            'provenance': 'FM_EXPLICIT_SEMANTIC',
+            'orientation_resolved_by': 'COMPILED_OPERATION_ACHIEVED_EFFECT',
+            'corroborated_by_compiled_operation': achieved_by,
+        }
+        trace['relations'].append(evidence)
+        effect_corroborated.append(evidence)
+    if effect_corroborated:
+        trace.setdefault('relation_orientation_resolutions', []).extend(effect_corroborated)
+    if reclassified_context:
+        trace.setdefault('current_state_relations', []).extend(reclassified_context)
+
     blocking_ops, blocking_rels, surplus_constraints = [], [], []
     for kind, collection, blocking in (
         ("operation", list(doc.get("unresolved_operation_semantics", ()) or ())
          + unmapped_operations, blocking_ops),
-        ("relation", doc.get("unresolved_relation_semantics", ()), blocking_rels),
+        ("relation", unresolved_relations, blocking_rels),
     ):
         for item in collection:
             demotable, provenance = _demotion_verdict(kind, item)
@@ -1931,17 +2067,31 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             candidate.predicate_name
             for candidate in extract_relation_semantic_candidates(domain, phrase)
         }
-        endpoints = {
-            id_map.get(role)
-            for role in (evidence.get("raw_subject"), evidence.get("raw_object"))
-            if role
-        }
+        raw_endpoints = [
+            role for role in (evidence.get("raw_subject"), evidence.get("raw_object")) if role
+        ]
+        endpoints = {id_map.get(role) for role in raw_endpoints}
         endpoints.discard(None)
+        raw_groups_by_id = {
+            str(item.get("id")): item for item in doc.get("interaction_groups", ()) or ()
+        }
         for group in groups:
             bound = {group.tool_role, group.target_role}
             if group.context_role:
                 bound.add(group.context_role)
-            if not endpoints or not endpoints <= bound:
+            # A participant this operation itself set aside, so that the slot it
+            # stood for could be supplied by the capability, is still what the
+            # model was talking about.  The FM wrote one role for both the bench
+            # and the site on it; the site became the entailed anchor and the
+            # bench became context, and without this the model's own sentence
+            # about the site matched neither of them.
+            stood_aside = set(
+                raw_groups_by_id.get(str(group.id), {}).get("v3_current_state_context_roles", ()) or ())
+            covered = endpoints | {
+                role for role in raw_endpoints if role in stood_aside
+            } - {None}
+            speaks_of_group = bool(covered) and covered <= (bound | stood_aside)
+            if not speaks_of_group:
                 continue
             owned = {predicate for _, predicate, _ in (group.physical_preconditions or ())}
             owned |= set(group.required_relations) | set(group.context_relations)
@@ -1953,20 +2103,16 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                     "enforced_predicates": sorted(meanings & owned),
                     "provenance": "ROBOT_CAPABILITY_PRECONDITION",
                 }
-            if not meanings:
-                # Prose the runtime can give no meaning at all, over exactly the
-                # roles this operation binds -- "the tool is used to fasten the
-                # component to the location".  Every constraint the runtime can
-                # express over those roles the operation already asserts and
-                # verifies, so there is nothing further to represent.  A relation
-                # over roles no operation binds still blocks.
-                return {
-                    "code": "RELATION_OVER_OPERATION_BOUND_ROLES_WITH_NO_RUNTIME_MEANING",
-                    "operation_id": group.id,
-                    "capability_id": group.capability_id,
-                    "enforced_predicates": sorted(owned),
-                    "provenance": "ROBOT_CAPABILITY_PRECONDITION",
-                }
+        # There used to be a second branch here: prose the runtime could give no
+        # meaning at all, over exactly the roles an operation binds, was treated
+        # as already enforced by that operation.  That is the one inference this
+        # gate must never make.  Not understanding a sentence says nothing about
+        # what the sentence requires, so concluding that the operation covers it
+        # turns an unread requirement into a satisfied one -- and it did so most
+        # readily on the relations whose wording was most unusual, which are
+        # exactly the ones worth reading.  A relation only counts as enforced
+        # when a meaning it actually nominates is one the compiled capability
+        # asserts.  Wording that nominates nothing stays unresolved and blocks.
         return None
 
     blocking_unresolved = []
@@ -2001,7 +2147,8 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     )
     declared_physical_operations = sum(
         1 for operation in (doc.get('raw_v3_contract', {}) or {}).get('operation_pairings', ())
-        if not is_non_physical_operation_phrase(str(operation.get('operation', '')))
+        if not is_non_physical_operation_phrase(
+            str(operation.get('operation', '')), operation.get('participant_roles', ()))
     ) if is_v3_document(raw) else len(raw_groups)
     executable_complete, executable_missing_reasons = check_executable_contract_complete(
         domain, nodes, groups, trace, sanitized, blocking_unresolved,
