@@ -152,7 +152,14 @@ _FAMILY_CUES: dict[str, str] = {
         + _NOT_A_RECEIVING_FEATURE + r")|"
         r"\b(joining (?:element|component|part|piece)|connecting (?:element|component|part)|"
         r"connectors?|hardware items?|installed component|"
-        r"component to be (?:installed|secured|attached|fastened))\b"
+        r"component to be (?:installed|secured|attached|fastened)|"
+        # Something the model says is to be fastened *onto something else* is
+        # the thing being fastened.  The preposition is what carries it: "the
+        # place where the fastening occurs" contains the same participle and
+        # names the site instead.
+        r"(?:to be|must be|needs? to be|need to be|is|are|being)\s+(?:\w+\s+){0,3}?"
+        r"(?:fasten|attach|join|secur|connect|affix|mount|install)\w*\s+"
+        r"(?:to|at|onto|into|against)\b)"
     ),
     "FIXED_TARGET": (
         r"\b(marked (?:spot|point|position|location|site|target|joint)|"
@@ -160,7 +167,11 @@ _FAMILY_CUES: dict[str, str] = {
         r"workpieces?|assembly receiv(?:ing|er)|"
         r"(?:screw|bolt|fastener|pilot|mounting|joint|threaded)\s+(?:holes?|recess(?:es)?|seats?|slots?|bores?)|"
         r"connection points?|attachment points?|"
-        r"needs? fastening|requires? fastening|destination for fastening|"
+        r"need\w* fastening|requir\w* fastening|destination for fastening|"
+        # The plainest possible statement of a receiving site, which previously
+        # had to be spelled out with a noun in front of it to be recognized.
+        r"receiv\w*\s+(?:the\s+|a\s+)?(?:fastener|screw|bolt|component|part|fixing)s?|"
+        r"where (?:the )?fastening (?:must )?(?:occur|occurs|happens|takes place)|"
         r"(?:object|part|assembly|location|spot|place)[^.]{0,40}(?:to be|receiv\w+|requiring|where the|where)[^.]{0,40}fasten\w*|"
         r"object (?:to be|receiving) secured|fixed (?:workpiece|point|target|receiving (?:location|site|target)))\b"
     ),
@@ -179,6 +190,50 @@ _FAMILY_CUES: dict[str, str] = {
         r"enclosed space|openable|can be opened|closed structure)\b"
     ),
 }
+
+# "X to be fastened TO Y" names X, the thing being fastened; "the place where
+# the fastening occurs" names Y, the site receiving it.  The participle alone
+# cannot tell them apart -- both sentences contain "fastened" -- so what
+# separates them is whether a preposition follows it, pointing at something
+# else the fastening happens against.
+# Wording that states the defining function of a role the runtime distinguishes
+# from the kind of thing it also is.  A stated function of this strength is not
+# a passing mention of another participant, so a category naming the broader
+# kind does not overrule it.
+_STATED_FUNCTION_OVER_KIND: dict[str, str] = {
+    "FIXED_TARGET": (
+        r"\b(?:requir\w*|need\w*|receiv\w*|await\w*|to be)\s+(?:the\s+)?"
+        r"(?:fasten\w*|screw\w*|bolt\w*|secur\w*|attach\w*|join\w*)"
+        r"|\bwhere (?:the )?fastening\b|\bfastening (?:site|location|point|spot)\b"
+    ),
+    "SEATING": r"\bwhere (?:a |the )?(?:person|people|viewer|occupant)s? (?:sit|sits|will sit)\b",
+}
+
+
+# The patient construction specifically: the role is the thing *being* fastened
+# onto something else.  "Receive fastening at the joint hole" is the opposite
+# valency -- the role receives the fastening -- and must not match, which is why
+# the participle has to sit inside a passive frame rather than merely appear
+# somewhere before a preposition.
+# The opposite valency, stated actively: the role receives the fastening.  This
+# has to be its own pattern rather than the broader receiving-assembly cue,
+# because that cue counts "to be fastened" as receiving -- which is exactly the
+# conflation the discriminator below exists to undo.
+_STATES_IT_RECEIVES_FASTENING = re.compile(
+    r"\b(?:receiv|accept|take|host)\w*\s+(?:the\s+|a\s+)?"
+    r"(?:fasten\w*|screw\w*|bolt\w*|component|part|fixing)",
+    re.I,
+)
+
+
+_FASTENED_ONTO_SOMETHING_ELSE = re.compile(
+    r"\b(?:to be|must be|needs? to be|need to be|is|are|being)\s+"
+    r"(?:\w+\s+){0,3}?"
+    r"(?:fasten|attach|join|secur|connect|affix|mount|install)\w*\s+"
+    r"(?:to|at|onto|into|against)\b",
+    re.I,
+)
+
 
 _FAMILY_FOR_DOMAIN_ROLE: dict[str, dict[str, str]] = {
     "kitchen": {
@@ -213,12 +268,22 @@ _RECEIVES_FASTENING = re.compile(
 )
 _STORAGE_STRUCTURE = re.compile(
     r"\b(cabinets?|cupboards?|drawers?|bins?|boxes|box|canisters?|containers? unit|"
-    r"lockers?|compartments?|chests?|storage (?:unit|structure|space|area|region))\b"
+    r"lockers?|compartments?|chests?|storage (?:unit|structure|space|area|region|container)s?|"
+    # Ordinary ways to say the same thing.  A cupboard described as "a closed
+    # structure that may hold the component or tool" is a place to search, and
+    # missing that wording read the cupboard as the tool it might hold.
+    r"closed (?:structure|space|area|region|volume)s?)\b"
 )
 _STORES_THINGS = re.compile(
-    r"\b(contain\w*|holding|holds|stor\w*|enclos\w*|keeps?|houses?)\b[^.]{0,40}"
+    # Morphology, not a word list: "may hold" is the same claim as "holds".
+    r"\b(contain\w*|hold\w*|stor\w*|enclos\w*|keep\w*|hous\w*|hidden|conceal\w*)\b[^.]{0,40}"
     r"\b(fasteners?|screws?|bolts?|components?|parts?|tools?|items?|utensils?|supplies|equipment)\b"
     r"|\benclosed space\b|\bcan be opened\b|\bopenable\b|\bto search\b"
+    # A place is described as somewhere to search either by what it holds or by
+    # the searching itself, and the second wording puts the noun first, which an
+    # ordered verb-then-noun pattern can never match.
+    r"|\bsearchable\b|\bmight be hidden\b|\bmay be hidden\b|\brequire\w* searching\b"
+    r"|\bworth searching\b|\bto be searched\b|\bcould be searched\b"
 )
 _EXPLICIT_IMPLEMENT_NOUN = re.compile(
     r"\b(tools?|implements?|instruments?|utensils?|drivers?|screwdrivers?|wrench(?:es)?|drills?|"
@@ -496,8 +561,18 @@ def _resolve_family_precedence(
         if family in _declared_families(domain)
         and identity and re.search(_FAMILY_CUES[family], identity, re.I)
     }
+    # ... except where the job description states the defining function of a
+    # role the runtime keeps apart from that kind.  "A specific area on the
+    # workbench requiring fastening" is a workbench surface *and* the fastening
+    # site, and only the second is a role the runtime can fasten into; letting
+    # the kind win read the site as the bench it sits on.
+    stated_function_families = {
+        family for family in _STATED_FUNCTION_OVER_KIND
+        if family in _declared_families(domain)
+        and purpose and re.search(_STATED_FUNCTION_OVER_KIND[family], purpose, re.I)
+    }
     if identity_kinds:
-        for family in sorted(_KIND_FAMILIES - identity_kinds):
+        for family in sorted(_KIND_FAMILIES - identity_kinds - stated_function_families):
             drop(family, "CANDIDATE_CATEGORY_KIND_OVER_JOB_DESCRIPTION")
     # Support against seating, in order of how directly each claim was made.
     if {"SUPPORT", "SEATING"} <= authoritative:
@@ -591,6 +666,23 @@ def _resolve_family_precedence(
     if authoritative & context and authoritative - context:
         for family in sorted(authoritative & context):
             drop(family, "FUNCTIONAL_FAMILY_OVER_RECOGNISED_CONTEXT")
+    # Last, because this is a discriminator rather than a nomination and it has
+    # to survive the rules above.  Something the model says is to be fastened
+    # *to* something else is the thing being fastened, not the site receiving it
+    # and not the surface it names as its destination.  With nothing to separate
+    # them, "the part that needs to be fastened to the site" was read as the
+    # site, and then collided with the site the model had also declared.
+    if (
+        _FASTENED_ONTO_SOMETHING_ELSE.search(purpose)
+        and not _STATES_IT_RECEIVES_FASTENING.search(purpose)
+        and ("FIXED_TARGET" in families or "SUPPORT" in families)
+        and "COMPONENT" in _declared_families(domain)
+    ):
+        for family in ("FIXED_TARGET", "SUPPORT"):
+            drop(family, "FASTENED_ONTO_SOMETHING_ELSE_IS_THE_COMPONENT")
+        if not authoritative:
+            authoritative.add("COMPONENT")
+            applied.append("FASTENED_ONTO_SOMETHING_ELSE_IS_THE_COMPONENT")
     return authoritative, list(dict.fromkeys(applied))
 
 
