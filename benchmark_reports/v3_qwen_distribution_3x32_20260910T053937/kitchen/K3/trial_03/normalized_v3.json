@@ -1,0 +1,334 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare two servings of coffee and two servings of soup, ensuring each coffee is mixed and stirred, and each soup is paired with an eating utensil.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "coffee_beans",
+        "entity_kind": "OBJECT",
+        "function": "Source of caffeine flavoring",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee powder",
+          "grounds",
+          "beans"
+        ],
+        "required_properties": [
+          "dry",
+          "aromatic"
+        ]
+      },
+      {
+        "id": "water",
+        "entity_kind": "OBJECT",
+        "function": "Liquid solvent for coffee",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "tap water",
+          "filtered water",
+          "liquid"
+        ],
+        "required_properties": [
+          "fluid",
+          "clear"
+        ]
+      },
+      {
+        "id": "coffee_mug",
+        "entity_kind": "OBJECT",
+        "function": "Container for hot beverage",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mug",
+          "cup",
+          "tumbler"
+        ],
+        "required_properties": [
+          "rigid",
+          "heat-resistant"
+        ]
+      },
+      {
+        "id": "soup_bowl",
+        "entity_kind": "OBJECT",
+        "function": "Container for hot liquid food",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bowl",
+          "dish",
+          "pot"
+        ],
+        "required_properties": [
+          "rigid",
+          "heat-resistant"
+        ]
+      },
+      {
+        "id": "stirring_spoon",
+        "entity_kind": "OBJECT",
+        "function": "Tool for mixing coffee",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "stick"
+        ],
+        "required_properties": [
+          "rigid",
+          "small"
+        ]
+      },
+      {
+        "id": "eating_spoon",
+        "entity_kind": "OBJECT",
+        "function": "Tool for consuming soup",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "fork"
+        ],
+        "required_properties": [
+          "rigid",
+          "medium-size"
+        ]
+      },
+      {
+        "id": "stove",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Heat source for preparation",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "stove",
+          "hotplate",
+          "kettle"
+        ],
+        "required_properties": [
+          "emits heat",
+          "fixed"
+        ]
+      },
+      {
+        "id": "person",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Recipient of food",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "human",
+          "guest"
+        ],
+        "required_properties": [
+          "alive",
+          "mobile"
+        ]
+      },
+      {
+        "id": "table",
+        "entity_kind": "REGION",
+        "function": "Work and serving surface",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "counter",
+          "surface"
+        ],
+        "required_properties": [
+          "flat",
+          "supportive"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "contains",
+        "relation": "Coffee mug contains coffee beans and water",
+        "participant_roles": [
+          "coffee_mug",
+          "coffee_beans",
+          "water"
+        ],
+        "required": true
+      },
+      {
+        "id": "stirs",
+        "relation": "Stirring spoon interacts with coffee mug",
+        "participant_roles": [
+          "stirring_spoon",
+          "coffee_mug"
+        ],
+        "required": true
+      },
+      {
+        "id": "heats",
+        "relation": "Stove heats soup bowl",
+        "participant_roles": [
+          "stove",
+          "soup_bowl"
+        ],
+        "required": true
+      },
+      {
+        "id": "accompanies",
+        "relation": "Eating spoon accompanies soup bowl",
+        "participant_roles": [
+          "eating_spoon",
+          "soup_bowl"
+        ],
+        "required": true
+      },
+      {
+        "id": "served_to",
+        "relation": "Soup bowl is delivered to person",
+        "participant_roles": [
+          "soup_bowl",
+          "person"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "prepare_coffee",
+        "operation": "Fill mug with coffee and water, then stir",
+        "participant_roles": [
+          "coffee_mug",
+          "coffee_beans",
+          "water",
+          "stirring_spoon"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "heat_soup",
+        "operation": "Apply heat to soup bowl",
+        "participant_roles": [
+          "stove",
+          "soup_bowl"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "plating_soup",
+        "operation": "Place eating spoon in soup bowl",
+        "participant_roles": [
+          "eating_spoon",
+          "soup_bowl"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "deliver_soup",
+        "operation": "Hand soup bowl to person",
+        "participant_roles": [
+          "soup_bowl",
+          "person"
+        ],
+        "operation_count": 2
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "coffee_beans": [
+        {
+          "label": "brown box",
+          "visual_description": "rectangular cardboard box on table"
+        }
+      ],
+      "water": [
+        {
+          "label": "teapot/kettle",
+          "visual_description": "metal vessel with spout on table"
+        }
+      ],
+      "coffee_mug": [
+        {
+          "label": "blue mug",
+          "visual_description": "blue cylindrical cup"
+        },
+        {
+          "label": "beige cup",
+          "visual_description": "small beige cylinder"
+        }
+      ],
+      "soup_bowl": [
+        {
+          "label": "red bowl",
+          "visual_description": "shallow red dish"
+        },
+        {
+          "label": "white bowl",
+          "visual_description": "shallow white dish"
+        }
+      ],
+      "stirring_spoon": [
+        {
+          "label": "silver spoon",
+          "visual_description": "long handled metal utensil lying on table"
+        }
+      ],
+      "eating_spoon": [
+        {
+          "label": "silver spoon",
+          "visual_description": "metal utensil lying on table"
+        }
+      ],
+      "stove": [],
+      "person": [],
+      "table": [
+        {
+          "label": "table",
+          "visual_description": "wooden table with drawers"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "wall_cabinet_left",
+        "label": "Wall cabinet left",
+        "visual_description": "grey box mounted on wall",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "wall_cabinet_right",
+        "label": "Wall cabinet right",
+        "visual_description": "grey box mounted on wall",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "drawer_left",
+        "label": "Table drawer left",
+        "visual_description": "drawers under table",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "drawer_right",
+        "label": "Table drawer right",
+        "visual_description": "drawers under table",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "box_on_table",
+        "label": "Box on table",
+        "visual_description": "cardboard box on table surface",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "wall_cabinet_left",
+      "wall_cabinet_right",
+      "drawer_left",
+      "drawer_right",
+      "box_on_table"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

@@ -1,0 +1,118 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Locate fastening tools and components in storage, perform fastening on a target assembly at the workbench, and return the tool to the workbench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "workbench",
+        "entity_kind": "OBJECT",
+        "function": "Surface where work is performed and tool is left.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wooden table"
+        ],
+        "required_properties": [
+          "flat surface",
+          "holds items"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "target_on_bench",
+        "relation": "located_at",
+        "participant_roles": [
+          "target_assembly",
+          "workbench"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "retrieve_fastener",
+        "operation": "retrieve_item",
+        "participant_roles": [
+          "fastener",
+          "storage_location"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "retrieve_tool",
+        "operation": "retrieve_item",
+        "participant_roles": [
+          "fastening_tool",
+          "storage_location"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "perform_fastening",
+        "operation": "apply_fastener",
+        "participant_roles": [
+          "fastening_tool",
+          "fastener",
+          "target_assembly"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "return_tool",
+        "operation": "place_item",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "workbench": [
+        {
+          "label": "wooden table with drawers",
+          "visual_description": "Wooden table with two blue drawers underneath."
+        }
+      ],
+      "target_assembly": [
+        {
+          "label": "yellow device on tray",
+          "visual_description": "Yellow rectangular object on a black base/tray on the table."
+        }
+      ],
+      "storage_location": [
+        {
+          "label": "blue standing cabinet",
+          "visual_description": "Blue cabinet with a handle, standing next to the table."
+        },
+        {
+          "label": "table drawers",
+          "visual_description": "Two blue drawers located under the table surface."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "standing_cabinet",
+        "label": "blue standing cabinet",
+        "visual_description": "Closed blue cabinet door.",
+        "reason": "Closed structure likely contains tools or spare components."
+      },
+      {
+        "id": "table_drawers",
+        "label": "table drawers",
+        "visual_description": "Closed drawers under the table.",
+        "reason": "Closed structure likely contains tools or spare components."
+      }
+    ],
+    "inspection_order": [
+      "standing_cabinet",
+      "table_drawers"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

@@ -1,0 +1,199 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Arrange refreshments on side tables near chairs and move remote to coffee table.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "Provides a cup and plate for a person to consume refreshments",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "plate",
+          "snack dish"
+        ],
+        "required_properties": [
+          "holds liquid",
+          "holds food"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "Device used to operate the television",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "remote control",
+          "tv controller"
+        ],
+        "required_properties": [
+          "wireless",
+          "buttons"
+        ]
+      },
+      {
+        "id": "side_table",
+        "entity_kind": "OBJECT",
+        "function": "Flat surface placed next to a chair for holding items",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "end table",
+          "side table",
+          "stand"
+        ],
+        "required_properties": [
+          "flat top",
+          "stable"
+        ]
+      },
+      {
+        "id": "coffee_table",
+        "entity_kind": "OBJECT",
+        "function": "Central flat surface accessible to multiple seated people",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "ottoman",
+          "center table"
+        ],
+        "required_properties": [
+          "flat top",
+          "central location"
+        ]
+      },
+      {
+        "id": "armchair",
+        "entity_kind": "OBJECT",
+        "function": "Seat for a person to watch television",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "chair",
+          "sofa seat"
+        ],
+        "required_properties": [
+          "seating surface",
+          "backrest"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_on_side_table",
+        "relation": "is located on",
+        "participant_roles": [
+          "refreshment_setting",
+          "side_table"
+        ],
+        "required": true
+      },
+      {
+        "id": "side_table_near_armchair",
+        "relation": "is located near",
+        "participant_roles": [
+          "side_table",
+          "armchair"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_on_coffee_table",
+        "relation": "is located on",
+        "participant_roles": [
+          "entertainment_control",
+          "coffee_table"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_accessible_to_chairs",
+        "relation": "is accessible to",
+        "participant_roles": [
+          "entertainment_control",
+          "armchair"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "provide_refreshment",
+        "operation": "place_on",
+        "participant_roles": [
+          "refreshment_setting",
+          "side_table"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "move_control",
+        "operation": "place_on",
+        "participant_roles": [
+          "entertainment_control",
+          "coffee_table"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "cups and plates",
+          "visual_description": "Visible on the desk surface, currently unassigned"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote",
+          "visual_description": "Visible on the desk surface"
+        }
+      ],
+      "side_table": [
+        {
+          "label": "left side table",
+          "visual_description": "Empty wooden table next to left chair"
+        },
+        {
+          "label": "right side table",
+          "visual_description": "Empty wooden table next to right chair"
+        }
+      ],
+      "coffee_table": [
+        {
+          "label": "center table",
+          "visual_description": "Empty rectangular table in the center of the room"
+        }
+      ],
+      "armchair": [
+        {
+          "label": "left chair",
+          "visual_description": "Wooden chair with black cushion"
+        },
+        {
+          "label": "right chair",
+          "visual_description": "Wooden chair with black cushion"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "desk_lower_storage",
+        "label": "desk lower compartment",
+        "visual_description": "Dark area beneath the desk surface",
+        "reason": "Potential for hidden items or tools related to the television setup"
+      }
+    ],
+    "inspection_order": [
+      "desk_lower_storage"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

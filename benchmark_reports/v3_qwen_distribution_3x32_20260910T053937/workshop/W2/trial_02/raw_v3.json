@@ -1,0 +1,209 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Find fastener and tool, fasten target, return tool.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastener",
+        "entity_kind": "OBJECT",
+        "function": "physical item used to secure the workpiece",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "clip",
+          "pin"
+        ],
+        "required_properties": [
+          "compatible with target hole",
+          "secure connection"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "implement used to drive or tighten the fastener",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "pliers"
+        ],
+        "required_properties": [
+          "capable of applying torque"
+        ]
+      },
+      {
+        "id": "target_area",
+        "entity_kind": "REGION",
+        "function": "the specific marked location on the workbench requiring fastening",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "marked spot",
+          "hole",
+          "assembly point"
+        ],
+        "required_properties": [
+          "receptive to fastener"
+        ]
+      },
+      {
+        "id": "storage_container",
+        "entity_kind": "REGION",
+        "function": "enclosed space where tools or components may be hidden",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "drawer",
+          "cabinet",
+          "box"
+        ],
+        "required_properties": [
+          "openable",
+          "contains items"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "REGION",
+        "function": "primary surface where the task concludes",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "bench"
+        ],
+        "required_properties": [
+          "stable surface"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "fit_relation",
+        "relation": "compatible_with",
+        "participant_roles": [
+          "fastener",
+          "target_area"
+        ],
+        "required": true
+      },
+      {
+        "id": "act_relation",
+        "relation": "operates_on",
+        "participant_roles": [
+          "fastening_tool",
+          "fastener"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "search_op",
+        "operation": "search_and_identify",
+        "participant_roles": [
+          "storage_container",
+          "fastener",
+          "fastening_tool"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "fasten_op",
+        "operation": "apply_fastening",
+        "participant_roles": [
+          "fastener",
+          "fastening_tool",
+          "target_area"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "return_op",
+        "operation": "place_equipment",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastener": [
+        {
+          "label": "yellow object on black tray",
+          "visual_description": "rectangular yellow block with blue strip"
+        }
+      ],
+      "fastening_tool": [
+        {
+          "label": "robot gripper holding yellow object",
+          "visual_description": "yellow block held in white arm"
+        }
+      ],
+      "target_area": [
+        {
+          "label": "black tray surface",
+          "visual_description": "dark mat on wood table"
+        },
+        {
+          "label": "wooden table surface",
+          "visual_description": "orange wood grain"
+        }
+      ],
+      "storage_container": [
+        {
+          "label": "blue cabinet",
+          "visual_description": "tall blue box on right of table"
+        },
+        {
+          "label": "left drawer",
+          "visual_description": "blue drawer under left side of table"
+        },
+        {
+          "label": "right drawer",
+          "visual_description": "blue drawer under right side of table"
+        }
+      ],
+      "workbench": [
+        {
+          "label": "entire table structure",
+          "visual_description": "wooden table with legs and drawers"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet",
+        "label": "blue cabinet on table",
+        "visual_description": "closed blue door with handle",
+        "reason": "closed storage structure, likely contains tools or components"
+      },
+      {
+        "id": "left_drawer",
+        "label": "left desk drawer",
+        "visual_description": "closed blue drawer with handle",
+        "reason": "closed storage structure, likely contains tools or components"
+      },
+      {
+        "id": "right_drawer",
+        "label": "right desk drawer",
+        "visual_description": "closed blue drawer with handle",
+        "reason": "closed storage structure, likely contains tools or components"
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet",
+      "left_drawer",
+      "right_drawer"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

@@ -1,0 +1,118 @@
+{
+  "fastening_component": {
+    "raw_role_id": "fastening_component",
+    "raw_function": "A hardware piece (screw, bolt, nut) used to mechanically join or secure parts.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "fastener"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "ROLE_ID_TEXT",
+        "preferred_roles": [
+          "fastener"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      }
+    ]
+  },
+  "fastening_tool": {
+    "raw_role_id": "fastening_tool",
+    "raw_function": "An implement used to apply torque or force to the fastening component.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "driver"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "driver"
+        ],
+        "excluded_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "INSTRUMENT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "deposit",
+        "capabilities": [
+          "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+        ]
+      }
+    ]
+  },
+  "fastening_target": {
+    "raw_role_id": "fastening_target",
+    "raw_function": "The specific workbench location or object requiring mechanical attachment.",
+    "raw_description": "",
+    "entity_kind": "FIXED_TARGET",
+    "canonical_role_candidates": [
+      "repair_target"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "ROLE_ID_TEXT",
+        "preferred_roles": [
+          "repair_target"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "FIXED_TARGET_SEMANTICS"
+      }
+    ]
+  },
+  "workbench_surface": {
+    "raw_role_id": "workbench_surface",
+    "raw_function": "The flat surface of the workbench where reusable equipment is deposited.",
+    "raw_description": "",
+    "entity_kind": "REGION",
+    "canonical_role_candidates": [
+      "MAIN_WORKBENCH_ZONE"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "MAIN_WORKBENCH_ZONE"
+        ],
+        "excluded_roles": [
+          "driver",
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "SUPPORT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "SUPPORT_CONTEXT"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "deposit",
+        "capabilities": [
+          "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+        ]
+      }
+    ]
+  }
+}

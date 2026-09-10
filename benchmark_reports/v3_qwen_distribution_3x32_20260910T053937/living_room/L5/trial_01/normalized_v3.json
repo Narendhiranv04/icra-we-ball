@@ -1,0 +1,179 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare living room for two people with refreshments and accessible entertainment control.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "Provide food or drink for a person",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "plate",
+          "bowl"
+        ],
+        "required_properties": [
+          "contains_food_or_drink"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "Control the television",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote",
+          "controller"
+        ],
+        "required_properties": [
+          "controls_entertainment"
+        ]
+      },
+      {
+        "id": "surface",
+        "entity_kind": "OBJECT",
+        "function": "Hold items for access",
+        "required_count": 3,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "stand"
+        ],
+        "required_properties": [
+          "flat_top"
+        ]
+      },
+      {
+        "id": "seating_target",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Reference point for people sitting",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "chair",
+          "sofa"
+        ],
+        "required_properties": [
+          "for_sitting"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_nearby_seating",
+        "relation": "refreshment_setting is near seating_target",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_accessible_seating",
+        "relation": "entertainment_control is accessible to seating_target",
+        "participant_roles": [
+          "entertainment_control",
+          "seating_target"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "place_refreshment",
+        "operation": "Place refreshment_setting on surface",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "place_control",
+        "operation": "Place entertainment_control on surface",
+        "participant_roles": [
+          "entertainment_control",
+          "surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "red_cup",
+          "visual_description": "on coffee table"
+        },
+        {
+          "label": "white_plate",
+          "visual_description": "on left side table"
+        },
+        {
+          "label": "red_cup",
+          "visual_description": "on desk"
+        },
+        {
+          "label": "white_plate",
+          "visual_description": "on desk"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote",
+          "visual_description": "on desk"
+        }
+      ],
+      "surface": [
+        {
+          "label": "coffee_table",
+          "visual_description": "central table"
+        },
+        {
+          "label": "left_side_table",
+          "visual_description": "next to left chair"
+        },
+        {
+          "label": "right_side_table",
+          "visual_description": "next to right chair"
+        },
+        {
+          "label": "console_table",
+          "visual_description": "under TV"
+        },
+        {
+          "label": "desk",
+          "visual_description": "large table on right"
+        }
+      ],
+      "seating_target": [
+        {
+          "label": "left_armchair",
+          "visual_description": "facing TV"
+        },
+        {
+          "label": "right_armchair",
+          "visual_description": "facing TV"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "desk_drawers",
+        "label": "desk_drawers",
+        "visual_description": "Closed storage on desk",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "desk_drawers"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

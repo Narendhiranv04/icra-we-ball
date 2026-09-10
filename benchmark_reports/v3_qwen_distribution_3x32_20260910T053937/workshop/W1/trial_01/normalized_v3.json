@@ -1,0 +1,228 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Identify fasteners, fasten workpiece, and place tool on workbench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastener",
+        "entity_kind": "OBJECT",
+        "function": "Component used to join the workpiece.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut",
+          "clip"
+        ],
+        "required_properties": [
+          "compatible with workpiece threads/hole",
+          "available in storage"
+        ]
+      },
+      {
+        "id": "workpiece",
+        "entity_kind": "OBJECT",
+        "function": "Object to be fastened.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "assembly",
+          "block",
+          "part"
+        ],
+        "required_properties": [
+          "has connection point",
+          "on workbench"
+        ]
+      },
+      {
+        "id": "tool",
+        "entity_kind": "OBJECT",
+        "function": "Implement used to apply fastening force.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "wrench",
+          "screwdriver",
+          "gripper"
+        ],
+        "required_properties": [
+          "functional",
+          "reusable"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "REGION",
+        "function": "Surface where work occurs and tool is left.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk"
+        ],
+        "required_properties": [
+          "stable surface"
+        ]
+      },
+      {
+        "id": "marked_location",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Specific spot on workbench for fastening.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "spot",
+          "area"
+        ],
+        "required_properties": [
+          "accessible",
+          "suitable for fastening"
+        ]
+      },
+      {
+        "id": "storage_container",
+        "entity_kind": "OBJECT",
+        "function": "Enclosed space containing fasteners.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "cabinet",
+          "drawer"
+        ],
+        "required_properties": [
+          "openable",
+          "contains parts"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "rel_1",
+        "relation": "fastener connects to workpiece at marked_location",
+        "participant_roles": [
+          "fastener",
+          "workpiece",
+          "marked_location"
+        ],
+        "required": true
+      },
+      {
+        "id": "rel_2",
+        "relation": "tool used on workpiece at marked_location",
+        "participant_roles": [
+          "tool",
+          "workpiece",
+          "marked_location"
+        ],
+        "required": true
+      },
+      {
+        "id": "rel_3",
+        "relation": "tool placed on workbench",
+        "participant_roles": [
+          "tool",
+          "workbench"
+        ],
+        "required": true
+      },
+      {
+        "id": "rel_4",
+        "relation": "fastener located inside storage_container",
+        "participant_roles": [
+          "fastener",
+          "storage_container"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_1",
+        "operation": "search_fastener",
+        "participant_roles": [
+          "storage_container",
+          "fastener"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "op_2",
+        "operation": "fasten",
+        "participant_roles": [
+          "fastener",
+          "workpiece",
+          "tool",
+          "marked_location"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "op_3",
+        "operation": "place_tool",
+        "participant_roles": [
+          "tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastener": [],
+      "workpiece": [
+        {
+          "label": "yellow_object_on_tray",
+          "visual_description": "Yellow block on black tray on workbench"
+        }
+      ],
+      "tool": [],
+      "workbench": [
+        {
+          "label": "wooden_table",
+          "visual_description": "Wooden table with drawers and cabinet"
+        }
+      ],
+      "marked_location": [],
+      "storage_container": [
+        {
+          "label": "blue_cabinet",
+          "visual_description": "Blue cabinet on back wall"
+        },
+        {
+          "label": "drawers",
+          "visual_description": "Two drawers under workbench"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet",
+        "label": "blue_cabinet",
+        "visual_description": "Closed blue cabinet on back wall",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "left_drawer",
+        "label": "left_drawer",
+        "visual_description": "Left drawer under workbench",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "right_drawer",
+        "label": "right_drawer",
+        "visual_description": "Right drawer under workbench",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet",
+      "left_drawer",
+      "right_drawer"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

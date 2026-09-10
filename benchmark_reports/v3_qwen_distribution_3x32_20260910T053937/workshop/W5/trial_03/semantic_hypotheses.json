@@ -1,0 +1,185 @@
+{
+  "assembly_target": {
+    "raw_role_id": "assembly_target",
+    "raw_function": "The object on the workbench that needs fastening.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "fastener"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "ROLE_ID_TEXT",
+        "preferred_roles": [
+          "fastener"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      }
+    ]
+  },
+  "fastening_component": {
+    "raw_role_id": "fastening_component",
+    "raw_function": "A part needed to secure the assembly.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "repair_target"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "ROLE_ID_TEXT",
+        "preferred_roles": [
+          "repair_target"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      }
+    ]
+  },
+  "fastening_tool": {
+    "raw_role_id": "fastening_tool",
+    "raw_function": "An implement used to perform the fastening.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "driver"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "driver"
+        ],
+        "excluded_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "INSTRUMENT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Place tool on workbench",
+        "capabilities": [
+          "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+        ]
+      }
+    ]
+  },
+  "workbench_surface": {
+    "raw_role_id": "workbench_surface",
+    "raw_function": "The surface where work is performed and tools are left.",
+    "raw_description": "",
+    "entity_kind": "REGION",
+    "canonical_role_candidates": [
+      "MAIN_WORKBENCH_ZONE"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "driver"
+        ],
+        "excluded_roles": [
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "INSTRUMENT",
+          "SUPPORT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "SUPPORT_CONTEXT"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Place tool on workbench",
+        "capabilities": [
+          "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+        ]
+      }
+    ]
+  },
+  "storage_drawer_left": {
+    "raw_role_id": "storage_drawer_left",
+    "raw_function": "A closed storage unit potentially containing components.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "fastener"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "fastener"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      }
+    ]
+  },
+  "storage_drawer_right": {
+    "raw_role_id": "storage_drawer_right",
+    "raw_function": "A closed storage unit potentially containing components.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "fastener"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "fastener"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      }
+    ]
+  },
+  "storage_cabinet": {
+    "raw_role_id": "storage_cabinet",
+    "raw_function": "A closed storage unit potentially containing components.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "fastener"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "fastener"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      }
+    ]
+  }
+}

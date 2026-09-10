@@ -1,0 +1,159 @@
+{
+  "fastening_component": {
+    "raw_role_id": "fastening_component",
+    "raw_function": "The part needed to secure the workpiece.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "driver",
+      "fastener",
+      "repair_target"
+    ],
+    "status": "AMBIGUOUS_ROLE_TYPE",
+    "evidence": [
+      {
+        "source": "ROLE_ID_TEXT",
+        "preferred_roles": [
+          "repair_target"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      },
+      {
+        "source": "RELATION_TEXT",
+        "raw_phrase": "compatible_with"
+      }
+    ]
+  },
+  "fastening_tool": {
+    "raw_role_id": "fastening_tool",
+    "raw_function": "The implement used to apply the fastener.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "driver"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "driver",
+          "fastener"
+        ],
+        "excluded_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "INSTRUMENT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "return_equipment",
+        "capabilities": [
+          "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+        ]
+      }
+    ]
+  },
+  "workpiece": {
+    "raw_role_id": "workpiece",
+    "raw_function": "The item being secured.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "driver",
+      "fastener",
+      "repair_target"
+    ],
+    "status": "AMBIGUOUS_ROLE_TYPE",
+    "evidence": [
+      {
+        "source": "COMBINED_FALLBACK_TEXT",
+        "preferred_roles": [],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "UNKNOWN",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      },
+      {
+        "source": "RELATION_TEXT",
+        "raw_phrase": "compatible_with"
+      }
+    ]
+  },
+  "storage_area": {
+    "raw_role_id": "storage_area",
+    "raw_function": "Location where tools and components might be stored.",
+    "raw_description": "",
+    "entity_kind": "REGION",
+    "canonical_role_candidates": [
+      "driver"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "driver"
+        ],
+        "excluded_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "INSTRUMENT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "SUPPORT_CONTEXT"
+      }
+    ]
+  },
+  "workbench": {
+    "raw_role_id": "workbench",
+    "raw_function": "Surface where the task is performed and tools are returned.",
+    "raw_description": "",
+    "entity_kind": "REGION",
+    "canonical_role_candidates": [
+      "MAIN_WORKBENCH_ZONE"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "driver"
+        ],
+        "excluded_roles": [
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "INSTRUMENT",
+          "SUPPORT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "SUPPORT_CONTEXT"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "return_equipment",
+        "capabilities": [
+          "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+        ]
+      }
+    ]
+  }
+}

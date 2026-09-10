@@ -1,0 +1,127 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Set up refreshment stations near seating and position a remote control centrally.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "Hold refreshments for a person",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "mug",
+          "plate",
+          "bowl"
+        ],
+        "required_properties": [
+          "holds liquid",
+          "holds food"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "Control television functions",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote control"
+        ],
+        "required_properties": [
+          "buttons"
+        ]
+      },
+      {
+        "id": "seating_area",
+        "entity_kind": "REGION",
+        "function": "Reference point for people and refreshments",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "chair",
+          "armchair",
+          "sofa"
+        ],
+        "required_properties": [
+          "for sitting"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_placement",
+        "relation": "near",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating_area"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_accessibility",
+        "relation": "accessible_to",
+        "participant_roles": [
+          "entertainment_control",
+          "seating_area"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "provide_refreshments",
+        "operation": "Place two refreshment settings near the seating area",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating_area"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "position_control",
+        "operation": "Place the entertainment control where it is accessible to both people",
+        "participant_roles": [
+          "entertainment_control",
+          "seating_area"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "Red mug and white plate on large desk",
+          "visual_description": "Located on the wooden desk in the foreground right, containing a red mug and a white plate."
+        },
+        {
+          "label": "White plate on left side table",
+          "visual_description": "Located on the small side table to the left of the left-most armchair."
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "Black remote control on large desk",
+          "visual_description": "Located on the large wooden desk in the foreground right, near the mugs."
+        }
+      ],
+      "seating_area": [
+        {
+          "label": "Left armchair",
+          "visual_description": "Wooden frame with black cushion, facing the TV."
+        },
+        {
+          "label": "Right armchair",
+          "visual_description": "Wooden frame with black cushion, facing the TV."
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

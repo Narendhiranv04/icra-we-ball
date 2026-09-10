@@ -1,0 +1,331 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare 2 coffees (coffee+water, stirred) and 2 soups (in bowls with utensils) and place them on the table.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "coffee_cup",
+        "entity_kind": "OBJECT",
+        "function": "Container for coffee drink",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mug",
+          "cup",
+          "glass"
+        ],
+        "required_properties": [
+          "holds liquid",
+          "drinking vessel"
+        ]
+      },
+      {
+        "id": "coffee_ingredient",
+        "entity_kind": "OBJECT",
+        "function": "Source of coffee flavor",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "coffee beans",
+          "coffee powder",
+          "grounds"
+        ],
+        "required_properties": [
+          "is coffee"
+        ]
+      },
+      {
+        "id": "water_source",
+        "entity_kind": "OBJECT",
+        "function": "Source of liquid base",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "jug",
+          "pitcher",
+          "teapot",
+          "bottle"
+        ],
+        "required_properties": [
+          "contains water"
+        ]
+      },
+      {
+        "id": "stirring_implement",
+        "entity_kind": "OBJECT",
+        "function": "Tool for mixing",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "stick"
+        ],
+        "required_properties": [
+          "is rigid",
+          "can mix"
+        ]
+      },
+      {
+        "id": "soup_bowl",
+        "entity_kind": "OBJECT",
+        "function": "Container for soup",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bowl",
+          "cup"
+        ],
+        "required_properties": [
+          "holds food",
+          "open top"
+        ]
+      },
+      {
+        "id": "soup_food",
+        "entity_kind": "OBJECT",
+        "function": "Main dish item",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "soup",
+          "broth"
+        ],
+        "required_properties": [
+          "is liquid food"
+        ]
+      },
+      {
+        "id": "eating_utensil",
+        "entity_kind": "OBJECT",
+        "function": "Tool for eating soup",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "fork",
+          "knife"
+        ],
+        "required_properties": [
+          "is eating tool"
+        ]
+      },
+      {
+        "id": "serving_surface",
+        "entity_kind": "REGION",
+        "function": "Location for final placement",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "counter"
+        ],
+        "required_properties": [
+          "is flat",
+          "supports weight"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "r1",
+        "relation": "contains",
+        "participant_roles": [
+          "coffee_cup",
+          "coffee_ingredient",
+          "water_source"
+        ],
+        "required": true
+      },
+      {
+        "id": "r2",
+        "relation": "contains",
+        "participant_roles": [
+          "soup_bowl",
+          "soup_food"
+        ],
+        "required": true
+      },
+      {
+        "id": "r3",
+        "relation": "paired_with",
+        "participant_roles": [
+          "soup_bowl",
+          "eating_utensil"
+        ],
+        "required": true
+      },
+      {
+        "id": "r4",
+        "relation": "placed_on",
+        "participant_roles": [
+          "coffee_cup",
+          "serving_surface"
+        ],
+        "required": true
+      },
+      {
+        "id": "r5",
+        "relation": "placed_on",
+        "participant_roles": [
+          "soup_bowl",
+          "serving_surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op1",
+        "operation": "Combine coffee ingredient and water into coffee cup",
+        "participant_roles": [
+          "coffee_ingredient",
+          "water_source",
+          "coffee_cup"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "op2",
+        "operation": "Stir coffee in cup",
+        "participant_roles": [
+          "coffee_cup",
+          "stirring_implement"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "op3",
+        "operation": "Transfer soup into soup bowl",
+        "participant_roles": [
+          "soup_food",
+          "soup_bowl"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "op4",
+        "operation": "Place eating utensil with soup bowl",
+        "participant_roles": [
+          "eating_utensil",
+          "soup_bowl"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "op5",
+        "operation": "Place coffee cup on serving surface",
+        "participant_roles": [
+          "coffee_cup",
+          "serving_surface"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "op6",
+        "operation": "Place soup bowl on serving surface",
+        "participant_roles": [
+          "soup_bowl",
+          "serving_surface"
+        ],
+        "operation_count": 2
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "coffee_cup": [
+        {
+          "label": "blue_mug",
+          "visual_description": "Blue mug on table"
+        },
+        {
+          "label": "beige_cup",
+          "visual_description": "Small beige cup on table"
+        }
+      ],
+      "coffee_ingredient": [
+        {
+          "label": "brown_box",
+          "visual_description": "Brown cardboard box on table"
+        },
+        {
+          "label": "green_canister",
+          "visual_description": "Green/brown canister on table"
+        }
+      ],
+      "water_source": [
+        {
+          "label": "teapot",
+          "visual_description": "White/silver teapot on table"
+        },
+        {
+          "label": "brown_box",
+          "visual_description": "Brown cardboard box on table"
+        }
+      ],
+      "stirring_implement": [
+        {
+          "label": "metal_spoons",
+          "visual_description": "Silver spoons lying on table"
+        }
+      ],
+      "soup_bowl": [
+        {
+          "label": "blue_bowl",
+          "visual_description": "Blue bowl on table"
+        },
+        {
+          "label": "red_bowl",
+          "visual_description": "Reddish bowl on table"
+        }
+      ],
+      "soup_food": [],
+      "eating_utensil": [
+        {
+          "label": "metal_spoons",
+          "visual_description": "Silver spoons lying on table"
+        }
+      ],
+      "serving_surface": [
+        {
+          "label": "table",
+          "visual_description": "Main table with legs"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "hanging_cabinet_left",
+        "label": "hanging_cabinet_left",
+        "visual_description": "Grey hanging cabinet on left wall",
+        "reason": "Closed cabinet unit, potentially holds dry goods or containers."
+      },
+      {
+        "id": "hanging_cabinet_right",
+        "label": "hanging_cabinet_right",
+        "visual_description": "Grey hanging cabinet on right wall",
+        "reason": "Closed cabinet unit, potentially holds dry goods or containers."
+      },
+      {
+        "id": "table_drawer_left",
+        "label": "table_drawer_left",
+        "visual_description": "Drawer under table on left",
+        "reason": "Closed drawer under table, potentially holds cutlery or bowls."
+      },
+      {
+        "id": "table_drawer_right",
+        "label": "table_drawer_right",
+        "visual_description": "Drawer under table on right",
+        "reason": "Closed drawer under table, potentially holds cutlery or bowls."
+      }
+    ],
+    "inspection_order": [
+      "hanging_cabinet_left",
+      "hanging_cabinet_right",
+      "table_drawer_left",
+      "table_drawer_right"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

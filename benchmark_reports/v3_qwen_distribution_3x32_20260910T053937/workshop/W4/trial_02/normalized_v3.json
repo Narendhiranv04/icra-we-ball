@@ -1,0 +1,183 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Identify parts for fastening, perform fastening, and place tool on desk.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_target",
+        "entity_kind": "FIXED_TARGET",
+        "function": "The specific location on the workbench where the fastening must occur.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "black tray",
+          "assembly area"
+        ],
+        "required_properties": [
+          "location requiring fastening"
+        ]
+      },
+      {
+        "id": "compatible_component",
+        "entity_kind": "OBJECT",
+        "function": "A physical part that fits and secures the fastening target.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut",
+          "block",
+          "part"
+        ],
+        "required_properties": [
+          "fits fastening_target"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "An implement used to apply the component to the target.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "pliers",
+          "gripper"
+        ],
+        "required_properties": [
+          "capable of securing component"
+        ]
+      },
+      {
+        "id": "workbench_surface",
+        "entity_kind": "REGION",
+        "function": "The flat area where the tool must be left after use.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wooden desk top"
+        ],
+        "required_properties": [
+          "flat horizontal surface"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "component_suitability",
+        "relation": "The compatible_component is suitable for the fastening_target.",
+        "participant_roles": [
+          "compatible_component",
+          "fastening_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "tool_application",
+        "relation": "The fastening_tool is used to attach the compatible_component to the fastening_target.",
+        "participant_roles": [
+          "fastening_tool",
+          "compatible_component",
+          "fastening_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "tool_placement",
+        "relation": "The fastening_tool is placed on the workbench_surface.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench_surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "identify_component",
+        "operation": "Search for and identify a compatible_component that fits the fastening_target.",
+        "participant_roles": [
+          "compatible_component",
+          "fastening_target"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "perform_fastening",
+        "operation": "Attach the compatible_component to the fastening_target using the fastening_tool.",
+        "participant_roles": [
+          "fastening_tool",
+          "compatible_component",
+          "fastening_target"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "deposit_tool",
+        "operation": "Place the fastening_tool on the workbench_surface.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench_surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastening_target": [
+        {
+          "label": "black tray on desk",
+          "visual_description": "Black rectangular tray sitting on the wooden desk surface containing yellow objects."
+        }
+      ],
+      "compatible_component": [
+        {
+          "label": "yellow blocks on tray",
+          "visual_description": "Small yellow rectangular objects resting on the black tray."
+        }
+      ],
+      "fastening_tool": [
+        {
+          "label": "none clearly visible",
+          "visual_description": "No obvious tool is currently being held or placed on the desk surface in the provided views."
+        }
+      ],
+      "workbench_surface": [
+        {
+          "label": "wooden desk top",
+          "visual_description": "The light brown wooden surface of the desk."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "left_drawer",
+        "label": "left_drawer",
+        "visual_description": "A closed blue drawer located under the left side of the desk.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "right_drawer",
+        "label": "right_drawer",
+        "visual_description": "A closed blue drawer located under the right side of the desk.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "cabinet",
+        "label": "cabinet",
+        "visual_description": "A tall closed cabinet standing behind the desk.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "left_drawer",
+      "right_drawer",
+      "cabinet"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

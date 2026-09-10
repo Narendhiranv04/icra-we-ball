@@ -1,0 +1,16 @@
+{
+  "role_count": 3,
+  "roles": [
+    "driver",
+    "fm_role__fastening_component",
+    "fm_role__workpiece"
+  ],
+  "relation_count": 0,
+  "operation_group_count": 0,
+  "required_contract_complete": false,
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Sanitizer reported semantic incompleteness",
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'storage_area', 'entity_kind': 'REGION', 'function': 'Location where tools and components might be stored.', 'required_count': 1, 'binding_policy': 'SHARED', 'candidate_categories': ['drawer', 'cabinet'], 'required_properties': ['contains_items', 'can_be_opened'], 'visible_candidates': [{'label': 'left_drawer', 'visual_description': 'Blue drawer under the left side of the workbench'}, {'label': 'right_drawer', 'visual_description': 'Blue drawer under the right side of the workbench'}, {'label': 'tall_cabinet', 'visual_description': 'Tall blue cabinet standing against the wall behind the workbench'}], 'description': ''}, 'collision_with': 'fastening_tool'}]"
+  ]
+}

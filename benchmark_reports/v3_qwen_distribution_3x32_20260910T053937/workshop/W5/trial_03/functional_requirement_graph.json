@@ -1,0 +1,759 @@
+{
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_summary": "Identify compatible components from storage, fasten the assembly on the workbench, and leave the tool on the workbench.",
+  "functional_roles": [
+    {
+      "id": "assembly_target",
+      "entity_kind": "OBJECT",
+      "function": "The object on the workbench that needs fastening.",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "yellow object on mat",
+        "mechanical assembly"
+      ],
+      "required_properties": [
+        "needs fastening"
+      ],
+      "visible_candidates": [
+        {
+          "label": "yellow object on mat",
+          "visual_description": "Yellow rectangular object on a dark blue mat on the workbench."
+        }
+      ]
+    },
+    {
+      "id": "fastening_component",
+      "entity_kind": "OBJECT",
+      "function": "A part needed to secure the assembly.",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "bolt",
+        "nut",
+        "screw",
+        "connector",
+        "part"
+      ],
+      "required_properties": [
+        "compatible with assembly_target"
+      ],
+      "visible_candidates": []
+    },
+    {
+      "id": "fastening_tool",
+      "entity_kind": "OBJECT",
+      "function": "An implement used to perform the fastening.",
+      "required_count": 1,
+      "binding_policy": "REUSABLE",
+      "candidate_categories": [
+        "screwdriver",
+        "hammer",
+        "wrench",
+        "tool"
+      ],
+      "required_properties": [
+        "used for fastening"
+      ],
+      "visible_candidates": []
+    },
+    {
+      "id": "workbench_surface",
+      "entity_kind": "REGION",
+      "function": "The surface where work is performed and tools are left.",
+      "required_count": 1,
+      "binding_policy": "SHARED",
+      "candidate_categories": [
+        "wooden table",
+        "desk"
+      ],
+      "required_properties": [
+        "holds items"
+      ],
+      "visible_candidates": []
+    },
+    {
+      "id": "storage_drawer_left",
+      "entity_kind": "OBJECT",
+      "function": "A closed storage unit potentially containing components.",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "left drawer",
+        "under-table drawer"
+      ],
+      "required_properties": [
+        "closed storage"
+      ],
+      "visible_candidates": [
+        {
+          "label": "left drawer",
+          "visual_description": "Blue drawer with white handle under the left side of the table."
+        }
+      ]
+    },
+    {
+      "id": "storage_drawer_right",
+      "entity_kind": "OBJECT",
+      "function": "A closed storage unit potentially containing components.",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "right drawer",
+        "under-table drawer"
+      ],
+      "required_properties": [
+        "closed storage"
+      ],
+      "visible_candidates": [
+        {
+          "label": "right drawer",
+          "visual_description": "Blue drawer with white handle under the right side of the table."
+        }
+      ]
+    },
+    {
+      "id": "storage_cabinet",
+      "entity_kind": "OBJECT",
+      "function": "A closed storage unit potentially containing components.",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "grey cabinet",
+        "tall cabinet"
+      ],
+      "required_properties": [
+        "closed storage"
+      ],
+      "visible_candidates": [
+        {
+          "label": "grey cabinet",
+          "visual_description": "Tall grey cabinet standing on the right side of the workbench."
+        }
+      ]
+    }
+  ],
+  "functional_relations": [
+    {
+      "id": "component_compatibility",
+      "subject_role": "fastening_component",
+      "relation": "fits",
+      "object_role": "assembly_target",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": []
+    },
+    {
+      "id": "fastening_action__fastening_tool__fastening_component",
+      "subject_role": "fastening_tool",
+      "relation": "used_to_fasten",
+      "object_role": "fastening_component",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": []
+    },
+    {
+      "id": "fastening_action__fastening_tool__assembly_target",
+      "subject_role": "fastening_tool",
+      "relation": "used_to_fasten",
+      "object_role": "assembly_target",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": []
+    },
+    {
+      "id": "fastening_action__fastening_component__assembly_target",
+      "subject_role": "fastening_component",
+      "relation": "used_to_fasten",
+      "object_role": "assembly_target",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": []
+    },
+    {
+      "id": "final_placement",
+      "subject_role": "fastening_tool",
+      "relation": "placed_on",
+      "object_role": "workbench_surface",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": [
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "fastening_tool",
+          "predicate": "PLACED_ON",
+          "subject_role": "workbench_surface"
+        },
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "workbench_surface",
+          "predicate": "PLACED_ON",
+          "subject_role": "fastening_tool"
+        }
+      ]
+    }
+  ],
+  "interaction_groups": [
+    {
+      "id": "perform_fastening",
+      "function": "Attach component to assembly",
+      "tool_role": null,
+      "target_role": null,
+      "context_role": null,
+      "required_target_count": 1,
+      "usage_policy": null,
+      "required_relations": [],
+      "context_relations": [],
+      "v3_slot_assignments": [],
+      "v3_participant_roles": [
+        "fastening_component",
+        "assembly_target",
+        "fastening_tool"
+      ],
+      "v3_explicit_participant_roles": [
+        "fastening_component",
+        "assembly_target",
+        "fastening_tool"
+      ],
+      "v3_raw_fm_participant_roles": [
+        "fastening_component",
+        "assembly_target",
+        "fastening_tool"
+      ],
+      "v3_current_state_context_roles": [],
+      "v3_graph_join_relation_id": null,
+      "v3_explicit_context_set_id": null
+    },
+    {
+      "id": "place_tool",
+      "function": "Place tool on workbench",
+      "tool_role": "fastening_tool",
+      "target_role": "workbench_surface",
+      "context_role": null,
+      "required_target_count": 1,
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED",
+      "required_relations": [],
+      "context_relations": [],
+      "v3_slot_assignments": [
+        {
+          "capability_id": "RETURN_REUSABLE_ITEM_TO_SUPPORT",
+          "planner_operation": "PLACE",
+          "source_role": "fastening_tool",
+          "target_role": "workbench_surface",
+          "anchor_role": null,
+          "source_type": "driver",
+          "target_type": "MAIN_WORKBENCH_ZONE",
+          "anchor_type": null,
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "v3_participant_roles": [
+        "fastening_tool",
+        "workbench_surface"
+      ],
+      "v3_explicit_participant_roles": [
+        "fastening_tool",
+        "workbench_surface"
+      ],
+      "v3_raw_fm_participant_roles": [
+        "fastening_tool",
+        "workbench_surface"
+      ],
+      "v3_current_state_context_roles": [],
+      "v3_graph_join_relation_id": null,
+      "v3_explicit_context_set_id": null
+    }
+  ],
+  "inspectable_regions": [
+    {
+      "id": "storage_drawer_left",
+      "label": "left drawer",
+      "visual_description": "Closed drawer with handle, potential storage.",
+      "reason": "Could be inspected for additional task-relevant candidates."
+    },
+    {
+      "id": "storage_drawer_right",
+      "label": "right drawer",
+      "visual_description": "Closed drawer with handle, potential storage.",
+      "reason": "Could be inspected for additional task-relevant candidates."
+    },
+    {
+      "id": "storage_cabinet",
+      "label": "grey cabinet",
+      "visual_description": "Closed cabinet door, potential storage.",
+      "reason": "Could be inspected for additional task-relevant candidates."
+    }
+  ],
+  "inspection_order": [
+    "storage_drawer_left",
+    "storage_drawer_right",
+    "storage_cabinet"
+  ],
+  "unsupported_reason": "",
+  "raw_v3_contract": {
+    "functional_roles": [
+      {
+        "id": "assembly_target",
+        "entity_kind": "OBJECT",
+        "function": "The object on the workbench that needs fastening.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "yellow object on mat",
+          "mechanical assembly"
+        ],
+        "required_properties": [
+          "needs fastening"
+        ]
+      },
+      {
+        "id": "fastening_component",
+        "entity_kind": "OBJECT",
+        "function": "A part needed to secure the assembly.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bolt",
+          "nut",
+          "screw",
+          "connector",
+          "part"
+        ],
+        "required_properties": [
+          "compatible with assembly_target"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "An implement used to perform the fastening.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "hammer",
+          "wrench",
+          "tool"
+        ],
+        "required_properties": [
+          "used for fastening"
+        ]
+      },
+      {
+        "id": "workbench_surface",
+        "entity_kind": "REGION",
+        "function": "The surface where work is performed and tools are left.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wooden table",
+          "desk"
+        ],
+        "required_properties": [
+          "holds items"
+        ]
+      },
+      {
+        "id": "storage_drawer_left",
+        "entity_kind": "OBJECT",
+        "function": "A closed storage unit potentially containing components.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "left drawer",
+          "under-table drawer"
+        ],
+        "required_properties": [
+          "closed storage"
+        ]
+      },
+      {
+        "id": "storage_drawer_right",
+        "entity_kind": "OBJECT",
+        "function": "A closed storage unit potentially containing components.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "right drawer",
+          "under-table drawer"
+        ],
+        "required_properties": [
+          "closed storage"
+        ]
+      },
+      {
+        "id": "storage_cabinet",
+        "entity_kind": "OBJECT",
+        "function": "A closed storage unit potentially containing components.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "grey cabinet",
+          "tall cabinet"
+        ],
+        "required_properties": [
+          "closed storage"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "component_compatibility",
+        "relation": "fits",
+        "participant_roles": [
+          "fastening_component",
+          "assembly_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "fastening_action",
+        "relation": "used_to_fasten",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_component",
+          "assembly_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "final_placement",
+        "relation": "placed_on",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench_surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "inspect_drawer_left",
+        "operation": "Search left drawer for component",
+        "participant_roles": [
+          "storage_drawer_left",
+          "fastening_component"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "inspect_drawer_right",
+        "operation": "Search right drawer for component",
+        "participant_roles": [
+          "storage_drawer_right",
+          "fastening_component"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "inspect_cabinet",
+        "operation": "Search cabinet for component",
+        "participant_roles": [
+          "storage_cabinet",
+          "fastening_component"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "perform_fastening",
+        "operation": "Attach component to assembly",
+        "participant_roles": [
+          "fastening_component",
+          "assembly_target",
+          "fastening_tool"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "place_tool",
+        "operation": "Place tool on workbench",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench_surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "raw_v3_guidance": {
+    "visible_candidates_per_role": {
+      "assembly_target": [
+        {
+          "label": "yellow object on mat",
+          "visual_description": "Yellow rectangular object on a dark blue mat on the workbench."
+        }
+      ],
+      "storage_drawer_left": [
+        {
+          "label": "left drawer",
+          "visual_description": "Blue drawer with white handle under the left side of the table."
+        }
+      ],
+      "storage_drawer_right": [
+        {
+          "label": "right drawer",
+          "visual_description": "Blue drawer with white handle under the right side of the table."
+        }
+      ],
+      "storage_cabinet": [
+        {
+          "label": "grey cabinet",
+          "visual_description": "Tall grey cabinet standing on the right side of the workbench."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "storage_drawer_left",
+        "label": "left drawer",
+        "visual_description": "Closed drawer with handle, potential storage.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "storage_drawer_right",
+        "label": "right drawer",
+        "visual_description": "Closed drawer with handle, potential storage.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "storage_cabinet",
+        "label": "grey cabinet",
+        "visual_description": "Closed cabinet door, potential storage.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "storage_drawer_left",
+      "storage_drawer_right",
+      "storage_cabinet"
+    ]
+  },
+  "functional_constraint_interpretation": [],
+  "fm_semantic_accounting": [
+    {
+      "element_kind": "operation",
+      "raw_id": "inspect_drawer_left",
+      "disposition": "NON_PHYSICAL_TASK_DIRECTIVE",
+      "canonical_representation": null,
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "operation",
+      "raw_id": "inspect_drawer_right",
+      "disposition": "NON_PHYSICAL_TASK_DIRECTIVE",
+      "canonical_representation": null,
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "operation",
+      "raw_id": "inspect_cabinet",
+      "disposition": "NON_PHYSICAL_TASK_DIRECTIVE",
+      "canonical_representation": null,
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "operation",
+      "raw_id": "perform_fastening",
+      "disposition": "UNRESOLVED_REQUIRED_OPERATION",
+      "canonical_representation": null,
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "operation",
+      "raw_id": "place_tool",
+      "disposition": "PRIMITIVE_CAPABILITY",
+      "canonical_representation": [
+        "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+      ],
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "assembly_target",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "MAIN_WORKBENCH_ZONE",
+        "driver",
+        "fastener",
+        "repair_target",
+        "workshop_frame_joint"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "fastening_component",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "MAIN_WORKBENCH_ZONE",
+        "driver",
+        "fastener",
+        "repair_target",
+        "workshop_frame_joint"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "fastening_tool",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "driver"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "workbench_surface",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "MAIN_WORKBENCH_ZONE",
+        "driver"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "storage_drawer_left",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "MAIN_WORKBENCH_ZONE",
+        "driver",
+        "fastener",
+        "repair_target",
+        "workshop_frame_joint"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "storage_drawer_right",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "MAIN_WORKBENCH_ZONE",
+        "driver",
+        "fastener",
+        "repair_target",
+        "workshop_frame_joint"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "storage_cabinet",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "MAIN_WORKBENCH_ZONE",
+        "driver",
+        "fastener",
+        "repair_target",
+        "workshop_frame_joint"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "relation",
+      "raw_id": "component_compatibility",
+      "disposition": "GROUNDED_TASK_RELATION",
+      "canonical_representation": "fits",
+      "provenance": "FM_EXPLICIT_RELATION",
+      "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "relation",
+      "raw_id": "fastening_action",
+      "disposition": "GROUNDED_TASK_RELATION",
+      "canonical_representation": "used_to_fasten",
+      "provenance": "FM_EXPLICIT_RELATION",
+      "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "relation",
+      "raw_id": "final_placement",
+      "disposition": "GROUNDED_TASK_RELATION",
+      "canonical_representation": "placed_on",
+      "provenance": "FM_EXPLICIT_RELATION",
+      "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+    }
+  ],
+  "current_state_operation_context_roles": [],
+  "current_state_relations": [],
+  "non_physical_operations": [
+    {
+      "id": "inspect_drawer_left",
+      "operation": "Search left drawer for component",
+      "participant_roles": [
+        "storage_drawer_left",
+        "fastening_component"
+      ],
+      "operation_count": 1,
+      "category": "NON_PHYSICAL_TASK_DIRECTIVE"
+    },
+    {
+      "id": "inspect_drawer_right",
+      "operation": "Search right drawer for component",
+      "participant_roles": [
+        "storage_drawer_right",
+        "fastening_component"
+      ],
+      "operation_count": 1,
+      "category": "NON_PHYSICAL_TASK_DIRECTIVE"
+    },
+    {
+      "id": "inspect_cabinet",
+      "operation": "Search cabinet for component",
+      "participant_roles": [
+        "storage_cabinet",
+        "fastening_component"
+      ],
+      "operation_count": 1,
+      "category": "NON_PHYSICAL_TASK_DIRECTIVE"
+    }
+  ],
+  "role_operation_consistency_audit": [
+    {
+      "operation_id": "perform_fastening",
+      "raw_operation": "Attach component to assembly",
+      "explicit_participant_roles": [
+        "fastening_component",
+        "assembly_target",
+        "fastening_tool"
+      ],
+      "normalized_participant_roles": [
+        "fastening_component",
+        "assembly_target",
+        "fastening_tool"
+      ],
+      "semantic_capability_candidates": [],
+      "viable_slot_assignments": 0,
+      "status": "PASS",
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "operation_id": "place_tool",
+      "raw_operation": "Place tool on workbench",
+      "explicit_participant_roles": [
+        "fastening_tool",
+        "workbench_surface"
+      ],
+      "normalized_participant_roles": [
+        "fastening_tool",
+        "workbench_surface"
+      ],
+      "semantic_capability_candidates": [
+        "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+      ],
+      "viable_slot_assignments": 1,
+      "status": "PASS",
+      "provenance": "FM_EXPLICIT_OPERATION"
+    }
+  ]
+}

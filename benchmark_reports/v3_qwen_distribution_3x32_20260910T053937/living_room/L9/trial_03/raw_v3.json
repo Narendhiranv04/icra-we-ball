@@ -1,0 +1,149 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Arrange refreshment settings for two people and position the remote control for shared access.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "To hold a serving of drink and food for one person.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "plate",
+          "snack"
+        ],
+        "required_properties": [
+          "hold_liquid",
+          "hold_food"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "To operate the television.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote_control",
+          "controller"
+        ],
+        "required_properties": [
+          "transmit_signals"
+        ]
+      },
+      {
+        "id": "surface",
+        "entity_kind": "REGION",
+        "function": "To support the refreshment settings and control.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "floor",
+          "shelf"
+        ],
+        "required_properties": [
+          "flat",
+          "stable"
+        ]
+      },
+      {
+        "id": "seating_area",
+        "entity_kind": "REGION",
+        "function": "Reference point for 'nearby' and 'accessible'.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "chair",
+          "sofa",
+          "armchair"
+        ],
+        "required_properties": [
+          "sitting_capacity"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "relation_1",
+        "relation": "near",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating_area"
+        ],
+        "required": true
+      },
+      {
+        "id": "relation_2",
+        "relation": "accessible_from",
+        "participant_roles": [
+          "entertainment_control",
+          "seating_area"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "operation_1",
+        "operation": "place",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "operation_2",
+        "operation": "place",
+        "participant_roles": [
+          "entertainment_control",
+          "surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "cups and plates",
+          "visual_description": "Two white plates and red cups on the wooden side table to the right."
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote control",
+          "visual_description": "Black remote control on the wooden side table to the right."
+        }
+      ],
+      "surface": [
+        {
+          "label": "side table",
+          "visual_description": "Wooden table with open shelves on the right."
+        },
+        {
+          "label": "coffee table",
+          "visual_description": "Low table with glass top in the center."
+        },
+        {
+          "label": "console table",
+          "visual_description": "Wooden table under the television."
+        }
+      ],
+      "seating_area": [
+        {
+          "label": "armchairs",
+          "visual_description": "Two black cushioned armchairs facing the television."
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

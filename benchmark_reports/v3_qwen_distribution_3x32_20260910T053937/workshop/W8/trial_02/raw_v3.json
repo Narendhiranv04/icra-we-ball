@@ -1,0 +1,191 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "The robot must locate a fastener and a tool from storage, use them to secure a component on the workbench, and then place the tool back on the workbench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "workpiece",
+        "entity_kind": "OBJECT",
+        "function": "The component to be fastened.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "yellow rectangular object"
+        ],
+        "required_properties": [
+          "has mounting point"
+        ]
+      },
+      {
+        "id": "fastener",
+        "entity_kind": "OBJECT",
+        "function": "Hardware to secure the workpiece.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut"
+        ],
+        "required_properties": [
+          "fits workpiece",
+          "drivable"
+        ]
+      },
+      {
+        "id": "tool",
+        "entity_kind": "OBJECT",
+        "function": "Implement to drive the fastener.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "driver"
+        ],
+        "required_properties": [
+          "drives fastener"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "REGION",
+        "function": "Surface where the task occurs and tool is left.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk"
+        ],
+        "required_properties": [
+          "flat surface"
+        ]
+      },
+      {
+        "id": "storage",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Enclosed areas containing tools and fasteners.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "drawer",
+          "cabinet"
+        ],
+        "required_properties": [
+          "enclosed",
+          "openable"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "fit",
+        "relation": "The fastener must physically suit the workpiece.",
+        "participant_roles": [
+          "fastener",
+          "workpiece"
+        ],
+        "required": true
+      },
+      {
+        "id": "operate",
+        "relation": "The tool is used to apply the fastener to the workpiece.",
+        "participant_roles": [
+          "tool",
+          "fastener",
+          "workpiece"
+        ],
+        "required": true
+      },
+      {
+        "id": "final_placement",
+        "relation": "The tool must end up on the workbench.",
+        "participant_roles": [
+          "tool",
+          "workbench"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "search",
+        "operation": "Inspect storage units to retrieve the fastener and tool.",
+        "participant_roles": [
+          "storage",
+          "fastener",
+          "tool"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "fasten",
+        "operation": "Secure the workpiece using the fastener and tool.",
+        "participant_roles": [
+          "tool",
+          "fastener",
+          "workpiece"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "place",
+        "operation": "Deposit the tool on the workbench.",
+        "participant_roles": [
+          "tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "workpiece": [
+        {
+          "label": "yellow object on table",
+          "visual_description": "A yellow rectangular block sitting on a black base on the workbench surface."
+        }
+      ],
+      "storage": [
+        {
+          "label": "blue cabinet",
+          "visual_description": "A tall blue cabinet standing behind the workbench, appearing closed."
+        },
+        {
+          "label": "drawers",
+          "visual_description": "Two blue drawers underneath the workbench, appearing closed."
+        }
+      ],
+      "tool": [],
+      "fastener": []
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet",
+        "label": "blue cabinet",
+        "visual_description": "Closed cabinet door with a handle.",
+        "reason": "Likely contains tools or fasteners; standard storage location."
+      },
+      {
+        "id": "left_drawer",
+        "label": "left drawer",
+        "visual_description": "Closed drawer with a handle.",
+        "reason": "Likely contains tools or fasteners; standard storage location."
+      },
+      {
+        "id": "right_drawer",
+        "label": "right drawer",
+        "visual_description": "Closed drawer with a handle.",
+        "reason": "Likely contains tools or fasteners; standard storage location."
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet",
+      "left_drawer",
+      "right_drawer"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

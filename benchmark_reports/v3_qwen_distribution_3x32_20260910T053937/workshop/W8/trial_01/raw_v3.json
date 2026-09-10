@@ -1,0 +1,178 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Find parts and tools, fasten a component to a workbench, then put the tool back.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "component_part",
+        "entity_kind": "OBJECT",
+        "function": "Physical piece to be attached to the workbench.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "connector",
+          "screw",
+          "bracket",
+          "clip"
+        ],
+        "required_properties": [
+          "compatible with marked location"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "Instrument used to secure the component.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "screwdriver",
+          "hammer",
+          "glue applicator"
+        ],
+        "required_properties": [
+          "capable of fastening"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Surface where the assembly happens and tools are left.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk"
+        ],
+        "required_properties": [
+          "assembly surface"
+        ]
+      },
+      {
+        "id": "storage_container",
+        "entity_kind": "REGION",
+        "function": "Enclosed spaces to search for parts or tools.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "drawer",
+          "cabinet",
+          "compartment"
+        ],
+        "required_properties": [
+          "enclosed space",
+          "accessible"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "is_compatible_with",
+        "relation": "The component must fit the marked workbench location.",
+        "participant_roles": [
+          "component_part",
+          "workbench"
+        ],
+        "required": true
+      },
+      {
+        "id": "is_used_for",
+        "relation": "The tool is required to attach the component.",
+        "participant_roles": [
+          "fastening_tool",
+          "component_part"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "search_and_identify",
+        "operation": "Open storage containers and inspect items to find compatible parts and tools.",
+        "participant_roles": [
+          "storage_container",
+          "component_part",
+          "fastening_tool"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "perform_fastening",
+        "operation": "Attach the component to the workbench using the tool.",
+        "participant_roles": [
+          "component_part",
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "deposit_tool",
+        "operation": "Place the reusable tool on the workbench surface.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "component_part": [
+        {
+          "label": "yellow object on tray",
+          "visual_description": "A yellow rectangular object resting on a black tray on the workbench."
+        }
+      ],
+      "fastening_tool": [],
+      "workbench": [
+        {
+          "label": "wooden table",
+          "visual_description": "A wooden table with drawers underneath and a cabinet behind it."
+        }
+      ],
+      "storage_container": [
+        {
+          "label": "left drawer",
+          "visual_description": "A blue drawer with a white handle located under the left side of the table."
+        },
+        {
+          "label": "right drawer",
+          "visual_description": "A blue drawer with a white handle located under the right side of the table."
+        },
+        {
+          "label": "tall cabinet",
+          "visual_description": "A tall blue cabinet standing behind the right side of the table."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "left_drawer",
+        "label": "left drawer",
+        "visual_description": "Blue drawer with handle under the table.",
+        "reason": "Closed storage unit that may contain components or tools."
+      },
+      {
+        "id": "right_drawer",
+        "label": "right drawer",
+        "visual_description": "Blue drawer with handle under the table.",
+        "reason": "Closed storage unit that may contain components or tools."
+      },
+      {
+        "id": "tall_cabinet",
+        "label": "tall cabinet",
+        "visual_description": "Blue cabinet behind the table.",
+        "reason": "Closed storage unit that may contain components or tools."
+      }
+    ],
+    "inspection_order": [
+      "left_drawer",
+      "right_drawer",
+      "tall_cabinet"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

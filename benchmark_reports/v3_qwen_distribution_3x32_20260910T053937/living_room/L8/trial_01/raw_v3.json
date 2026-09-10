@@ -1,0 +1,132 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Set up refreshment settings for two people and position the remote control centrally.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "Holds food or drink for a person",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "plate",
+          "cup",
+          "dish",
+          "snack"
+        ],
+        "required_properties": [
+          "holds_refreshment"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "Controls the television",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote",
+          "controller",
+          "button"
+        ],
+        "required_properties": [
+          "controls_tv"
+        ]
+      },
+      {
+        "id": "surface",
+        "entity_kind": "REGION",
+        "function": "Provides a flat area to hold items",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "bench"
+        ],
+        "required_properties": [
+          "flat_top"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_setting_on_surface",
+        "relation": "rests on",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface"
+        ],
+        "required": true
+      },
+      {
+        "id": "entertainment_control_on_surface",
+        "relation": "rests on",
+        "participant_roles": [
+          "entertainment_control",
+          "surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "place_refreshment",
+        "operation": "Place refreshment_setting on surface",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "place_control",
+        "operation": "Place entertainment_control on surface",
+        "participant_roles": [
+          "entertainment_control",
+          "surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "plates and cups",
+          "visual_description": "on large wooden table"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "black remote",
+          "visual_description": "on large wooden table"
+        }
+      ],
+      "surface": [
+        {
+          "label": "large wooden table",
+          "visual_description": "foreground right"
+        },
+        {
+          "label": "coffee table",
+          "visual_description": "center"
+        },
+        {
+          "label": "side table",
+          "visual_description": "near right chair"
+        },
+        {
+          "label": "console table",
+          "visual_description": "under tv"
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

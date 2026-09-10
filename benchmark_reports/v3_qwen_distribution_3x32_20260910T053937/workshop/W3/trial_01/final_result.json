@@ -1,0 +1,17 @@
+{
+  "assignment": null,
+  "candidate_plan": [],
+  "candidate_search_statistics": {},
+  "canonicalization_succeeded": false,
+  "domain": "workshop",
+  "failure_category": "GRAPH_COMPILATION_FAILURE",
+  "failure_reason": "INCOMPLETE_CANONICAL_GRAPH: coherent FM contract could not be fully represented; unresolved=[{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'storage_structure', 'entity_kind': 'OBJECT', 'function': 'Container holding the required components.', 'required_count': 1, 'binding_policy': 'SHARED', 'candidate_categories': ['cabinet', 'drawer', 'storage bin'], 'required_properties': ['can be opened', 'contains items'], 'visible_candidates': [{'label': 'grey cabinet', 'visual_description': 'tall grey box behind table'}, {'label': 'left blue drawer', 'visual_description': 'blue drawer under left side of table'}, {'label': 'right blue drawer', 'visual_description': 'blue drawer under right side of table'}], 'description': ''}, 'collision_with': 'fastener'}, {'raw_subject': 'fastener', 'raw_phrase': 'functional', 'raw_object': 'assembly_base', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'functional' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH_TARGET'] or task causal semantics\"}, {'raw_subject': 'fastening_tool', 'raw_phrase': 'functional', 'raw_object': 'fastener', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'functional' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics\"}]",
+  "functional_spec_complete": false,
+  "inspected_regions": [],
+  "mode": "vlm",
+  "outcome_category": "GRAPH_COMPILATION_FAILURE",
+  "plan": [],
+  "search_statistics": {},
+  "status": "VLM_SPEC_FAILED",
+  "variant": "W3"
+}

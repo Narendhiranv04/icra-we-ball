@@ -1,0 +1,172 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Set up refreshments and entertainment control on a surface near seating.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "Provide refreshment for one person",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "drink",
+          "snack",
+          "cup",
+          "plate"
+        ],
+        "required_properties": [
+          "edible",
+          "drinkable"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "Control the television",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote",
+          "controller"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "surface",
+        "entity_kind": "REGION",
+        "function": "Hold items for access",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "ottoman"
+        ],
+        "required_properties": [
+          "flat",
+          "stable"
+        ]
+      },
+      {
+        "id": "seating",
+        "entity_kind": "REGION",
+        "function": "Place for people to sit",
+        "required_count": 2,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "chair",
+          "armchair"
+        ],
+        "required_properties": [
+          "for_sitting"
+        ]
+      },
+      {
+        "id": "television_screen",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Display content",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "tv",
+          "screen"
+        ],
+        "required_properties": []
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_near_seating",
+        "relation": "near",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_near_seating",
+        "relation": "near",
+        "participant_roles": [
+          "entertainment_control",
+          "seating"
+        ],
+        "required": true
+      },
+      {
+        "id": "items_on_surface",
+        "relation": "on",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface",
+          "entertainment_control",
+          "surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "place_refreshments",
+        "operation": "Place refreshment settings on surface",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "place_control",
+        "operation": "Place entertainment control on surface",
+        "participant_roles": [
+          "entertainment_control",
+          "surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "cups and plates",
+          "visual_description": "On the desk"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote",
+          "visual_description": "On the desk"
+        }
+      ],
+      "surface": [
+        {
+          "label": "coffee table",
+          "visual_description": "Empty, between chairs"
+        },
+        {
+          "label": "desk",
+          "visual_description": "Occupied with items"
+        }
+      ],
+      "seating": [
+        {
+          "label": "armchair",
+          "visual_description": "Two units, facing TV"
+        }
+      ],
+      "television_screen": [
+        {
+          "label": "tv",
+          "visual_description": "Mounted on wall"
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

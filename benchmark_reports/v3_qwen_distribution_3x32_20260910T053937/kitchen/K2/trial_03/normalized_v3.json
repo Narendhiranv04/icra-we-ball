@@ -1,0 +1,316 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare two coffees and two soups, serving each with appropriate utensils.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "coffee_cup",
+        "entity_kind": "OBJECT",
+        "function": "Holds the prepared coffee for consumption.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mug",
+          "cup",
+          "glass"
+        ],
+        "required_properties": [
+          "container",
+          "holds_liquid"
+        ]
+      },
+      {
+        "id": "soup_bowl",
+        "entity_kind": "OBJECT",
+        "function": "Holds the soup for consumption.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bowl",
+          "dish"
+        ],
+        "required_properties": [
+          "container",
+          "holds_food"
+        ]
+      },
+      {
+        "id": "coffee_ingredient",
+        "entity_kind": "OBJECT",
+        "function": "Source of coffee flavor.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee_beans",
+          "coffee_powder",
+          "grounds"
+        ],
+        "required_properties": [
+          "consumable",
+          "coffee_flavor"
+        ]
+      },
+      {
+        "id": "water_container",
+        "entity_kind": "OBJECT",
+        "function": "Source of hot water for brewing.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "kettle",
+          "teapot",
+          "jug"
+        ],
+        "required_properties": [
+          "container",
+          "holds_water",
+          "heatable"
+        ]
+      },
+      {
+        "id": "stirring_utensil",
+        "entity_kind": "OBJECT",
+        "function": "Tool to mix coffee ingredients.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "stirrer"
+        ],
+        "required_properties": [
+          "rigid",
+          "thin_end"
+        ]
+      },
+      {
+        "id": "eating_utensil",
+        "entity_kind": "OBJECT",
+        "function": "Tool for consuming soup.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "fork"
+        ],
+        "required_properties": [
+          "rigid",
+          "tip"
+        ]
+      },
+      {
+        "id": "work_surface",
+        "entity_kind": "REGION",
+        "function": "Area where preparation occurs.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "counter"
+        ],
+        "required_properties": [
+          "flat",
+          "stable"
+        ]
+      },
+      {
+        "id": "storage_container",
+        "entity_kind": "REGION",
+        "function": "Enclosed space holding ingredients or tools.",
+        "required_count": 2,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "cabinet",
+          "drawer",
+          "box"
+        ],
+        "required_properties": [
+          "enclosed",
+          "openable"
+        ]
+      },
+      {
+        "id": "dining_spot",
+        "entity_kind": "REGION",
+        "function": "Location where the recipient consumes the meal.",
+        "required_count": 2,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "chair",
+          "seat",
+          "table_edge"
+        ],
+        "required_properties": [
+          "accessible",
+          "seating_area"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "prep_coffee",
+        "relation": "prepared_from",
+        "participant_roles": [
+          "coffee_cup",
+          "coffee_ingredient",
+          "water_container"
+        ],
+        "required": true
+      },
+      {
+        "id": "serve_coffee",
+        "relation": "placed_at",
+        "participant_roles": [
+          "coffee_cup",
+          "dining_spot"
+        ],
+        "required": true
+      },
+      {
+        "id": "serve_soup",
+        "relation": "placed_at",
+        "participant_roles": [
+          "soup_bowl",
+          "dining_spot"
+        ],
+        "required": true
+      },
+      {
+        "id": "serve_soup_utensil",
+        "relation": "served_with",
+        "participant_roles": [
+          "soup_bowl",
+          "eating_utensil"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "make_coffee",
+        "operation": "mix_and_stir",
+        "participant_roles": [
+          "coffee_cup",
+          "coffee_ingredient",
+          "water_container",
+          "stirring_utensil"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "serve_coffee_action",
+        "operation": "place",
+        "participant_roles": [
+          "coffee_cup",
+          "dining_spot"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "serve_soup_action",
+        "operation": "place_with",
+        "participant_roles": [
+          "soup_bowl",
+          "eating_utensil",
+          "dining_spot"
+        ],
+        "operation_count": 2
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "coffee_cup": [
+        {
+          "label": "beige_cup",
+          "visual_description": "Small cylindrical cup on left side of table"
+        }
+      ],
+      "soup_bowl": [
+        {
+          "label": "blue_bowl",
+          "visual_description": "Blue bowl in center"
+        },
+        {
+          "label": "white_bowl",
+          "visual_description": "White bowl with red liquid"
+        }
+      ],
+      "water_container": [
+        {
+          "label": "teapot",
+          "visual_description": "Silver teapot near center right"
+        }
+      ],
+      "stirring_utensil": [
+        {
+          "label": "spoon_1",
+          "visual_description": "Metal spoon near blue bowl"
+        }
+      ],
+      "eating_utensil": [
+        {
+          "label": "spoon_2",
+          "visual_description": "Metal spoon near white bowl"
+        }
+      ],
+      "coffee_ingredient": [
+        {
+          "label": "brown_box",
+          "visual_description": "Brown rectangular box on table right"
+        },
+        {
+          "label": "green_canister",
+          "visual_description": "Green cylindrical container on table"
+        }
+      ],
+      "work_surface": [
+        {
+          "label": "table_top",
+          "visual_description": "White tabletop with items"
+        }
+      ],
+      "storage_container": [
+        {
+          "label": "cabinet_left",
+          "visual_description": "Grey wall-mounted cabinet left"
+        },
+        {
+          "label": "cabinet_right",
+          "visual_description": "Grey wall-mounted cabinet right"
+        },
+        {
+          "label": "drawer",
+          "visual_description": "Openable drawer under table"
+        }
+      ],
+      "dining_spot": []
+    },
+    "inspectable_regions": [
+      {
+        "id": "cabinet_left",
+        "label": "grey_cabinet_left",
+        "visual_description": "Closed grey box with handle",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "cabinet_right",
+        "label": "grey_cabinet_right",
+        "visual_description": "Closed grey box with handle",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "drawer",
+        "label": "table_drawer",
+        "visual_description": "Closed white drawer under table",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "cabinet_left",
+      "cabinet_right",
+      "drawer"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

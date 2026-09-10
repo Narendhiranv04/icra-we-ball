@@ -1,0 +1,173 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Locate a fastener and tool to assemble a component on a workbench, then return the tool.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastener",
+        "entity_kind": "OBJECT",
+        "function": "Provides the connection between parts",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "pin"
+        ],
+        "required_properties": [
+          "fits_target_hole",
+          "drivable_by_tool"
+        ]
+      },
+      {
+        "id": "target_object",
+        "entity_kind": "OBJECT",
+        "function": "Receives the fastener",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "part",
+          "block",
+          "assembly"
+        ],
+        "required_properties": [
+          "has_fastening_hole",
+          "rests_on_workbench"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "Applies force to secure the fastener",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "wrench",
+          "screwdriver",
+          "allen_key"
+        ],
+        "required_properties": [
+          "matches_fastener_head"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "REGION",
+        "function": "Supports the operation and final placement of equipment",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk"
+        ],
+        "required_properties": [
+          "flat_surface",
+          "supports_weight"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "relation_1",
+        "relation": "fits_into",
+        "participant_roles": [
+          "fastener",
+          "target_object"
+        ],
+        "required": true
+      },
+      {
+        "id": "relation_2",
+        "relation": "operates_on",
+        "participant_roles": [
+          "fastening_tool",
+          "fastener"
+        ],
+        "required": true
+      },
+      {
+        "id": "relation_3",
+        "relation": "rests_on",
+        "participant_roles": [
+          "target_object",
+          "workbench"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "operation_1",
+        "operation": "inserted_into",
+        "participant_roles": [
+          "fastener",
+          "target_object"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "operation_2",
+        "operation": "tightened",
+        "participant_roles": [
+          "fastening_tool",
+          "fastener"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "operation_3",
+        "operation": "placed_on",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastener": [],
+      "target_object": [
+        {
+          "label": "yellow_block_on_tray",
+          "visual_description": "Yellow rectangular object with a slot, sitting on a black tray on the workbench surface"
+        }
+      ],
+      "fastening_tool": [],
+      "workbench": [
+        {
+          "label": "wooden_table",
+          "visual_description": "Wooden desk with drawers and a cabinet on top"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "region_cabinet",
+        "label": "blue_cabinet",
+        "visual_description": "Blue cabinet standing on the workbench with a closed door",
+        "reason": "Closed storage structure likely containing fasteners or tools"
+      },
+      {
+        "id": "region_drawer_left",
+        "label": "left_drawer",
+        "visual_description": "Drawer under the left side of the workbench",
+        "reason": "Closed storage structure likely containing fasteners or tools"
+      },
+      {
+        "id": "region_drawer_right",
+        "label": "right_drawer",
+        "visual_description": "Drawer under the right side of the workbench",
+        "reason": "Closed storage structure likely containing fasteners or tools"
+      }
+    ],
+    "inspection_order": [
+      "region_cabinet",
+      "region_drawer_left",
+      "region_drawer_right"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

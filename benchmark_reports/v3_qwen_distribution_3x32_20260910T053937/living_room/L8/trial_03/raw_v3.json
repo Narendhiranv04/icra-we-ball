@@ -1,0 +1,141 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Distribute refreshment settings and position entertainment control for two viewers.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "person",
+        "entity_kind": "OBJECT",
+        "function": "Receiver of refreshments and viewer of television",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "human"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "Container for food or drink",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "plate",
+          "cup",
+          "napkin_set"
+        ],
+        "required_properties": [
+          "holds_food_or_drink"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "Device to operate television",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote",
+          "control_unit"
+        ],
+        "required_properties": [
+          "operates_tv"
+        ]
+      },
+      {
+        "id": "surface",
+        "entity_kind": "REGION",
+        "function": "Support for items",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "floor"
+        ],
+        "required_properties": [
+          "flat",
+          "stable"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_proximity",
+        "relation": "near",
+        "participant_roles": [
+          "refreshment_setting",
+          "person"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_accessibility",
+        "relation": "accessible_to",
+        "participant_roles": [
+          "entertainment_control",
+          "person"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "distribute_refreshments",
+        "operation": "place",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface",
+          "person"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "position_control",
+        "operation": "move_and_place",
+        "participant_roles": [
+          "entertainment_control",
+          "surface",
+          "person"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "person": [],
+      "refreshment_setting": [
+        {
+          "label": "cups and plates",
+          "visual_description": "Two red cups and white plates sitting on the wooden desk in the foreground."
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote",
+          "visual_description": "A black rectangular object resembling a remote control sitting on the wooden desk in the foreground."
+        }
+      ],
+      "surface": [
+        {
+          "label": "coffee_table",
+          "visual_description": "Low rectangular table with green top in the center."
+        },
+        {
+          "label": "side_table",
+          "visual_description": "Small wooden table next to the right armchair."
+        },
+        {
+          "label": "desk_surface",
+          "visual_description": "Top of the wooden desk in the foreground."
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

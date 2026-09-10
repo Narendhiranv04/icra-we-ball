@@ -1,0 +1,201 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Locate necessary parts and tools to fasten a component at a specific workbench spot, perform the fastening, and leave the tool on the bench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "workbench_surface",
+        "entity_kind": "OBJECT",
+        "function": "The primary surface where the task takes place and where tools are left.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "bench"
+        ],
+        "required_properties": [
+          "stable",
+          "flat surface"
+        ]
+      },
+      {
+        "id": "marked_fastening_site",
+        "entity_kind": "REGION",
+        "function": "The specific location on the workbench where the fastening occurs.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "marked spot",
+          "assembly point"
+        ],
+        "required_properties": [
+          "accessible",
+          "suitable for attachment"
+        ]
+      },
+      {
+        "id": "attachment_component",
+        "entity_kind": "OBJECT",
+        "function": "The physical part that needs to be fastened to the site.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "part",
+          "block",
+          "module"
+        ],
+        "required_properties": [
+          "compatible with site",
+          "movable"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "The implement used to secure the component.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "clamp"
+        ],
+        "required_properties": [
+          "functional",
+          "reusable"
+        ]
+      },
+      {
+        "id": "storage_container",
+        "entity_kind": "OBJECT",
+        "function": "A closed structure that may hold the component or tool.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "cabinet",
+          "drawer",
+          "box"
+        ],
+        "required_properties": [
+          "enclosed",
+          "openable"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "relation_fit",
+        "relation": "fits",
+        "participant_roles": [
+          "attachment_component",
+          "marked_fastening_site"
+        ],
+        "required": true
+      },
+      {
+        "id": "relation_secure",
+        "relation": "secures",
+        "participant_roles": [
+          "fastening_tool",
+          "attachment_component",
+          "marked_fastening_site"
+        ],
+        "required": true
+      },
+      {
+        "id": "relation_place",
+        "relation": "placed_on",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench_surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_search",
+        "operation": "search_and_identify",
+        "participant_roles": [
+          "storage_container",
+          "attachment_component",
+          "fastening_tool"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "op_assemble",
+        "operation": "perform_fastening",
+        "participant_roles": [
+          "fastening_tool",
+          "attachment_component",
+          "marked_fastening_site"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "op_deposit",
+        "operation": "leave_tool_safely",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench_surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "workbench_surface": [
+        {
+          "label": "Wooden table",
+          "visual_description": "Brown wooden desk with legs and drawers underneath."
+        }
+      ],
+      "marked_fastening_site": [
+        {
+          "label": "Grey mat with yellow block",
+          "visual_description": "Dark grey rectangular pad on the table surface with a yellow rectangular object on top."
+        }
+      ],
+      "attachment_component": [
+        {
+          "label": "Yellow block",
+          "visual_description": "Yellow rectangular object sitting on the grey mat."
+        }
+      ],
+      "storage_container": [
+        {
+          "label": "Blue cabinet",
+          "visual_description": "Tall blue cabinet with a handle on the right side of the back wall."
+        },
+        {
+          "label": "Under-table drawers",
+          "visual_description": "Two blue drawers with silver handles located beneath the table surface."
+        }
+      ],
+      "fastening_tool": []
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet",
+        "label": "Blue cabinet",
+        "visual_description": "Closed blue cabinet against the back wall.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "under_table_drawers",
+        "label": "Under-table drawers",
+        "visual_description": "Two closed drawers under the workbench.",
+        "reason": "Common storage location for small tools or parts."
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet",
+      "under_table_drawers"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

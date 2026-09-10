@@ -1,0 +1,163 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare living room seating and refreshment areas for two people and position the remote control for easy access.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "A complete set of items for one person to consume while watching TV, typically a plate and cup.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "plate",
+          "cup",
+          "snack"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "A device to operate the television, such as a remote control.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote",
+          "controller"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "surface",
+        "entity_kind": "REGION",
+        "function": "A flat, stable area to hold refreshment settings or the entertainment control.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "shelf"
+        ],
+        "required_properties": [
+          "flat",
+          "stable"
+        ]
+      },
+      {
+        "id": "seat",
+        "entity_kind": "OBJECT",
+        "function": "A piece of furniture for a person to sit on while watching television.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "chair",
+          "armchair",
+          "sofa"
+        ],
+        "required_properties": []
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_proximity",
+        "relation": "positioned_near",
+        "participant_roles": [
+          "refreshment_setting",
+          "seat"
+        ],
+        "required": true
+      },
+      {
+        "id": "refreshment_placement",
+        "relation": "positioned_on",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_proximity",
+        "relation": "positioned_near",
+        "participant_roles": [
+          "entertainment_control",
+          "seat"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_placement",
+        "relation": "positioned_on",
+        "participant_roles": [
+          "entertainment_control",
+          "surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "set_refreshments",
+        "operation": "place_refreshment_setting",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "move_control",
+        "operation": "move_entertainment_control",
+        "participant_roles": [
+          "entertainment_control",
+          "surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "plate_and_cup",
+          "visual_description": "White plate and red cup on the coffee table"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote",
+          "visual_description": "Black remote on the coffee table"
+        }
+      ],
+      "surface": [
+        {
+          "label": "coffee_table",
+          "visual_description": "Large wooden table with items on it"
+        },
+        {
+          "label": "console_table",
+          "visual_description": "Small wooden table under the TV"
+        }
+      ],
+      "seat": [
+        {
+          "label": "armchair_left",
+          "visual_description": "Wooden armchair facing TV"
+        },
+        {
+          "label": "armchair_right",
+          "visual_description": "Wooden armchair facing TV"
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": [
+      "coffee_table",
+      "console_table"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

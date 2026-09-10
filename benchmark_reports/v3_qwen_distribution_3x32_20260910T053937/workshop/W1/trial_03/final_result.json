@@ -1,0 +1,17 @@
+{
+  "assignment": null,
+  "candidate_plan": [],
+  "candidate_search_statistics": {},
+  "canonicalization_succeeded": false,
+  "domain": "workshop",
+  "failure_category": "GRAPH_COMPILATION_FAILURE",
+  "failure_reason": "INCOMPLETE_CANONICAL_GRAPH: coherent FM contract could not be fully represented; unresolved=[{'raw_role': {'id': 'compatible_component', 'entity_kind': 'OBJECT', 'function': 'The physical part that needs to be fastened.', 'required_count': 1, 'binding_policy': 'DISTINCT', 'candidate_categories': ['screw', 'bolt', 'nut', 'bracket'], 'required_properties': ['part', 'fits target'], 'visible_candidates': [], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}, {'raw_subject': 'compatible_component', 'raw_phrase': 'The compatible component must be at the marked location.', 'raw_object': 'marked_workbench_location', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]",
+  "functional_spec_complete": false,
+  "inspected_regions": [],
+  "mode": "vlm",
+  "outcome_category": "GRAPH_COMPILATION_FAILURE",
+  "plan": [],
+  "search_statistics": {},
+  "status": "VLM_SPEC_FAILED",
+  "variant": "W1"
+}

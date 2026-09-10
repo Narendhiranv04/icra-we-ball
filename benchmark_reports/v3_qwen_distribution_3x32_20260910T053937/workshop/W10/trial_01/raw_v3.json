@@ -1,0 +1,223 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Find fastening parts and tool, fasten the workbench, leave tool on bench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_point",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Location on the workbench that requires securing.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "workbench surface",
+          "assembly point"
+        ],
+        "required_properties": [
+          "needs fastening"
+        ]
+      },
+      {
+        "id": "fastener",
+        "entity_kind": "OBJECT",
+        "function": "Hardware component to be installed at the fastening point.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "pin",
+          "block"
+        ],
+        "required_properties": [
+          "compatible with fastening_point",
+          "driveable"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "Instrument used to install the fastener.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "drill",
+          "handle"
+        ],
+        "required_properties": [
+          "capable of driving fastener"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "REGION",
+        "function": "Surface where work is performed and tools are returned.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk"
+        ],
+        "required_properties": [
+          "stable surface"
+        ]
+      },
+      {
+        "id": "storage_container",
+        "entity_kind": "REGION",
+        "function": "Closed structure holding the required components.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cabinet",
+          "drawer"
+        ],
+        "required_properties": [
+          "enclosed",
+          "openable"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "installed_at",
+        "relation": "The fastener is installed at the fastening point.",
+        "participant_roles": [
+          "fastener",
+          "fastening_point"
+        ],
+        "required": true
+      },
+      {
+        "id": "used_to_install",
+        "relation": "The fastening tool is used to install the fastener.",
+        "participant_roles": [
+          "fastening_tool",
+          "fastener"
+        ],
+        "required": true
+      },
+      {
+        "id": "returned_to",
+        "relation": "The fastening tool is placed on the workbench.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "required": true
+      },
+      {
+        "id": "found_in",
+        "relation": "The fastener and tool are found inside the storage container.",
+        "participant_roles": [
+          "fastener",
+          "fastening_tool",
+          "storage_container"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "search_components",
+        "operation": "Search the storage containers to find the fastener and tool.",
+        "participant_roles": [
+          "fastener",
+          "fastening_tool",
+          "storage_container"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "perform_fastening",
+        "operation": "Drive the fastener into the fastening point using the tool.",
+        "participant_roles": [
+          "fastening_tool",
+          "fastener",
+          "fastening_point"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "return_tool",
+        "operation": "Place the tool on the workbench.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastening_point": [
+        {
+          "label": "wooden workbench surface near tray",
+          "visual_description": "Flat wooden area where the tray sits."
+        }
+      ],
+      "fastener": [
+        {
+          "label": "yellow block on tray",
+          "visual_description": "Yellow rectangular object on the black tray."
+        }
+      ],
+      "fastening_tool": [
+        {
+          "label": "yellow handle on tray",
+          "visual_description": "Yellow object with handle shape on the black tray."
+        }
+      ],
+      "workbench": [
+        {
+          "label": "wooden table",
+          "visual_description": "Wooden table with legs and drawers."
+        }
+      ],
+      "storage_container": [
+        {
+          "label": "blue cabinet",
+          "visual_description": "Tall blue cabinet with a door."
+        },
+        {
+          "label": "left drawer",
+          "visual_description": "Blue drawer under the left side of the table."
+        },
+        {
+          "label": "right drawer",
+          "visual_description": "Blue drawer under the right side of the table."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet_door",
+        "label": "blue cabinet door",
+        "visual_description": "Closed door of the tall blue cabinet.",
+        "reason": "Could contain fasteners or tools."
+      },
+      {
+        "id": "left_drawer_front",
+        "label": "left drawer front",
+        "visual_description": "Front panel of the left table drawer.",
+        "reason": "Could contain fasteners or tools."
+      },
+      {
+        "id": "right_drawer_front",
+        "label": "right drawer front",
+        "visual_description": "Front panel of the right table drawer.",
+        "reason": "Could contain fasteners or tools."
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet_door",
+      "left_drawer_front",
+      "right_drawer_front"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

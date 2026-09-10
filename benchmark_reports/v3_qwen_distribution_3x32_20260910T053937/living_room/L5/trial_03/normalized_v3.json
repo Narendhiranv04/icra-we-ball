@@ -1,0 +1,174 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare refreshment settings for two people and position a remote control.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "drink_vessel",
+        "entity_kind": "OBJECT",
+        "function": "Holds liquid for consumption",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "mug",
+          "glass"
+        ],
+        "required_properties": [
+          "holds liquid"
+        ]
+      },
+      {
+        "id": "food_vessel",
+        "entity_kind": "OBJECT",
+        "function": "Holds food for consumption",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "plate",
+          "bowl"
+        ],
+        "required_properties": [
+          "holds food"
+        ]
+      },
+      {
+        "id": "entertainment_controller",
+        "entity_kind": "OBJECT",
+        "function": "Controls the television",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote",
+          "controller"
+        ],
+        "required_properties": [
+          "controls TV"
+        ]
+      },
+      {
+        "id": "placement_surface",
+        "entity_kind": "REGION",
+        "function": "Flat surface to hold items",
+        "required_count": 2,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "side table"
+        ],
+        "required_properties": [
+          "flat surface"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_setting_pair",
+        "relation": "complementary_pair",
+        "participant_roles": [
+          "drink_vessel",
+          "food_vessel"
+        ],
+        "required": true
+      },
+      {
+        "id": "item_on_surface",
+        "relation": "spatial_support",
+        "participant_roles": [
+          "drink_vessel",
+          "food_vessel",
+          "entertainment_controller",
+          "placement_surface"
+        ],
+        "required": true
+      },
+      {
+        "id": "accessible_location",
+        "relation": "accessibility",
+        "participant_roles": [
+          "entertainment_controller",
+          "placement_surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "create_refreshment_setting",
+        "operation": "place_items_on_surface",
+        "participant_roles": [
+          "drink_vessel",
+          "food_vessel",
+          "placement_surface"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "position_remote",
+        "operation": "place_item_on_surface",
+        "participant_roles": [
+          "entertainment_controller",
+          "placement_surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "drink_vessel": [
+        {
+          "label": "Red cup on coffee table",
+          "visual_description": "Small red ceramic cup on the center coffee table"
+        },
+        {
+          "label": "Red cup on desk",
+          "visual_description": "Small red ceramic cup on the wooden desk"
+        }
+      ],
+      "food_vessel": [
+        {
+          "label": "White plate on left side table",
+          "visual_description": "White round plate on the left side table"
+        },
+        {
+          "label": "White plate on right side table",
+          "visual_description": "White round plate on the right side table"
+        },
+        {
+          "label": "White plate on desk",
+          "visual_description": "White round plate on the wooden desk"
+        }
+      ],
+      "entertainment_controller": [
+        {
+          "label": "Black remote on desk",
+          "visual_description": "Black rectangular remote control on the wooden desk"
+        }
+      ],
+      "placement_surface": [
+        {
+          "label": "Left side table",
+          "visual_description": "Small wooden table to the left of the left chair"
+        },
+        {
+          "label": "Right side table",
+          "visual_description": "Small wooden table to the right of the right chair"
+        },
+        {
+          "label": "Coffee table",
+          "visual_description": "Low rectangular table in the center of the seating area"
+        },
+        {
+          "label": "Desk",
+          "visual_description": "Large wooden desk in the foreground"
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

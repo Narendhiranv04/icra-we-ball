@@ -1,0 +1,17 @@
+{
+  "assignment": null,
+  "candidate_plan": [],
+  "candidate_search_statistics": {},
+  "canonicalization_succeeded": false,
+  "domain": "workshop",
+  "failure_category": "GRAPH_COMPILATION_FAILURE",
+  "failure_reason": "INCOMPLETE_CANONICAL_GRAPH: coherent FM contract could not be fully represented; unresolved=[{'raw_role': {'id': 'compatible_component', 'entity_kind': 'OBJECT', 'function': 'The physical part(s) that need to be attached or joined at the target.', 'required_count': 1, 'binding_policy': 'DISTINCT', 'candidate_categories': ['block', 'part', 'assembly'], 'required_properties': ['fits the target', 'needs fastening'], 'visible_candidates': [{'label': 'yellow_blue_block', 'visual_description': 'Rectangular assembly with yellow and blue blocks on a black base, sitting on the table.'}], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}, {'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'storage_container', 'entity_kind': 'REGION', 'function': 'Closed areas where components or tools might be hidden and require searching.', 'required_count': 1, 'binding_policy': 'SHARED', 'candidate_categories': ['cabinet', 'drawer', 'cupboard'], 'required_properties': ['is closed', 'has a handle or latch'], 'visible_candidates': [{'label': 'blue_cabinet', 'visual_description': 'Tall blue cabinet with a white handle next to the monitor.'}, {'label': 'left_drawer', 'visual_description': 'Blue drawer with white handle under the left side of the table.'}, {'label': 'right_drawer', 'visual_description': 'Blue drawer with white handle under the right side of the table.'}], 'description': ''}, 'collision_with': 'tool'}, {'raw_subject': 'compatible_component', 'raw_phrase': 'compatible_component fits fastening_target', 'raw_object': 'fastening_target', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]",
+  "functional_spec_complete": false,
+  "inspected_regions": [],
+  "mode": "vlm",
+  "outcome_category": "GRAPH_COMPILATION_FAILURE",
+  "plan": [],
+  "search_statistics": {},
+  "status": "VLM_SPEC_FAILED",
+  "variant": "W8"
+}

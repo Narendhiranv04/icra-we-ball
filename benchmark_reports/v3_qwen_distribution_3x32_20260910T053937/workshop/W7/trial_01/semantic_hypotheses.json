@@ -1,0 +1,119 @@
+{
+  "fastening_spot": {
+    "raw_role_id": "fastening_spot",
+    "raw_function": "The specific location on the workbench where the fastening occurs.",
+    "raw_description": "",
+    "entity_kind": "FIXED_TARGET",
+    "canonical_role_candidates": [
+      "fastener"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "COMBINED_FALLBACK_TEXT",
+        "preferred_roles": [
+          "fastener"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      }
+    ]
+  },
+  "fastening_part": {
+    "raw_role_id": "fastening_part",
+    "raw_function": "The component to be inserted or attached to the workbench.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "fastener"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "fastener"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      }
+    ]
+  },
+  "fastening_tool": {
+    "raw_role_id": "fastening_tool",
+    "raw_function": "The implement used to drive or attach the component.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "driver"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "driver"
+        ],
+        "excluded_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "INSTRUMENT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Place the tool onto the workbench surface.",
+        "capabilities": [
+          "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+        ]
+      }
+    ]
+  },
+  "workbench": {
+    "raw_role_id": "workbench",
+    "raw_function": "The flat surface where the work is performed and where the tool is left.",
+    "raw_description": "",
+    "entity_kind": "REGION",
+    "canonical_role_candidates": [
+      "MAIN_WORKBENCH_ZONE"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "driver"
+        ],
+        "excluded_roles": [
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "INSTRUMENT",
+          "SUPPORT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "SUPPORT_CONTEXT"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Place the tool onto the workbench surface.",
+        "capabilities": [
+          "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+        ]
+      }
+    ]
+  }
+}

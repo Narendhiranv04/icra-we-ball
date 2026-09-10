@@ -1,0 +1,36 @@
+[
+  {
+    "code": "ROBOT_SELF_CANDIDATE_REMOVED",
+    "role_id": "tool",
+    "candidate": {
+      "label": "robot_gripper",
+      "visual_description": "Yellow gripper mechanism held by the robot arm in image 3."
+    }
+  },
+  {
+    "code": "HIDDEN_CONTENT_REASON_SANITIZED",
+    "region_id": "blue_cabinet"
+  },
+  {
+    "code": "HIDDEN_CONTENT_REASON_SANITIZED",
+    "region_id": "left_drawer"
+  },
+  {
+    "code": "HIDDEN_CONTENT_REASON_SANITIZED",
+    "region_id": "right_drawer"
+  },
+  {
+    "code": "INSPECTION_ORDER_NORMALIZED",
+    "raw": [
+      "blue_cabinet",
+      "left_drawer",
+      "right_drawer",
+      "workbench_surface"
+    ],
+    "normalized": [
+      "blue_cabinet",
+      "left_drawer",
+      "right_drawer"
+    ]
+  }
+]

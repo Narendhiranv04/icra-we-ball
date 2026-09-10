@@ -1,0 +1,82 @@
+[
+  {
+    "element_kind": "operation",
+    "raw_id": "op_refreshment_setup",
+    "disposition": "PRIMITIVE_CAPABILITY",
+    "canonical_representation": [
+      "SUPPORT_DRINKWARE"
+    ],
+    "provenance": "FM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "operation",
+    "raw_id": "op_remote_relocation",
+    "disposition": "PRIMITIVE_CAPABILITY",
+    "canonical_representation": [
+      "SUPPORT_ENTERTAINMENT_CONTROL"
+    ],
+    "provenance": "FM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "refreshment_item",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "CUP_SAUCER_SET",
+      "PERSONAL_CUP_SAUCER_REGION",
+      "REMOTE",
+      "SEATING_PAIR",
+      "SEATING_POSITION",
+      "SHARED_REMOTE_REGION",
+      "staging_tray"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "remote_control",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "REMOTE"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "side_table",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "PERSONAL_CUP_SAUCER_REGION"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "coffee_table",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "SHARED_REMOTE_REGION"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "relation",
+    "raw_id": "refreshment_placement",
+    "disposition": "GROUNDED_TASK_RELATION",
+    "canonical_representation": "placed_on",
+    "provenance": "FM_EXPLICIT_RELATION",
+    "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "relation",
+    "raw_id": "remote_placement",
+    "disposition": "GROUNDED_TASK_RELATION",
+    "canonical_representation": "placed_on",
+    "provenance": "FM_EXPLICIT_RELATION",
+    "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+  }
+]

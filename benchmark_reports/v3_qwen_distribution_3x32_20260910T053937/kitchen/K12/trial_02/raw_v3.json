@@ -1,0 +1,314 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare coffee and soup for two people on the table.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "coffee_cup",
+        "entity_kind": "OBJECT",
+        "function": "Container for coffee beverage",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mug",
+          "cup",
+          "glass"
+        ],
+        "required_properties": [
+          "holds liquid",
+          "drinking vessel"
+        ]
+      },
+      {
+        "id": "soup_bowl",
+        "entity_kind": "OBJECT",
+        "function": "Container for soup",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bowl",
+          "dish",
+          "bowl"
+        ],
+        "required_properties": [
+          "holds food",
+          "serving vessel"
+        ]
+      },
+      {
+        "id": "eating_utensil",
+        "entity_kind": "OBJECT",
+        "function": "Tool for eating soup",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "fork",
+          "ladle"
+        ],
+        "required_properties": [
+          "edible tool",
+          "grasping handle"
+        ]
+      },
+      {
+        "id": "stirrer",
+        "entity_kind": "OBJECT",
+        "function": "Tool for mixing coffee",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "stick",
+          "rod"
+        ],
+        "required_properties": [
+          "mixing tool"
+        ]
+      },
+      {
+        "id": "coffee_source",
+        "entity_kind": "OBJECT",
+        "function": "Source of coffee liquid",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "pot",
+          "bag",
+          "bean"
+        ],
+        "required_properties": [
+          "contains coffee"
+        ]
+      },
+      {
+        "id": "water_source",
+        "entity_kind": "OBJECT",
+        "function": "Source of water liquid",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "jug",
+          "tap",
+          "bottle",
+          "pitcher"
+        ],
+        "required_properties": [
+          "contains water"
+        ]
+      },
+      {
+        "id": "soup_liquid",
+        "entity_kind": "OBJECT",
+        "function": "Food substance to be eaten",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "soup",
+          "broth",
+          "stew"
+        ],
+        "required_properties": [
+          "liquid food"
+        ]
+      },
+      {
+        "id": "table",
+        "entity_kind": "REGION",
+        "function": "Surface for placement",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "counter"
+        ],
+        "required_properties": [
+          "flat surface",
+          "stable"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "coffee_mixture",
+        "relation": "filled_with",
+        "participant_roles": [
+          "coffee_cup",
+          "coffee_source",
+          "water_source"
+        ],
+        "required": true
+      },
+      {
+        "id": "soup_content",
+        "relation": "filled_with",
+        "participant_roles": [
+          "soup_bowl",
+          "soup_liquid"
+        ],
+        "required": true
+      },
+      {
+        "id": "utensil_assignment",
+        "relation": "paired_with",
+        "participant_roles": [
+          "soup_bowl",
+          "eating_utensil"
+        ],
+        "required": true
+      },
+      {
+        "id": "coffee_placement",
+        "relation": "placed_on",
+        "participant_roles": [
+          "coffee_cup",
+          "table"
+        ],
+        "required": true
+      },
+      {
+        "id": "soup_placement",
+        "relation": "placed_on",
+        "participant_roles": [
+          "soup_bowl",
+          "table"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "pour_coffee",
+        "operation": "pour",
+        "participant_roles": [
+          "coffee_source",
+          "coffee_cup"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "pour_water",
+        "operation": "pour",
+        "participant_roles": [
+          "water_source",
+          "coffee_cup"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "stir_coffee",
+        "operation": "stir",
+        "participant_roles": [
+          "stirrer",
+          "coffee_cup"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "fill_soup",
+        "operation": "pour",
+        "participant_roles": [
+          "soup_liquid",
+          "soup_bowl"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "place_utensil",
+        "operation": "place",
+        "participant_roles": [
+          "eating_utensil",
+          "soup_bowl"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "place_coffee",
+        "operation": "place",
+        "participant_roles": [
+          "coffee_cup",
+          "table"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "place_soup",
+        "operation": "place",
+        "participant_roles": [
+          "soup_bowl",
+          "table"
+        ],
+        "operation_count": 2
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "coffee_cup": [
+        {
+          "label": "beige_cup",
+          "visual_description": "Small beige cylindrical cup on left side of table"
+        }
+      ],
+      "soup_bowl": [
+        {
+          "label": "red_bowl",
+          "visual_description": "Bowl containing red liquid on table center"
+        }
+      ],
+      "coffee_source": [
+        {
+          "label": "teapot",
+          "visual_description": "Silver teapot on table center"
+        }
+      ],
+      "table": [
+        {
+          "label": "table",
+          "visual_description": "White rectangular table with wooden legs"
+        }
+      ],
+      "brown_box": [
+        {
+          "label": "brown_box",
+          "visual_description": "Brown rectangular box on table right"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "grey_cabinet_1",
+        "label": "grey_cabinet_left",
+        "visual_description": "Grey floating cabinet on left wall",
+        "reason": "Closed storage structure, likely contains dry goods or utensils"
+      },
+      {
+        "id": "grey_cabinet_2",
+        "label": "grey_cabinet_right",
+        "visual_description": "Grey floating cabinet on right wall",
+        "reason": "Closed storage structure, likely contains dry goods or utensils"
+      },
+      {
+        "id": "table_drawer_1",
+        "label": "table_drawer_left",
+        "visual_description": "Drawer under table left side",
+        "reason": "Closed storage structure, likely contains cutlery"
+      },
+      {
+        "id": "table_drawer_2",
+        "label": "table_drawer_right",
+        "visual_description": "Drawer under table right side",
+        "reason": "Closed storage structure, likely contains cutlery"
+      }
+    ],
+    "inspection_order": [
+      "grey_cabinet_1",
+      "grey_cabinet_2",
+      "table_drawer_1",
+      "table_drawer_2"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

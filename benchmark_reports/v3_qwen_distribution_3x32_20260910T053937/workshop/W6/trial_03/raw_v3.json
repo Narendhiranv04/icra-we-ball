@@ -1,0 +1,217 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Locate compatible fastening parts and tools from storage, perform the fastening on the workpiece, and return the tool to the workbench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_component",
+        "entity_kind": "OBJECT",
+        "function": "The part needed to secure the workpiece.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bolt",
+          "nut",
+          "screw",
+          "clip"
+        ],
+        "required_properties": [
+          "compatible_with_workpiece"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "The implement used to apply the fastener.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "hammer"
+        ],
+        "required_properties": [
+          "capable_of_driving_fastening_component"
+        ]
+      },
+      {
+        "id": "workpiece",
+        "entity_kind": "OBJECT",
+        "function": "The item being secured.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "device",
+          "panel",
+          "assembly"
+        ],
+        "required_properties": [
+          "has_fastening_hole"
+        ]
+      },
+      {
+        "id": "storage_area",
+        "entity_kind": "REGION",
+        "function": "Location where tools and components might be stored.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "drawer",
+          "cabinet"
+        ],
+        "required_properties": [
+          "contains_items",
+          "can_be_opened"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "REGION",
+        "function": "Surface where the task is performed and tools are returned.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "bench"
+        ],
+        "required_properties": [
+          "stable_surface"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "rel_001",
+        "relation": "compatible_with",
+        "participant_roles": [
+          "fastening_component",
+          "workpiece"
+        ],
+        "required": true
+      },
+      {
+        "id": "rel_002",
+        "relation": "operates_on",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_component",
+          "workpiece"
+        ],
+        "required": true
+      },
+      {
+        "id": "rel_003",
+        "relation": "placed_on",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_001",
+        "operation": "search_and_identify",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_component",
+          "storage_area"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "op_002",
+        "operation": "perform_fastening",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_component",
+          "workpiece"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "op_003",
+        "operation": "return_equipment",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastening_component": [
+        {
+          "label": "yellow_blocks_on_tray",
+          "visual_description": "Yellow rectangular objects on the black tray on the workbench surface"
+        }
+      ],
+      "fastening_tool": [
+        {
+          "label": "yellow_block_in_gripper",
+          "visual_description": "Yellow block held in the robot arm's gripper (Image 3)"
+        },
+        {
+          "label": "items_on_tray",
+          "visual_description": "Items on the black tray which could be tools"
+        }
+      ],
+      "workpiece": [
+        {
+          "label": "black_tray",
+          "visual_description": "Black tray sitting on the workbench"
+        }
+      ],
+      "storage_area": [
+        {
+          "label": "left_drawer",
+          "visual_description": "Blue drawer under the left side of the workbench"
+        },
+        {
+          "label": "right_drawer",
+          "visual_description": "Blue drawer under the right side of the workbench"
+        },
+        {
+          "label": "tall_cabinet",
+          "visual_description": "Tall blue cabinet standing against the wall behind the workbench"
+        }
+      ],
+      "workbench": [
+        {
+          "label": "wooden_table",
+          "visual_description": "Wooden workbench surface"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "left_drawer",
+        "label": "Left Drawer",
+        "visual_description": "Closed blue drawer with white handle",
+        "reason": "Closed storage structure potentially containing tools or components."
+      },
+      {
+        "id": "right_drawer",
+        "label": "Right Drawer",
+        "visual_description": "Closed blue drawer with white handle",
+        "reason": "Closed storage structure potentially containing tools or components."
+      },
+      {
+        "id": "tall_cabinet",
+        "label": "Tall Cabinet",
+        "visual_description": "Closed blue cabinet with door and handle",
+        "reason": "Closed storage structure potentially containing tools or components."
+      }
+    ],
+    "inspection_order": [
+      "left_drawer",
+      "right_drawer",
+      "tall_cabinet"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

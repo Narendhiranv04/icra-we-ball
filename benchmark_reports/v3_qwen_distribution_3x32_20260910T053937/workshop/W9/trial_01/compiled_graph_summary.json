@@ -1,0 +1,16 @@
+{
+  "role_count": 3,
+  "roles": [
+    "driver",
+    "fastener",
+    "repair_target"
+  ],
+  "relation_count": 0,
+  "operation_group_count": 0,
+  "required_contract_complete": false,
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Sanitizer reported semantic incompleteness",
+    "Unresolved required relations: [{'raw_subject': 'fastening_component', 'raw_phrase': 'fits_into', 'raw_object': 'fastening_target', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'fits_into' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH_TARGET'] or task causal semantics\"}]"
+  ]
+}

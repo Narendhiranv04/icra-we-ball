@@ -1,0 +1,224 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Identify a fastening component from storage, use a tool to fasten it to the workbench, and return the tool.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_component",
+        "entity_kind": "OBJECT",
+        "function": "Physical item used to secure the target location.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "glue",
+          "clip"
+        ],
+        "required_properties": [
+          "compatible with target surface"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "Implement used to apply the fastening component.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "hammer",
+          "glue gun"
+        ],
+        "required_properties": [
+          "suitable for the component"
+        ]
+      },
+      {
+        "id": "target_location",
+        "entity_kind": "REGION",
+        "function": "Specific area on the workbench requiring fastening.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "workbench surface",
+          "yellow block base"
+        ],
+        "required_properties": [
+          "accessible"
+        ]
+      },
+      {
+        "id": "storage_container",
+        "entity_kind": "OBJECT",
+        "function": "Closed structure containing the fastening component or tool.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cabinet",
+          "drawer"
+        ],
+        "required_properties": [
+          "openable"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "REGION",
+        "function": "Surface where the fastening occurs and tool is returned.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wooden table"
+        ],
+        "required_properties": [
+          "stable"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "suit_for_fastening",
+        "relation": "suit_for",
+        "participant_roles": [
+          "fastening_component",
+          "target_location"
+        ],
+        "required": true
+      },
+      {
+        "id": "operates_on",
+        "relation": "operates_on",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_component"
+        ],
+        "required": true
+      },
+      {
+        "id": "situated_on",
+        "relation": "situated_on",
+        "participant_roles": [
+          "target_location",
+          "workbench"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "search_storage",
+        "operation": "inspect",
+        "participant_roles": [
+          "storage_container",
+          "fastening_component"
+        ],
+        "operation_count": 3
+      },
+      {
+        "id": "apply_fastener",
+        "operation": "fasten",
+        "participant_roles": [
+          "fastening_component",
+          "target_location",
+          "fastening_tool"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "return_tool",
+        "operation": "place",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastening_component": [
+        {
+          "label": "inside blue cabinet",
+          "visual_description": "contents of the blue cabinet"
+        },
+        {
+          "label": "inside left drawer",
+          "visual_description": "contents of the left drawer"
+        },
+        {
+          "label": "inside right drawer",
+          "visual_description": "contents of the right drawer"
+        }
+      ],
+      "fastening_tool": [
+        {
+          "label": "inside blue cabinet",
+          "visual_description": "contents of the blue cabinet"
+        },
+        {
+          "label": "inside left drawer",
+          "visual_description": "contents of the left drawer"
+        },
+        {
+          "label": "inside right drawer",
+          "visual_description": "contents of the right drawer"
+        }
+      ],
+      "target_location": [
+        {
+          "label": "surface near yellow block",
+          "visual_description": "wooden table surface around the yellow object"
+        }
+      ],
+      "storage_container": [
+        {
+          "label": "blue cabinet",
+          "visual_description": "tall blue cabinet on table"
+        },
+        {
+          "label": "left drawer",
+          "visual_description": "left drawer under table"
+        },
+        {
+          "label": "right drawer",
+          "visual_description": "right drawer under table"
+        }
+      ],
+      "workbench": [
+        {
+          "label": "wooden table",
+          "visual_description": "table with drawers"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet",
+        "label": "blue cabinet",
+        "visual_description": "closed door with handle",
+        "reason": "closed storage structure, likely contains tools"
+      },
+      {
+        "id": "left_drawer",
+        "label": "left drawer",
+        "visual_description": "closed drawer with handle",
+        "reason": "closed storage structure, likely contains tools"
+      },
+      {
+        "id": "right_drawer",
+        "label": "right drawer",
+        "visual_description": "closed drawer with handle",
+        "reason": "closed storage structure, likely contains tools"
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet",
+      "left_drawer",
+      "right_drawer"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

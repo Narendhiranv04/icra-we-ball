@@ -1,0 +1,713 @@
+{
+  "total_trials": 96,
+  "overall": {
+    "strict_v3_valid": 82,
+    "task_valid": 20,
+    "graph_compiled": 1,
+    "grounding_reached": 0,
+    "complete_grounding": 0,
+    "astar_reached": 0,
+    "success": 0
+  },
+  "per_domain": {
+    "kitchen": {
+      "strict_v3_valid": 33,
+      "task_valid": 5,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "trials": 36,
+      "outcome_categories": {
+        "TASK_SPECIFICATION_FAILURE": 36
+      }
+    },
+    "living_room": {
+      "strict_v3_valid": 23,
+      "task_valid": 2,
+      "graph_compiled": 1,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "trials": 30,
+      "outcome_categories": {
+        "TASK_SPECIFICATION_FAILURE": 28,
+        "GRAPH_COMPILATION_FAILURE": 2
+      }
+    },
+    "workshop": {
+      "strict_v3_valid": 26,
+      "task_valid": 13,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "trials": 30,
+      "outcome_categories": {
+        "TASK_SPECIFICATION_FAILURE": 22,
+        "GRAPH_COMPILATION_FAILURE": 7,
+        "null": 1
+      }
+    }
+  },
+  "outcome_categories": {
+    "TASK_SPECIFICATION_FAILURE": 86,
+    "GRAPH_COMPILATION_FAILURE": 9,
+    "null": 1
+  },
+  "per_variant": {
+    "K1": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "K2": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 1,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "K3": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 1,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "K4": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "K5": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "K6": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "K7": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 1,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "K8": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "K9": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 1,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "K10": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "K11": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 1,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "K12": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "L1": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "L2": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "L3": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 1,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "L4": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "L5": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 1,
+      "graph_compiled": 1,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "L6": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "L7": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "L8": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 1,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "L9": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 1,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "L10": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "W1": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 1,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ]
+    },
+    "W2": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 1,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        null,
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "W3": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 1,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "W4": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 1,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "W5": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 1,
+      "task_valid": 1,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "W6": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 2,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "W7": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 1,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    },
+    "W8": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ]
+    },
+    "W9": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 2,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ]
+    },
+    "W10": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 0,
+      "graph_compiled": 0,
+      "grounding_reached": 0,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ]
+    }
+  },
+  "consistency_histogram": {
+    "strict_v3_valid": {
+      "3": 21,
+      "2": 8,
+      "1": 3
+    },
+    "task_valid": {
+      "0": 16,
+      "1": 13,
+      "2": 2,
+      "3": 1
+    },
+    "graph_compiled": {
+      "0": 31,
+      "1": 1
+    },
+    "grounding_reached": {
+      "0": 32
+    },
+    "complete_grounding": {
+      "0": 32
+    },
+    "astar_reached": {
+      "0": 32
+    },
+    "success": {
+      "0": 32
+    }
+  },
+  "error_codes": {
+    "FM_INTERNAL_RELATION_PARTICIPANT_CONTRADICTION": 34,
+    "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS": 28,
+    "NO_PARSEABLE_FM_CONTENT": 5,
+    "DUPLICATE_RELATION_PARTICIPANT": 4,
+    "UNDECLARED_PARTICIPANT": 3,
+    "MAIN_WORKBENCH_ZONE": 2,
+    "INSERTABLE_IN": 1,
+    "DUPLICATE_OPERATION_PARTICIPANT": 1,
+    "MalformedVLMSpecificationError": 1
+  },
+  "raw_semantic_patterns": {
+    "claims_hidden_contents": 32,
+    "operation_phrased_as_sentence": 25,
+    "relation_phrased_as_sentence": 23,
+    "wrong_binding_policy_shared_with_multiple_instances": 20,
+    "incidental_current_state_relation": 17,
+    "reusable_with_multiple_instances": 12,
+    "non_physical_directive_operation": 12,
+    "composite_operation": 5,
+    "guidance_references_undeclared_role": 5,
+    "operation_references_undeclared_role": 4,
+    "duplicate_relation_participant": 4,
+    "inspection_order_mismatch": 3,
+    "duplicate_operation_participant": 2,
+    "relation_references_undeclared_role": 1,
+    "current_state_leakage_in_role_function": 1
+  },
+  "raw_semantic_patterns_by_domain": {
+    "kitchen": {
+      "claims_hidden_contents": 14,
+      "wrong_binding_policy_shared_with_multiple_instances": 13,
+      "reusable_with_multiple_instances": 10,
+      "incidental_current_state_relation": 7,
+      "operation_phrased_as_sentence": 6,
+      "relation_phrased_as_sentence": 5,
+      "composite_operation": 2,
+      "guidance_references_undeclared_role": 2,
+      "operation_references_undeclared_role": 1,
+      "inspection_order_mismatch": 1,
+      "duplicate_operation_participant": 1
+    },
+    "living_room": {
+      "wrong_binding_policy_shared_with_multiple_instances": 6,
+      "operation_phrased_as_sentence": 5,
+      "claims_hidden_contents": 4,
+      "relation_phrased_as_sentence": 4,
+      "incidental_current_state_relation": 3,
+      "duplicate_relation_participant": 3,
+      "guidance_references_undeclared_role": 2,
+      "reusable_with_multiple_instances": 1,
+      "duplicate_operation_participant": 1,
+      "inspection_order_mismatch": 1
+    },
+    "workshop": {
+      "claims_hidden_contents": 14,
+      "relation_phrased_as_sentence": 14,
+      "operation_phrased_as_sentence": 14,
+      "non_physical_directive_operation": 12,
+      "incidental_current_state_relation": 7,
+      "operation_references_undeclared_role": 3,
+      "composite_operation": 3,
+      "wrong_binding_policy_shared_with_multiple_instances": 1,
+      "relation_references_undeclared_role": 1,
+      "guidance_references_undeclared_role": 1,
+      "reusable_with_multiple_instances": 1,
+      "inspection_order_mismatch": 1,
+      "current_state_leakage_in_role_function": 1,
+      "duplicate_relation_participant": 1
+    }
+  },
+  "within_domain_role_count_divergence": {
+    "kitchen": {
+      "role_count_distribution": {
+        "7": 7,
+        "8": 18,
+        "9": 8,
+        "11": 1,
+        "12": 1
+      },
+      "min": 7,
+      "max": 12,
+      "mean": 8.23
+    },
+    "living_room": {
+      "role_count_distribution": {
+        "3": 4,
+        "4": 13,
+        "5": 7,
+        "6": 2
+      },
+      "min": 3,
+      "max": 6,
+      "mean": 4.27
+    },
+    "workshop": {
+      "role_count_distribution": {
+        "1": 1,
+        "3": 1,
+        "4": 12,
+        "5": 13,
+        "6": 2,
+        "7": 1
+      },
+      "min": 1,
+      "max": 7,
+      "mean": 4.53
+    }
+  }
+}

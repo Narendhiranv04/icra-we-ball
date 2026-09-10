@@ -1,0 +1,577 @@
+{
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_summary": "Arrange refreshment items on side tables near chairs and move remote to coffee table.",
+  "functional_roles": [
+    {
+      "id": "refreshment_item",
+      "entity_kind": "OBJECT",
+      "function": "Holds food or drink for consumption",
+      "required_count": 2,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "cup",
+        "plate",
+        "glass"
+      ],
+      "required_properties": [
+        "holds liquid",
+        "holds solid"
+      ],
+      "visible_candidates": [
+        {
+          "label": "red cup",
+          "visual_description": "Red cup on central coffee table"
+        },
+        {
+          "label": "white plate",
+          "visual_description": "White plate on left side table"
+        },
+        {
+          "label": "red cup",
+          "visual_description": "Red cup on large desk in foreground"
+        },
+        {
+          "label": "white plate",
+          "visual_description": "White plate on large desk in foreground"
+        }
+      ]
+    },
+    {
+      "id": "remote_control",
+      "entity_kind": "OBJECT",
+      "function": "Controls the television",
+      "required_count": 1,
+      "binding_policy": "SHARED",
+      "candidate_categories": [
+        "remote",
+        "controller"
+      ],
+      "required_properties": [
+        "buttons",
+        "transmitter"
+      ],
+      "visible_candidates": [
+        {
+          "label": "black remote",
+          "visual_description": "Black remote on large desk in foreground"
+        }
+      ]
+    },
+    {
+      "id": "side_table",
+      "entity_kind": "OBJECT",
+      "function": "Provides a surface for refreshments near seating",
+      "required_count": 2,
+      "binding_policy": "SHARED",
+      "candidate_categories": [
+        "end table",
+        "side table"
+      ],
+      "required_properties": [
+        "flat top",
+        "stable"
+      ],
+      "visible_candidates": [
+        {
+          "label": "left side table",
+          "visual_description": "Wooden table next to left chair"
+        },
+        {
+          "label": "right side table",
+          "visual_description": "Wooden table next to right chair"
+        }
+      ]
+    },
+    {
+      "id": "coffee_table",
+      "entity_kind": "OBJECT",
+      "function": "Central surface accessible to multiple seats",
+      "required_count": 1,
+      "binding_policy": "SHARED",
+      "candidate_categories": [
+        "coffee table",
+        "low table"
+      ],
+      "required_properties": [
+        "flat top",
+        "central location"
+      ],
+      "visible_candidates": [
+        {
+          "label": "central coffee table",
+          "visual_description": "Table with greenish top in center of seating area"
+        }
+      ]
+    }
+  ],
+  "functional_relations": [
+    {
+      "id": "refreshment_placement",
+      "subject_role": "side_table",
+      "relation": "placed_on",
+      "object_role": "refreshment_item",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": [
+        {
+          "category": "PHYSICAL_VERIFIER",
+          "object_role": "refreshment_item",
+          "predicate": "FITS_SET_ON",
+          "subject_role": "side_table"
+        },
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "refreshment_item",
+          "predicate": "PLACED_ON",
+          "subject_role": "side_table"
+        },
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "side_table",
+          "predicate": "PLACED_ON",
+          "subject_role": "refreshment_item"
+        }
+      ]
+    },
+    {
+      "id": "remote_placement",
+      "subject_role": "coffee_table",
+      "relation": "placed_on",
+      "object_role": "remote_control",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": [
+        {
+          "category": "PHYSICAL_VERIFIER",
+          "object_role": "remote_control",
+          "predicate": "FITS_ON",
+          "subject_role": "coffee_table"
+        },
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "coffee_table",
+          "predicate": "PLACED_ON",
+          "subject_role": "remote_control"
+        }
+      ]
+    }
+  ],
+  "interaction_groups": [
+    {
+      "id": "op_refreshment_setup",
+      "function": "Place refreshment item on side table",
+      "tool_role": "side_table",
+      "target_role": "refreshment_item",
+      "context_role": null,
+      "required_target_count": 2,
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED",
+      "required_relations": [],
+      "context_relations": [],
+      "v3_slot_assignments": [
+        {
+          "capability_id": "SUPPORT_DRINKWARE",
+          "planner_operation": "SUPPORT_DRINKWARE",
+          "source_role": "side_table",
+          "target_role": "refreshment_item",
+          "anchor_role": null,
+          "source_type": "PERSONAL_CUP_SAUCER_REGION",
+          "target_type": "CUP_SAUCER_SET",
+          "anchor_type": null,
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "v3_participant_roles": [
+        "refreshment_item",
+        "side_table"
+      ],
+      "v3_explicit_participant_roles": [
+        "refreshment_item",
+        "side_table"
+      ],
+      "v3_raw_fm_participant_roles": [
+        "refreshment_item",
+        "side_table"
+      ],
+      "v3_current_state_context_roles": [],
+      "v3_graph_join_relation_id": null,
+      "v3_explicit_context_set_id": null
+    },
+    {
+      "id": "op_remote_relocation",
+      "function": "Place remote control on coffee table",
+      "tool_role": "coffee_table",
+      "target_role": "remote_control",
+      "context_role": null,
+      "required_target_count": 1,
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED",
+      "required_relations": [],
+      "context_relations": [],
+      "v3_slot_assignments": [
+        {
+          "capability_id": "SUPPORT_ENTERTAINMENT_CONTROL",
+          "planner_operation": "SUPPORT_ENTERTAINMENT_CONTROL",
+          "source_role": "coffee_table",
+          "target_role": "remote_control",
+          "anchor_role": null,
+          "source_type": "SHARED_REMOTE_REGION",
+          "target_type": "REMOTE",
+          "anchor_type": null,
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "v3_participant_roles": [
+        "remote_control",
+        "coffee_table"
+      ],
+      "v3_explicit_participant_roles": [
+        "remote_control",
+        "coffee_table"
+      ],
+      "v3_raw_fm_participant_roles": [
+        "remote_control",
+        "coffee_table"
+      ],
+      "v3_current_state_context_roles": [],
+      "v3_graph_join_relation_id": null,
+      "v3_explicit_context_set_id": null
+    }
+  ],
+  "inspectable_regions": [
+    {
+      "id": "large_desk",
+      "label": "Large desk in foreground",
+      "visual_description": "Contains remote and refreshments, likely source for relocation",
+      "reason": "Could be inspected for additional task-relevant candidates."
+    },
+    {
+      "id": "coffee_table",
+      "label": "Central coffee table",
+      "visual_description": "Located between chairs, suitable for remote placement",
+      "reason": "Target location for the remote control."
+    },
+    {
+      "id": "side_tables",
+      "label": "Side tables next to chairs",
+      "visual_description": "Flanking the seating area, suitable for refreshments",
+      "reason": "Target locations for the refreshment items."
+    },
+    {
+      "id": "console_table",
+      "label": "Console table under TV",
+      "visual_description": "Table against the wall under the screen",
+      "reason": "Could be searched for additional remotes or items."
+    }
+  ],
+  "inspection_order": [
+    "large_desk",
+    "coffee_table",
+    "side_tables",
+    "console_table"
+  ],
+  "unsupported_reason": "",
+  "raw_v3_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_item",
+        "entity_kind": "OBJECT",
+        "function": "Holds food or drink for consumption",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "plate",
+          "glass"
+        ],
+        "required_properties": [
+          "holds liquid",
+          "holds solid"
+        ]
+      },
+      {
+        "id": "remote_control",
+        "entity_kind": "OBJECT",
+        "function": "Controls the television",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote",
+          "controller"
+        ],
+        "required_properties": [
+          "buttons",
+          "transmitter"
+        ]
+      },
+      {
+        "id": "side_table",
+        "entity_kind": "OBJECT",
+        "function": "Provides a surface for refreshments near seating",
+        "required_count": 2,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "end table",
+          "side table"
+        ],
+        "required_properties": [
+          "flat top",
+          "stable"
+        ]
+      },
+      {
+        "id": "coffee_table",
+        "entity_kind": "OBJECT",
+        "function": "Central surface accessible to multiple seats",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee table",
+          "low table"
+        ],
+        "required_properties": [
+          "flat top",
+          "central location"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_placement",
+        "relation": "placed_on",
+        "participant_roles": [
+          "refreshment_item",
+          "side_table"
+        ],
+        "required": true
+      },
+      {
+        "id": "remote_placement",
+        "relation": "placed_on",
+        "participant_roles": [
+          "remote_control",
+          "coffee_table"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_refreshment_setup",
+        "operation": "Place refreshment item on side table",
+        "participant_roles": [
+          "refreshment_item",
+          "side_table"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "op_remote_relocation",
+        "operation": "Place remote control on coffee table",
+        "participant_roles": [
+          "remote_control",
+          "coffee_table"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "raw_v3_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_item": [
+        {
+          "label": "red cup",
+          "visual_description": "Red cup on central coffee table"
+        },
+        {
+          "label": "white plate",
+          "visual_description": "White plate on left side table"
+        },
+        {
+          "label": "red cup",
+          "visual_description": "Red cup on large desk in foreground"
+        },
+        {
+          "label": "white plate",
+          "visual_description": "White plate on large desk in foreground"
+        }
+      ],
+      "remote_control": [
+        {
+          "label": "black remote",
+          "visual_description": "Black remote on large desk in foreground"
+        }
+      ],
+      "side_table": [
+        {
+          "label": "left side table",
+          "visual_description": "Wooden table next to left chair"
+        },
+        {
+          "label": "right side table",
+          "visual_description": "Wooden table next to right chair"
+        }
+      ],
+      "coffee_table": [
+        {
+          "label": "central coffee table",
+          "visual_description": "Table with greenish top in center of seating area"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "large_desk",
+        "label": "Large desk in foreground",
+        "visual_description": "Contains remote and refreshments, likely source for relocation",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "coffee_table",
+        "label": "Central coffee table",
+        "visual_description": "Located between chairs, suitable for remote placement",
+        "reason": "Target location for the remote control."
+      },
+      {
+        "id": "side_tables",
+        "label": "Side tables next to chairs",
+        "visual_description": "Flanking the seating area, suitable for refreshments",
+        "reason": "Target locations for the refreshment items."
+      },
+      {
+        "id": "console_table",
+        "label": "Console table under TV",
+        "visual_description": "Table against the wall under the screen",
+        "reason": "Could be searched for additional remotes or items."
+      }
+    ],
+    "inspection_order": [
+      "large_desk",
+      "coffee_table",
+      "side_tables",
+      "console_table"
+    ]
+  },
+  "functional_constraint_interpretation": [],
+  "fm_semantic_accounting": [
+    {
+      "element_kind": "operation",
+      "raw_id": "op_refreshment_setup",
+      "disposition": "PRIMITIVE_CAPABILITY",
+      "canonical_representation": [
+        "SUPPORT_DRINKWARE"
+      ],
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "operation",
+      "raw_id": "op_remote_relocation",
+      "disposition": "PRIMITIVE_CAPABILITY",
+      "canonical_representation": [
+        "SUPPORT_ENTERTAINMENT_CONTROL"
+      ],
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "refreshment_item",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "CUP_SAUCER_SET",
+        "PERSONAL_CUP_SAUCER_REGION",
+        "REMOTE",
+        "SEATING_PAIR",
+        "SEATING_POSITION",
+        "SHARED_REMOTE_REGION",
+        "staging_tray"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "remote_control",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "REMOTE"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "side_table",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "PERSONAL_CUP_SAUCER_REGION"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "coffee_table",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "SHARED_REMOTE_REGION"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "relation",
+      "raw_id": "refreshment_placement",
+      "disposition": "GROUNDED_TASK_RELATION",
+      "canonical_representation": "placed_on",
+      "provenance": "FM_EXPLICIT_RELATION",
+      "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "relation",
+      "raw_id": "remote_placement",
+      "disposition": "GROUNDED_TASK_RELATION",
+      "canonical_representation": "placed_on",
+      "provenance": "FM_EXPLICIT_RELATION",
+      "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+    }
+  ],
+  "current_state_operation_context_roles": [],
+  "current_state_relations": [],
+  "role_operation_consistency_audit": [
+    {
+      "operation_id": "op_refreshment_setup",
+      "raw_operation": "Place refreshment item on side table",
+      "explicit_participant_roles": [
+        "refreshment_item",
+        "side_table"
+      ],
+      "normalized_participant_roles": [
+        "refreshment_item",
+        "side_table"
+      ],
+      "semantic_capability_candidates": [
+        "SUPPORT_DRINKWARE"
+      ],
+      "viable_slot_assignments": 1,
+      "status": "PASS",
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "operation_id": "op_remote_relocation",
+      "raw_operation": "Place remote control on coffee table",
+      "explicit_participant_roles": [
+        "remote_control",
+        "coffee_table"
+      ],
+      "normalized_participant_roles": [
+        "remote_control",
+        "coffee_table"
+      ],
+      "semantic_capability_candidates": [
+        "SUPPORT_ENTERTAINMENT_CONTROL"
+      ],
+      "viable_slot_assignments": 1,
+      "status": "PASS",
+      "provenance": "FM_EXPLICIT_OPERATION"
+    }
+  ]
+}

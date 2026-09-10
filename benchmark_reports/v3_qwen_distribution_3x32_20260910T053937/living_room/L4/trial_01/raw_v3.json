@@ -1,0 +1,128 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Set up two refreshment settings near the seating area and move the remote to a central accessible location.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "To serve as a place for refreshments for one person.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "coffee table",
+          "side table",
+          "desk"
+        ],
+        "required_properties": [
+          "holds refreshments"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "To control the television.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote"
+        ],
+        "required_properties": [
+          "controls TV"
+        ]
+      },
+      {
+        "id": "seating_area",
+        "entity_kind": "REGION",
+        "function": "To serve as the reference point for people watching television.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "chairs with coffee table",
+          "desk with chair"
+        ],
+        "required_properties": [
+          "contains seating for two people"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_setting_nearby_seating",
+        "relation": "Refreshment Setting is nearby the Seating Area.",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating_area"
+        ],
+        "required": true
+      },
+      {
+        "id": "entertainment_control_accessible",
+        "relation": "Entertainment Control is accessible to the Seating Area.",
+        "participant_roles": [
+          "entertainment_control",
+          "seating_area"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "place_refreshment_setting",
+        "operation": "Place Refreshment Setting.",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating_area"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "place_entertainment_control",
+        "operation": "Place Entertainment Control.",
+        "participant_roles": [
+          "entertainment_control",
+          "seating_area"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "coffee table",
+          "visual_description": "Central table with one cup on it."
+        },
+        {
+          "label": "desk",
+          "visual_description": "Large wooden table with plates and a cup on it."
+        },
+        {
+          "label": "side tables",
+          "visual_description": "Small wooden tables next to chairs."
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote",
+          "visual_description": "Black remote control on the desk."
+        }
+      ],
+      "seating_area": [
+        {
+          "label": "chairs with coffee table",
+          "visual_description": "Two armchairs facing the TV with a coffee table between them."
+        },
+        {
+          "label": "desk with chair",
+          "visual_description": "A large desk with a chair next to it."
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

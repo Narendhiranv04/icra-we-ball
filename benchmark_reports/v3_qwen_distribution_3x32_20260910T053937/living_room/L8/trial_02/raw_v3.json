@@ -1,0 +1,165 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare living room for two people with refreshments and accessible entertainment control.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "person",
+        "entity_kind": "OBJECT",
+        "function": "The individual consuming refreshments and watching TV.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "human",
+          "guest"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "A cup or plate with refreshments for one person.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "glass",
+          "plate",
+          "bowl"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "Device to operate the television.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote_control",
+          "hand_controller"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "surface_near_person",
+        "entity_kind": "REGION",
+        "function": "A surface adjacent to a person for placing refreshments.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "side_table",
+          "armrest",
+          "floor_spot"
+        ],
+        "required_properties": [
+          "is_flat",
+          "near_seat"
+        ]
+      },
+      {
+        "id": "central_table",
+        "entity_kind": "REGION",
+        "function": "A central surface accessible to both people for the control.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee_table",
+          "center_table"
+        ],
+        "required_properties": [
+          "is_flat",
+          "between_seats"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_proximity",
+        "relation": "Each refreshment setting is positioned near a person.",
+        "participant_roles": [
+          "refreshment_setting",
+          "person",
+          "surface_near_person"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_location",
+        "relation": "The entertainment control is placed on the central table.",
+        "participant_roles": [
+          "entertainment_control",
+          "central_table"
+        ],
+        "required": true
+      },
+      {
+        "id": "central_access",
+        "relation": "The central table is situated between the two people.",
+        "participant_roles": [
+          "central_table",
+          "person",
+          "person"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "place_refreshments",
+        "operation": "Place refreshment settings onto nearby surfaces.",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface_near_person"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "place_control",
+        "operation": "Place entertainment control onto the central table.",
+        "participant_roles": [
+          "entertainment_control",
+          "central_table"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "person": [],
+      "refreshment_setting": [
+        {
+          "label": "cup_plate_set",
+          "visual_description": "Cups and plates on the desk to the right."
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote_control",
+          "visual_description": "Remote on the desk to the right."
+        }
+      ],
+      "surface_near_person": [
+        {
+          "label": "side_table_right",
+          "visual_description": "Small table next to the right chair."
+        },
+        {
+          "label": "coffee_table",
+          "visual_description": "Central table with tray top."
+        }
+      ],
+      "central_table": [
+        {
+          "label": "coffee_table",
+          "visual_description": "Central table with tray top."
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

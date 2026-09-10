@@ -1,0 +1,179 @@
+[
+  {
+    "element_kind": "operation",
+    "raw_id": "Add_Coffee_Powder",
+    "disposition": "PRIMITIVE_CAPABILITY",
+    "canonical_representation": [
+      "TRANSFER_CONTENT_TO_CONTAINER"
+    ],
+    "provenance": "FM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "operation",
+    "raw_id": "Add_Water",
+    "disposition": "PRIMITIVE_CAPABILITY",
+    "canonical_representation": [
+      "TRANSFER_CONTENT_TO_CONTAINER"
+    ],
+    "provenance": "FM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "operation",
+    "raw_id": "Stir_Coffee",
+    "disposition": "PRIMITIVE_CAPABILITY",
+    "canonical_representation": [
+      "STIR_COFFEE"
+    ],
+    "provenance": "FM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "operation",
+    "raw_id": "Add_Soup_Food",
+    "disposition": "UNRESOLVED_REQUIRED_OPERATION",
+    "canonical_representation": null,
+    "provenance": "FM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "operation",
+    "raw_id": "Place_Eating_Spoon",
+    "disposition": "UNRESOLVED_REQUIRED_OPERATION",
+    "canonical_representation": null,
+    "provenance": "FM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "Coffee_Cup",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "coffee_container"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "Soup_Bowl",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "soup_container"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "Stirring_Spoon",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "coffee_stirrer"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "Eating_Spoon",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "soup_eating_utensil"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "Coffee_Powder",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "coffee_container",
+      "coffee_source",
+      "coffee_stirrer",
+      "countertop",
+      "dining_table",
+      "serving_area",
+      "soup_container",
+      "soup_eating_utensil",
+      "water_source"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "Water",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "coffee_container",
+      "coffee_source",
+      "coffee_stirrer",
+      "countertop",
+      "dining_table",
+      "serving_area",
+      "soup_container",
+      "soup_eating_utensil",
+      "water_source"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "Soup_Food",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "coffee_container",
+      "coffee_source",
+      "coffee_stirrer",
+      "countertop",
+      "dining_table",
+      "serving_area",
+      "soup_container",
+      "soup_eating_utensil",
+      "water_source"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "Preparation_Surface",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "countertop"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "OBSERVATION_ONLY"
+  },
+  {
+    "element_kind": "relation",
+    "raw_id": "Coffee_Assembly",
+    "disposition": "GROUNDED_TASK_RELATION",
+    "canonical_representation": "Contains",
+    "provenance": "FM_EXPLICIT_RELATION",
+    "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "relation",
+    "raw_id": "Soup_Assembly",
+    "disposition": "GROUNDED_TASK_RELATION",
+    "canonical_representation": "Contains",
+    "provenance": "FM_EXPLICIT_RELATION",
+    "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "relation",
+    "raw_id": "Stirring_Tool_Association",
+    "disposition": "GROUNDED_TASK_RELATION",
+    "canonical_representation": "Used_For",
+    "provenance": "FM_EXPLICIT_RELATION",
+    "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "relation",
+    "raw_id": "Eating_Tool_Association",
+    "disposition": "GROUNDED_TASK_RELATION",
+    "canonical_representation": "Served_With",
+    "provenance": "FM_EXPLICIT_RELATION",
+    "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+  }
+]

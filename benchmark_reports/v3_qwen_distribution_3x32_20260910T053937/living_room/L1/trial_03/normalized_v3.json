@@ -1,0 +1,149 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare living room for two people with refreshment settings and accessible entertainment control.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "A prepared arrangement of items for consumption, including a drink and plate.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "table_setting",
+          "snack_tray",
+          "high_top_table_setup"
+        ],
+        "required_properties": [
+          "has_drink_vessel",
+          "has_plate",
+          "is_stable_surface"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "A device used to operate the television.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote_control",
+          "media_controller"
+        ],
+        "required_properties": [
+          "has_power_button",
+          "is_portable"
+        ]
+      },
+      {
+        "id": "seating_area",
+        "entity_kind": "REGION",
+        "function": "The area where the people will sit.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "chair_group",
+          "sofa_section"
+        ],
+        "required_properties": [
+          "is_seatable"
+        ]
+      },
+      {
+        "id": "television",
+        "entity_kind": "FIXED_TARGET",
+        "function": "The screen to be watched.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "tv_screen",
+          "monitor"
+        ],
+        "required_properties": [
+          "is_display_device"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "setting_proximity",
+        "relation": "is_near",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating_area"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_accessibility",
+        "relation": "is_accessible_to",
+        "participant_roles": [
+          "entertainment_control",
+          "seating_area"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "setup_refreshments",
+        "operation": "place",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating_area"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "relocate_control",
+        "operation": "move",
+        "participant_roles": [
+          "entertainment_control",
+          "seating_area"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "current_desk_setup",
+          "visual_description": "A wooden desk in the foreground with plates and cups on it."
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote_on_desk",
+          "visual_description": "A black remote control resting on the foreground desk."
+        }
+      ],
+      "seating_area": [
+        {
+          "label": "chair_group",
+          "visual_description": "Two armchairs facing the TV."
+        }
+      ],
+      "television": [
+        {
+          "label": "wall_mounted_tv",
+          "visual_description": "A flat screen TV mounted on the back wall."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "foreground_desk",
+        "label": "Foreground Desk / Console",
+        "visual_description": "Large wooden table in the foreground with plates/cups.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "foreground_desk"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

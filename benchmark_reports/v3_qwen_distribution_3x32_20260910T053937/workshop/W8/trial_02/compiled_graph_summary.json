@@ -1,0 +1,16 @@
+{
+  "role_count": 3,
+  "roles": [
+    "driver",
+    "fastener",
+    "repair_target"
+  ],
+  "relation_count": 3,
+  "operation_group_count": 1,
+  "required_contract_complete": false,
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'storage', 'entity_kind': 'FIXED_TARGET', 'function': 'Enclosed areas containing tools and fasteners.', 'required_count': 2, 'binding_policy': 'DISTINCT', 'candidate_categories': ['drawer', 'cabinet'], 'required_properties': ['enclosed', 'openable'], 'visible_candidates': [{'label': 'blue cabinet', 'visual_description': 'A tall blue cabinet standing behind the workbench, appearing closed.'}, {'label': 'drawers', 'visual_description': 'Two blue drawers underneath the workbench, appearing closed.'}], 'description': ''}, 'collision_with': 'tool'}]",
+    "Unresolved required relations: [{'raw_subject': 'fastener', 'raw_phrase': 'The fastener must physically suit the workpiece.', 'raw_object': 'workpiece', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'The fastener must physically suit the workpiece.' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH_TARGET'] or task causal semantics\"}, {'raw_subject': 'tool', 'raw_phrase': 'The tool is used to apply the fastener to the workpiece.', 'raw_object': 'fastener', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'The tool is used to apply the fastener to the workpiece.' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics\"}, {'raw_subject': 'tool', 'raw_phrase': 'The tool is used to apply the fastener to the workpiece.', 'raw_object': 'workpiece', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'The tool is used to apply the fastener to the workpiece.' provides no semantic evidence for valid predicates ['REACHES_TARGET'] or task causal semantics\"}, {'raw_subject': 'fastener', 'raw_phrase': 'The tool is used to apply the fastener to the workpiece.', 'raw_object': 'workpiece', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'The tool is used to apply the fastener to the workpiece.' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH_TARGET'] or task causal semantics\"}]"
+  ]
+}

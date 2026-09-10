@@ -1,0 +1,19 @@
+{
+  "role_count": 6,
+  "roles": [
+    "coffee_container",
+    "coffee_source",
+    "coffee_stirrer",
+    "soup_container",
+    "soup_eating_utensil",
+    "water_source"
+  ],
+  "relation_count": 0,
+  "operation_group_count": 2,
+  "required_contract_complete": false,
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Sanitizer reported semantic incompleteness",
+    "Unresolved required relations: [{'raw_subject': 'coffee_cup', 'raw_phrase': 'prepared_from', 'raw_object': 'coffee_ingredient', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'prepared_from' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'coffee_cup', 'raw_phrase': 'prepared_from', 'raw_object': 'water_source', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'prepared_from' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'coffee_ingredient', 'raw_phrase': 'prepared_from', 'raw_object': 'water_source', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'prepared_from' provides no semantic evidence for valid predicates [] or task causal semantics\"}]"
+  ]
+}

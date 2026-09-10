@@ -1,0 +1,177 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Find fastening parts and tools, perform the fastening on the desk, and put tools back on the desk.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastener_component",
+        "entity_kind": "OBJECT",
+        "function": "Provides the material connection between parts.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut",
+          "clip"
+        ],
+        "required_properties": [
+          "fits target hole"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "Applies force to secure the fastener.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "pliers"
+        ],
+        "required_properties": [
+          "drives fastener"
+        ]
+      },
+      {
+        "id": "workpiece_target",
+        "entity_kind": "FIXED_TARGET",
+        "function": "The location or object receiving the fastener.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "panel",
+          "fixture",
+          "assembly"
+        ],
+        "required_properties": [
+          "has mounting point"
+        ]
+      },
+      {
+        "id": "desk_surface",
+        "entity_kind": "REGION",
+        "function": "Flat surface where equipment is placed.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table top",
+          "workbench"
+        ],
+        "required_properties": [
+          "horizontal surface"
+        ]
+      },
+      {
+        "id": "reusable_equipment",
+        "entity_kind": "OBJECT",
+        "function": "Tool used for the task, to be left behind.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "tool",
+          "device"
+        ],
+        "required_properties": [
+          "manipulatable"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "fits_into",
+        "relation": "The fastener component must fit into the workpiece target.",
+        "participant_roles": [
+          "fastener_component",
+          "workpiece_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "secures",
+        "relation": "The fastening tool acts on the fastener component to secure it to the workpiece target.",
+        "participant_roles": [
+          "fastening_tool",
+          "fastener_component",
+          "workpiece_target"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "identify_components",
+        "operation": "Search for and select the fastener and tool.",
+        "participant_roles": [
+          "fastener_component",
+          "fastening_tool"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "complete_fastening",
+        "operation": "Drive the fastener into the target using the tool.",
+        "participant_roles": [
+          "fastening_tool",
+          "fastener_component",
+          "workpiece_target"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "place_equipment",
+        "operation": "Place the used tool onto the desk surface.",
+        "participant_roles": [
+          "reusable_equipment",
+          "desk_surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastener_component": [
+        {
+          "label": "Yellow strip on black tray",
+          "visual_description": "Yellow rectangular object on a black tray on the desk."
+        }
+      ],
+      "fastening_tool": [],
+      "workpiece_target": [
+        {
+          "label": "Black tray with yellow strip",
+          "visual_description": "Black rectangular tray sitting on the wooden desk."
+        }
+      ],
+      "desk_surface": [
+        {
+          "label": "Wooden table top",
+          "visual_description": "Light brown wooden surface with legs."
+        }
+      ],
+      "reusable_equipment": []
+    },
+    "inspectable_regions": [
+      {
+        "id": "cabinet",
+        "label": "Closed blue cabinet",
+        "visual_description": "Tall blue cabinet with a handle standing next to the monitor.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "drawers",
+        "label": "Under-desk drawers",
+        "visual_description": "Two blue drawers with white handles located beneath the desk.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "cabinet",
+      "drawers"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

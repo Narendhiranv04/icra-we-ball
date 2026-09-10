@@ -1,0 +1,211 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Identify fastening components, perform fastening, and place tool on workbench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_part",
+        "entity_kind": "OBJECT",
+        "function": "The object that needs to be secured to the workbench.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "yellow block",
+          "metal plate",
+          "wooden piece"
+        ],
+        "required_properties": [
+          "compatible with fastening_method"
+        ]
+      },
+      {
+        "id": "attachment_target",
+        "entity_kind": "REGION",
+        "function": "The specific location on the workbench where the part is fastened.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table surface",
+          "marked spot"
+        ],
+        "required_properties": [
+          "stable",
+          "suitable for attachment"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "Equipment used to perform the fastening action.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "glue gun",
+          "clamp",
+          "hammer"
+        ],
+        "required_properties": [
+          "capable of securing fastening_part"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "FIXED_TARGET",
+        "function": "The support surface where the tool is left and the work is done.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "desk",
+          "table",
+          "workstation"
+        ],
+        "required_properties": [
+          "flat surface",
+          "supportive"
+        ]
+      },
+      {
+        "id": "storage_container",
+        "entity_kind": "REGION",
+        "function": "A closed space where components or tools might be hidden.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "drawer",
+          "cabinet",
+          "box"
+        ],
+        "required_properties": [
+          "enclosed",
+          "searchable"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "is_attached_to",
+        "relation": "The fastening_part must be secured to the attachment_target.",
+        "participant_roles": [
+          "fastening_part",
+          "attachment_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "uses",
+        "relation": "The fastening_tool is applied to join the fastening_part and attachment_target.",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_part",
+          "attachment_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "rests_on",
+        "relation": "The fastening_tool is placed on the workbench after use.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "identify_components",
+        "operation": "Locate and identify the compatible fastening_part and fastening_tool.",
+        "participant_roles": [
+          "fastening_part",
+          "fastening_tool",
+          "storage_container"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "perform_fastening",
+        "operation": "Secure the fastening_part to the attachment_target using the fastening_tool.",
+        "participant_roles": [
+          "fastening_part",
+          "attachment_target",
+          "fastening_tool"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "place_tool",
+        "operation": "Leave the fastening_tool on the workbench.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastening_part": [
+        {
+          "label": "yellow block on black tray",
+          "visual_description": "Yellow rectangular object on a black base on the table."
+        }
+      ],
+      "attachment_target": [
+        {
+          "label": "wooden table surface",
+          "visual_description": "The top surface of the wooden table."
+        }
+      ],
+      "fastening_tool": [],
+      "workbench": [
+        {
+          "label": "wooden table",
+          "visual_description": "The entire table structure including legs and surface."
+        }
+      ],
+      "storage_container": [
+        {
+          "label": "blue cabinet",
+          "visual_description": "Tall blue closed cabinet on the right side of the table."
+        },
+        {
+          "label": "left drawer",
+          "visual_description": "Blue drawer under the left side of the table."
+        },
+        {
+          "label": "right drawer",
+          "visual_description": "Blue drawer under the right side of the table."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet",
+        "label": "blue cabinet",
+        "visual_description": "Tall blue closed cabinet on the right side of the table.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "left_drawer",
+        "label": "left drawer",
+        "visual_description": "Blue drawer under the left side of the table.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "right_drawer",
+        "label": "right drawer",
+        "visual_description": "Blue drawer under the right side of the table.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet",
+      "left_drawer",
+      "right_drawer"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

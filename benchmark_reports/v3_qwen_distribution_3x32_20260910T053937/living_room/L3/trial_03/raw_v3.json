@@ -1,0 +1,196 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Set up refreshment stations for two people and position the remote control.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_item",
+        "entity_kind": "OBJECT",
+        "function": "A drink or food item provided to a person.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "glass",
+          "plate",
+          "snack"
+        ],
+        "required_properties": [
+          "consumable"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "A device to operate the television.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote",
+          "controller"
+        ],
+        "required_properties": [
+          "electronic",
+          "button"
+        ]
+      },
+      {
+        "id": "surface",
+        "entity_kind": "REGION",
+        "function": "A flat area to hold refreshment items.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "side_table",
+          "coffee_table",
+          "console_table",
+          "desk"
+        ],
+        "required_properties": [
+          "flat",
+          "stable"
+        ]
+      },
+      {
+        "id": "chair",
+        "entity_kind": "OBJECT",
+        "function": "A seat occupied by a person.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "armchair",
+          "sofa",
+          "chair"
+        ],
+        "required_properties": [
+          "seating"
+        ]
+      },
+      {
+        "id": "television",
+        "entity_kind": "FIXED_TARGET",
+        "function": "The screen being watched.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "tv",
+          "screen"
+        ],
+        "required_properties": [
+          "display"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_on_surface",
+        "relation": "on",
+        "participant_roles": [
+          "refreshment_item",
+          "surface"
+        ],
+        "required": true
+      },
+      {
+        "id": "surface_near_chair",
+        "relation": "near",
+        "participant_roles": [
+          "surface",
+          "chair"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_accessible",
+        "relation": "accessible_to",
+        "participant_roles": [
+          "entertainment_control",
+          "chair"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "setup_refreshment_station",
+        "operation": "place",
+        "participant_roles": [
+          "refreshment_item",
+          "surface"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "position_remote",
+        "operation": "place",
+        "participant_roles": [
+          "entertainment_control",
+          "surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_item": [
+        {
+          "label": "red_cup",
+          "visual_description": "A red mug on the desk"
+        },
+        {
+          "label": "white_plate",
+          "visual_description": "A white plate on the desk"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "black_remote",
+          "visual_description": "A black remote control on the desk"
+        }
+      ],
+      "surface": [
+        {
+          "label": "left_side_table",
+          "visual_description": "Small wooden table next to left chair"
+        },
+        {
+          "label": "right_side_table",
+          "visual_description": "Small wooden table next to right chair"
+        },
+        {
+          "label": "coffee_table",
+          "visual_description": "Rectangular table in center"
+        },
+        {
+          "label": "console_table",
+          "visual_description": "Long table under TV"
+        },
+        {
+          "label": "desk",
+          "visual_description": "Large wooden table in foreground"
+        }
+      ],
+      "chair": [
+        {
+          "label": "left_armchair",
+          "visual_description": "Wooden chair with black cushion"
+        },
+        {
+          "label": "right_armchair",
+          "visual_description": "Wooden chair with black cushion"
+        }
+      ],
+      "television": [
+        {
+          "label": "wall_tv",
+          "visual_description": "Flat screen mounted on wall"
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

@@ -1,0 +1,226 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare living room for two people by placing refreshment settings near seating and ensuring entertainment control accessibility.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "Holds food or drink for consumption",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "plate",
+          "glass",
+          "snack"
+        ],
+        "required_properties": [
+          "stable",
+          "edible_container"
+        ]
+      },
+      {
+        "id": "surface",
+        "entity_kind": "REGION",
+        "function": "Supports refreshment setting",
+        "required_count": 2,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "side_table",
+          "console_table",
+          "coffee_table"
+        ],
+        "required_properties": [
+          "flat",
+          "horizontal"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "Controls television power or channels",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote",
+          "switch",
+          "button_panel"
+        ],
+        "required_properties": [
+          "interactive",
+          "portable"
+        ]
+      },
+      {
+        "id": "television",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Displays video content",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "tv_screen",
+          "monitor"
+        ],
+        "required_properties": [
+          "display_capable"
+        ]
+      },
+      {
+        "id": "seating",
+        "entity_kind": "OBJECT",
+        "function": "Provides place to sit",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "chair",
+          "sofa",
+          "armchair"
+        ],
+        "required_properties": [
+          "supportive",
+          "upright"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "rel_001",
+        "relation": "supported_by",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface"
+        ],
+        "required": true
+      },
+      {
+        "id": "rel_002",
+        "relation": "near",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating"
+        ],
+        "required": true
+      },
+      {
+        "id": "rel_003",
+        "relation": "accessible_to",
+        "participant_roles": [
+          "entertainment_control",
+          "seating"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op_001",
+        "operation": "Place Refreshment Setting on Surface",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "op_002",
+        "operation": "Place Entertainment Control near Seating",
+        "participant_roles": [
+          "entertainment_control",
+          "seating"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "Red cup on coffee table",
+          "visual_description": "Single dark red cup sitting on the central coffee table"
+        },
+        {
+          "label": "Plates and cup on desk table",
+          "visual_description": "Two white plates and a red cup arranged on the wooden desk table"
+        }
+      ],
+      "surface": [
+        {
+          "label": "Coffee table",
+          "visual_description": "Central low table with light green top"
+        },
+        {
+          "label": "Desk table",
+          "visual_description": "Wooden table with decorative legs on the right side"
+        },
+        {
+          "label": "Side tables",
+          "visual_description": "Two small wooden tables flanking the armchairs"
+        },
+        {
+          "label": "Console table",
+          "visual_description": "Long narrow table beneath the television"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "Remote control",
+          "visual_description": "Black rectangular object on the desk table"
+        }
+      ],
+      "seating": [
+        {
+          "label": "Left armchair",
+          "visual_description": "Dark cushioned chair with wooden frame"
+        },
+        {
+          "label": "Right armchair",
+          "visual_description": "Dark cushioned chair with wooden frame"
+        }
+      ],
+      "television": [
+        {
+          "label": "Wall mounted TV",
+          "visual_description": "Large black screen mounted on the back wall"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "region_desk",
+        "label": "Desk Table Interior",
+        "visual_description": "Drawer and shelf space under the desk table",
+        "reason": "Could contain additional plates, cups, or the remote"
+      },
+      {
+        "id": "region_side_tables",
+        "label": "Side Tables Shelves",
+        "visual_description": "Open shelving under the side tables",
+        "reason": "Could hold extra refreshment items or storage"
+      },
+      {
+        "id": "region_console",
+        "label": "Console Table Shelf",
+        "visual_description": "Shelf space under the console table",
+        "reason": "Could hold entertainment equipment or remotes"
+      },
+      {
+        "id": "region_coffee_table",
+        "label": "Coffee Table Underneath",
+        "visual_description": "Open space under the coffee table",
+        "reason": "Could hold additional items or serve as a secondary surface"
+      }
+    ],
+    "inspection_order": [
+      "region_desk",
+      "region_side_tables",
+      "region_console",
+      "region_coffee_table"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

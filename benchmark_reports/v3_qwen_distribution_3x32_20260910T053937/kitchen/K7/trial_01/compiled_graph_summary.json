@@ -1,0 +1,18 @@
+{
+  "role_count": 4,
+  "roles": [
+    "coffee_container",
+    "coffee_source",
+    "coffee_stirrer",
+    "soup_container"
+  ],
+  "relation_count": 0,
+  "operation_group_count": 1,
+  "required_contract_complete": false,
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Sanitizer reported semantic incompleteness",
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'water', 'entity_kind': 'OBJECT', 'function': 'Liquid ingredient for making coffee.', 'required_count': 2, 'binding_policy': 'SHARED', 'candidate_categories': ['water', 'liquid'], 'required_properties': ['fluid'], 'visible_candidates': [], 'description': ''}, 'collision_with': 'coffee_powder'}, {'raw_role': {'id': 'soup', 'entity_kind': 'OBJECT', 'function': 'Food item to be served.', 'required_count': 2, 'binding_policy': 'DISTINCT', 'candidate_categories': ['broth', 'stew', 'liquid_food'], 'required_properties': ['edible', 'hot_or_cold'], 'visible_candidates': [], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}]",
+    "Unresolved required relations: [{'raw_subject': 'coffee_cup', 'raw_phrase': 'requires_and_contains', 'raw_object': 'coffee_powder', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'requires_and_contains' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'coffee_cup', 'raw_phrase': 'requires_and_contains', 'raw_object': 'water', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'coffee_powder', 'raw_phrase': 'requires_and_contains', 'raw_object': 'water', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'soup_bowl', 'raw_phrase': 'contains', 'raw_object': 'soup', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'coffee_cup', 'raw_phrase': 'uses_for_action', 'raw_object': 'spoon', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'uses_for_action' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'soup_bowl', 'raw_phrase': 'uses_for_action', 'raw_object': 'spoon', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'uses_for_action' provides no semantic evidence for valid predicates [] or task causal semantics\"}]"
+  ]
+}

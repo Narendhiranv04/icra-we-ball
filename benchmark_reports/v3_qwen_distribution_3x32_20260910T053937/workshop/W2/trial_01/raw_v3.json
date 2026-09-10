@@ -1,0 +1,178 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Identify and fasten a component at a workbench location, then place the tool on the workbench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_location",
+        "entity_kind": "FIXED_TARGET",
+        "function": "The specific spot on the workbench where the fastening must occur.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "marked spot on desk",
+          "workbench surface"
+        ],
+        "required_properties": [
+          "needs fastening"
+        ]
+      },
+      {
+        "id": "fastening_component",
+        "entity_kind": "OBJECT",
+        "function": "The hardware item needed to secure the workbench location.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut",
+          "washer",
+          "clip"
+        ],
+        "required_properties": [
+          "compatible with fastening location"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "The implement used to drive or secure the component.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "drill",
+          "pliers"
+        ],
+        "required_properties": [
+          "capable of driving fastening component"
+        ]
+      },
+      {
+        "id": "workbench_surface",
+        "entity_kind": "REGION",
+        "function": "The stable area where the tool must be left after use.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wooden desk top"
+        ],
+        "required_properties": [
+          "stable surface"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "component_suits_location",
+        "relation": "fastening_component fits fastening_location",
+        "participant_roles": [
+          "fastening_component",
+          "fastening_location"
+        ],
+        "required": true
+      },
+      {
+        "id": "tool_secures_component",
+        "relation": "fastening_tool secures fastening_component to fastening_location",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_component",
+          "fastening_location"
+        ],
+        "required": true
+      },
+      {
+        "id": "tool_rests_on_surface",
+        "relation": "fastening_tool rests on workbench_surface",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench_surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "identify_component",
+        "operation": "Identify fastening_component compatible with fastening_location",
+        "participant_roles": [
+          "fastening_component",
+          "fastening_location"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "perform_fastening",
+        "operation": "Use fastening_tool to secure fastening_component into fastening_location",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_component",
+          "fastening_location"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "place_tool",
+        "operation": "Place fastening_tool on workbench_surface",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench_surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastening_location": [],
+      "fastening_component": [
+        {
+          "label": "yellow object on black pad",
+          "visual_description": "Small yellow rectangular object on a dark mat on the desk."
+        }
+      ],
+      "fastening_tool": [
+        {
+          "label": "robot arm",
+          "visual_description": "White robotic arm structure present in the scene."
+        }
+      ],
+      "workbench_surface": [
+        {
+          "label": "desk top",
+          "visual_description": "Wooden surface of the desk."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "left_drawer",
+        "label": "Left desk drawer",
+        "visual_description": "Blue drawer with handle on the left side of the desk.",
+        "reason": "Closed storage structure under the desk, likely contains tools or components."
+      },
+      {
+        "id": "right_drawer",
+        "label": "Right desk drawer",
+        "visual_description": "Blue drawer with handle on the right side of the desk.",
+        "reason": "Closed storage structure under the desk, likely contains tools or components."
+      },
+      {
+        "id": "blue_cabinet",
+        "label": "Blue cabinet",
+        "visual_description": "Tall blue cabinet standing behind the desk.",
+        "reason": "Closed storage structure against the wall, likely contains equipment."
+      }
+    ],
+    "inspection_order": [
+      "left_drawer",
+      "right_drawer",
+      "blue_cabinet"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

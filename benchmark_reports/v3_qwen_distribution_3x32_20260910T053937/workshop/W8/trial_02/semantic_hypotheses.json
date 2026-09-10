@@ -1,0 +1,181 @@
+{
+  "workpiece": {
+    "raw_role_id": "workpiece",
+    "raw_function": "The component to be fastened.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "repair_target"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "repair_target"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "FIXED_TARGET_SEMANTICS"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Secure the workpiece using the fastener and tool.",
+        "allowed_anchor_roles": [
+          "repair_target"
+        ]
+      }
+    ]
+  },
+  "fastener": {
+    "raw_role_id": "fastener",
+    "raw_function": "Hardware to secure the workpiece.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "fastener"
+    ],
+    "status": "STRUCTURAL_OVERRIDE_OF_WEAK_FUNCTION_ALIAS",
+    "evidence": [
+      {
+        "source": "ROLE_ID_TEXT",
+        "preferred_roles": [
+          "fastener"
+        ],
+        "excluded_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "driver",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "COMPONENT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Secure the workpiece using the fastener and tool.",
+        "capabilities": [
+          "FASTEN_JOINT"
+        ]
+      },
+      {
+        "source": "JOINT_TYPING",
+        "status": "STRUCTURAL_OVERRIDE_OF_WEAK_FUNCTION_ALIAS"
+      }
+    ]
+  },
+  "tool": {
+    "raw_role_id": "tool",
+    "raw_function": "Implement to drive the fastener.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "driver"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "driver",
+          "fastener"
+        ],
+        "excluded_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "INSTRUMENT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Secure the workpiece using the fastener and tool.",
+        "capabilities": [
+          "FASTEN_JOINT"
+        ]
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Deposit the tool on the workbench.",
+        "capabilities": [
+          "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+        ]
+      }
+    ]
+  },
+  "workbench": {
+    "raw_role_id": "workbench",
+    "raw_function": "Surface where the task occurs and tool is left.",
+    "raw_description": "",
+    "entity_kind": "REGION",
+    "canonical_role_candidates": [
+      "MAIN_WORKBENCH_ZONE"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "driver"
+        ],
+        "excluded_roles": [
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "INSTRUMENT",
+          "SUPPORT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "SUPPORT_CONTEXT"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Deposit the tool on the workbench.",
+        "capabilities": [
+          "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+        ]
+      }
+    ]
+  },
+  "storage": {
+    "raw_role_id": "storage",
+    "raw_function": "Enclosed areas containing tools and fasteners.",
+    "raw_description": "",
+    "entity_kind": "FIXED_TARGET",
+    "canonical_role_candidates": [
+      "driver"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "driver"
+        ],
+        "excluded_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "INSTRUMENT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      }
+    ]
+  }
+}

@@ -1,0 +1,210 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Locate fastening hardware in storage, attach it to a workpiece on the table, and leave the tool on the table.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "workpiece",
+        "entity_kind": "OBJECT",
+        "function": "The item that needs to be fastened.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "yellow assembly part",
+          "rectangular block"
+        ],
+        "required_properties": [
+          "needs fastening"
+        ]
+      },
+      {
+        "id": "fastener",
+        "entity_kind": "OBJECT",
+        "function": "Hardware used to secure the workpiece.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut",
+          "connector"
+        ],
+        "required_properties": [
+          "compatible with workpiece",
+          "threaded or locking mechanism"
+        ]
+      },
+      {
+        "id": "tool",
+        "entity_kind": "OBJECT",
+        "function": "Device used to apply the fastener.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "gripper"
+        ],
+        "required_properties": [
+          "capable of tightening fasteners"
+        ]
+      },
+      {
+        "id": "storage_location",
+        "entity_kind": "REGION",
+        "function": "Closed containers where components may be found.",
+        "required_count": 3,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "blue cabinet",
+          "under-table drawer",
+          "side drawer"
+        ],
+        "required_properties": [
+          "closed container",
+          "potential source of items"
+        ]
+      },
+      {
+        "id": "table_surface",
+        "entity_kind": "REGION",
+        "function": "The flat surface where the tool must be left.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wooden desk top"
+        ],
+        "required_properties": [
+          "flat surface",
+          "workbench area"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "contained_in",
+        "relation": "The fastener is currently located inside one of the storage locations.",
+        "participant_roles": [
+          "fastener",
+          "storage_location"
+        ],
+        "required": true
+      },
+      {
+        "id": "secured_to",
+        "relation": "The fastener must be attached to the workpiece to complete the task.",
+        "participant_roles": [
+          "fastener",
+          "workpiece"
+        ],
+        "required": true
+      },
+      {
+        "id": "placed_on",
+        "relation": "The tool must end up resting on the table surface.",
+        "participant_roles": [
+          "tool",
+          "table_surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "inspect_storage",
+        "operation": "Open and examine the contents of the storage locations to find the fastener.",
+        "participant_roles": [
+          "storage_location",
+          "robot_agent"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "retrieve_fastener",
+        "operation": "Pick up the identified compatible fastener.",
+        "participant_roles": [
+          "fastener",
+          "robot_agent"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "fasten_workpiece",
+        "operation": "Apply the fastener to the workpiece.",
+        "participant_roles": [
+          "fastener",
+          "workpiece",
+          "robot_agent"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "place_tool",
+        "operation": "Place the used tool on the workbench.",
+        "participant_roles": [
+          "tool",
+          "table_surface",
+          "robot_agent"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "workpiece": [
+        {
+          "label": "yellow rectangular object",
+          "visual_description": "A yellow block sitting on the wooden table in the center-left area."
+        }
+      ],
+      "storage_location": [
+        {
+          "label": "blue cabinet",
+          "visual_description": "A tall blue cabinet standing on the right side of the table."
+        },
+        {
+          "label": "left drawer",
+          "visual_description": "A blue drawer underneath the left side of the table."
+        },
+        {
+          "label": "right drawer",
+          "visual_description": "A blue drawer underneath the right side of the table."
+        }
+      ],
+      "table_surface": [
+        {
+          "label": "wooden desk top",
+          "visual_description": "The entire wooden surface of the workbench."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet",
+        "label": "blue cabinet",
+        "visual_description": "Closed blue cabinet with a silver handle on the table.",
+        "reason": "Closed container on the workbench, high probability of containing tools or parts."
+      },
+      {
+        "id": "left_drawer",
+        "label": "left drawer",
+        "visual_description": "Closed blue drawer under the table left leg.",
+        "reason": "Closed drawer, standard storage location for small components."
+      },
+      {
+        "id": "right_drawer",
+        "label": "right drawer",
+        "visual_description": "Closed blue drawer under the table right leg.",
+        "reason": "Closed drawer, standard storage location for small components."
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet",
+      "left_drawer",
+      "right_drawer"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

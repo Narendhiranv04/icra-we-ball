@@ -1,0 +1,266 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Create two servings of coffee and two servings of soup, ensuring specific preparation steps are followed.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "coffee_cup",
+        "entity_kind": "OBJECT",
+        "function": "Container for the prepared coffee drink",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mug",
+          "cup",
+          "glass"
+        ],
+        "required_properties": [
+          "holds_liquid",
+          "handle"
+        ]
+      },
+      {
+        "id": "soup_bowl",
+        "entity_kind": "OBJECT",
+        "function": "Container for the soup",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bowl",
+          "dish"
+        ],
+        "required_properties": [
+          "holds_food",
+          "open_top"
+        ]
+      },
+      {
+        "id": "coffee_ingredient",
+        "entity_kind": "OBJECT",
+        "function": "Substance providing coffee flavor",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "coffee_beans",
+          "coffee_powder",
+          "coffee_jar"
+        ],
+        "required_properties": [
+          "coffee_content"
+        ]
+      },
+      {
+        "id": "water_ingredient",
+        "entity_kind": "OBJECT",
+        "function": "Liquid base for coffee",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "water_bottle",
+          "water_tap",
+          "kettle"
+        ],
+        "required_properties": [
+          "is_water"
+        ]
+      },
+      {
+        "id": "soup_ingredient",
+        "entity_kind": "OBJECT",
+        "function": "Substance to be eaten as soup",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "soup_can",
+          "soup_pot",
+          "food_bag"
+        ],
+        "required_properties": [
+          "is_soup"
+        ]
+      },
+      {
+        "id": "eating_utensil",
+        "entity_kind": "OBJECT",
+        "function": "Tool for consuming soup",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "fork"
+        ],
+        "required_properties": [
+          "edible_tool"
+        ]
+      },
+      {
+        "id": "stirring_utensil",
+        "entity_kind": "OBJECT",
+        "function": "Tool for mixing coffee",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "spoon",
+          "stick"
+        ],
+        "required_properties": [
+          "stirring_capability"
+        ]
+      },
+      {
+        "id": "work_surface",
+        "entity_kind": "REGION",
+        "function": "Flat area for preparation and serving",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "counter"
+        ],
+        "required_properties": [
+          "flat",
+          "stable"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "coffee_preparation",
+        "relation": "prepared_by_combination",
+        "participant_roles": [
+          "coffee_cup",
+          "coffee_ingredient",
+          "water_ingredient"
+        ],
+        "required": true
+      },
+      {
+        "id": "soup_containment",
+        "relation": "filled_with",
+        "participant_roles": [
+          "soup_bowl",
+          "soup_ingredient"
+        ],
+        "required": true
+      },
+      {
+        "id": "utensil_pairing",
+        "relation": "served_with",
+        "participant_roles": [
+          "soup_bowl",
+          "eating_utensil"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "mix_coffee",
+        "operation": "Combine coffee ingredient and water into coffee cup",
+        "participant_roles": [
+          "coffee_cup",
+          "coffee_ingredient",
+          "water_ingredient"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "stir_coffee",
+        "operation": "Stir the coffee mixture",
+        "participant_roles": [
+          "coffee_cup",
+          "stirring_utensil"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "fill_soup",
+        "operation": "Place soup into soup bowls",
+        "participant_roles": [
+          "soup_bowl",
+          "soup_ingredient"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "place_utensil",
+        "operation": "Place eating utensil next to soup bowl",
+        "participant_roles": [
+          "soup_bowl",
+          "eating_utensil"
+        ],
+        "operation_count": 2
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "coffee_cup": [
+        {
+          "label": "blue_mug",
+          "visual_description": "Blue ceramic mug with handle"
+        },
+        {
+          "label": "beige_cup",
+          "visual_description": "Beige ceramic cup"
+        }
+      ],
+      "soup_bowl": [
+        {
+          "label": "blue_bowl",
+          "visual_description": "Blue bowl containing red liquid"
+        },
+        {
+          "label": "red_bowl",
+          "visual_description": "Small bowl with red contents"
+        }
+      ],
+      "eating_utensil": [
+        {
+          "label": "metal_spoon",
+          "visual_description": "Metal spoon lying on table"
+        }
+      ],
+      "work_surface": [
+        {
+          "label": "main_table",
+          "visual_description": "Large rectangular table"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "wall_cabinet_1",
+        "label": "Grey hanging cabinet",
+        "visual_description": "Closed grey box with handle mounted on wall",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "wall_cabinet_2",
+        "label": "Grey hanging cabinet",
+        "visual_description": "Closed grey box with handle mounted on wall",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "cardboard_box",
+        "label": "Brown cardboard box",
+        "visual_description": "Closed brown box sitting on table",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "table_drawer",
+        "label": "Table drawer",
+        "visual_description": "Closed drawer underneath table",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "wall_cabinet_1",
+      "wall_cabinet_2",
+      "cardboard_box",
+      "table_drawer"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

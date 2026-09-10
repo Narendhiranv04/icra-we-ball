@@ -1,0 +1,180 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Provide two refreshment settings on accessible surfaces and place the remote control on a surface accessible to both people.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "A set of items including a drinking vessel and a dish intended for consumption.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "plate",
+          "saucer",
+          "bowl"
+        ],
+        "required_properties": [
+          "contains drinking vessel",
+          "contains dish"
+        ]
+      },
+      {
+        "id": "surface",
+        "entity_kind": "REGION",
+        "function": "A flat area capable of supporting objects.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "side table",
+          "console table"
+        ],
+        "required_properties": [
+          "flat top",
+          "stable"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "A device used to operate the television.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote control",
+          "button panel"
+        ],
+        "required_properties": [
+          "electronic interface",
+          "buttons"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "setting_on_surface",
+        "relation": "is located on",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_on_surface",
+        "relation": "is located on",
+        "participant_roles": [
+          "entertainment_control",
+          "surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "provide_refreshment_settings",
+        "operation": "place",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "place_entertainment_control",
+        "operation": "move_and_place",
+        "participant_roles": [
+          "entertainment_control",
+          "surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "Coffee Table Set",
+          "visual_description": "Dark cup and white plate on the central coffee table"
+        },
+        {
+          "label": "Desk Set",
+          "visual_description": "Red cup and white plate on the large wooden desk"
+        }
+      ],
+      "surface": [
+        {
+          "label": "Coffee Table",
+          "visual_description": "Rectangular table with greenish top in center of seating area"
+        },
+        {
+          "label": "Left Side Table",
+          "visual_description": "Small wooden table next to the left armchair"
+        },
+        {
+          "label": "Right Side Table",
+          "visual_description": "Small wooden table next to the right armchair"
+        },
+        {
+          "label": "Large Desk",
+          "visual_description": "Wooden table on the right side containing the remote"
+        },
+        {
+          "label": "Console Table",
+          "visual_description": "Long table mounted against the wall under the TV"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "Remote Control",
+          "visual_description": "Black rectangular device on the large desk"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "desk",
+        "label": "Large Wooden Desk",
+        "visual_description": "Contains remote, red cup, white plate",
+        "reason": "Source of entertainment control and potentially one refreshment setting; needs inspection for items to move."
+      },
+      {
+        "id": "coffee_table",
+        "label": "Central Coffee Table",
+        "visual_description": "Contains one refreshment setting",
+        "reason": "Central location, likely candidate for accessibility, currently holds one setting."
+      },
+      {
+        "id": "side_table_left",
+        "label": "Left Side Table",
+        "visual_description": "Empty wooden surface",
+        "reason": "Empty surface near seating, ideal candidate for a second refreshment setting."
+      },
+      {
+        "id": "side_table_right",
+        "label": "Right Side Table",
+        "visual_description": "Empty wooden surface",
+        "reason": "Empty surface near seating, ideal candidate for a second refreshment setting."
+      },
+      {
+        "id": "console_table",
+        "label": "Wall Console Table",
+        "visual_description": "Empty wooden surface under TV",
+        "reason": "Empty surface near TV, potential candidate for refreshment setting or control placement."
+      }
+    ],
+    "inspection_order": [
+      "desk",
+      "coffee_table",
+      "side_table_left",
+      "side_table_right",
+      "console_table"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

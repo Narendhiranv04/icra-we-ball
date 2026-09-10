@@ -1,0 +1,259 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Identify components, fasten workpiece, return tool.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "workpiece",
+        "entity_kind": "OBJECT",
+        "function": "The object on the table that needs to be secured.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "assembly",
+          "bar",
+          "module"
+        ],
+        "required_properties": [
+          "needs_fastening",
+          "located_on_workbench"
+        ]
+      },
+      {
+        "id": "fastener",
+        "entity_kind": "OBJECT",
+        "function": "The compatible screw or bolt needed to secure the workpiece.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "clip",
+          "nut",
+          "pin"
+        ],
+        "required_properties": [
+          "fits_workpiece",
+          "connective",
+          "small"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "The implement used to apply the fastener.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "hammer",
+          "wrench",
+          "driver",
+          "punch",
+          "implement"
+        ],
+        "required_properties": [
+          "applies_force",
+          "manipulates_fastener"
+        ]
+      },
+      {
+        "id": "storage_container",
+        "entity_kind": "REGION",
+        "function": "The enclosed spaces where components are stored.",
+        "required_count": 3,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cabinet",
+          "drawer",
+          "case",
+          "compartment",
+          "bin"
+        ],
+        "required_properties": [
+          "enclosed_space",
+          "holds_components",
+          "openable"
+        ]
+      },
+      {
+        "id": "workbench_surface",
+        "entity_kind": "REGION",
+        "function": "The flat surface where work is performed and tools are placed.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "bench",
+          "platform"
+        ],
+        "required_properties": [
+          "flat_surface",
+          "supports_objects",
+          "reusable_placement"
+        ]
+      },
+      {
+        "id": "target_region",
+        "entity_kind": "REGION",
+        "function": "The specific marked spot on the workbench for fastening.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "spot",
+          "location",
+          "position",
+          "zone"
+        ],
+        "required_properties": [
+          "on_workbench_surface",
+          "marked_for_fastening",
+          "specific_point"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "fits",
+        "relation": "The fastener must be compatible with the workpiece to secure it.",
+        "participant_roles": [
+          "fastener",
+          "workpiece"
+        ],
+        "required": true
+      },
+      {
+        "id": "applies_to",
+        "relation": "The fastening tool is used to drive the fastener into the workpiece.",
+        "participant_roles": [
+          "fastening_tool",
+          "fastener",
+          "workpiece"
+        ],
+        "required": true
+      },
+      {
+        "id": "found_in",
+        "relation": "The fastener is located inside the storage container.",
+        "participant_roles": [
+          "fastener",
+          "storage_container"
+        ],
+        "required": true
+      },
+      {
+        "id": "located_at",
+        "relation": "The workpiece is positioned at the target region on the workbench.",
+        "participant_roles": [
+          "workpiece",
+          "target_region"
+        ],
+        "required": true
+      },
+      {
+        "id": "placed_on",
+        "relation": "The reusable equipment is placed on the workbench surface after use.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench_surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "search_storage",
+        "operation": "Inspect the storage containers to locate the compatible fastener.",
+        "participant_roles": [
+          "storage_container",
+          "fastener"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "perform_fastening",
+        "operation": "Use the fastening tool to secure the fastener to the workpiece at the target location.",
+        "participant_roles": [
+          "fastening_tool",
+          "fastener",
+          "workpiece"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "cleanup_tool",
+        "operation": "Return the reusable fastening tool to the workbench surface.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench_surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "workpiece": [
+        {
+          "label": "yellow_black_assembly_on_table",
+          "visual_description": "Yellow bar on black base sitting on the wooden table."
+        }
+      ],
+      "fastener": [],
+      "fastening_tool": [
+        {
+          "label": "robot_arm_gripper_or_held_object",
+          "visual_description": "Yellow blocky object held by the robot arm in the third image."
+        }
+      ],
+      "storage_container": [
+        {
+          "label": "blue_cabinet_behind_table",
+          "visual_description": "Tall blue cabinet with a door."
+        },
+        {
+          "label": "left_blue_drawer_under_table",
+          "visual_description": "Blue drawer on the left side under the table."
+        },
+        {
+          "label": "right_blue_drawer_under_table",
+          "visual_description": "Blue drawer on the right side under the table."
+        }
+      ],
+      "workbench_surface": [
+        {
+          "label": "wooden_table_top",
+          "visual_description": "Wooden surface of the desk."
+        }
+      ],
+      "target_region": []
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet_behind_table",
+        "label": "blue_cabinet_behind_table",
+        "visual_description": "Closed cabinet door, likely contains tools or parts.",
+        "reason": "Closed storage structure, plausible location for fasteners or tools."
+      },
+      {
+        "id": "left_blue_drawer_under_table",
+        "label": "left_blue_drawer_under_table",
+        "visual_description": "Closed drawer front with handle.",
+        "reason": "Closed storage structure, plausible location for fasteners or tools."
+      },
+      {
+        "id": "right_blue_drawer_under_table",
+        "label": "right_blue_drawer_under_table",
+        "visual_description": "Closed drawer front with handle.",
+        "reason": "Closed storage structure, plausible location for fasteners or tools."
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet_behind_table",
+      "left_blue_drawer_under_table",
+      "right_blue_drawer_under_table"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

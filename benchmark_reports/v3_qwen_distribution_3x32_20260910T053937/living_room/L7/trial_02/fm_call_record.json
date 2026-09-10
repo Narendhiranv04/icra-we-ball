@@ -1,0 +1,47 @@
+{
+  "model": "qwen35-9b",
+  "call_kind": "task_requirements",
+  "sanitized_request": {
+    "system_prompt": "You turn one instruction and three photographs of the starting scene into a single functional task contract. Return only JSON matching the schema. Never output an action sequence, a plan, or backend predicate names.\n\nAlmost every task is SUPPORTED. A robot will later open, search and inspect the scene, so nothing about what you cannot currently see bears on this decision. Hidden objects, closed drawers or cabinets, unknown contents, absent people, missing equipment, and anything needing a search are never grounds for UNSUPPORTED. Use UNSUPPORTED only when the task itself cannot be described as roles, relations and operations at all; then leave the contract empty and say why. A supported contract has roles and an empty unsupported_reason.\n\nDo the work in two passes and keep them apart.\n\nPASS 1 - THE TASK, WITHOUT LOOKING. Read the instruction alone. List every physical participant the task needs to be finished, and describe each by the job it does, in plain words. Two participants whose jobs differ are separate roles even when they could be the same kind of object: something that supplies material is not the thing that receives it, something used as an implement is not the thing being worked on, and a support belonging to one individual is not a support deliberately shared. Declare a role once with a count rather than repeating it. A participant the instruction needs stays required even when nothing in the photographs could serve it.\n\nOnly the instruction creates requirements. Do not invent a material, a supply, or a preparation step because a finished result implies one might exist.\n\nPASS 2 - THE SCENE. Now use the three photographs, and only for guidance: what appears to be present, where things currently sit, and which closed or storage structures could be opened and searched. Being visible never makes something required. Where something currently sits is present state, not a goal, unless the instruction asks for it to go there or stay there.\n\nROLES. entity_kind is OBJECT for an independently movable item, REGION for an area or surface that can be a destination, FIXED_TARGET for a fixed reference or interaction point that is not carried around. required_count is how many physical instances the task needs. binding_policy is DISTINCT when separate instances are needed, REUSABLE when one instance can serve repeatedly, SHARED for a single thing deliberately common to several. candidate_categories are ordinary names the thing might go by; required_properties are qualities it must have.\n\nRELATIONS say what must hold for the task to count as done: one thing must suit or fit another, one must depend on another, or things must end up in a particular arrangement. Do not state a relation that merely reports how the scene already looks. When the instruction says both, all, each, between, or a pair, name every declared role the phrase covers instead of inventing one combined role.\n\nOPERATIONS are the physical changes the instruction demands. Give one operation for each distinct change and list only the roles directly taking part in it. Participant order carries no meaning: the runtime decides which one is acted on, which receives, and which is a reference. Do not add an operation to describe something already true. operation_count is how many times the change happens, and is independent of required_count.\n\nPeople who only determine how many portions are needed change counts. They are not roles and not things to be handled, unless the task genuinely requires placing something relative to where someone is.\n\nDo not guess measurements, distances, or coordinates. Write roles, relations and operations as short everyday phrases, not capitalised code-like names.\n\nObservation guidance: list visible candidates under the role ids you declared; list only genuinely closed or storage structures as inspectable regions, saying why each could be worth searching without claiming to know its contents; let inspection_order name every region you declared exactly once and nothing else.",
+    "user_prompt": {
+      "task_instruction": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
+      "request": "Build the task contract from the instruction first, then use the three views only to describe what is present and what could be searched. Declare every required participant, including any that is not currently visible. Give each relation two to four declared roles, naming every member the instruction groups together. Give each operation the declared roles that directly take part. Keep instance counts and operation counts separate. Output only the final JSON."
+    },
+    "schema_name": "functional_specification_v3",
+    "num_images": 3,
+    "image_metadata": [
+      {
+        "path": "/home/naren/RA_iiith/benchmark_reports/v3_qwen_distribution_3x32_20260910T053937/trial_02/living_room/L7/vlm/vlm_inputs/l2_camera_left.png",
+        "mime_type": "image/png",
+        "bytes": 196297,
+        "sha256": "e077a51cce3cfa5fedb9190f38cfdaffcef2fa223aff1c4ef070dc5bd0dfc7c1"
+      },
+      {
+        "path": "/home/naren/RA_iiith/benchmark_reports/v3_qwen_distribution_3x32_20260910T053937/trial_02/living_room/L7/vlm/vlm_inputs/l2_camera_right.png",
+        "mime_type": "image/png",
+        "bytes": 191838,
+        "sha256": "7c6073bbb646789929d10a6d55bf510e24101b229f79e4089764a6a60ae8c7ef"
+      },
+      {
+        "path": "/home/naren/RA_iiith/benchmark_reports/v3_qwen_distribution_3x32_20260910T053937/trial_02/living_room/L7/vlm/vlm_inputs/l2_camera_top.png",
+        "mime_type": "image/png",
+        "bytes": 210310,
+        "sha256": "9ee6dfd802dbff2853f50f1e67ace01f9970e15e0464d6589e4ef1d2ffd0a20d"
+      }
+    ]
+  },
+  "finish_reason": "stop",
+  "usage": {
+    "prompt_tokens": 4521,
+    "total_tokens": 11230,
+    "completion_tokens": 6709,
+    "prompt_tokens_details": null,
+    "completion_tokens_details": {
+      "reasoning_tokens": 5674
+    }
+  },
+  "content_length_chars": 3987,
+  "content_sha256": "cc46b10bfbba802aecd435b1e3cc25e48437c311f43c7272771371d4cfe7517c",
+  "json_parse_success": true,
+  "parse_error": null
+}

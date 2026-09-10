@@ -1,0 +1,185 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Find fastening parts and tool, assemble them on the workbench, and return the tool.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "implements the fastening action",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "pliers"
+        ],
+        "required_properties": [
+          "grasping",
+          "torque_application"
+        ]
+      },
+      {
+        "id": "fastening_part",
+        "entity_kind": "OBJECT",
+        "function": "connects components together",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut",
+          "clip"
+        ],
+        "required_properties": [
+          "threaded",
+          "metal"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "FIXED_TARGET",
+        "function": "provides the surface for assembly",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk"
+        ],
+        "required_properties": [
+          "flat_surface"
+        ]
+      },
+      {
+        "id": "storage_unit",
+        "entity_kind": "REGION",
+        "function": "holds hidden components and tools",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cabinet",
+          "drawer"
+        ],
+        "required_properties": [
+          "enclosed",
+          "openable"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "compatibility",
+        "relation": "compatible_with",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_part"
+        ],
+        "required": true
+      },
+      {
+        "id": "attachment",
+        "relation": "attaches_to",
+        "participant_roles": [
+          "fastening_part",
+          "workbench"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "search_part",
+        "operation": "search_for_component",
+        "participant_roles": [
+          "fastening_part",
+          "storage_unit"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "search_tool",
+        "operation": "search_for_tool",
+        "participant_roles": [
+          "fastening_tool",
+          "storage_unit"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "place_part",
+        "operation": "place_on_surface",
+        "participant_roles": [
+          "fastening_part",
+          "workbench"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "fasten",
+        "operation": "apply_fastening",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_part",
+          "workbench"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "return_tool",
+        "operation": "place_equipment",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "storage_unit": [
+        {
+          "label": "blue cabinet",
+          "visual_description": "Tall blue box with handle behind the table"
+        },
+        {
+          "label": "blue drawers",
+          "visual_description": "Two blue drawers under the wooden table"
+        }
+      ],
+      "workbench": [
+        {
+          "label": "wooden table",
+          "visual_description": "Brown wooden table with a black tray on top"
+        }
+      ],
+      "fastening_part": [
+        {
+          "label": "yellow object",
+          "visual_description": "Yellow blocky item on the black tray"
+        }
+      ],
+      "fastening_tool": []
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet",
+        "label": "blue cabinet",
+        "visual_description": "Tall blue box with handle behind the table",
+        "reason": "Closed storage unit likely containing tools or spare parts."
+      },
+      {
+        "id": "blue_drawers",
+        "label": "blue drawers",
+        "visual_description": "Two blue drawers under the wooden table",
+        "reason": "Closed storage unit likely containing tools or spare parts."
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet",
+      "blue_drawers"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

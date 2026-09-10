@@ -1,0 +1,142 @@
+{
+  "refreshment_item": {
+    "raw_role_id": "refreshment_item",
+    "raw_function": "Holds food or drink for consumption",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "CUP_SAUCER_SET"
+    ],
+    "status": "OPERATION_ASSISTED",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "UNKNOWN",
+        "legacy_mapper_rule": "TYPED_DOMAIN_SEMANTICS"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Place refreshment item on side table",
+        "capabilities": [
+          "SUPPORT_DRINKWARE"
+        ]
+      }
+    ]
+  },
+  "remote_control": {
+    "raw_role_id": "remote_control",
+    "raw_function": "Controls the television",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "REMOTE"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "REMOTE"
+        ],
+        "excluded_roles": [
+          "PERSONAL_CUP_SAUCER_REGION",
+          "SEATING_PAIR",
+          "SEATING_POSITION",
+          "SHARED_REMOTE_REGION",
+          "staging_tray"
+        ],
+        "explicit_families": [
+          "PAYLOAD"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "TYPED_DOMAIN_SEMANTICS"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Place remote control on coffee table",
+        "capabilities": [
+          "SUPPORT_ENTERTAINMENT_CONTROL"
+        ]
+      }
+    ]
+  },
+  "side_table": {
+    "raw_role_id": "side_table",
+    "raw_function": "Provides a surface for refreshments near seating",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "PERSONAL_CUP_SAUCER_REGION"
+    ],
+    "status": "STRUCTURAL_OVERRIDE_OF_WEAK_FUNCTION_ALIAS",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "PERSONAL_CUP_SAUCER_REGION"
+        ],
+        "excluded_roles": [
+          "CUP_SAUCER_SET",
+          "REMOTE",
+          "SEATING_PAIR",
+          "SEATING_POSITION"
+        ],
+        "explicit_families": [
+          "SUPPORT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "FIXED_TARGET_SEMANTICS"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Place refreshment item on side table",
+        "capabilities": [
+          "SUPPORT_DRINKWARE"
+        ]
+      },
+      {
+        "source": "JOINT_TYPING",
+        "status": "STRUCTURAL_OVERRIDE_OF_WEAK_FUNCTION_ALIAS"
+      }
+    ]
+  },
+  "coffee_table": {
+    "raw_role_id": "coffee_table",
+    "raw_function": "Central surface accessible to multiple seats",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "SHARED_REMOTE_REGION"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "SHARED_REMOTE_REGION"
+        ],
+        "excluded_roles": [
+          "CUP_SAUCER_SET",
+          "REMOTE",
+          "SEATING_PAIR",
+          "SEATING_POSITION"
+        ],
+        "explicit_families": [
+          "SUPPORT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "EXPLICIT_SHARED_CONTROL_SUPPORT_SEMANTICS"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Place remote control on coffee table",
+        "capabilities": [
+          "SUPPORT_ENTERTAINMENT_CONTROL"
+        ]
+      }
+    ]
+  }
+}

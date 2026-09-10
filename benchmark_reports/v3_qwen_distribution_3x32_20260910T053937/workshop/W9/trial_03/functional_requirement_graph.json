@@ -1,0 +1,565 @@
+{
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_summary": "Identify components, fasten target, place tool.",
+  "functional_roles": [
+    {
+      "id": "fastening_target",
+      "entity_kind": "OBJECT",
+      "function": "object requiring fastening",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "workpiece",
+        "assembly"
+      ],
+      "required_properties": [
+        "needs_fastening"
+      ],
+      "visible_candidates": [
+        {
+          "label": "yellow object on tray",
+          "visual_description": "yellow block on black mat on table"
+        }
+      ]
+    },
+    {
+      "id": "compatible_components",
+      "entity_kind": "OBJECT",
+      "function": "parts needed for fastening",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "screw",
+        "nut",
+        "bolt",
+        "part"
+      ],
+      "required_properties": [
+        "fits_fastening_target"
+      ],
+      "visible_candidates": [
+        {
+          "label": "yellow objects on tray",
+          "visual_description": "small yellow items on black mat"
+        }
+      ]
+    },
+    {
+      "id": "fastening_tool",
+      "entity_kind": "OBJECT",
+      "function": "implement for fastening",
+      "required_count": 1,
+      "binding_policy": "REUSABLE",
+      "candidate_categories": [
+        "wrench",
+        "screwdriver",
+        "clamp"
+      ],
+      "required_properties": [
+        "applies_force"
+      ],
+      "visible_candidates": []
+    },
+    {
+      "id": "workbench",
+      "entity_kind": "REGION",
+      "function": "surface for placement",
+      "required_count": 1,
+      "binding_policy": "SHARED",
+      "candidate_categories": [
+        "table",
+        "desk"
+      ],
+      "required_properties": [
+        "is_surface"
+      ],
+      "visible_candidates": [
+        {
+          "label": "wooden table",
+          "visual_description": "wooden desk with drawers"
+        }
+      ]
+    }
+  ],
+  "functional_relations": [
+    {
+      "id": "suit_for_fastening",
+      "subject_role": "compatible_components",
+      "relation": "compatible_components suit_for_fastening fastening_target",
+      "object_role": "fastening_target",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": []
+    },
+    {
+      "id": "suit_for_operation",
+      "subject_role": "fastening_tool",
+      "relation": "fastening_tool suit_for_operation fastening_target",
+      "object_role": "fastening_target",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": []
+    },
+    {
+      "id": "ends_up_on",
+      "subject_role": "fastening_tool",
+      "relation": "fastening_tool ends_up_on workbench",
+      "object_role": "workbench",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": [
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "workbench",
+          "predicate": "PLACED_ON",
+          "subject_role": "fastening_tool"
+        }
+      ]
+    }
+  ],
+  "interaction_groups": [
+    {
+      "id": "perform_fastening",
+      "function": "perform_fastening",
+      "tool_role": null,
+      "target_role": null,
+      "context_role": null,
+      "required_target_count": 1,
+      "usage_policy": null,
+      "required_relations": [],
+      "context_relations": [],
+      "v3_slot_assignments": [
+        {
+          "capability_id": "FASTEN_JOINT",
+          "planner_operation": "DRIVE_FASTENER_INTO_TARGET",
+          "source_role": "fastening_tool",
+          "target_role": "fastening_target",
+          "anchor_role": "compatible_components",
+          "source_type": "driver",
+          "target_type": "fastener",
+          "anchor_type": "repair_target",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "capability_id": "FASTEN_JOINT",
+          "planner_operation": "DRIVE_FASTENER_INTO_TARGET",
+          "source_role": "fastening_tool",
+          "target_role": "compatible_components",
+          "anchor_role": "fastening_target",
+          "source_type": "driver",
+          "target_type": "fastener",
+          "anchor_type": "repair_target",
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "v3_participant_roles": [
+        "fastening_tool",
+        "compatible_components",
+        "fastening_target"
+      ],
+      "v3_explicit_participant_roles": [
+        "fastening_tool",
+        "compatible_components",
+        "fastening_target"
+      ],
+      "v3_raw_fm_participant_roles": [
+        "fastening_tool",
+        "compatible_components",
+        "fastening_target"
+      ],
+      "v3_current_state_context_roles": [],
+      "v3_graph_join_relation_id": null,
+      "v3_explicit_context_set_id": null
+    },
+    {
+      "id": "deposit_tool",
+      "function": "deposit_tool",
+      "tool_role": "fastening_tool",
+      "target_role": "workbench",
+      "context_role": null,
+      "required_target_count": 1,
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED",
+      "required_relations": [],
+      "context_relations": [],
+      "v3_slot_assignments": [
+        {
+          "capability_id": "RETURN_REUSABLE_ITEM_TO_SUPPORT",
+          "planner_operation": "PLACE",
+          "source_role": "fastening_tool",
+          "target_role": "workbench",
+          "anchor_role": null,
+          "source_type": "driver",
+          "target_type": "MAIN_WORKBENCH_ZONE",
+          "anchor_type": null,
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "v3_participant_roles": [
+        "fastening_tool",
+        "workbench"
+      ],
+      "v3_explicit_participant_roles": [
+        "fastening_tool",
+        "workbench"
+      ],
+      "v3_raw_fm_participant_roles": [
+        "fastening_tool",
+        "workbench"
+      ],
+      "v3_current_state_context_roles": [],
+      "v3_graph_join_relation_id": null,
+      "v3_explicit_context_set_id": null
+    }
+  ],
+  "inspectable_regions": [
+    {
+      "id": "blue_cabinet",
+      "label": "blue cabinet",
+      "visual_description": "closed cabinet on right",
+      "reason": "closed storage structure potentially holding tools"
+    },
+    {
+      "id": "drawer_left",
+      "label": "left drawer",
+      "visual_description": "closed drawer under table left",
+      "reason": "closed storage structure potentially holding tools"
+    },
+    {
+      "id": "drawer_right",
+      "label": "right drawer",
+      "visual_description": "closed drawer under table right",
+      "reason": "closed storage structure potentially holding tools"
+    }
+  ],
+  "inspection_order": [
+    "blue_cabinet",
+    "drawer_left",
+    "drawer_right"
+  ],
+  "unsupported_reason": "",
+  "raw_v3_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_target",
+        "entity_kind": "OBJECT",
+        "function": "object requiring fastening",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "workpiece",
+          "assembly"
+        ],
+        "required_properties": [
+          "needs_fastening"
+        ]
+      },
+      {
+        "id": "compatible_components",
+        "entity_kind": "OBJECT",
+        "function": "parts needed for fastening",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "nut",
+          "bolt",
+          "part"
+        ],
+        "required_properties": [
+          "fits_fastening_target"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "implement for fastening",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "wrench",
+          "screwdriver",
+          "clamp"
+        ],
+        "required_properties": [
+          "applies_force"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "REGION",
+        "function": "surface for placement",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk"
+        ],
+        "required_properties": [
+          "is_surface"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "suit_for_fastening",
+        "relation": "compatible_components suit_for_fastening fastening_target",
+        "participant_roles": [
+          "compatible_components",
+          "fastening_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "suit_for_operation",
+        "relation": "fastening_tool suit_for_operation fastening_target",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "ends_up_on",
+        "relation": "fastening_tool ends_up_on workbench",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "identify_components",
+        "operation": "identify_components",
+        "participant_roles": [
+          "compatible_components",
+          "fastening_target"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "perform_fastening",
+        "operation": "perform_fastening",
+        "participant_roles": [
+          "fastening_tool",
+          "compatible_components",
+          "fastening_target"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "deposit_tool",
+        "operation": "deposit_tool",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "raw_v3_guidance": {
+    "visible_candidates_per_role": {
+      "fastening_target": [
+        {
+          "label": "yellow object on tray",
+          "visual_description": "yellow block on black mat on table"
+        }
+      ],
+      "compatible_components": [
+        {
+          "label": "yellow objects on tray",
+          "visual_description": "small yellow items on black mat"
+        }
+      ],
+      "fastening_tool": [],
+      "workbench": [
+        {
+          "label": "wooden table",
+          "visual_description": "wooden desk with drawers"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet",
+        "label": "blue cabinet",
+        "visual_description": "closed cabinet on right",
+        "reason": "closed storage structure potentially holding tools"
+      },
+      {
+        "id": "drawer_left",
+        "label": "left drawer",
+        "visual_description": "closed drawer under table left",
+        "reason": "closed storage structure potentially holding tools"
+      },
+      {
+        "id": "drawer_right",
+        "label": "right drawer",
+        "visual_description": "closed drawer under table right",
+        "reason": "closed storage structure potentially holding tools"
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet",
+      "drawer_left",
+      "drawer_right"
+    ]
+  },
+  "functional_constraint_interpretation": [],
+  "fm_semantic_accounting": [
+    {
+      "element_kind": "operation",
+      "raw_id": "identify_components",
+      "disposition": "NON_PHYSICAL_TASK_DIRECTIVE",
+      "canonical_representation": null,
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "operation",
+      "raw_id": "perform_fastening",
+      "disposition": "PRIMITIVE_CAPABILITY",
+      "canonical_representation": [
+        "FASTEN_JOINT"
+      ],
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "operation",
+      "raw_id": "deposit_tool",
+      "disposition": "PRIMITIVE_CAPABILITY",
+      "canonical_representation": [
+        "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+      ],
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "fastening_target",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "MAIN_WORKBENCH_ZONE",
+        "driver",
+        "fastener",
+        "repair_target",
+        "workshop_frame_joint"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "compatible_components",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "MAIN_WORKBENCH_ZONE",
+        "driver",
+        "fastener",
+        "repair_target",
+        "workshop_frame_joint"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "fastening_tool",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "driver"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "workbench",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "relation",
+      "raw_id": "suit_for_fastening",
+      "disposition": "GROUNDED_TASK_RELATION",
+      "canonical_representation": "compatible_components suit_for_fastening fastening_target",
+      "provenance": "FM_EXPLICIT_RELATION",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "relation",
+      "raw_id": "suit_for_operation",
+      "disposition": "GROUNDED_TASK_RELATION",
+      "canonical_representation": "fastening_tool suit_for_operation fastening_target",
+      "provenance": "FM_EXPLICIT_RELATION",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "relation",
+      "raw_id": "ends_up_on",
+      "disposition": "GROUNDED_TASK_RELATION",
+      "canonical_representation": "fastening_tool ends_up_on workbench",
+      "provenance": "FM_EXPLICIT_RELATION",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    }
+  ],
+  "current_state_operation_context_roles": [],
+  "current_state_relations": [],
+  "non_physical_operations": [
+    {
+      "id": "identify_components",
+      "operation": "identify_components",
+      "participant_roles": [
+        "compatible_components",
+        "fastening_target"
+      ],
+      "operation_count": 1,
+      "category": "NON_PHYSICAL_TASK_DIRECTIVE"
+    }
+  ],
+  "role_operation_consistency_audit": [
+    {
+      "operation_id": "perform_fastening",
+      "raw_operation": "perform_fastening",
+      "explicit_participant_roles": [
+        "fastening_tool",
+        "compatible_components",
+        "fastening_target"
+      ],
+      "normalized_participant_roles": [
+        "fastening_tool",
+        "compatible_components",
+        "fastening_target"
+      ],
+      "semantic_capability_candidates": [
+        "FASTEN_JOINT"
+      ],
+      "viable_slot_assignments": 2,
+      "status": "PASS",
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "operation_id": "deposit_tool",
+      "raw_operation": "deposit_tool",
+      "explicit_participant_roles": [
+        "fastening_tool",
+        "workbench"
+      ],
+      "normalized_participant_roles": [
+        "fastening_tool",
+        "workbench"
+      ],
+      "semantic_capability_candidates": [
+        "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+      ],
+      "viable_slot_assignments": 1,
+      "status": "PASS",
+      "provenance": "FM_EXPLICIT_OPERATION"
+    }
+  ]
+}

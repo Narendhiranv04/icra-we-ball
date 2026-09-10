@@ -1,0 +1,17 @@
+{
+  "assignment": null,
+  "candidate_plan": [],
+  "candidate_search_statistics": {},
+  "canonicalization_succeeded": false,
+  "domain": "workshop",
+  "failure_category": "GRAPH_COMPILATION_FAILURE",
+  "failure_reason": "INCOMPLETE_CANONICAL_GRAPH: coherent FM contract could not be fully represented; unresolved=[{'raw_role': {'id': 'component_part', 'entity_kind': 'OBJECT', 'function': 'Physical piece to be attached to the workbench.', 'required_count': 1, 'binding_policy': 'DISTINCT', 'candidate_categories': ['connector', 'screw', 'bracket', 'clip'], 'required_properties': ['compatible with marked location'], 'visible_candidates': [{'label': 'yellow object on tray', 'visual_description': 'A yellow rectangular object resting on a black tray on the workbench.'}], 'description': ''}, 'status': 'UNRESOLVED_SEMANTIC'}, {'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'storage_container', 'entity_kind': 'REGION', 'function': 'Enclosed spaces to search for parts or tools.', 'required_count': 1, 'binding_policy': 'SHARED', 'candidate_categories': ['drawer', 'cabinet', 'compartment'], 'required_properties': ['enclosed space', 'accessible'], 'visible_candidates': [{'label': 'left drawer', 'visual_description': 'A blue drawer with a white handle located under the left side of the table.'}, {'label': 'right drawer', 'visual_description': 'A blue drawer with a white handle located under the right side of the table.'}, {'label': 'tall cabinet', 'visual_description': 'A tall blue cabinet standing behind the right side of the table.'}], 'description': ''}, 'collision_with': 'fastening_tool'}, {'raw_subject': 'component_part', 'raw_phrase': 'The component must fit the marked workbench location.', 'raw_object': 'workbench', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'fastening_tool', 'raw_phrase': 'The tool is required to attach the component.', 'raw_object': 'component_part', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]",
+  "functional_spec_complete": false,
+  "inspected_regions": [],
+  "mode": "vlm",
+  "outcome_category": "GRAPH_COMPILATION_FAILURE",
+  "plan": [],
+  "search_statistics": {},
+  "status": "VLM_SPEC_FAILED",
+  "variant": "W8"
+}

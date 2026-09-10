@@ -1,0 +1,233 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Set up refreshment stations for two viewers near seating and position the remote control centrally.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_set",
+        "entity_kind": "OBJECT",
+        "function": "Provides drink and food for one person",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup and plate",
+          "drinkware and dish"
+        ],
+        "required_properties": [
+          "contains drinking vessel",
+          "contains eating vessel"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "Operates the television",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote control",
+          "switch"
+        ],
+        "required_properties": [
+          "activates television"
+        ]
+      },
+      {
+        "id": "surface",
+        "entity_kind": "REGION",
+        "function": "Supports objects",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "ottoman"
+        ],
+        "required_properties": [
+          "flat top",
+          "stable support"
+        ]
+      },
+      {
+        "id": "television",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Displays video content",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "screen",
+          "display"
+        ],
+        "required_properties": [
+          "emits video content"
+        ]
+      },
+      {
+        "id": "chair",
+        "entity_kind": "OBJECT",
+        "function": "Seat for a viewer",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "armchair",
+          "seat"
+        ],
+        "required_properties": [
+          "for sitting",
+          "facing television"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_on_surface",
+        "relation": "is_supported_by",
+        "participant_roles": [
+          "refreshment_set",
+          "surface"
+        ],
+        "required": true
+      },
+      {
+        "id": "refreshment_near_seating",
+        "relation": "is_near",
+        "participant_roles": [
+          "refreshment_set",
+          "chair"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_on_surface",
+        "relation": "is_supported_by",
+        "participant_roles": [
+          "entertainment_control",
+          "surface"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_accessible_to_seating",
+        "relation": "is_within_reach_of",
+        "participant_roles": [
+          "entertainment_control",
+          "chair"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "arrange_refreshments",
+        "operation": "place",
+        "participant_roles": [
+          "refreshment_set",
+          "surface",
+          "chair"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "position_control",
+        "operation": "move_to",
+        "participant_roles": [
+          "entertainment_control",
+          "surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_set": [
+        {
+          "label": "coffee_table_setting",
+          "visual_description": "Single red cup on coffee table"
+        },
+        {
+          "label": "desk_setting",
+          "visual_description": "Red cup and two white plates on desk"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "desk_remote",
+          "visual_description": "Black remote on desk"
+        }
+      ],
+      "surface": [
+        {
+          "label": "coffee_table",
+          "visual_description": "Central low table"
+        },
+        {
+          "label": "side_table_left",
+          "visual_description": "Small wooden table next to left chair"
+        },
+        {
+          "label": "side_table_right",
+          "visual_description": "Small wooden table next to right chair"
+        },
+        {
+          "label": "desk",
+          "visual_description": "Large wooden desk with drawers"
+        },
+        {
+          "label": "console_table",
+          "visual_description": "Table under television"
+        }
+      ],
+      "television": [
+        {
+          "label": "wall_mounted_screen",
+          "visual_description": "Black screen on back wall"
+        }
+      ],
+      "chair": [
+        {
+          "label": "left_armchair",
+          "visual_description": "Armchair facing TV"
+        },
+        {
+          "label": "right_armchair",
+          "visual_description": "Armchair facing TV"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "desk",
+        "label": "Desk",
+        "visual_description": "Wooden desk with visible drawer handles",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "side_table_left",
+        "label": "Left Side Table",
+        "visual_description": "Small wooden stand with shelves",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "side_table_right",
+        "label": "Right Side Table",
+        "visual_description": "Small wooden stand with shelves",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "console_table",
+        "label": "Console Table",
+        "visual_description": "Table beneath television",
+        "reason": "Common location for media equipment."
+      }
+    ],
+    "inspection_order": [
+      "desk",
+      "side_table_left",
+      "side_table_right",
+      "console_table"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

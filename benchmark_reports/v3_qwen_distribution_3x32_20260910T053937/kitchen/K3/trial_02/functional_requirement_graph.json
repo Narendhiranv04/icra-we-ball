@@ -1,0 +1,1123 @@
+{
+  "schema_version": 3,
+  "status": "SUPPORTED",
+  "task_summary": "Prepare and serve two coffees and two soups with utensils.",
+  "functional_roles": [
+    {
+      "id": "Coffee_Cup",
+      "entity_kind": "OBJECT",
+      "function": "Hold the prepared coffee beverage.",
+      "required_count": 2,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "mug",
+        "cup",
+        "glass"
+      ],
+      "required_properties": [
+        "holds liquid",
+        "drinking vessel"
+      ],
+      "visible_candidates": [
+        {
+          "label": "blue mug",
+          "visual_description": "Blue ceramic mug on table"
+        },
+        {
+          "label": "beige mug",
+          "visual_description": "Beige ceramic cup on table"
+        }
+      ]
+    },
+    {
+      "id": "Soup_Bowl",
+      "entity_kind": "OBJECT",
+      "function": "Hold the prepared soup.",
+      "required_count": 2,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "bowl",
+        "dish"
+      ],
+      "required_properties": [
+        "holds food"
+      ],
+      "visible_candidates": [
+        {
+          "label": "white bowl",
+          "visual_description": "White bowl containing red liquid"
+        }
+      ]
+    },
+    {
+      "id": "Stirring_Spoon",
+      "entity_kind": "OBJECT",
+      "function": "Mix the coffee ingredients.",
+      "required_count": 2,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "spoon",
+        "stick"
+      ],
+      "required_properties": [
+        "fits in cup",
+        "rigid"
+      ],
+      "visible_candidates": [
+        {
+          "label": "silver spoon",
+          "visual_description": "Silver spoon lying flat on table"
+        }
+      ]
+    },
+    {
+      "id": "Eating_Spoon",
+      "entity_kind": "OBJECT",
+      "function": "Eat the soup.",
+      "required_count": 2,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "spoon",
+        "fork"
+      ],
+      "required_properties": [
+        "fits in mouth",
+        "rigid"
+      ],
+      "visible_candidates": [
+        {
+          "label": "silver spoon",
+          "visual_description": "Silver spoon lying flat on table"
+        }
+      ]
+    },
+    {
+      "id": "Coffee_Powder",
+      "entity_kind": "OBJECT",
+      "function": "Provide the coffee flavor.",
+      "required_count": 2,
+      "binding_policy": "REUSABLE",
+      "candidate_categories": [
+        "coffee beans",
+        "instant coffee"
+      ],
+      "required_properties": [
+        "aromatic",
+        "dissolvable"
+      ],
+      "visible_candidates": [
+        {
+          "label": "green canister",
+          "visual_description": "Green cylindrical container on table"
+        }
+      ]
+    },
+    {
+      "id": "Water",
+      "entity_kind": "OBJECT",
+      "function": "Provide the liquid base.",
+      "required_count": 2,
+      "binding_policy": "REUSABLE",
+      "candidate_categories": [
+        "liquid",
+        "tap water"
+      ],
+      "required_properties": [
+        "fluid"
+      ],
+      "visible_candidates": []
+    },
+    {
+      "id": "Soup_Food",
+      "entity_kind": "OBJECT",
+      "function": "Provide the soup substance.",
+      "required_count": 2,
+      "binding_policy": "REUSABLE",
+      "candidate_categories": [
+        "broth",
+        "curry",
+        "stew"
+      ],
+      "required_properties": [
+        "edible",
+        "hot"
+      ],
+      "visible_candidates": [
+        {
+          "label": "red liquid",
+          "visual_description": "Red liquid inside white bowl"
+        }
+      ]
+    },
+    {
+      "id": "Preparation_Surface",
+      "entity_kind": "REGION",
+      "function": "Surface for placing items during prep.",
+      "required_count": 1,
+      "binding_policy": "SHARED",
+      "candidate_categories": [
+        "table",
+        "counter"
+      ],
+      "required_properties": [
+        "flat",
+        "stable"
+      ],
+      "visible_candidates": [
+        {
+          "label": "table top",
+          "visual_description": "Light wood colored table surface"
+        }
+      ]
+    }
+  ],
+  "functional_relations": [
+    {
+      "id": "Coffee_Assembly__Coffee_Cup__Coffee_Powder",
+      "subject_role": "Coffee_Cup",
+      "relation": "Contains",
+      "object_role": "Coffee_Powder",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": [
+        {
+          "category": "PHYSICAL_VERIFIER",
+          "object_role": "Coffee_Cup",
+          "predicate": "INSERTABLE_IN",
+          "subject_role": "Coffee_Powder"
+        },
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "Coffee_Cup",
+          "predicate": "CONTAINS",
+          "subject_role": "Coffee_Powder"
+        },
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "Coffee_Powder",
+          "predicate": "CONTAINS",
+          "subject_role": "Coffee_Cup"
+        }
+      ]
+    },
+    {
+      "id": "Coffee_Assembly__Coffee_Cup__Water",
+      "subject_role": "Coffee_Cup",
+      "relation": "Contains",
+      "object_role": "Water",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": [
+        {
+          "category": "PHYSICAL_VERIFIER",
+          "object_role": "Coffee_Cup",
+          "predicate": "INSERTABLE_IN",
+          "subject_role": "Water"
+        },
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "Coffee_Cup",
+          "predicate": "CONTAINS",
+          "subject_role": "Water"
+        },
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "Water",
+          "predicate": "CONTAINS",
+          "subject_role": "Coffee_Cup"
+        }
+      ]
+    },
+    {
+      "id": "Coffee_Assembly__Coffee_Powder__Water",
+      "subject_role": "Coffee_Powder",
+      "relation": "Contains",
+      "object_role": "Water",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": [
+        {
+          "category": "PHYSICAL_VERIFIER",
+          "object_role": "Coffee_Powder",
+          "predicate": "INSERTABLE_IN",
+          "subject_role": "Water"
+        },
+        {
+          "category": "PHYSICAL_VERIFIER",
+          "object_role": "Water",
+          "predicate": "INSERTABLE_IN",
+          "subject_role": "Coffee_Powder"
+        },
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "Coffee_Powder",
+          "predicate": "CONTAINS",
+          "subject_role": "Water"
+        },
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "Water",
+          "predicate": "CONTAINS",
+          "subject_role": "Coffee_Powder"
+        }
+      ]
+    },
+    {
+      "id": "Soup_Assembly",
+      "subject_role": "Soup_Bowl",
+      "relation": "Contains",
+      "object_role": "Soup_Food",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": [
+        {
+          "category": "PHYSICAL_VERIFIER",
+          "object_role": "Soup_Bowl",
+          "predicate": "INSERTABLE_IN",
+          "subject_role": "Soup_Food"
+        },
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "Soup_Bowl",
+          "predicate": "CONTAINS",
+          "subject_role": "Soup_Food"
+        },
+        {
+          "category": "TASK_EFFECT_SEMANTICS",
+          "object_role": "Soup_Food",
+          "predicate": "CONTAINS",
+          "subject_role": "Soup_Bowl"
+        }
+      ]
+    },
+    {
+      "id": "Stirring_Tool_Association",
+      "subject_role": "Coffee_Cup",
+      "relation": "Used_For",
+      "object_role": "Stirring_Spoon",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": []
+    },
+    {
+      "id": "Eating_Tool_Association",
+      "subject_role": "Eating_Spoon",
+      "relation": "Served_With",
+      "object_role": "Soup_Bowl",
+      "required": true,
+      "unordered_participants": true,
+      "v3_orientation_options": [
+        {
+          "category": "TASK_CAUSAL_SEMANTICS",
+          "object_role": "Soup_Bowl",
+          "predicate": "PAIRED_WITH",
+          "subject_role": "Eating_Spoon"
+        }
+      ]
+    }
+  ],
+  "interaction_groups": [
+    {
+      "id": "Add_Coffee_Powder",
+      "function": "Pour",
+      "tool_role": null,
+      "target_role": null,
+      "context_role": null,
+      "required_target_count": 2,
+      "usage_policy": null,
+      "required_relations": [],
+      "context_relations": [],
+      "v3_slot_assignments": [
+        {
+          "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+          "planner_operation": "POUR",
+          "source_role": "Coffee_Powder",
+          "target_role": "Coffee_Cup",
+          "anchor_role": null,
+          "source_type": "coffee_source",
+          "target_type": "coffee_container",
+          "anchor_type": null,
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+          "planner_operation": "POUR",
+          "source_role": "Coffee_Powder",
+          "target_role": "Coffee_Cup",
+          "anchor_role": null,
+          "source_type": "water_source",
+          "target_type": "coffee_container",
+          "anchor_type": null,
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "v3_participant_roles": [
+        "Coffee_Cup",
+        "Coffee_Powder"
+      ],
+      "v3_explicit_participant_roles": [
+        "Coffee_Cup",
+        "Coffee_Powder"
+      ],
+      "v3_raw_fm_participant_roles": [
+        "Coffee_Cup",
+        "Coffee_Powder"
+      ],
+      "v3_current_state_context_roles": [],
+      "v3_graph_join_relation_id": null,
+      "v3_explicit_context_set_id": null
+    },
+    {
+      "id": "Add_Water",
+      "function": "Pour",
+      "tool_role": null,
+      "target_role": null,
+      "context_role": null,
+      "required_target_count": 2,
+      "usage_policy": null,
+      "required_relations": [],
+      "context_relations": [],
+      "v3_slot_assignments": [
+        {
+          "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+          "planner_operation": "POUR",
+          "source_role": "Water",
+          "target_role": "Coffee_Cup",
+          "anchor_role": null,
+          "source_type": "coffee_source",
+          "target_type": "coffee_container",
+          "anchor_type": null,
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        },
+        {
+          "capability_id": "TRANSFER_CONTENT_TO_CONTAINER",
+          "planner_operation": "POUR",
+          "source_role": "Water",
+          "target_role": "Coffee_Cup",
+          "anchor_role": null,
+          "source_type": "water_source",
+          "target_type": "coffee_container",
+          "anchor_type": null,
+          "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+        }
+      ],
+      "v3_participant_roles": [
+        "Coffee_Cup",
+        "Water"
+      ],
+      "v3_explicit_participant_roles": [
+        "Coffee_Cup",
+        "Water"
+      ],
+      "v3_raw_fm_participant_roles": [
+        "Coffee_Cup",
+        "Water"
+      ],
+      "v3_current_state_context_roles": [],
+      "v3_graph_join_relation_id": null,
+      "v3_explicit_context_set_id": null
+    },
+    {
+      "id": "Stir_Coffee",
+      "function": "Stir",
+      "tool_role": "Stirring_Spoon",
+      "target_role": "Coffee_Cup",
+      "context_role": null,
+      "required_target_count": 2,
+      "usage_policy": "DEDICATED_PER_TARGET",
+      "required_relations": [],
+      "context_relations": [],
+      "v3_slot_assignments": [
+        {
+          "capability_id": "STIR_COFFEE",
+          "planner_operation": "STIR_COFFEE",
+          "source_role": "Stirring_Spoon",
+          "target_role": "Coffee_Cup",
+          "anchor_role": null,
+          "source_type": "coffee_stirrer",
+          "target_type": "coffee_container",
+          "anchor_type": null,
+          "usage_policy": "DEDICATED_PER_TARGET"
+        }
+      ],
+      "v3_participant_roles": [
+        "Coffee_Cup",
+        "Stirring_Spoon"
+      ],
+      "v3_explicit_participant_roles": [
+        "Coffee_Cup",
+        "Stirring_Spoon"
+      ],
+      "v3_raw_fm_participant_roles": [
+        "Coffee_Cup",
+        "Stirring_Spoon"
+      ],
+      "v3_current_state_context_roles": [],
+      "v3_graph_join_relation_id": null,
+      "v3_explicit_context_set_id": null
+    },
+    {
+      "id": "Add_Soup_Food",
+      "function": "Place",
+      "tool_role": null,
+      "target_role": null,
+      "context_role": null,
+      "required_target_count": 2,
+      "usage_policy": null,
+      "required_relations": [],
+      "context_relations": [],
+      "v3_slot_assignments": [],
+      "v3_participant_roles": [
+        "Soup_Bowl",
+        "Soup_Food"
+      ],
+      "v3_explicit_participant_roles": [
+        "Soup_Bowl",
+        "Soup_Food"
+      ],
+      "v3_raw_fm_participant_roles": [
+        "Soup_Bowl",
+        "Soup_Food"
+      ],
+      "v3_current_state_context_roles": [],
+      "v3_graph_join_relation_id": null,
+      "v3_explicit_context_set_id": null
+    },
+    {
+      "id": "Place_Eating_Spoon",
+      "function": "Place",
+      "tool_role": null,
+      "target_role": null,
+      "context_role": null,
+      "required_target_count": 2,
+      "usage_policy": null,
+      "required_relations": [],
+      "context_relations": [],
+      "v3_slot_assignments": [],
+      "v3_participant_roles": [
+        "Soup_Bowl",
+        "Eating_Spoon"
+      ],
+      "v3_explicit_participant_roles": [
+        "Soup_Bowl",
+        "Eating_Spoon"
+      ],
+      "v3_raw_fm_participant_roles": [
+        "Soup_Bowl",
+        "Eating_Spoon"
+      ],
+      "v3_current_state_context_roles": [],
+      "v3_graph_join_relation_id": null,
+      "v3_explicit_context_set_id": null
+    }
+  ],
+  "inspectable_regions": [
+    {
+      "id": "upper_left_cabinet",
+      "label": "upper left wall cabinet",
+      "visual_description": "Grey box mounted on wall",
+      "reason": "Could be inspected for additional task-relevant candidates."
+    },
+    {
+      "id": "upper_right_cabinet",
+      "label": "upper right wall cabinet",
+      "visual_description": "Grey box mounted on wall",
+      "reason": "Could be inspected for additional task-relevant candidates."
+    },
+    {
+      "id": "lower_left_drawer",
+      "label": "lower left table drawer",
+      "visual_description": "Drawer front visible below table",
+      "reason": "Could be inspected for additional task-relevant candidates."
+    },
+    {
+      "id": "lower_right_drawer",
+      "label": "lower right table drawer",
+      "visual_description": "Drawer front visible below table",
+      "reason": "Could be inspected for additional task-relevant candidates."
+    },
+    {
+      "id": "brown_box",
+      "label": "brown cardboard box on table",
+      "visual_description": "Brown rectangular box on table",
+      "reason": "Could be inspected for additional task-relevant candidates."
+    }
+  ],
+  "inspection_order": [
+    "upper_left_cabinet",
+    "upper_right_cabinet",
+    "lower_left_drawer",
+    "lower_right_drawer",
+    "brown_box"
+  ],
+  "unsupported_reason": "",
+  "raw_v3_contract": {
+    "functional_roles": [
+      {
+        "id": "Coffee_Cup",
+        "entity_kind": "OBJECT",
+        "function": "Hold the prepared coffee beverage.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mug",
+          "cup",
+          "glass"
+        ],
+        "required_properties": [
+          "holds liquid",
+          "drinking vessel"
+        ]
+      },
+      {
+        "id": "Soup_Bowl",
+        "entity_kind": "OBJECT",
+        "function": "Hold the prepared soup.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bowl",
+          "dish"
+        ],
+        "required_properties": [
+          "holds food"
+        ]
+      },
+      {
+        "id": "Stirring_Spoon",
+        "entity_kind": "OBJECT",
+        "function": "Mix the coffee ingredients.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "stick"
+        ],
+        "required_properties": [
+          "fits in cup",
+          "rigid"
+        ]
+      },
+      {
+        "id": "Eating_Spoon",
+        "entity_kind": "OBJECT",
+        "function": "Eat the soup.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "fork"
+        ],
+        "required_properties": [
+          "fits in mouth",
+          "rigid"
+        ]
+      },
+      {
+        "id": "Coffee_Powder",
+        "entity_kind": "OBJECT",
+        "function": "Provide the coffee flavor.",
+        "required_count": 2,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "coffee beans",
+          "instant coffee"
+        ],
+        "required_properties": [
+          "aromatic",
+          "dissolvable"
+        ]
+      },
+      {
+        "id": "Water",
+        "entity_kind": "OBJECT",
+        "function": "Provide the liquid base.",
+        "required_count": 2,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "liquid",
+          "tap water"
+        ],
+        "required_properties": [
+          "fluid"
+        ]
+      },
+      {
+        "id": "Soup_Food",
+        "entity_kind": "OBJECT",
+        "function": "Provide the soup substance.",
+        "required_count": 2,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "broth",
+          "curry",
+          "stew"
+        ],
+        "required_properties": [
+          "edible",
+          "hot"
+        ]
+      },
+      {
+        "id": "Preparation_Surface",
+        "entity_kind": "REGION",
+        "function": "Surface for placing items during prep.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "counter"
+        ],
+        "required_properties": [
+          "flat",
+          "stable"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "Coffee_Assembly",
+        "relation": "Contains",
+        "participant_roles": [
+          "Coffee_Cup",
+          "Coffee_Powder",
+          "Water"
+        ],
+        "required": true
+      },
+      {
+        "id": "Soup_Assembly",
+        "relation": "Contains",
+        "participant_roles": [
+          "Soup_Bowl",
+          "Soup_Food"
+        ],
+        "required": true
+      },
+      {
+        "id": "Stirring_Tool_Association",
+        "relation": "Used_For",
+        "participant_roles": [
+          "Coffee_Cup",
+          "Stirring_Spoon"
+        ],
+        "required": true
+      },
+      {
+        "id": "Eating_Tool_Association",
+        "relation": "Served_With",
+        "participant_roles": [
+          "Soup_Bowl",
+          "Eating_Spoon"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "Add_Coffee_Powder",
+        "operation": "Pour",
+        "participant_roles": [
+          "Coffee_Cup",
+          "Coffee_Powder"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "Add_Water",
+        "operation": "Pour",
+        "participant_roles": [
+          "Coffee_Cup",
+          "Water"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "Stir_Coffee",
+        "operation": "Stir",
+        "participant_roles": [
+          "Coffee_Cup",
+          "Stirring_Spoon"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "Add_Soup_Food",
+        "operation": "Place",
+        "participant_roles": [
+          "Soup_Bowl",
+          "Soup_Food"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "Place_Eating_Spoon",
+        "operation": "Place",
+        "participant_roles": [
+          "Soup_Bowl",
+          "Eating_Spoon"
+        ],
+        "operation_count": 2
+      }
+    ]
+  },
+  "raw_v3_guidance": {
+    "visible_candidates_per_role": {
+      "Coffee_Cup": [
+        {
+          "label": "blue mug",
+          "visual_description": "Blue ceramic mug on table"
+        },
+        {
+          "label": "beige mug",
+          "visual_description": "Beige ceramic cup on table"
+        }
+      ],
+      "Soup_Bowl": [
+        {
+          "label": "white bowl",
+          "visual_description": "White bowl containing red liquid"
+        }
+      ],
+      "Stirring_Spoon": [
+        {
+          "label": "silver spoon",
+          "visual_description": "Silver spoon lying flat on table"
+        }
+      ],
+      "Eating_Spoon": [
+        {
+          "label": "silver spoon",
+          "visual_description": "Silver spoon lying flat on table"
+        }
+      ],
+      "Coffee_Powder": [
+        {
+          "label": "green canister",
+          "visual_description": "Green cylindrical container on table"
+        }
+      ],
+      "Soup_Food": [
+        {
+          "label": "red liquid",
+          "visual_description": "Red liquid inside white bowl"
+        }
+      ],
+      "Preparation_Surface": [
+        {
+          "label": "table top",
+          "visual_description": "Light wood colored table surface"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "upper_left_cabinet",
+        "label": "upper left wall cabinet",
+        "visual_description": "Grey box mounted on wall",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "upper_right_cabinet",
+        "label": "upper right wall cabinet",
+        "visual_description": "Grey box mounted on wall",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "lower_left_drawer",
+        "label": "lower left table drawer",
+        "visual_description": "Drawer front visible below table",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "lower_right_drawer",
+        "label": "lower right table drawer",
+        "visual_description": "Drawer front visible below table",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "brown_box",
+        "label": "brown cardboard box on table",
+        "visual_description": "Brown rectangular box on table",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "upper_left_cabinet",
+      "upper_right_cabinet",
+      "lower_left_drawer",
+      "lower_right_drawer",
+      "brown_box"
+    ]
+  },
+  "functional_constraint_interpretation": [],
+  "fm_semantic_accounting": [
+    {
+      "element_kind": "operation",
+      "raw_id": "Add_Coffee_Powder",
+      "disposition": "PRIMITIVE_CAPABILITY",
+      "canonical_representation": [
+        "TRANSFER_CONTENT_TO_CONTAINER"
+      ],
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "operation",
+      "raw_id": "Add_Water",
+      "disposition": "PRIMITIVE_CAPABILITY",
+      "canonical_representation": [
+        "TRANSFER_CONTENT_TO_CONTAINER"
+      ],
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "operation",
+      "raw_id": "Stir_Coffee",
+      "disposition": "PRIMITIVE_CAPABILITY",
+      "canonical_representation": [
+        "STIR_COFFEE"
+      ],
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "operation",
+      "raw_id": "Add_Soup_Food",
+      "disposition": "UNRESOLVED_REQUIRED_OPERATION",
+      "canonical_representation": null,
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "operation",
+      "raw_id": "Place_Eating_Spoon",
+      "disposition": "UNRESOLVED_REQUIRED_OPERATION",
+      "canonical_representation": null,
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "Coffee_Cup",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "coffee_container"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "Soup_Bowl",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "soup_container"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "Stirring_Spoon",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "coffee_stirrer"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "Eating_Spoon",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "soup_eating_utensil"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "Coffee_Powder",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "coffee_container",
+        "coffee_source",
+        "coffee_stirrer",
+        "countertop",
+        "dining_table",
+        "serving_area",
+        "soup_container",
+        "soup_eating_utensil",
+        "water_source"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "Water",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "coffee_container",
+        "coffee_source",
+        "coffee_stirrer",
+        "countertop",
+        "dining_table",
+        "serving_area",
+        "soup_container",
+        "soup_eating_utensil",
+        "water_source"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "Soup_Food",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "coffee_container",
+        "coffee_source",
+        "coffee_stirrer",
+        "countertop",
+        "dining_table",
+        "serving_area",
+        "soup_container",
+        "soup_eating_utensil",
+        "water_source"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+    },
+    {
+      "element_kind": "role",
+      "raw_id": "Preparation_Surface",
+      "disposition": "GROUNDED_TASK_PARTICIPANT",
+      "canonical_representation": [
+        "countertop"
+      ],
+      "provenance": "FM_EXPLICIT_ROLE",
+      "requirement_provenance": "OBSERVATION_ONLY"
+    },
+    {
+      "element_kind": "relation",
+      "raw_id": "Coffee_Assembly",
+      "disposition": "GROUNDED_TASK_RELATION",
+      "canonical_representation": "Contains",
+      "provenance": "FM_EXPLICIT_RELATION",
+      "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "relation",
+      "raw_id": "Soup_Assembly",
+      "disposition": "GROUNDED_TASK_RELATION",
+      "canonical_representation": "Contains",
+      "provenance": "FM_EXPLICIT_RELATION",
+      "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "relation",
+      "raw_id": "Stirring_Tool_Association",
+      "disposition": "GROUNDED_TASK_RELATION",
+      "canonical_representation": "Used_For",
+      "provenance": "FM_EXPLICIT_RELATION",
+      "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+    },
+    {
+      "element_kind": "relation",
+      "raw_id": "Eating_Tool_Association",
+      "disposition": "GROUNDED_TASK_RELATION",
+      "canonical_representation": "Served_With",
+      "provenance": "FM_EXPLICIT_RELATION",
+      "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+    }
+  ],
+  "current_state_operation_context_roles": [],
+  "current_state_relations": [],
+  "role_operation_consistency_audit": [
+    {
+      "operation_id": "Add_Coffee_Powder",
+      "raw_operation": "Pour",
+      "explicit_participant_roles": [
+        "Coffee_Cup",
+        "Coffee_Powder"
+      ],
+      "normalized_participant_roles": [
+        "Coffee_Cup",
+        "Coffee_Powder"
+      ],
+      "semantic_capability_candidates": [
+        "TRANSFER_CONTENT_TO_CONTAINER"
+      ],
+      "viable_slot_assignments": 2,
+      "status": "PASS",
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "operation_id": "Add_Water",
+      "raw_operation": "Pour",
+      "explicit_participant_roles": [
+        "Coffee_Cup",
+        "Water"
+      ],
+      "normalized_participant_roles": [
+        "Coffee_Cup",
+        "Water"
+      ],
+      "semantic_capability_candidates": [
+        "TRANSFER_CONTENT_TO_CONTAINER"
+      ],
+      "viable_slot_assignments": 2,
+      "status": "PASS",
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "operation_id": "Stir_Coffee",
+      "raw_operation": "Stir",
+      "explicit_participant_roles": [
+        "Coffee_Cup",
+        "Stirring_Spoon"
+      ],
+      "normalized_participant_roles": [
+        "Coffee_Cup",
+        "Stirring_Spoon"
+      ],
+      "semantic_capability_candidates": [
+        "STIR_COFFEE"
+      ],
+      "viable_slot_assignments": 1,
+      "status": "PASS",
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "operation_id": "Add_Soup_Food",
+      "raw_operation": "Place",
+      "explicit_participant_roles": [
+        "Soup_Bowl",
+        "Soup_Food"
+      ],
+      "normalized_participant_roles": [
+        "Soup_Bowl",
+        "Soup_Food"
+      ],
+      "semantic_capability_candidates": [],
+      "viable_slot_assignments": 0,
+      "status": "PASS",
+      "provenance": "FM_EXPLICIT_OPERATION"
+    },
+    {
+      "operation_id": "Place_Eating_Spoon",
+      "raw_operation": "Place",
+      "explicit_participant_roles": [
+        "Soup_Bowl",
+        "Eating_Spoon"
+      ],
+      "normalized_participant_roles": [
+        "Soup_Bowl",
+        "Eating_Spoon"
+      ],
+      "semantic_capability_candidates": [],
+      "viable_slot_assignments": 0,
+      "status": "PASS",
+      "provenance": "FM_EXPLICIT_OPERATION"
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Set up two refreshment stations near seating areas and move the remote control to a central accessible spot.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "holds refreshments for a person",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "table",
+          "surface",
+          "tray"
+        ],
+        "required_properties": [
+          "flat_surface",
+          "holds_items"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "controls the television",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote",
+          "controller"
+        ],
+        "required_properties": [
+          "operates_tv"
+        ]
+      },
+      {
+        "id": "television",
+        "entity_kind": "FIXED_TARGET",
+        "function": "displays content for viewing",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "screen",
+          "monitor"
+        ],
+        "required_properties": [
+          "display"
+        ]
+      },
+      {
+        "id": "seating_area",
+        "entity_kind": "REGION",
+        "function": "location where a person sits",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "chair",
+          "sofa",
+          "seat"
+        ],
+        "required_properties": [
+          "for_sitting"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "setting_near_seat",
+        "relation": "is_adjacent_to",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating_area"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_accessible",
+        "relation": "is_within_reach_of",
+        "participant_roles": [
+          "entertainment_control",
+          "seating_area"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "prepare_refreshment_settings",
+        "operation": "arrange_refreshment_setting",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating_area"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "relocate_control",
+        "operation": "move_entertainment_control",
+        "participant_roles": [
+          "entertainment_control",
+          "seating_area"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "coffee_table",
+          "visual_description": "low rectangular table in center"
+        },
+        {
+          "label": "left_side_table",
+          "visual_description": "small wooden table next to left chair"
+        },
+        {
+          "label": "right_side_table",
+          "visual_description": "small wooden table next to right chair"
+        },
+        {
+          "label": "console_table",
+          "visual_description": "long table behind TV"
+        },
+        {
+          "label": "desk",
+          "visual_description": "large wooden table in foreground"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote_control",
+          "visual_description": "black remote on the foreground desk"
+        }
+      ],
+      "television": [
+        {
+          "label": "wall_mounted_tv",
+          "visual_description": "black screen on back wall"
+        }
+      ],
+      "seating_area": [
+        {
+          "label": "black_armchair_left",
+          "visual_description": "armchair on left"
+        },
+        {
+          "label": "black_armchair_right",
+          "visual_description": "armchair on right"
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

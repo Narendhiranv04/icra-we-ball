@@ -1,0 +1,305 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare and serve two coffees and two soups with utensils.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "coffee_cup",
+        "entity_kind": "OBJECT",
+        "function": "Container for coffee",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mug",
+          "cup",
+          "glass"
+        ],
+        "required_properties": [
+          "holds liquid",
+          "drinkable size"
+        ]
+      },
+      {
+        "id": "soup_bowl",
+        "entity_kind": "OBJECT",
+        "function": "Container for soup",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bowl",
+          "dish"
+        ],
+        "required_properties": [
+          "holds food",
+          "heat resistant"
+        ]
+      },
+      {
+        "id": "stirring_utensil",
+        "entity_kind": "OBJECT",
+        "function": "Tool to mix coffee",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "stick"
+        ],
+        "required_properties": [
+          "rigid",
+          "long enough to reach bottom"
+        ]
+      },
+      {
+        "id": "eating_utensil",
+        "entity_kind": "OBJECT",
+        "function": "Tool to eat soup",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "fork"
+        ],
+        "required_properties": [
+          "suitable for soup"
+        ]
+      },
+      {
+        "id": "coffee_ingredient",
+        "entity_kind": "OBJECT",
+        "function": "Solid coffee source",
+        "required_count": 2,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "coffee powder",
+          "coffee granules",
+          "coffee beans"
+        ],
+        "required_properties": [
+          "dissolvable in water",
+          "aromatic"
+        ]
+      },
+      {
+        "id": "water",
+        "entity_kind": "OBJECT",
+        "function": "Liquid source for coffee",
+        "required_count": 2,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "tap water",
+          "bottled water",
+          "kettle contents"
+        ],
+        "required_properties": [
+          "liquid",
+          "drinkable"
+        ]
+      },
+      {
+        "id": "soup_ingredient",
+        "entity_kind": "OBJECT",
+        "function": "Soup food source",
+        "required_count": 2,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "soup",
+          "broth",
+          "can",
+          "jar"
+        ],
+        "required_properties": [
+          "edible",
+          "hot or cold"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "coffee_mixing_relation",
+        "relation": "coffee_cup contains coffee_ingredient and water",
+        "participant_roles": [
+          "coffee_cup",
+          "coffee_ingredient",
+          "water"
+        ],
+        "required": true
+      },
+      {
+        "id": "coffee_stirring_relation",
+        "relation": "stirring_utensil acts on coffee_cup",
+        "participant_roles": [
+          "coffee_cup",
+          "stirring_utensil"
+        ],
+        "required": true
+      },
+      {
+        "id": "soup_containment_relation",
+        "relation": "soup_bowl contains soup_ingredient",
+        "participant_roles": [
+          "soup_bowl",
+          "soup_ingredient"
+        ],
+        "required": true
+      },
+      {
+        "id": "utensil_pairing_relation",
+        "relation": "eating_utensil is placed with soup_bowl",
+        "participant_roles": [
+          "soup_bowl",
+          "eating_utensil"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "mix_coffee_operation",
+        "operation": "Combine coffee_ingredient and water into coffee_cup",
+        "participant_roles": [
+          "coffee_cup",
+          "coffee_ingredient",
+          "water"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "stir_coffee_operation",
+        "operation": "Stir coffee_cup with stirring_utensil",
+        "participant_roles": [
+          "coffee_cup",
+          "stirring_utensil"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "fill_soup_operation",
+        "operation": "Place soup_ingredient into soup_bowl",
+        "participant_roles": [
+          "soup_bowl",
+          "soup_ingredient"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "place_utensil_operation",
+        "operation": "Position eating_utensil next to soup_bowl",
+        "participant_roles": [
+          "soup_bowl",
+          "eating_utensil"
+        ],
+        "operation_count": 2
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "coffee_cup": [
+        {
+          "label": "blue_mug",
+          "visual_description": "Blue cylindrical cup with handle on table surface"
+        },
+        {
+          "label": "beige_mug",
+          "visual_description": "Beige cylindrical cup on table surface"
+        }
+      ],
+      "soup_bowl": [
+        {
+          "label": "blue_bowl",
+          "visual_description": "Blue round bowl on table surface"
+        },
+        {
+          "label": "white_bowl",
+          "visual_description": "White round bowl on table surface"
+        }
+      ],
+      "stirring_utensil": [
+        {
+          "label": "silver_spoon",
+          "visual_description": "Metal spoon lying on table surface"
+        }
+      ],
+      "eating_utensil": [
+        {
+          "label": "silver_spoon",
+          "visual_description": "Metal spoon lying on table surface"
+        }
+      ],
+      "coffee_ingredient": [
+        {
+          "label": "black_canister",
+          "visual_description": "Green and black cylindrical container on table"
+        },
+        {
+          "label": "brown_box",
+          "visual_description": "Brown rectangular box on table"
+        }
+      ],
+      "water": [
+        {
+          "label": "white_teapot",
+          "visual_description": "White teapot on table surface"
+        }
+      ],
+      "soup_ingredient": [
+        {
+          "label": "red_substance_in_small_bowl",
+          "visual_description": "Red contents in small bowl on table"
+        },
+        {
+          "label": "brown_box",
+          "visual_description": "Brown rectangular box on table (potential soup container)"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "wall_cabinet_left",
+        "label": "Left hanging cabinet",
+        "visual_description": "Grey box mounted on wall with handle",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "wall_cabinet_right",
+        "label": "Right hanging cabinet",
+        "visual_description": "Grey box mounted on wall with handle",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "table_drawer_left",
+        "label": "Left table drawer",
+        "visual_description": "Drawer under table with handle",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "table_drawer_right",
+        "label": "Right table drawer",
+        "visual_description": "Drawer under table with handle",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "table_box",
+        "label": "Brown box on table",
+        "visual_description": "Rectangular cardboard box on table surface",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "table_canister",
+        "label": "Green/black canister on table",
+        "visual_description": "Cylindrical container on table surface",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "wall_cabinet_left",
+      "wall_cabinet_right",
+      "table_drawer_left",
+      "table_drawer_right",
+      "table_box",
+      "table_canister"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

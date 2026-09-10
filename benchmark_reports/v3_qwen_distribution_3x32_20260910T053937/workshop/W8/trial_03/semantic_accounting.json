@@ -1,0 +1,91 @@
+[
+  {
+    "element_kind": "operation",
+    "raw_id": "search_for_parts",
+    "disposition": "NON_PHYSICAL_TASK_DIRECTIVE",
+    "canonical_representation": null,
+    "provenance": "FM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "operation",
+    "raw_id": "perform_fastening",
+    "disposition": "UNRESOLVED_REQUIRED_OPERATION",
+    "canonical_representation": null,
+    "provenance": "FM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "operation",
+    "raw_id": "deposit_tool",
+    "disposition": "PRIMITIVE_CAPABILITY",
+    "canonical_representation": [
+      "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+    ],
+    "provenance": "FM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "fastening_target",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "MAIN_WORKBENCH_ZONE",
+      "driver",
+      "fastener",
+      "repair_target",
+      "workshop_frame_joint"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "compatible_component",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "MAIN_WORKBENCH_ZONE",
+      "driver",
+      "fastener",
+      "repair_target",
+      "workshop_frame_joint"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "tool",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "driver"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "storage_container",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "driver"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "workbench_surface",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "MAIN_WORKBENCH_ZONE"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "relation",
+    "raw_id": "attachment_requirement",
+    "disposition": "GROUNDED_TASK_RELATION",
+    "canonical_representation": "compatible_component fits fastening_target",
+    "provenance": "FM_EXPLICIT_RELATION",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  }
+]

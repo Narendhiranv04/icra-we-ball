@@ -1,0 +1,177 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Find fastening parts and tool, fasten at marked spot, put tool on bench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_location",
+        "entity_kind": "FIXED_TARGET",
+        "function": "The specific spot on the workbench that needs to be fastened.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "hole",
+          "slot",
+          "joint"
+        ],
+        "required_properties": [
+          "needs_fastening"
+        ]
+      },
+      {
+        "id": "fastening_component",
+        "entity_kind": "OBJECT",
+        "function": "A screw, bolt, or nut needed to secure the fastening.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut"
+        ],
+        "required_properties": [
+          "compatible",
+          "available"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "The implement (screwdriver, wrench) used to apply the fastening.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "drill"
+        ],
+        "required_properties": [
+          "functional"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "REGION",
+        "function": "The surface where the task occurs and the tool is left.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "bench"
+        ],
+        "required_properties": [
+          "support_surface"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "compatible_with",
+        "relation": "The fastening_component must fit the fastening_location.",
+        "participant_roles": [
+          "fastening_component",
+          "fastening_location"
+        ],
+        "required": true
+      },
+      {
+        "id": "operates_on",
+        "relation": "The fastening_tool acts upon the fastening_location.",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_location"
+        ],
+        "required": true
+      },
+      {
+        "id": "placed_on",
+        "relation": "The fastening_tool ends up on the workbench.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "identify_component",
+        "operation": "Search for and verify the fastening_component.",
+        "participant_roles": [
+          "fastening_component",
+          "fastening_location"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "perform_fastening",
+        "operation": "Use the fastening_tool to fasten the component to the location.",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_component",
+          "fastening_location"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "store_tool",
+        "operation": "Place the fastening_tool on the workbench.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastening_location": [],
+      "fastening_component": [
+        {
+          "label": "yellow_object_on_tray",
+          "visual_description": "Yellow rectangular object on black tray on table."
+        }
+      ],
+      "fastening_tool": [
+        {
+          "label": "robot_arm_gripper",
+          "visual_description": "Robot arm end effector visible in foreground."
+        }
+      ],
+      "workbench": [
+        {
+          "label": "wooden_table",
+          "visual_description": "Wooden table with drawers and cabinet."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet",
+        "label": "Blue cabinet behind table",
+        "visual_description": "Tall blue storage unit with closed door.",
+        "reason": "Closed storage structure likely containing tools or components."
+      },
+      {
+        "id": "under_table_drawers",
+        "label": "Drawers under table",
+        "visual_description": "Two blue drawers under the table surface.",
+        "reason": "Closed storage structures likely containing tools or components."
+      },
+      {
+        "id": "black_tray_on_table",
+        "label": "Black tray on table",
+        "visual_description": "Black tray sitting on the table surface.",
+        "reason": "Open storage surface containing visible objects."
+      }
+    ],
+    "inspection_order": [
+      "black_tray_on_table",
+      "blue_cabinet",
+      "under_table_drawers"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

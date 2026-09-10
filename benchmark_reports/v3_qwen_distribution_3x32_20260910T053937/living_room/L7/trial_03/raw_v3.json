@@ -1,0 +1,199 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Arrange refreshments and a controller for two people in a living room setting.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "person",
+        "entity_kind": "OBJECT",
+        "function": "Beneficiary who consumes refreshments and views television",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "human",
+          "guest"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "Collection of drinkware and plates for one individual",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "plate",
+          "drink",
+          "snack"
+        ],
+        "required_properties": [
+          "holds_refreshment"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "Device used to operate the television",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote",
+          "controller"
+        ],
+        "required_properties": [
+          "controls_television"
+        ]
+      },
+      {
+        "id": "surface",
+        "entity_kind": "REGION",
+        "function": "Flat area supporting objects",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "side_table",
+          "floor"
+        ],
+        "required_properties": [
+          "can_hold_objects"
+        ]
+      },
+      {
+        "id": "television",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Screen displaying content",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "tv",
+          "screen"
+        ],
+        "required_properties": [
+          "displays_video"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_provision",
+        "relation": "Each refreshment_setting must be located nearby a specific person",
+        "participant_roles": [
+          "refreshment_setting",
+          "person"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_accessibility",
+        "relation": "The entertainment_control must be positioned where both people can reach it",
+        "participant_roles": [
+          "entertainment_control",
+          "person",
+          "person"
+        ],
+        "required": true
+      },
+      {
+        "id": "item_placement",
+        "relation": "Refreshment_settings and the entertainment_control must rest on a surface",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface",
+          "entertainment_control",
+          "surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "set_refreshments",
+        "operation": "Place a refreshment_setting on a surface near a person",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface",
+          "person"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "place_controller",
+        "operation": "Move the entertainment_control to a surface accessible to both people",
+        "participant_roles": [
+          "entertainment_control",
+          "surface",
+          "person",
+          "person"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "person": [],
+      "refreshment_setting": [
+        {
+          "label": "cups_and_plates",
+          "visual_description": "White plates and red cups visible on the large console table in the foreground"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote",
+          "visual_description": "Black remote control lying on the large console table"
+        }
+      ],
+      "surface": [
+        {
+          "label": "console_table",
+          "visual_description": "Large wooden table in the foreground holding items"
+        },
+        {
+          "label": "side_tables",
+          "visual_description": "Two smaller tables flanking the armchairs"
+        },
+        {
+          "label": "floor_area",
+          "visual_description": "Empty rug/floor space between furniture"
+        }
+      ],
+      "television": [
+        {
+          "label": "wall_mounted_tv",
+          "visual_description": "Black screen mounted on the back wall"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "console_table",
+        "label": "Console Table",
+        "visual_description": "Foreground table holding current refreshments and remote",
+        "reason": "Holds existing items; may require clearing or rearranging to distribute items to other surfaces."
+      },
+      {
+        "id": "side_tables",
+        "label": "Side Tables",
+        "visual_description": "Empty tables next to chairs",
+        "reason": "Available surfaces suitable for placing individual refreshment settings near seated people."
+      },
+      {
+        "id": "floor_area",
+        "label": "Floor Area",
+        "visual_description": "Open space on the rug",
+        "reason": "Potential alternative surface if tables are insufficient, though less ideal for refreshments."
+      }
+    ],
+    "inspection_order": [
+      "console_table",
+      "side_tables",
+      "floor_area"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

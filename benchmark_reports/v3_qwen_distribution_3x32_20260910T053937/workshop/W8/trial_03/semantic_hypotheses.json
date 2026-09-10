@@ -1,0 +1,149 @@
+{
+  "fastening_target": {
+    "raw_role_id": "fastening_target",
+    "raw_function": "The specific location on the workbench where the fastening must occur.",
+    "raw_description": "",
+    "entity_kind": "FIXED_TARGET",
+    "canonical_role_candidates": [
+      "fastener"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "ROLE_ID_TEXT",
+        "preferred_roles": [
+          "fastener"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      }
+    ]
+  },
+  "compatible_component": {
+    "raw_role_id": "compatible_component",
+    "raw_function": "The physical part(s) that need to be attached or joined at the target.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "MAIN_WORKBENCH_ZONE",
+      "driver",
+      "fastener",
+      "repair_target",
+      "workshop_frame_joint"
+    ],
+    "status": "UNCONSTRAINED_ROLE_TYPE",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "UNKNOWN",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      }
+    ]
+  },
+  "tool": {
+    "raw_role_id": "tool",
+    "raw_function": "The implement used to perform the fastening action.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "driver"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "driver"
+        ],
+        "excluded_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "INSTRUMENT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Place tool on workbench surface",
+        "capabilities": [
+          "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+        ]
+      }
+    ]
+  },
+  "storage_container": {
+    "raw_role_id": "storage_container",
+    "raw_function": "Closed areas where components or tools might be hidden and require searching.",
+    "raw_description": "",
+    "entity_kind": "REGION",
+    "canonical_role_candidates": [
+      "driver"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "driver"
+        ],
+        "excluded_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "INSTRUMENT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "SUPPORT_CONTEXT"
+      }
+    ]
+  },
+  "workbench_surface": {
+    "raw_role_id": "workbench_surface",
+    "raw_function": "The flat area where reusable equipment must be placed after use.",
+    "raw_description": "",
+    "entity_kind": "REGION",
+    "canonical_role_candidates": [
+      "MAIN_WORKBENCH_ZONE"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "ROLE_ID_TEXT",
+        "preferred_roles": [
+          "MAIN_WORKBENCH_ZONE"
+        ],
+        "excluded_roles": [
+          "driver",
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "SUPPORT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "SUPPORT_CONTEXT"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Place tool on workbench surface",
+        "capabilities": [
+          "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+        ]
+      }
+    ]
+  }
+}

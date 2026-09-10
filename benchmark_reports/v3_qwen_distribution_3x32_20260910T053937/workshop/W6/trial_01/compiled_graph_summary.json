@@ -1,0 +1,15 @@
+{
+  "role_count": 2,
+  "roles": [
+    "driver",
+    "fastener"
+  ],
+  "relation_count": 1,
+  "operation_group_count": 0,
+  "required_contract_complete": false,
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Sanitizer reported semantic incompleteness",
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'storage_container', 'entity_kind': 'OBJECT', 'function': 'Closed structure containing the fastening component or tool.', 'required_count': 1, 'binding_policy': 'DISTINCT', 'candidate_categories': ['cabinet', 'drawer'], 'required_properties': ['openable'], 'visible_candidates': [{'label': 'blue cabinet', 'visual_description': 'tall blue cabinet on table'}, {'label': 'left drawer', 'visual_description': 'left drawer under table'}, {'label': 'right drawer', 'visual_description': 'right drawer under table'}], 'description': ''}, 'collision_with': 'fastening_tool'}]"
+  ]
+}

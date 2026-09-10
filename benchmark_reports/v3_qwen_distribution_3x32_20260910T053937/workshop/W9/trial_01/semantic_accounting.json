@@ -1,0 +1,99 @@
+[
+  {
+    "element_kind": "operation",
+    "raw_id": "operation_1",
+    "disposition": "NON_PHYSICAL_TASK_DIRECTIVE",
+    "canonical_representation": null,
+    "provenance": "FM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "operation",
+    "raw_id": "operation_2",
+    "disposition": "PRIMITIVE_CAPABILITY",
+    "canonical_representation": [
+      "FASTEN_JOINT"
+    ],
+    "provenance": "FM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "operation",
+    "raw_id": "operation_3",
+    "disposition": "PRIMITIVE_CAPABILITY",
+    "canonical_representation": [
+      "RETURN_REUSABLE_ITEM_TO_SUPPORT"
+    ],
+    "provenance": "FM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "fastening_component",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "MAIN_WORKBENCH_ZONE",
+      "driver",
+      "fastener",
+      "repair_target",
+      "workshop_frame_joint"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "fastening_tool",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "driver"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "fastening_target",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "MAIN_WORKBENCH_ZONE",
+      "driver",
+      "fastener",
+      "repair_target",
+      "workshop_frame_joint"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "workbench_surface",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "MAIN_WORKBENCH_ZONE"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "relation",
+    "raw_id": "relation_1",
+    "disposition": "GROUNDED_TASK_RELATION",
+    "canonical_representation": "fits_into",
+    "provenance": "FM_EXPLICIT_RELATION",
+    "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "relation",
+    "raw_id": "relation_2",
+    "disposition": "GROUNDED_TASK_RELATION",
+    "canonical_representation": "acts_on",
+    "provenance": "FM_EXPLICIT_RELATION",
+    "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "relation",
+    "raw_id": "relation_3",
+    "disposition": "GROUNDED_TASK_RELATION",
+    "canonical_representation": "placed_on",
+    "provenance": "FM_EXPLICIT_RELATION",
+    "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+  }
+]

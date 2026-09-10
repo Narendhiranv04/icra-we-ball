@@ -1,0 +1,174 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Set up refreshments for two people and move the remote control to a central location.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "holds drink or food for a person",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "plate",
+          "snack",
+          "set"
+        ],
+        "required_properties": [
+          "holds_refreshment",
+          "portable"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "operates the television",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote",
+          "controller",
+          "device"
+        ],
+        "required_properties": [
+          "wireless",
+          "small"
+        ]
+      },
+      {
+        "id": "surface",
+        "entity_kind": "REGION",
+        "function": "holds items for access",
+        "required_count": 2,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "shelf"
+        ],
+        "required_properties": [
+          "flat",
+          "stable"
+        ]
+      },
+      {
+        "id": "television",
+        "entity_kind": "FIXED_TARGET",
+        "function": "display for viewing",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "tv",
+          "screen"
+        ],
+        "required_properties": [
+          "mounted",
+          "powered"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_near_surface",
+        "relation": "refreshment_setting is near surface",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_accessible",
+        "relation": "entertainment_control is accessible to surface",
+        "participant_roles": [
+          "entertainment_control",
+          "surface"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_targets_tv",
+        "relation": "entertainment_control operates television",
+        "participant_roles": [
+          "entertainment_control",
+          "television"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "place_refreshments",
+        "operation": "place refreshment_setting onto surface",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "move_control",
+        "operation": "place entertainment_control onto surface",
+        "participant_roles": [
+          "entertainment_control",
+          "surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "cup",
+          "visual_description": "red cup on coffee table"
+        },
+        {
+          "label": "plate",
+          "visual_description": "white plate on coffee table"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote",
+          "visual_description": "black remote on desk"
+        }
+      ],
+      "surface": [
+        {
+          "label": "coffee_table",
+          "visual_description": "central table with items"
+        },
+        {
+          "label": "desk",
+          "visual_description": "wooden desk on right"
+        },
+        {
+          "label": "side_tables",
+          "visual_description": "small tables next to chairs"
+        }
+      ],
+      "television": [
+        {
+          "label": "tv",
+          "visual_description": "black screen on wall"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "desk_dresser",
+        "label": "desk",
+        "visual_description": "wooden desk with drawers on right",
+        "reason": "Contains the remote control and potential extra refreshments."
+      }
+    ],
+    "inspection_order": [
+      "desk_dresser"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

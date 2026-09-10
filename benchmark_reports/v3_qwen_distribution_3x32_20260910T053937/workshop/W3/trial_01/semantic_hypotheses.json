@@ -1,0 +1,134 @@
+{
+  "assembly_base": {
+    "raw_role_id": "assembly_base",
+    "raw_function": "The object to be fastened.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "repair_target"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "CANDIDATE_CATEGORY_TEXT",
+        "preferred_roles": [
+          "repair_target"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "FIXED_TARGET_SEMANTICS"
+      }
+    ]
+  },
+  "fastener": {
+    "raw_role_id": "fastener",
+    "raw_function": "The screw or bolt used to secure the assembly.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "fastener"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "ROLE_ID_TEXT",
+        "preferred_roles": [
+          "fastener"
+        ],
+        "excluded_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "driver",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "COMPONENT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      }
+    ]
+  },
+  "fastening_tool": {
+    "raw_role_id": "fastening_tool",
+    "raw_function": "The implement used to apply the fastener.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "driver"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "driver",
+          "fastener"
+        ],
+        "excluded_roles": [
+          "MAIN_WORKBENCH_ZONE",
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "INSTRUMENT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      }
+    ]
+  },
+  "storage_structure": {
+    "raw_role_id": "storage_structure",
+    "raw_function": "Container holding the required components.",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "fastener"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "fastener"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "CAUSAL_OPERATION_PARTICIPANT"
+      }
+    ]
+  },
+  "marked_workbench_location": {
+    "raw_role_id": "marked_workbench_location",
+    "raw_function": "The specific spot on the workbench where fastening occurs.",
+    "raw_description": "",
+    "entity_kind": "REGION",
+    "canonical_role_candidates": [
+      "MAIN_WORKBENCH_ZONE"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "CANDIDATE_CATEGORY_TEXT",
+        "preferred_roles": [
+          "MAIN_WORKBENCH_ZONE"
+        ],
+        "excluded_roles": [
+          "driver",
+          "fastener",
+          "repair_target",
+          "workshop_frame_joint"
+        ],
+        "explicit_families": [
+          "SUPPORT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "SUPPORT_CONTEXT"
+      }
+    ]
+  }
+}

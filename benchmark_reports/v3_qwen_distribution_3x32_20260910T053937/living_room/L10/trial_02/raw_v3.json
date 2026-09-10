@@ -1,0 +1,151 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Set up refreshments for two people and position the remote control for access.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "holds food or drink for a person",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "plate",
+          "cup",
+          "glass"
+        ],
+        "required_properties": [
+          "holds_food_or_drink"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "operates the television",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote",
+          "controller"
+        ],
+        "required_properties": [
+          "controls_tv"
+        ]
+      },
+      {
+        "id": "surface",
+        "entity_kind": "REGION",
+        "function": "provides a flat area to hold items",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "console",
+          "desk"
+        ],
+        "required_properties": [
+          "flat_top",
+          "holds_items"
+        ]
+      },
+      {
+        "id": "seating",
+        "entity_kind": "FIXED_TARGET",
+        "function": "provides a place for people to sit",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "chair",
+          "sofa",
+          "couch"
+        ],
+        "required_properties": [
+          "sits_on",
+          "faces_tv"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_proximity",
+        "relation": "is_near",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating"
+        ],
+        "required": true
+      },
+      {
+        "id": "remote_accessibility",
+        "relation": "is_accessible_to",
+        "participant_roles": [
+          "entertainment_control",
+          "seating"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "provide_refreshment",
+        "operation": "place_refreshment_setting",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface",
+          "seating"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "position_remote",
+        "operation": "place_remote_control",
+        "participant_roles": [
+          "entertainment_control",
+          "surface",
+          "seating"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "white_plate",
+          "visual_description": "white round dish on table"
+        },
+        {
+          "label": "red_cup",
+          "visual_description": "red drinking vessel on table"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote",
+          "visual_description": "black rectangular device on table"
+        }
+      ],
+      "surface": [
+        {
+          "label": "coffee_table",
+          "visual_description": "wooden table in foreground"
+        }
+      ],
+      "seating": [
+        {
+          "label": "chair",
+          "visual_description": "wooden armchair facing tv"
+        },
+        {
+          "label": "chair",
+          "visual_description": "wooden armchair facing tv"
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

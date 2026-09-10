@@ -1,0 +1,305 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare and serve two coffees and two soups with utensils.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "Coffee_Cup",
+        "entity_kind": "OBJECT",
+        "function": "Hold the prepared coffee beverage.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mug",
+          "cup",
+          "glass"
+        ],
+        "required_properties": [
+          "holds liquid",
+          "drinking vessel"
+        ]
+      },
+      {
+        "id": "Soup_Bowl",
+        "entity_kind": "OBJECT",
+        "function": "Hold the prepared soup.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bowl",
+          "dish"
+        ],
+        "required_properties": [
+          "holds food"
+        ]
+      },
+      {
+        "id": "Stirring_Spoon",
+        "entity_kind": "OBJECT",
+        "function": "Mix the coffee ingredients.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "stick"
+        ],
+        "required_properties": [
+          "fits in cup",
+          "rigid"
+        ]
+      },
+      {
+        "id": "Eating_Spoon",
+        "entity_kind": "OBJECT",
+        "function": "Eat the soup.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "fork"
+        ],
+        "required_properties": [
+          "fits in mouth",
+          "rigid"
+        ]
+      },
+      {
+        "id": "Coffee_Powder",
+        "entity_kind": "OBJECT",
+        "function": "Provide the coffee flavor.",
+        "required_count": 2,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "coffee beans",
+          "instant coffee"
+        ],
+        "required_properties": [
+          "aromatic",
+          "dissolvable"
+        ]
+      },
+      {
+        "id": "Water",
+        "entity_kind": "OBJECT",
+        "function": "Provide the liquid base.",
+        "required_count": 2,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "liquid",
+          "tap water"
+        ],
+        "required_properties": [
+          "fluid"
+        ]
+      },
+      {
+        "id": "Soup_Food",
+        "entity_kind": "OBJECT",
+        "function": "Provide the soup substance.",
+        "required_count": 2,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "broth",
+          "curry",
+          "stew"
+        ],
+        "required_properties": [
+          "edible",
+          "hot"
+        ]
+      },
+      {
+        "id": "Preparation_Surface",
+        "entity_kind": "REGION",
+        "function": "Surface for placing items during prep.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "counter"
+        ],
+        "required_properties": [
+          "flat",
+          "stable"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "Coffee_Assembly",
+        "relation": "Contains",
+        "participant_roles": [
+          "Coffee_Cup",
+          "Coffee_Powder",
+          "Water"
+        ],
+        "required": true
+      },
+      {
+        "id": "Soup_Assembly",
+        "relation": "Contains",
+        "participant_roles": [
+          "Soup_Bowl",
+          "Soup_Food"
+        ],
+        "required": true
+      },
+      {
+        "id": "Stirring_Tool_Association",
+        "relation": "Used_For",
+        "participant_roles": [
+          "Coffee_Cup",
+          "Stirring_Spoon"
+        ],
+        "required": true
+      },
+      {
+        "id": "Eating_Tool_Association",
+        "relation": "Served_With",
+        "participant_roles": [
+          "Soup_Bowl",
+          "Eating_Spoon"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "Add_Coffee_Powder",
+        "operation": "Pour",
+        "participant_roles": [
+          "Coffee_Cup",
+          "Coffee_Powder"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "Add_Water",
+        "operation": "Pour",
+        "participant_roles": [
+          "Coffee_Cup",
+          "Water"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "Stir_Coffee",
+        "operation": "Stir",
+        "participant_roles": [
+          "Coffee_Cup",
+          "Stirring_Spoon"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "Add_Soup_Food",
+        "operation": "Place",
+        "participant_roles": [
+          "Soup_Bowl",
+          "Soup_Food"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "Place_Eating_Spoon",
+        "operation": "Place",
+        "participant_roles": [
+          "Soup_Bowl",
+          "Eating_Spoon"
+        ],
+        "operation_count": 2
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "Coffee_Cup": [
+        {
+          "label": "blue mug",
+          "visual_description": "Blue ceramic mug on table"
+        },
+        {
+          "label": "beige mug",
+          "visual_description": "Beige ceramic cup on table"
+        }
+      ],
+      "Soup_Bowl": [
+        {
+          "label": "white bowl",
+          "visual_description": "White bowl containing red liquid"
+        }
+      ],
+      "Stirring_Spoon": [
+        {
+          "label": "silver spoon",
+          "visual_description": "Silver spoon lying flat on table"
+        }
+      ],
+      "Eating_Spoon": [
+        {
+          "label": "silver spoon",
+          "visual_description": "Silver spoon lying flat on table"
+        }
+      ],
+      "Coffee_Powder": [
+        {
+          "label": "green canister",
+          "visual_description": "Green cylindrical container on table"
+        }
+      ],
+      "Soup_Food": [
+        {
+          "label": "red liquid",
+          "visual_description": "Red liquid inside white bowl"
+        }
+      ],
+      "Preparation_Surface": [
+        {
+          "label": "table top",
+          "visual_description": "Light wood colored table surface"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "upper_left_cabinet",
+        "label": "upper left wall cabinet",
+        "visual_description": "Grey box mounted on wall",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "upper_right_cabinet",
+        "label": "upper right wall cabinet",
+        "visual_description": "Grey box mounted on wall",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "lower_left_drawer",
+        "label": "lower left table drawer",
+        "visual_description": "Drawer front visible below table",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "lower_right_drawer",
+        "label": "lower right table drawer",
+        "visual_description": "Drawer front visible below table",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "brown_box",
+        "label": "brown cardboard box on table",
+        "visual_description": "Brown rectangular box on table",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "upper_left_cabinet",
+      "upper_right_cabinet",
+      "lower_left_drawer",
+      "lower_right_drawer",
+      "brown_box"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

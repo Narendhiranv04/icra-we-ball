@@ -1,0 +1,150 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Find compatible parts and tool, fasten them to the workbench, leave tool on workbench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_spot",
+        "entity_kind": "FIXED_TARGET",
+        "function": "The specific location on the workbench where the fastening occurs.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "hole",
+          "slot",
+          "mounting_point"
+        ],
+        "required_properties": [
+          "sturdy",
+          "accessible"
+        ]
+      },
+      {
+        "id": "fastening_part",
+        "entity_kind": "OBJECT",
+        "function": "The component to be inserted or attached to the workbench.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "plug",
+          "block"
+        ],
+        "required_properties": [
+          "compatible_with_spot"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "The implement used to drive or attach the component.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "hammer",
+          "glue",
+          "wrench"
+        ],
+        "required_properties": [
+          "drives_part"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "REGION",
+        "function": "The flat surface where the work is performed and where the tool is left.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "bench"
+        ],
+        "required_properties": [
+          "flat_surface"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "fits_into",
+        "relation": "The component must fit into the spot.",
+        "participant_roles": [
+          "fastening_part",
+          "fastening_spot"
+        ],
+        "required": true
+      },
+      {
+        "id": "manipulates",
+        "relation": "The tool must manipulate the component.",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_part"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "secure_part",
+        "operation": "Insert and secure the component into the spot using the tool.",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_part",
+          "fastening_spot"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "leave_tool",
+        "operation": "Place the tool onto the workbench surface.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastening_spot": [
+        {
+          "label": "Surface of wooden table",
+          "visual_description": "Flat wooden surface with drawers underneath."
+        }
+      ],
+      "fastening_part": [],
+      "fastening_tool": [],
+      "workbench": [
+        {
+          "label": "Wooden table with drawers",
+          "visual_description": "Central wooden furniture piece with two blue drawers."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "drawers_under_table",
+        "label": "Drawers under table",
+        "visual_description": "Two blue drawers with white handles under the table surface.",
+        "reason": "Closed storage structure containing potential tools or parts."
+      },
+      {
+        "id": "blue_cabinet",
+        "label": "Blue cabinet",
+        "visual_description": "Tall blue cabinet standing against the wall.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "drawers_under_table",
+      "blue_cabinet"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

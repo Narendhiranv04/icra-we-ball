@@ -1,0 +1,17 @@
+{
+  "role_count": 5,
+  "roles": [
+    "CUP_SAUCER_SET",
+    "PERSONAL_CUP_SAUCER_REGION",
+    "REMOTE",
+    "SEATING_PAIR",
+    "SEATING_POSITION"
+  ],
+  "relation_count": 0,
+  "operation_group_count": 1,
+  "required_contract_complete": false,
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'place_control', 'function': 'Place entertainment_control on surface', 'tool_role': 'surface', 'target_role': 'entertainment_control', 'context_role': None, 'required_target_count': 1, 'usage_policy': 'SEQUENTIAL_REUSE_ALLOWED', 'required_relations': [], 'context_relations': [], 'v3_slot_assignments': [{'capability_id': 'SUPPORT_ENTERTAINMENT_CONTROL', 'planner_operation': 'SUPPORT_ENTERTAINMENT_CONTROL', 'source_role': 'surface', 'target_role': 'entertainment_control', 'anchor_role': None, 'source_type': 'SHARED_REMOTE_REGION', 'target_type': 'REMOTE', 'anchor_type': None, 'usage_policy': 'SEQUENTIAL_REUSE_ALLOWED'}], 'v3_participant_roles': ['entertainment_control', 'surface'], 'v3_explicit_participant_roles': ['entertainment_control', 'surface'], 'v3_raw_fm_participant_roles': ['entertainment_control', 'surface'], 'v3_current_state_context_roles': [], 'v3_graph_join_relation_id': None, 'v3_explicit_context_set_id': None}, 'status': 'UNSUPPORTED_OPERATOR', 'reason': \"Operation semantic evidence ['SUPPORT_ENTERTAINMENT_CONTROL'] is incompatible with endpoints (PERSONAL_CUP_SAUCER_REGION, REMOTE, SEATING_PAIR)\", 'interp_status': 'UNMAPPABLE_OPERATION'}]"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "assignment": null,
+  "candidate_plan": [],
+  "candidate_search_statistics": {},
+  "canonicalization_succeeded": false,
+  "domain": "workshop",
+  "failure_category": "GRAPH_COMPILATION_FAILURE",
+  "failure_reason": "INCOMPLETE_CANONICAL_GRAPH: coherent FM contract could not be fully represented; unresolved=[{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'fastening_part', 'entity_kind': 'OBJECT', 'function': 'The component to be inserted or attached to the workbench.', 'required_count': 1, 'binding_policy': 'DISTINCT', 'candidate_categories': ['screw', 'bolt', 'plug', 'block'], 'required_properties': ['compatible_with_spot'], 'visible_candidates': [], 'description': ''}, 'collision_with': 'fastening_spot'}, {'raw_subject': 'fastening_part', 'raw_phrase': 'The component must fit into the spot.', 'raw_object': 'fastening_spot', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'fastening_tool', 'raw_phrase': 'The tool must manipulate the component.', 'raw_object': 'fastening_part', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]",
+  "functional_spec_complete": false,
+  "inspected_regions": [],
+  "mode": "vlm",
+  "outcome_category": "GRAPH_COMPILATION_FAILURE",
+  "plan": [],
+  "search_statistics": {},
+  "status": "VLM_SPEC_FAILED",
+  "variant": "W7"
+}

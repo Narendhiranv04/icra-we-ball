@@ -1,0 +1,288 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare and serve coffee and soup for two people.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "CoffeeContainer",
+        "entity_kind": "OBJECT",
+        "function": "Holds the prepared coffee for a person.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mug",
+          "cup",
+          "glass"
+        ],
+        "required_properties": [
+          "holds liquid",
+          "drinking vessel"
+        ]
+      },
+      {
+        "id": "SoupContainer",
+        "entity_kind": "OBJECT",
+        "function": "Holds the soup for a person.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bowl",
+          "dish",
+          "plate"
+        ],
+        "required_properties": [
+          "holds food",
+          "eating vessel"
+        ]
+      },
+      {
+        "id": "StirringUtensil",
+        "entity_kind": "OBJECT",
+        "function": "Mixes the coffee ingredients.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "stick",
+          "whisk"
+        ],
+        "required_properties": [
+          "solid object",
+          "can move in liquid"
+        ]
+      },
+      {
+        "id": "EatingUtensil",
+        "entity_kind": "OBJECT",
+        "function": "Allows a person to eat the soup.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "spoon",
+          "fork",
+          "knife"
+        ],
+        "required_properties": [
+          "solid object",
+          "eating tool"
+        ]
+      },
+      {
+        "id": "CoffeeSupply",
+        "entity_kind": "OBJECT",
+        "function": "Provides the coffee flavor.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "grounds",
+          "beans",
+          "jar",
+          "packet"
+        ],
+        "required_properties": [
+          "contains coffee",
+          "dissolves/mixes in water"
+        ]
+      },
+      {
+        "id": "WaterSupply",
+        "entity_kind": "OBJECT",
+        "function": "Provides the liquid base for coffee.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "water bottle",
+          "jug",
+          "kettle",
+          "tap"
+        ],
+        "required_properties": [
+          "contains water",
+          "liquid"
+        ]
+      },
+      {
+        "id": "SoupSupply",
+        "entity_kind": "OBJECT",
+        "function": "Provides the soup content.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "pot",
+          "container",
+          "bowl"
+        ],
+        "required_properties": [
+          "contains soup",
+          "liquid or semi-liquid food"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "Relation_1",
+        "relation": "CoffeeContainer must contain CoffeeSupply and WaterSupply",
+        "participant_roles": [
+          "CoffeeContainer",
+          "CoffeeSupply",
+          "WaterSupply"
+        ],
+        "required": true
+      },
+      {
+        "id": "Relation_2",
+        "relation": "SoupContainer must contain SoupSupply",
+        "participant_roles": [
+          "SoupContainer",
+          "SoupSupply"
+        ],
+        "required": true
+      },
+      {
+        "id": "Relation_3",
+        "relation": "StirringUtensil must mix CoffeeContainer",
+        "participant_roles": [
+          "StirringUtensil",
+          "CoffeeContainer"
+        ],
+        "required": true
+      },
+      {
+        "id": "Relation_4",
+        "relation": "EatingUtensil must accompany SoupContainer",
+        "participant_roles": [
+          "EatingUtensil",
+          "SoupContainer"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "Operation_1",
+        "operation": "Pour CoffeeSupply and WaterSupply into CoffeeContainer",
+        "participant_roles": [
+          "CoffeeContainer",
+          "CoffeeSupply",
+          "WaterSupply"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "Operation_2",
+        "operation": "Stir CoffeeContainer with StirringUtensil",
+        "participant_roles": [
+          "StirringUtensil",
+          "CoffeeContainer"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "Operation_3",
+        "operation": "Pour SoupSupply into SoupContainer",
+        "participant_roles": [
+          "SoupContainer",
+          "SoupSupply"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "Operation_4",
+        "operation": "Place EatingUtensil with SoupContainer",
+        "participant_roles": [
+          "EatingUtensil",
+          "SoupContainer"
+        ],
+        "operation_count": 2
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "CoffeeContainer": [
+        {
+          "label": "Blue mug",
+          "visual_description": "Blue ceramic cup on table"
+        },
+        {
+          "label": "Beige cup",
+          "visual_description": "Small beige cup on table"
+        }
+      ],
+      "SoupContainer": [
+        {
+          "label": "Red bowl",
+          "visual_description": "White bowl with red interior on table"
+        }
+      ],
+      "StirringUtensil": [
+        {
+          "label": "Silver spoons",
+          "visual_description": "Two silver spoons on table"
+        }
+      ],
+      "EatingUtensil": [
+        {
+          "label": "Silver spoons",
+          "visual_description": "Two silver spoons on table"
+        }
+      ],
+      "CoffeeSupply": [
+        {
+          "label": "Green jar",
+          "visual_description": "Small dark green jar on table"
+        },
+        {
+          "label": "Brown box",
+          "visual_description": "Brown rectangular box on table"
+        }
+      ],
+      "WaterSupply": [
+        {
+          "label": "White kettle",
+          "visual_description": "White metal kettle on table"
+        }
+      ],
+      "SoupSupply": [
+        {
+          "label": "Hidden",
+          "visual_description": "Not clearly visible, possibly in cabinet"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "Cabinet_Left",
+        "label": "Left Grey Cabinet",
+        "visual_description": "Grey box with handle on wall/floor",
+        "reason": "Closed storage structure, may contain supplies"
+      },
+      {
+        "id": "Cabinet_Right",
+        "label": "Right Grey Cabinet",
+        "visual_description": "Grey box with handle on wall/floor",
+        "reason": "Closed storage structure, may contain supplies"
+      },
+      {
+        "id": "Drawer_Left",
+        "label": "Drawer Under Table Left",
+        "visual_description": "White drawer with handle under table",
+        "reason": "Closed storage structure, may contain utensils or supplies"
+      },
+      {
+        "id": "Drawer_Right",
+        "label": "Drawer Under Table Right",
+        "visual_description": "White drawer with handle under table",
+        "reason": "Closed storage structure, may contain utensils or supplies"
+      }
+    ],
+    "inspection_order": [
+      "Cabinet_Left",
+      "Cabinet_Right",
+      "Drawer_Left",
+      "Drawer_Right"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

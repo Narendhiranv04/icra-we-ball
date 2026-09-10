@@ -1,0 +1,17 @@
+{
+  "role_count": 3,
+  "roles": [
+    "driver",
+    "fastener",
+    "repair_target"
+  ],
+  "relation_count": 0,
+  "operation_group_count": 0,
+  "required_contract_complete": false,
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Sanitizer reported semantic incompleteness",
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'storage_drawer_left', 'entity_kind': 'OBJECT', 'function': 'A closed storage unit potentially containing components.', 'required_count': 1, 'binding_policy': 'DISTINCT', 'candidate_categories': ['left drawer', 'under-table drawer'], 'required_properties': ['closed storage'], 'visible_candidates': [{'label': 'left drawer', 'visual_description': 'Blue drawer with white handle under the left side of the table.'}], 'description': ''}, 'collision_with': 'assembly_target'}, {'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'storage_drawer_right', 'entity_kind': 'OBJECT', 'function': 'A closed storage unit potentially containing components.', 'required_count': 1, 'binding_policy': 'DISTINCT', 'candidate_categories': ['right drawer', 'under-table drawer'], 'required_properties': ['closed storage'], 'visible_candidates': [{'label': 'right drawer', 'visual_description': 'Blue drawer with white handle under the right side of the table.'}], 'description': ''}, 'collision_with': 'assembly_target'}, {'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'storage_cabinet', 'entity_kind': 'OBJECT', 'function': 'A closed storage unit potentially containing components.', 'required_count': 1, 'binding_policy': 'DISTINCT', 'candidate_categories': ['grey cabinet', 'tall cabinet'], 'required_properties': ['closed storage'], 'visible_candidates': [{'label': 'grey cabinet', 'visual_description': 'Tall grey cabinet standing on the right side of the workbench.'}], 'description': ''}, 'collision_with': 'assembly_target'}]",
+    "Unresolved required relations: [{'raw_subject': 'fastening_component', 'raw_phrase': 'fits', 'raw_object': 'assembly_target', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'fits' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'fastening_tool', 'raw_phrase': 'used_to_fasten', 'raw_object': 'fastening_component', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'used_to_fasten' provides no semantic evidence for valid predicates ['REACHES_TARGET'] or task causal semantics\"}, {'raw_subject': 'fastening_tool', 'raw_phrase': 'used_to_fasten', 'raw_object': 'assembly_target', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'used_to_fasten' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH'] or task causal semantics\"}, {'raw_subject': 'fastening_component', 'raw_phrase': 'used_to_fasten', 'raw_object': 'assembly_target', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'used_to_fasten' provides no semantic evidence for valid predicates [] or task causal semantics\"}]"
+  ]
+}

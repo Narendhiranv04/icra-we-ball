@@ -1,0 +1,221 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Find parts and tools, fasten them at a specific spot, and leave the tool on the table.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "workbench",
+        "entity_kind": "OBJECT",
+        "function": "The wooden table serving as the base and final resting place for equipment.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "workbench"
+        ],
+        "required_properties": [
+          "stable",
+          "surface"
+        ]
+      },
+      {
+        "id": "fastening_site",
+        "entity_kind": "REGION",
+        "function": "The specific marked location on the workbench where the fastening occurs.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "marked_area",
+          "slot",
+          "hole",
+          "tray"
+        ],
+        "required_properties": [
+          "location"
+        ]
+      },
+      {
+        "id": "fastener_component",
+        "entity_kind": "OBJECT",
+        "function": "A physical part required to complete the assembly or connection.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "part",
+          "piece",
+          "connector",
+          "screw",
+          "bracket"
+        ],
+        "required_properties": [
+          "physical",
+          "compatible"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "An implement used to perform the fastening action.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "hammer",
+          "grip"
+        ],
+        "required_properties": [
+          "manipulatable",
+          "mechanical"
+        ]
+      },
+      {
+        "id": "storage_unit",
+        "entity_kind": "OBJECT",
+        "function": "Closed containers potentially holding the required components or tools.",
+        "required_count": 3,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "drawer",
+          "cabinet",
+          "box"
+        ],
+        "required_properties": [
+          "enclosed",
+          "openable"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "suit_for_fastening",
+        "relation": "The fastener_component must be compatible with the fastening_site.",
+        "participant_roles": [
+          "fastener_component",
+          "fastening_site"
+        ],
+        "required": true
+      },
+      {
+        "id": "perform_fastening",
+        "relation": "The fastening_tool is used to act upon the fastener_component at the fastening_site.",
+        "participant_roles": [
+          "fastening_tool",
+          "fastener_component",
+          "fastening_site"
+        ],
+        "required": true
+      },
+      {
+        "id": "return_equipment",
+        "relation": "The fastening_tool must end up on the workbench after use.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "search_components",
+        "operation": "Open and inspect storage_units to find fastener_components or fastening_tools.",
+        "participant_roles": [
+          "storage_unit",
+          "fastener_component",
+          "fastening_tool"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "execute_fastening",
+        "operation": "Apply the fastening_tool to the fastener_component at the fastening_site.",
+        "participant_roles": [
+          "fastening_tool",
+          "fastener_component",
+          "fastening_site"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "deposit_tool",
+        "operation": "Place the fastening_tool onto the workbench surface.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "workbench": [
+        {
+          "label": "Wooden Table",
+          "visual_description": "A brown wooden table with legs, drawers underneath, and a cabinet on top."
+        }
+      ],
+      "fastening_site": [
+        {
+          "label": "Yellow Object Area",
+          "visual_description": "A yellow rectangular object sitting on a black tray on the table surface."
+        }
+      ],
+      "fastener_component": [
+        {
+          "label": "Yellow Object",
+          "visual_description": "A yellow item on the tray, possibly a part or tool."
+        }
+      ],
+      "fastening_tool": [
+        {
+          "label": "Yellow Object",
+          "visual_description": "Could be a screwdriver or handle."
+        }
+      ],
+      "storage_unit": [
+        {
+          "label": "Left Drawer",
+          "visual_description": "Blue drawer under the left side of the table."
+        },
+        {
+          "label": "Right Drawer",
+          "visual_description": "Blue drawer under the right side of the table."
+        },
+        {
+          "label": "Cabinet",
+          "visual_description": "Tall blue cabinet standing on the back right of the table."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "left_drawer",
+        "label": "Left Drawer",
+        "visual_description": "Closed blue drawer with a handle.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "right_drawer",
+        "label": "Right Drawer",
+        "visual_description": "Closed blue drawer with a handle.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "cabinet",
+        "label": "Cabinet",
+        "visual_description": "Closed blue cabinet with a door handle.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "left_drawer",
+      "right_drawer",
+      "cabinet"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

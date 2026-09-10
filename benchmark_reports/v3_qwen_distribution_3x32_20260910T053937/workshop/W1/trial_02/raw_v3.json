@@ -1,0 +1,148 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Find compatible fastening parts and tools, use a tool to fasten a component to the workbench, then put the tool back on the workbench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "compatible_component",
+        "entity_kind": "OBJECT",
+        "function": "Provides the physical material to be fastened.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "plug",
+          "part"
+        ],
+        "required_properties": [
+          "fits the marked workbench location"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "REGION",
+        "function": "The fixed surface where the fastening occurs.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "bench"
+        ],
+        "required_properties": [
+          "has a marked location for fastening"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "The implement used to secure the component.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "driver"
+        ],
+        "required_properties": [
+          "capable of fastening"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "compatibility",
+        "relation": "compatible_component fits onto workbench",
+        "participant_roles": [
+          "compatible_component",
+          "workbench"
+        ],
+        "required": true
+      },
+      {
+        "id": "usage",
+        "relation": "fastening_tool is used to fasten compatible_component",
+        "participant_roles": [
+          "fastening_tool",
+          "compatible_component"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "fastening_action",
+        "operation": "fastening_tool fastens compatible_component to workbench",
+        "participant_roles": [
+          "fastening_tool",
+          "compatible_component",
+          "workbench"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "cleanup_action",
+        "operation": "fastening_tool is placed on workbench",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "compatible_component": [
+        {
+          "label": "yellow object on tray",
+          "visual_description": "Yellow rectangular object on a black tray on the table surface."
+        }
+      ],
+      "workbench": [
+        {
+          "label": "wooden table",
+          "visual_description": "Wooden desk with drawers and a cabinet on top."
+        }
+      ],
+      "fastening_tool": [
+        {
+          "label": "unknown items in cabinet",
+          "visual_description": "Contents of the blue cabinet are not visible."
+        },
+        {
+          "label": "unknown items in drawers",
+          "visual_description": "Contents of the drawers are not visible."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet",
+        "label": "Blue cabinet",
+        "visual_description": "Tall blue storage unit on the wall behind the table.",
+        "reason": "Closed storage structure that may contain fastening tools or components."
+      },
+      {
+        "id": "left_drawer",
+        "label": "Left drawer",
+        "visual_description": "Drawer on the left side under the table.",
+        "reason": "Closed storage structure that may contain fastening tools or components."
+      },
+      {
+        "id": "right_drawer",
+        "label": "Right drawer",
+        "visual_description": "Drawer on the right side under the table.",
+        "reason": "Closed storage structure that may contain fastening tools or components."
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet",
+      "left_drawer",
+      "right_drawer"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

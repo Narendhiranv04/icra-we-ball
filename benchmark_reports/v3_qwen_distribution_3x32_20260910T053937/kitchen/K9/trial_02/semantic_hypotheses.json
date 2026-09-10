@@ -1,0 +1,235 @@
+{
+  "coffee_cup": {
+    "raw_role_id": "coffee_cup",
+    "raw_function": "Container for coffee liquid",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "coffee_container"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "ROLE_ID_TEXT",
+        "preferred_roles": [
+          "coffee_container"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "DOMAIN_SEMANTICS"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "rotate_stirrer_in_liquid",
+        "capabilities": [
+          "STIR_COFFEE"
+        ]
+      }
+    ]
+  },
+  "soup_bowl": {
+    "raw_role_id": "soup_bowl",
+    "raw_function": "Container for soup",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "soup_container"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "COMBINED_FALLBACK_TEXT",
+        "preferred_roles": [
+          "soup_container"
+        ],
+        "excluded_roles": [],
+        "explicit_families": [],
+        "strength": "WEAK_ALIAS",
+        "legacy_mapper_rule": "DOMAIN_SEMANTICS"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "place_utensil_next_to_container",
+        "capabilities": [
+          "PROVIDE_SOUP_EATING_UTENSIL"
+        ]
+      }
+    ]
+  },
+  "coffee_beans": {
+    "raw_role_id": "coffee_beans",
+    "raw_function": "Source of coffee flavor",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "coffee_source"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "coffee_source"
+        ],
+        "excluded_roles": [
+          "coffee_container",
+          "coffee_stirrer",
+          "countertop",
+          "dining_table",
+          "serving_area",
+          "soup_container",
+          "soup_eating_utensil",
+          "water_source"
+        ],
+        "explicit_families": [
+          "SOURCE"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "CAUSAL_SOURCE_PROVIDER"
+      }
+    ]
+  },
+  "water_source": {
+    "raw_role_id": "water_source",
+    "raw_function": "Source of liquid for coffee",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "coffee_source"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "coffee_source"
+        ],
+        "excluded_roles": [
+          "coffee_container",
+          "coffee_stirrer",
+          "countertop",
+          "dining_table",
+          "serving_area",
+          "soup_container",
+          "soup_eating_utensil",
+          "water_source"
+        ],
+        "explicit_families": [
+          "SOURCE"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "CAUSAL_SOURCE_PROVIDER"
+      }
+    ]
+  },
+  "stirring_spoon": {
+    "raw_role_id": "stirring_spoon",
+    "raw_function": "Tool to mix coffee",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "coffee_stirrer"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "coffee_stirrer"
+        ],
+        "excluded_roles": [
+          "coffee_container",
+          "coffee_source",
+          "countertop",
+          "dining_table",
+          "serving_area",
+          "soup_container",
+          "water_source"
+        ],
+        "explicit_families": [
+          "INSTRUMENT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "DOMAIN_SEMANTICS"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "rotate_stirrer_in_liquid",
+        "capabilities": [
+          "STIR_COFFEE"
+        ]
+      }
+    ]
+  },
+  "eating_spoon": {
+    "raw_role_id": "eating_spoon",
+    "raw_function": "Utensil for eating soup",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "soup_eating_utensil"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "soup_eating_utensil"
+        ],
+        "excluded_roles": [
+          "coffee_container",
+          "coffee_source",
+          "countertop",
+          "dining_table",
+          "serving_area",
+          "soup_container",
+          "water_source"
+        ],
+        "explicit_families": [
+          "INSTRUMENT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "DOMAIN_SEMANTICS"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "place_utensil_next_to_container",
+        "capabilities": [
+          "PROVIDE_SOUP_EATING_UTENSIL"
+        ]
+      }
+    ]
+  },
+  "table": {
+    "raw_role_id": "table",
+    "raw_function": "Surface for preparation and serving",
+    "raw_description": "",
+    "entity_kind": "REGION",
+    "canonical_role_candidates": [
+      "serving_area"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "serving_area"
+        ],
+        "excluded_roles": [
+          "coffee_container",
+          "coffee_source",
+          "coffee_stirrer",
+          "soup_container",
+          "soup_eating_utensil",
+          "water_source"
+        ],
+        "explicit_families": [
+          "SUPPORT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "DOMAIN_SEMANTICS"
+      }
+    ]
+  }
+}

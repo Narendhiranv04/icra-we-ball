@@ -1,0 +1,244 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Identify compatible components from storage, fasten the assembly on the workbench, and leave the tool on the workbench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "assembly_target",
+        "entity_kind": "OBJECT",
+        "function": "The object on the workbench that needs fastening.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "yellow object on mat",
+          "mechanical assembly"
+        ],
+        "required_properties": [
+          "needs fastening"
+        ]
+      },
+      {
+        "id": "fastening_component",
+        "entity_kind": "OBJECT",
+        "function": "A part needed to secure the assembly.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bolt",
+          "nut",
+          "screw",
+          "connector",
+          "part"
+        ],
+        "required_properties": [
+          "compatible with assembly_target"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "An implement used to perform the fastening.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "hammer",
+          "wrench",
+          "tool"
+        ],
+        "required_properties": [
+          "used for fastening"
+        ]
+      },
+      {
+        "id": "workbench_surface",
+        "entity_kind": "REGION",
+        "function": "The surface where work is performed and tools are left.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wooden table",
+          "desk"
+        ],
+        "required_properties": [
+          "holds items"
+        ]
+      },
+      {
+        "id": "storage_drawer_left",
+        "entity_kind": "OBJECT",
+        "function": "A closed storage unit potentially containing components.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "left drawer",
+          "under-table drawer"
+        ],
+        "required_properties": [
+          "closed storage"
+        ]
+      },
+      {
+        "id": "storage_drawer_right",
+        "entity_kind": "OBJECT",
+        "function": "A closed storage unit potentially containing components.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "right drawer",
+          "under-table drawer"
+        ],
+        "required_properties": [
+          "closed storage"
+        ]
+      },
+      {
+        "id": "storage_cabinet",
+        "entity_kind": "OBJECT",
+        "function": "A closed storage unit potentially containing components.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "grey cabinet",
+          "tall cabinet"
+        ],
+        "required_properties": [
+          "closed storage"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "component_compatibility",
+        "relation": "fits",
+        "participant_roles": [
+          "fastening_component",
+          "assembly_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "fastening_action",
+        "relation": "used_to_fasten",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_component",
+          "assembly_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "final_placement",
+        "relation": "placed_on",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench_surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "inspect_drawer_left",
+        "operation": "Search left drawer for component",
+        "participant_roles": [
+          "storage_drawer_left",
+          "fastening_component"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "inspect_drawer_right",
+        "operation": "Search right drawer for component",
+        "participant_roles": [
+          "storage_drawer_right",
+          "fastening_component"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "inspect_cabinet",
+        "operation": "Search cabinet for component",
+        "participant_roles": [
+          "storage_cabinet",
+          "fastening_component"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "perform_fastening",
+        "operation": "Attach component to assembly",
+        "participant_roles": [
+          "fastening_component",
+          "assembly_target",
+          "fastening_tool"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "place_tool",
+        "operation": "Place tool on workbench",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench_surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "assembly_target": [
+        {
+          "label": "yellow object on mat",
+          "visual_description": "Yellow rectangular object on a dark blue mat on the workbench."
+        }
+      ],
+      "storage_drawer_left": [
+        {
+          "label": "left drawer",
+          "visual_description": "Blue drawer with white handle under the left side of the table."
+        }
+      ],
+      "storage_drawer_right": [
+        {
+          "label": "right drawer",
+          "visual_description": "Blue drawer with white handle under the right side of the table."
+        }
+      ],
+      "storage_cabinet": [
+        {
+          "label": "grey cabinet",
+          "visual_description": "Tall grey cabinet standing on the right side of the workbench."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "storage_drawer_left",
+        "label": "left drawer",
+        "visual_description": "Closed drawer with handle, potential storage.",
+        "reason": "Closed storage structure that could contain the required component."
+      },
+      {
+        "id": "storage_drawer_right",
+        "label": "right drawer",
+        "visual_description": "Closed drawer with handle, potential storage.",
+        "reason": "Closed storage structure that could contain the required component."
+      },
+      {
+        "id": "storage_cabinet",
+        "label": "grey cabinet",
+        "visual_description": "Closed cabinet door, potential storage.",
+        "reason": "Closed storage structure that could contain the required component."
+      }
+    ],
+    "inspection_order": [
+      "storage_drawer_left",
+      "storage_drawer_right",
+      "storage_cabinet"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

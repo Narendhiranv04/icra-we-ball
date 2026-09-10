@@ -1,0 +1,335 @@
+{
+  "artifacts": {
+    "result": "result.json",
+    "target_anchor_provenance": "target_anchor_provenance.json"
+  },
+  "astar_invocations": 0,
+  "candidate_plan": null,
+  "candidate_search_statistics": {},
+  "canonicalization_succeeded": false,
+  "domain": "workshop",
+  "execution_state": "planning_only",
+  "exploration_actuation": "direct_sim_articulation",
+  "failure_category": "TASK_SPECIFICATION_FAILURE",
+  "failure_reason": "UNSUPPORTED_NARY_RELATION_PARTICIPANTS: relation 'secures' does not express a reviewed context-set semantic family",
+  "finished_at_utc": "2026-09-10T02:51:58.463282+00:00",
+  "fm_schema_version": 3,
+  "functional_spec_complete": false,
+  "git_commit": "01d4218c1a4881a2d779893074c7dbaf1572f541",
+  "git_dirty": false,
+  "high_level_replans": 0,
+  "inference_config": {
+    "chat_template_kwargs": {
+      "enable_thinking": true
+    },
+    "max_tokens": 24000,
+    "min_p": 0.0,
+    "model": "qwen35-9b",
+    "presence_penalty": 1.0,
+    "repetition_penalty": 1.0,
+    "response_format": {
+      "json_schema": {
+        "name": "functional_specification_v3",
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "additionalProperties": false,
+          "properties": {
+            "observation_guidance": {
+              "additionalProperties": false,
+              "properties": {
+                "inspectable_regions": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z0-9_]+$",
+                        "type": "string"
+                      },
+                      "label": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "reason": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "visual_description": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label",
+                      "visual_description",
+                      "reason"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 16,
+                  "type": "array"
+                },
+                "inspection_order": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "visible_candidates_per_role": {
+                  "additionalProperties": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "visual_description": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "visual_description"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "visible_candidates_per_role",
+                "inspectable_regions",
+                "inspection_order"
+              ],
+              "type": "object"
+            },
+            "schema_version": {
+              "enum": [
+                3
+              ],
+              "type": "integer"
+            },
+            "status": {
+              "enum": [
+                "SUPPORTED",
+                "UNSUPPORTED"
+              ],
+              "type": "string"
+            },
+            "task_contract": {
+              "additionalProperties": false,
+              "properties": {
+                "functional_relations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z0-9_]+$",
+                        "type": "string"
+                      },
+                      "participant_roles": {
+                        "items": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "maxItems": 4,
+                        "minItems": 2,
+                        "type": "array"
+                      },
+                      "relation": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "required": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "relation",
+                      "participant_roles",
+                      "required"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 32,
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "functional_roles": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "binding_policy": {
+                        "description": "Physical-role binding: DISTINCT requires separate instances, REUSABLE permits sequential use of an instance, and SHARED denotes common context or an entity intentionally shared by participants.",
+                        "enum": [
+                          "DISTINCT",
+                          "REUSABLE",
+                          "SHARED"
+                        ],
+                        "type": "string"
+                      },
+                      "candidate_categories": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "maxItems": 16,
+                        "minItems": 0,
+                        "type": "array"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "entity_kind": {
+                        "enum": [
+                          "OBJECT",
+                          "REGION",
+                          "FIXED_TARGET"
+                        ],
+                        "type": "string"
+                      },
+                      "function": {
+                        "description": "One short functional noun phrase with no task narrative.",
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "required_count": {
+                        "description": "Minimum number of distinct physical instances of this role required simultaneously or independently for task completion; not the number of operation applications.",
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "required_properties": {
+                        "items": {
+                          "description": "One short unary physical or functional property of this role; not a relation or operation.",
+                          "type": "string"
+                        },
+                        "maxItems": 16,
+                        "minItems": 0,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "entity_kind",
+                      "function",
+                      "required_count",
+                      "binding_policy",
+                      "candidate_categories",
+                      "required_properties"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 16,
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "operation_pairings": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z0-9_]+$",
+                        "type": "string"
+                      },
+                      "operation": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "operation_count": {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "participant_roles": {
+                        "items": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "maxItems": 4,
+                        "minItems": 2,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "operation",
+                      "participant_roles",
+                      "operation_count"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 16,
+                  "minItems": 0,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "functional_roles",
+                "functional_relations",
+                "operation_pairings"
+              ],
+              "type": "object"
+            },
+            "task_summary": {
+              "type": "string"
+            },
+            "unsupported_reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema_version",
+            "status",
+            "task_summary",
+            "task_contract",
+            "observation_guidance",
+            "unsupported_reason"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
+      "type": "json_schema"
+    },
+    "stream": false,
+    "temperature": 0.6,
+    "top_k": 20,
+    "top_p": 0.95
+  },
+  "internal_variant": "I0_NO_DRIVER",
+  "observer_errors": [],
+  "pipeline_runtime_seconds": 80.1039,
+  "prompt_schema_hash": "b2d21de950167c1d5158c17092412559f3f027ccd03b3a905af111e1b2449a7c",
+  "provider_model": "qwen35-9b",
+  "provider_region_ranking": [],
+  "region_order_used": [],
+  "robot_capability_registry_hash": "5efe92460544bdd7ac6b9fac337775ef36ec297ad9ac2784e51114723c335762",
+  "runtime_semantic_ontology_hash": "ab5095cdcf2ed6a2799548ebdd5510062ce488d2c047a1e2e71d997fec44a57d",
+  "schema_version": 1,
+  "search_contract": null,
+  "search_order_source_effective": null,
+  "search_order_source_requested": "auto",
+  "search_policy_version": null,
+  "search_seed_effective": null,
+  "search_seed_requested": null,
+  "semantic_vlm_requests": 1,
+  "spec_acquisition": "live_provider",
+  "spec_mode": "vlm",
+  "spec_provider_source": null,
+  "specification_input": null,
+  "specification_sha256": null,
+  "started_at_utc": "2026-09-10T02:50:38.359381+00:00",
+  "terminal_status": "VLM_SPEC_FAILED",
+  "transport_retries": 0,
+  "variant": "W9",
+  "visualization_requested": false,
+  "vlm_request_count": 1
+}

@@ -1,0 +1,109 @@
+{
+  "refreshment_setting": {
+    "raw_role_id": "refreshment_setting",
+    "raw_function": "Holds food or drink for a person",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "CUP_SAUCER_SET"
+    ],
+    "status": "OPERATION_ASSISTED",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "CUP_SAUCER_SET"
+        ],
+        "excluded_roles": [
+          "PERSONAL_CUP_SAUCER_REGION",
+          "SEATING_PAIR",
+          "SEATING_POSITION",
+          "SHARED_REMOTE_REGION",
+          "staging_tray"
+        ],
+        "explicit_families": [
+          "PAYLOAD"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "TYPED_DOMAIN_SEMANTICS"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Place refreshment_setting on surface",
+        "capabilities": [
+          "SUPPORT_DRINKWARE"
+        ]
+      }
+    ]
+  },
+  "entertainment_control": {
+    "raw_role_id": "entertainment_control",
+    "raw_function": "Controls the television",
+    "raw_description": "",
+    "entity_kind": "OBJECT",
+    "canonical_role_candidates": [
+      "REMOTE"
+    ],
+    "status": "DIRECT_FUNCTION_MATCH",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "REMOTE"
+        ],
+        "excluded_roles": [
+          "PERSONAL_CUP_SAUCER_REGION",
+          "SEATING_PAIR",
+          "SEATING_POSITION",
+          "SHARED_REMOTE_REGION",
+          "staging_tray"
+        ],
+        "explicit_families": [
+          "PAYLOAD"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "TYPED_DOMAIN_SEMANTICS"
+      }
+    ]
+  },
+  "surface": {
+    "raw_role_id": "surface",
+    "raw_function": "Provides a flat area to hold items",
+    "raw_description": "",
+    "entity_kind": "REGION",
+    "canonical_role_candidates": [
+      "PERSONAL_CUP_SAUCER_REGION"
+    ],
+    "status": "STRUCTURAL_OVERRIDE_OF_WEAK_FUNCTION_ALIAS",
+    "evidence": [
+      {
+        "source": "FUNCTION_TEXT",
+        "preferred_roles": [
+          "SHARED_REMOTE_REGION"
+        ],
+        "excluded_roles": [
+          "CUP_SAUCER_SET",
+          "REMOTE",
+          "SEATING_PAIR",
+          "SEATING_POSITION"
+        ],
+        "explicit_families": [
+          "SUPPORT"
+        ],
+        "strength": "EXPLICIT_FAMILY",
+        "legacy_mapper_rule": "TYPED_DOMAIN_SEMANTICS"
+      },
+      {
+        "source": "OPERATION_TEXT",
+        "raw_phrase": "Place refreshment_setting on surface",
+        "capabilities": [
+          "SUPPORT_DRINKWARE"
+        ]
+      },
+      {
+        "source": "JOINT_TYPING",
+        "status": "STRUCTURAL_OVERRIDE_OF_WEAK_FUNCTION_ALIAS"
+      }
+    ]
+  }
+}

@@ -1,0 +1,194 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Search for parts, fasten them at the table, and put the tool back.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_target",
+        "entity_kind": "FIXED_TARGET",
+        "function": "The specific location on the workbench where the fastening must occur.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "marked spot",
+          "table surface"
+        ],
+        "required_properties": [
+          "is the designated work area"
+        ]
+      },
+      {
+        "id": "compatible_component",
+        "entity_kind": "OBJECT",
+        "function": "The physical part(s) that need to be attached or joined at the target.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "block",
+          "part",
+          "assembly"
+        ],
+        "required_properties": [
+          "fits the target",
+          "needs fastening"
+        ]
+      },
+      {
+        "id": "tool",
+        "entity_kind": "OBJECT",
+        "function": "The implement used to perform the fastening action.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "gripper"
+        ],
+        "required_properties": [
+          "capable of fastening"
+        ]
+      },
+      {
+        "id": "storage_container",
+        "entity_kind": "REGION",
+        "function": "Closed areas where components or tools might be hidden and require searching.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "cabinet",
+          "drawer",
+          "cupboard"
+        ],
+        "required_properties": [
+          "is closed",
+          "has a handle or latch"
+        ]
+      },
+      {
+        "id": "workbench_surface",
+        "entity_kind": "REGION",
+        "function": "The flat area where reusable equipment must be placed after use.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table top",
+          "desk surface"
+        ],
+        "required_properties": [
+          "is horizontal",
+          "is stable"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "attachment_requirement",
+        "relation": "compatible_component fits fastening_target",
+        "participant_roles": [
+          "compatible_component",
+          "fastening_target"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "search_for_parts",
+        "operation": "Inspect storage to locate components",
+        "participant_roles": [
+          "storage_container",
+          "compatible_component"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "perform_fastening",
+        "operation": "Join component to target using tool",
+        "participant_roles": [
+          "tool",
+          "compatible_component",
+          "fastening_target"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "deposit_tool",
+        "operation": "Place tool on workbench surface",
+        "participant_roles": [
+          "tool",
+          "workbench_surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastening_target": [
+        {
+          "label": "center_table_spot",
+          "visual_description": "Area on the wooden table where the yellow/blue block sits."
+        }
+      ],
+      "compatible_component": [
+        {
+          "label": "yellow_blue_block",
+          "visual_description": "Rectangular assembly with yellow and blue blocks on a black base, sitting on the table."
+        }
+      ],
+      "tool": [
+        {
+          "label": "hidden_tool",
+          "visual_description": "Unknown items potentially inside the cabinet or drawers."
+        }
+      ],
+      "storage_container": [
+        {
+          "label": "blue_cabinet",
+          "visual_description": "Tall blue cabinet with a white handle next to the monitor."
+        },
+        {
+          "label": "left_drawer",
+          "visual_description": "Blue drawer with white handle under the left side of the table."
+        },
+        {
+          "label": "right_drawer",
+          "visual_description": "Blue drawer with white handle under the right side of the table."
+        }
+      ],
+      "workbench_surface": [
+        {
+          "label": "wooden_table",
+          "visual_description": "The entire wooden tabletop surface."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet",
+        "label": "blue_cabinet",
+        "visual_description": "Closed blue cabinet with handle.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "left_drawer",
+        "label": "left_drawer",
+        "visual_description": "Closed blue drawer.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "right_drawer",
+        "label": "right_drawer",
+        "visual_description": "Closed blue drawer.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet",
+      "left_drawer",
+      "right_drawer"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

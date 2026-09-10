@@ -1,0 +1,205 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare living room for two people with refreshment settings and accessible entertainment control.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "person",
+        "entity_kind": "OBJECT",
+        "function": "individual consumer of refreshments",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "human",
+          "guest"
+        ],
+        "required_properties": [
+          "capable_of_sitting",
+          "looking_at_tv"
+        ]
+      },
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "setup containing drink and food items",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup_and_plate",
+          "drink_station"
+        ],
+        "required_properties": [
+          "holds_beverage",
+          "holds_plate"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "device to operate television",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote",
+          "controller"
+        ],
+        "required_properties": [
+          "operates_tv"
+        ]
+      },
+      {
+        "id": "accessible_surface",
+        "entity_kind": "REGION",
+        "function": "location within reach of all people",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "side_table"
+        ],
+        "required_properties": [
+          "flat_top",
+          "reachable"
+        ]
+      },
+      {
+        "id": "television",
+        "entity_kind": "FIXED_TARGET",
+        "function": "screen for viewing",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "tv_screen",
+          "display"
+        ],
+        "required_properties": [
+          "emits_image"
+        ]
+      },
+      {
+        "id": "living_room",
+        "entity_kind": "REGION",
+        "function": "primary space for activity",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "room",
+          "space"
+        ],
+        "required_properties": [
+          "contains_furniture"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_assignment",
+        "relation": "provided_to",
+        "participant_roles": [
+          "refreshment_setting",
+          "person"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_placement",
+        "relation": "placed_on",
+        "participant_roles": [
+          "entertainment_control",
+          "accessible_surface"
+        ],
+        "required": true
+      },
+      {
+        "id": "accessibility_requirement",
+        "relation": "accessible_to",
+        "participant_roles": [
+          "accessible_surface",
+          "person"
+        ],
+        "required": true
+      },
+      {
+        "id": "viewing_orientation",
+        "relation": "faces",
+        "participant_roles": [
+          "person",
+          "television"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "provide_refreshment",
+        "operation": "set_up_refreshment_setting",
+        "participant_roles": [
+          "refreshment_setting",
+          "person"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "place_control",
+        "operation": "move_control_device",
+        "participant_roles": [
+          "entertainment_control",
+          "accessible_surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "person": [],
+      "refreshment_setting": [
+        {
+          "label": "coffee_table_setup",
+          "visual_description": "cup and plate on the central coffee table"
+        },
+        {
+          "label": "desk_setup",
+          "visual_description": "cup, plate and remote on the foreground desk"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote_on_desk",
+          "visual_description": "black remote control on the desk surface"
+        }
+      ],
+      "accessible_surface": [
+        {
+          "label": "desk",
+          "visual_description": "wooden desk in foreground"
+        },
+        {
+          "label": "coffee_table",
+          "visual_description": "central coffee table"
+        },
+        {
+          "label": "side_tables",
+          "visual_description": "small wooden tables next to chairs"
+        }
+      ],
+      "television": [
+        {
+          "label": "wall_mounted_tv",
+          "visual_description": "black screen mounted on the back wall"
+        }
+      ],
+      "living_room": [
+        {
+          "label": "room_floor",
+          "visual_description": "open floor space covered by rug"
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

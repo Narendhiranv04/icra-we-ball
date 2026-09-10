@@ -1,0 +1,319 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare coffee and soup for two people, including mixing, stirring, and serving with utensils.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "coffee",
+        "entity_kind": "OBJECT",
+        "function": "Liquid ingredient to be mixed into the beverage.",
+        "required_count": 2,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "liquid",
+          "beverage_mix"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "water",
+        "entity_kind": "OBJECT",
+        "function": "Liquid ingredient to be mixed with coffee.",
+        "required_count": 2,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "liquid",
+          "water_source"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "stirring_implementation",
+        "entity_kind": "OBJECT",
+        "function": "Tool used to mix the coffee beverage.",
+        "required_count": 2,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "spoon",
+          "utensil",
+          "stirrer"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "coffee_cup",
+        "entity_kind": "OBJECT",
+        "function": "Vessel to hold the prepared coffee.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "mug",
+          "cup",
+          "bowl"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "soup",
+        "entity_kind": "OBJECT",
+        "function": "Food ingredient to be served.",
+        "required_count": 2,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "liquid_food",
+          "soup"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "soup_bowl",
+        "entity_kind": "OBJECT",
+        "function": "Vessel to hold the soup.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bowl",
+          "dish"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "eating_utensil",
+        "entity_kind": "OBJECT",
+        "function": "Tool provided for eating the soup.",
+        "required_count": 2,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "spoon",
+          "fork",
+          "utensil"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "serving_surface",
+        "entity_kind": "REGION",
+        "function": "Area where the food and drinks are placed.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "counter",
+          "surface"
+        ],
+        "required_properties": []
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "r1",
+        "relation": "contained_in",
+        "participant_roles": [
+          "coffee",
+          "coffee_cup"
+        ],
+        "required": true
+      },
+      {
+        "id": "r2",
+        "relation": "contained_in",
+        "participant_roles": [
+          "water",
+          "coffee_cup"
+        ],
+        "required": true
+      },
+      {
+        "id": "r3",
+        "relation": "contained_in",
+        "participant_roles": [
+          "soup",
+          "soup_bowl"
+        ],
+        "required": true
+      },
+      {
+        "id": "r4",
+        "relation": "paired_with",
+        "participant_roles": [
+          "soup_bowl",
+          "eating_utensil"
+        ],
+        "required": true
+      },
+      {
+        "id": "r5",
+        "relation": "located_on",
+        "participant_roles": [
+          "coffee_cup",
+          "serving_surface"
+        ],
+        "required": true
+      },
+      {
+        "id": "r6",
+        "relation": "located_on",
+        "participant_roles": [
+          "soup_bowl",
+          "serving_surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "op1",
+        "operation": "mix",
+        "participant_roles": [
+          "coffee",
+          "water",
+          "coffee_cup"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "op2",
+        "operation": "stir",
+        "participant_roles": [
+          "coffee_cup",
+          "stirring_implementation"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "op3",
+        "operation": "fill",
+        "participant_roles": [
+          "soup_bowl",
+          "soup"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "op4",
+        "operation": "place",
+        "participant_roles": [
+          "soup_bowl",
+          "eating_utensil"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "op5",
+        "operation": "place",
+        "participant_roles": [
+          "coffee_cup",
+          "serving_surface"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "op6",
+        "operation": "place",
+        "participant_roles": [
+          "soup_bowl",
+          "serving_surface"
+        ],
+        "operation_count": 2
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "coffee": [
+        {
+          "label": "Green canister on table",
+          "visual_description": "Small cylindrical container with dark contents."
+        },
+        {
+          "label": "Brown box on table",
+          "visual_description": "Rectangular cardboard box."
+        }
+      ],
+      "water": [
+        {
+          "label": "Silver pitcher on table",
+          "visual_description": "Metal container with a spout."
+        }
+      ],
+      "stirring_implementation": [
+        {
+          "label": "Spoons on table",
+          "visual_description": "Multiple metal spoons lying on the table surface."
+        }
+      ],
+      "coffee_cup": [
+        {
+          "label": "Silver mug on table",
+          "visual_description": "Metal cup standing upright."
+        },
+        {
+          "label": "Blue bowl on table",
+          "visual_description": "Round blue dish."
+        }
+      ],
+      "soup": [
+        {
+          "label": "Red liquid in bowls",
+          "visual_description": "Reddish substance inside the bowls."
+        }
+      ],
+      "soup_bowl": [
+        {
+          "label": "Blue bowl on table",
+          "visual_description": "Round blue dish."
+        },
+        {
+          "label": "White/Red bowl on table",
+          "visual_description": "Round dish with red interior."
+        }
+      ],
+      "eating_utensil": [
+        {
+          "label": "Spoons on table",
+          "visual_description": "Metal spoons scattered on the table."
+        }
+      ],
+      "serving_surface": [
+        {
+          "label": "Table surface",
+          "visual_description": "Flat top of the central wooden table."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "region_1",
+        "label": "Wall cabinet (left)",
+        "visual_description": "Grey box mounted on the wall with a handle, appearing closed.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "region_2",
+        "label": "Wall cabinet (right)",
+        "visual_description": "Grey box mounted on the wall with a handle, appearing closed.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "region_3",
+        "label": "Table drawer",
+        "visual_description": "White drawer under the table with a handle, appearing closed.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "region_4",
+        "label": "Table box",
+        "visual_description": "Brown rectangular box on the table with a handle/lid.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "region_1",
+      "region_2",
+      "region_3",
+      "region_4"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

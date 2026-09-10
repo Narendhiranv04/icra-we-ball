@@ -1,0 +1,159 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Identify and secure a component at a specific workbench location, then place the tool on the desk.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "marked_workbench_location",
+        "entity_kind": "REGION",
+        "function": "The specific spot on the desk where the fastening must occur.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "marked spot",
+          "assembly point"
+        ],
+        "required_properties": [
+          "surface",
+          "target for fastening"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "The implement used to perform the fastening action.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "screwdriver",
+          "wrench",
+          "pliers"
+        ],
+        "required_properties": [
+          "implement",
+          "capable of fastening"
+        ]
+      },
+      {
+        "id": "compatible_component",
+        "entity_kind": "OBJECT",
+        "function": "The physical part that needs to be fastened.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut",
+          "bracket"
+        ],
+        "required_properties": [
+          "part",
+          "fits target"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "REGION",
+        "function": "The surface where the tool must be left.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "desk",
+          "table"
+        ],
+        "required_properties": [
+          "surface",
+          "holds items"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "tool_suitability",
+        "relation": "The fastening tool must be suitable for the marked location.",
+        "participant_roles": [
+          "fastening_tool",
+          "marked_workbench_location"
+        ],
+        "required": true
+      },
+      {
+        "id": "component_presence",
+        "relation": "The compatible component must be at the marked location.",
+        "participant_roles": [
+          "compatible_component",
+          "marked_workbench_location"
+        ],
+        "required": true
+      },
+      {
+        "id": "final_placement",
+        "relation": "The fastening tool must end up on the workbench.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "identify_and_assemble",
+        "operation": "Locate parts and perform the fastening action.",
+        "participant_roles": [
+          "compatible_component",
+          "fastening_tool",
+          "marked_workbench_location"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "deposit_tool",
+        "operation": "Place the tool on the workbench surface.",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "marked_workbench_location": [
+        {
+          "label": "yellow_object_on_desk",
+          "visual_description": "Yellow rectangular object on black base sitting on the desk surface."
+        }
+      ],
+      "fastening_tool": [],
+      "compatible_component": [],
+      "workbench": [
+        {
+          "label": "wooden_desk",
+          "visual_description": "Wooden table with drawers and a cabinet on top."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet_on_desk",
+        "label": "Blue cabinet on desk",
+        "visual_description": "Tall blue cabinet standing on the right side of the desk.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "drawers_under_desk",
+        "label": "Drawers under desk",
+        "visual_description": "Two blue drawers located beneath the desk surface.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet_on_desk",
+      "drawers_under_desk"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

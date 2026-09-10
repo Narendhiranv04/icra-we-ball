@@ -1,0 +1,19 @@
+{
+  "role_count": 5,
+  "roles": [
+    "coffee_container",
+    "coffee_source",
+    "coffee_stirrer",
+    "soup_container",
+    "soup_eating_utensil"
+  ],
+  "relation_count": 0,
+  "operation_group_count": 2,
+  "required_contract_complete": false,
+  "canonicalization_status": "PARTIAL",
+  "contract_missing_reasons": [
+    "Sanitizer reported semantic incompleteness",
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'water_source', 'entity_kind': 'OBJECT', 'function': 'Source of liquid for coffee', 'required_count': 1, 'binding_policy': 'REUSABLE', 'candidate_categories': ['teapot', 'jug', 'bottle'], 'required_properties': ['contains_water'], 'visible_candidates': [{'label': 'white teapot', 'visual_description': 'White ceramic pot with spout on the table'}], 'description': ''}, 'collision_with': 'coffee_beans'}]",
+    "Unresolved required relations: [{'raw_subject': 'coffee_cup', 'raw_phrase': 'contains_liquid_made_from', 'raw_object': 'coffee_beans', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'contains_liquid_made_from' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'coffee_cup', 'raw_phrase': 'contains_liquid_made_from', 'raw_object': 'water_source', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'coffee_beans', 'raw_phrase': 'contains_liquid_made_from', 'raw_object': 'water_source', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'coffee_cup', 'raw_phrase': 'acted_upon_by', 'raw_object': 'stirring_spoon', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'acted_upon_by' provides no semantic evidence for valid predicates [] or task causal semantics\"}, {'raw_subject': 'soup_bowl', 'raw_phrase': 'equipped_with', 'raw_object': 'eating_spoon', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'equipped_with' provides no semantic evidence for valid predicates [] or task causal semantics\"}]"
+  ]
+}

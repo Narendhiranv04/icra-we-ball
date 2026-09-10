@@ -1,0 +1,170 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Find fasteners and tool, attach fastener to target, leave tool on table.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_component",
+        "entity_kind": "OBJECT",
+        "function": "A hardware piece (screw, bolt, nut) used to mechanically join or secure parts.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "nut",
+          "washer",
+          "clip"
+        ],
+        "required_properties": [
+          "compatible_with_fastening_target"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "An implement used to apply torque or force to the fastening component.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "wrench",
+          "screwdriver",
+          "pliers",
+          "hammer"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "fastening_target",
+        "entity_kind": "FIXED_TARGET",
+        "function": "The specific workbench location or object requiring mechanical attachment.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "workpiece",
+          "assembly",
+          "fixture"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "workbench_surface",
+        "entity_kind": "REGION",
+        "function": "The flat surface of the workbench where reusable equipment is deposited.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "bench"
+        ],
+        "required_properties": []
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "relation_1",
+        "relation": "fits_into",
+        "participant_roles": [
+          "fastening_component",
+          "fastening_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "relation_2",
+        "relation": "acts_on",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_component",
+          "fastening_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "relation_3",
+        "relation": "placed_on",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench_surface"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "operation_1",
+        "operation": "identify_and_select",
+        "participant_roles": [
+          "fastening_component",
+          "fastening_target"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "operation_2",
+        "operation": "secure",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_component",
+          "fastening_target"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "operation_3",
+        "operation": "deposit",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench_surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastening_component": [],
+      "fastening_tool": [],
+      "fastening_target": [
+        {
+          "label": "yellow_object_on_table",
+          "visual_description": "Yellow rectangular object on the table surface."
+        }
+      ],
+      "workbench_surface": [
+        {
+          "label": "wooden_table_top",
+          "visual_description": "Wooden surface of the table."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "left_drawer",
+        "label": "Left drawer under table",
+        "visual_description": "Blue drawer with handle, closed.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "right_drawer",
+        "label": "Right drawer under table",
+        "visual_description": "Blue drawer with handle, closed.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      },
+      {
+        "id": "cabinet",
+        "label": "Grey cabinet on table",
+        "visual_description": "Tall grey storage unit with a door, closed.",
+        "reason": "Could be inspected for additional task-relevant candidates."
+      }
+    ],
+    "inspection_order": [
+      "left_drawer",
+      "right_drawer",
+      "cabinet"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

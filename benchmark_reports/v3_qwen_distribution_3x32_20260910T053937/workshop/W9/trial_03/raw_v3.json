@@ -1,0 +1,181 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Identify components, fasten target, place tool.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_target",
+        "entity_kind": "OBJECT",
+        "function": "object requiring fastening",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "workpiece",
+          "assembly"
+        ],
+        "required_properties": [
+          "needs_fastening"
+        ]
+      },
+      {
+        "id": "compatible_components",
+        "entity_kind": "OBJECT",
+        "function": "parts needed for fastening",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "nut",
+          "bolt",
+          "part"
+        ],
+        "required_properties": [
+          "fits_fastening_target"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "implement for fastening",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "wrench",
+          "screwdriver",
+          "clamp"
+        ],
+        "required_properties": [
+          "applies_force"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "REGION",
+        "function": "surface for placement",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk"
+        ],
+        "required_properties": [
+          "is_surface"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "suit_for_fastening",
+        "relation": "compatible_components suit_for_fastening fastening_target",
+        "participant_roles": [
+          "compatible_components",
+          "fastening_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "suit_for_operation",
+        "relation": "fastening_tool suit_for_operation fastening_target",
+        "participant_roles": [
+          "fastening_tool",
+          "fastening_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "ends_up_on",
+        "relation": "fastening_tool ends_up_on workbench",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "identify_components",
+        "operation": "identify_components",
+        "participant_roles": [
+          "compatible_components",
+          "fastening_target"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "perform_fastening",
+        "operation": "perform_fastening",
+        "participant_roles": [
+          "fastening_tool",
+          "compatible_components",
+          "fastening_target"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "deposit_tool",
+        "operation": "deposit_tool",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastening_target": [
+        {
+          "label": "yellow object on tray",
+          "visual_description": "yellow block on black mat on table"
+        }
+      ],
+      "compatible_components": [
+        {
+          "label": "yellow objects on tray",
+          "visual_description": "small yellow items on black mat"
+        }
+      ],
+      "fastening_tool": [
+        {
+          "label": "robot arm",
+          "visual_description": "white robotic arm structure"
+        }
+      ],
+      "workbench": [
+        {
+          "label": "wooden table",
+          "visual_description": "wooden desk with drawers"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet",
+        "label": "blue cabinet",
+        "visual_description": "closed cabinet on right",
+        "reason": "closed storage structure potentially holding tools"
+      },
+      {
+        "id": "drawer_left",
+        "label": "left drawer",
+        "visual_description": "closed drawer under table left",
+        "reason": "closed storage structure potentially holding tools"
+      },
+      {
+        "id": "drawer_right",
+        "label": "right drawer",
+        "visual_description": "closed drawer under table right",
+        "reason": "closed storage structure potentially holding tools"
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet",
+      "drawer_left",
+      "drawer_right"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

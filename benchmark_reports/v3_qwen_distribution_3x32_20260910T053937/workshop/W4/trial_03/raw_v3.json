@@ -1,0 +1,187 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Locate fastening parts, assemble them on the workbench target, and leave tools on the bench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "workbench",
+        "entity_kind": "FIXED_TARGET",
+        "function": "fixed surface where the task occurs and tools are left",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "wooden table",
+          "desk"
+        ],
+        "required_properties": [
+          "stable surface",
+          "drawer access"
+        ]
+      },
+      {
+        "id": "fastening_target",
+        "entity_kind": "OBJECT",
+        "function": "object or location requiring mechanical securing",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "black tray",
+          "assembly piece"
+        ],
+        "required_properties": [
+          "needs fastening",
+          "located on workbench"
+        ]
+      },
+      {
+        "id": "compatible_component",
+        "entity_kind": "OBJECT",
+        "function": "hardware piece that fits the target",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "bolt",
+          "nut",
+          "screw",
+          "bracket"
+        ],
+        "required_properties": [
+          "compatible shape",
+          "compatible thread"
+        ]
+      },
+      {
+        "id": "fastening_tool",
+        "entity_kind": "OBJECT",
+        "function": "implement used to drive or tighten the component",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "wrench",
+          "screwdriver",
+          "hammer"
+        ],
+        "required_properties": [
+          "appropriate for component"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "relation_001",
+        "relation": "compatible_component fits fastening_target",
+        "participant_roles": [
+          "compatible_component",
+          "fastening_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "relation_002",
+        "relation": "fastening_tool operates on compatible_component and fastening_target",
+        "participant_roles": [
+          "fastening_tool",
+          "compatible_component",
+          "fastening_target"
+        ],
+        "required": true
+      },
+      {
+        "id": "relation_003",
+        "relation": "fastening_tool rests on workbench",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "operation_001",
+        "operation": "locate compatible_component",
+        "participant_roles": [
+          "compatible_component",
+          "workbench"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "operation_002",
+        "operation": "fasten compatible_component to fastening_target",
+        "participant_roles": [
+          "fastening_tool",
+          "compatible_component",
+          "fastening_target"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "operation_003",
+        "operation": "place fastening_tool on workbench",
+        "participant_roles": [
+          "fastening_tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "workbench": [
+        {
+          "label": "wooden_table",
+          "visual_description": "wooden desk with drawers and a monitor/cabinet behind it"
+        }
+      ],
+      "fastening_target": [
+        {
+          "label": "black_tray_with_yellow_items",
+          "visual_description": "black rectangular object with yellow/gold pieces on top of the desk"
+        }
+      ],
+      "compatible_component": [
+        {
+          "label": "yellow_items_on_tray",
+          "visual_description": "yellow/gold blocks or pieces sitting on the black tray"
+        }
+      ],
+      "fastening_tool": []
+    },
+    "inspectable_regions": [
+      {
+        "id": "left_drawer",
+        "label": "left_drawer",
+        "visual_description": "closed drawer under the left side of the table",
+        "reason": "closed storage structure potentially containing components or tools"
+      },
+      {
+        "id": "right_drawer",
+        "label": "right_drawer",
+        "visual_description": "closed drawer under the right side of the table",
+        "reason": "closed storage structure potentially containing components or tools"
+      },
+      {
+        "id": "cabinet",
+        "label": "cabinet",
+        "visual_description": "blue cabinet standing next to the monitor",
+        "reason": "closed storage structure potentially containing components or tools"
+      },
+      {
+        "id": "workbench_surface",
+        "label": "workbench_surface",
+        "visual_description": "top surface of the wooden desk",
+        "reason": "surface where target is located and where tools should be placed"
+      }
+    ],
+    "inspection_order": [
+      "left_drawer",
+      "right_drawer",
+      "cabinet",
+      "workbench_surface"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

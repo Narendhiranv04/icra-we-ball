@@ -1,0 +1,161 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare living room for two people with refreshments and accessible entertainment control.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "A group of items (cup, plate) prepared for a single person's use.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "place setting",
+          "cup and plate",
+          "drink station"
+        ],
+        "required_properties": [
+          "holds_liquid",
+          "holds_food",
+          "portable"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "A device used to operate the television.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote",
+          "controller",
+          "handheld device"
+        ],
+        "required_properties": [
+          "electronic",
+          "operates_tv"
+        ]
+      },
+      {
+        "id": "seating_spot",
+        "entity_kind": "REGION",
+        "function": "An area where a person sits to watch television.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "chair",
+          "armchair",
+          "seat"
+        ],
+        "required_properties": [
+          "upright",
+          "for_sitting",
+          "facing_tv"
+        ]
+      },
+      {
+        "id": "central_console",
+        "entity_kind": "OBJECT",
+        "function": "A surface located centrally between seating spots for shared access.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "stand",
+          "shelf",
+          "console"
+        ],
+        "required_properties": [
+          "flat_surface",
+          "under_tv",
+          "between_seats"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "setting_proximity",
+        "relation": "is_near",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating_spot"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_placement",
+        "relation": "is_on",
+        "participant_roles": [
+          "entertainment_control",
+          "central_console"
+        ],
+        "required": true
+      },
+      {
+        "id": "shared_access",
+        "relation": "is_accessible_to",
+        "participant_roles": [
+          "central_console",
+          "seating_spot"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "distribute_refreshments",
+        "operation": "move_and_arrange",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating_spot"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "move_remote",
+        "operation": "move",
+        "participant_roles": [
+          "entertainment_control",
+          "central_console"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "current_setting",
+          "visual_description": "Two cups and two plates arranged on the large wooden table in the foreground."
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote",
+          "visual_description": "A black remote control lying on the large wooden table in the foreground."
+        }
+      ],
+      "seating_spot": [
+        {
+          "label": "left_chair",
+          "visual_description": "A wooden armchair with black cushions on the left side of the room."
+        },
+        {
+          "label": "right_chair",
+          "visual_description": "A wooden armchair with black cushions on the right side of the room."
+        }
+      ],
+      "central_console": [
+        {
+          "label": "console_table",
+          "visual_description": "A low wooden table situated directly beneath the wall-mounted television."
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

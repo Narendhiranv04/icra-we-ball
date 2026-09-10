@@ -1,0 +1,186 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare living room for two people with refreshment settings and accessible entertainment control.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "person",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Beneficiary who will watch television and consume refreshments.",
+        "required_count": 2,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "human",
+          "guest"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "A set of items for eating or drinking.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup_set",
+          "snack_plate"
+        ],
+        "required_properties": [
+          "contains_food_or_drink"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "Device used to operate the television.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "remote",
+          "controller"
+        ],
+        "required_properties": [
+          "operates_television"
+        ]
+      },
+      {
+        "id": "surface",
+        "entity_kind": "REGION",
+        "function": "Flat area where items are placed.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk"
+        ],
+        "required_properties": [
+          "has_flat_top"
+        ]
+      },
+      {
+        "id": "television",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Display device for entertainment.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "tv",
+          "screen"
+        ],
+        "required_properties": [
+          "displays_video"
+        ]
+      },
+      {
+        "id": "seat",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Place where people sit to watch television.",
+        "required_count": 2,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "chair",
+          "couch"
+        ],
+        "required_properties": []
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "setting_assignment",
+        "relation": "Each refreshment setting is provided to a person.",
+        "participant_roles": [
+          "refreshment_setting",
+          "person"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_access",
+        "relation": "The entertainment control is accessible to both people.",
+        "participant_roles": [
+          "entertainment_control",
+          "person"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_function",
+        "relation": "The entertainment control operates the television.",
+        "participant_roles": [
+          "entertainment_control",
+          "television"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "set_refreshments",
+        "operation": "Place refreshment settings on the surface.",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface",
+          "person"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "position_control",
+        "operation": "Place the entertainment control on the surface.",
+        "participant_roles": [
+          "entertainment_control",
+          "surface",
+          "person"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "person": [],
+      "refreshment_setting": [
+        {
+          "label": "cup_and_plate",
+          "visual_description": "White plate and red cup on coffee table"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "remote",
+          "visual_description": "Black remote on coffee table"
+        }
+      ],
+      "surface": [
+        {
+          "label": "coffee_table",
+          "visual_description": "Large wooden table with items on it"
+        },
+        {
+          "label": "console_table",
+          "visual_description": "Small wooden table under TV"
+        }
+      ],
+      "television": [
+        {
+          "label": "wall_mounted_tv",
+          "visual_description": "Black screen on wall"
+        }
+      ],
+      "seat": [
+        {
+          "label": "left_armchair",
+          "visual_description": "Wooden chair with black cushion"
+        },
+        {
+          "label": "right_armchair",
+          "visual_description": "Wooden chair with black cushion"
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

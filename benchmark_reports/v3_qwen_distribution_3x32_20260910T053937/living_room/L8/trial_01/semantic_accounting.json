@@ -1,0 +1,68 @@
+[
+  {
+    "element_kind": "operation",
+    "raw_id": "place_refreshment",
+    "disposition": "PRIMITIVE_CAPABILITY",
+    "canonical_representation": [
+      "SUPPORT_DRINKWARE"
+    ],
+    "provenance": "FM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "operation",
+    "raw_id": "place_control",
+    "disposition": "PRIMITIVE_CAPABILITY",
+    "canonical_representation": [
+      "SUPPORT_ENTERTAINMENT_CONTROL"
+    ],
+    "provenance": "FM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "refreshment_setting",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "CUP_SAUCER_SET"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "entertainment_control",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "REMOTE"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT"
+  },
+  {
+    "element_kind": "role",
+    "raw_id": "surface",
+    "disposition": "GROUNDED_TASK_PARTICIPANT",
+    "canonical_representation": [
+      "PERSONAL_CUP_SAUCER_REGION",
+      "SHARED_REMOTE_REGION",
+      "staging_tray"
+    ],
+    "provenance": "FM_EXPLICIT_ROLE",
+    "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "relation",
+    "raw_id": "refreshment_setting_on_surface",
+    "disposition": "GROUNDED_TASK_RELATION",
+    "canonical_representation": "rests on",
+    "provenance": "FM_EXPLICIT_RELATION",
+    "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+  },
+  {
+    "element_kind": "relation",
+    "raw_id": "entertainment_control_on_surface",
+    "disposition": "GROUNDED_TASK_RELATION",
+    "canonical_representation": "rests on",
+    "provenance": "FM_EXPLICIT_RELATION",
+    "requirement_provenance": "DERIVED_FROM_EXPLICIT_OPERATION"
+  }
+]

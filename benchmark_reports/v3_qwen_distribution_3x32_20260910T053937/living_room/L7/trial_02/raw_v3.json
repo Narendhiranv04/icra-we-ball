@@ -1,0 +1,144 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare the living room for two people by providing refreshment settings near the seating and placing the remote control in an accessible location.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_items",
+        "entity_kind": "OBJECT",
+        "function": "Consumable items or serving ware for refreshments",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "cup",
+          "plate",
+          "snack",
+          "bowl"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "remote_control",
+        "entity_kind": "OBJECT",
+        "function": "Device to operate the television",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote",
+          "controller"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "surface",
+        "entity_kind": "REGION",
+        "function": "Flat area to hold objects",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "floor"
+        ],
+        "required_properties": []
+      },
+      {
+        "id": "seating_area",
+        "entity_kind": "REGION",
+        "function": "Area where people sit to watch television",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "chairs",
+          "sofa",
+          "rug"
+        ],
+        "required_properties": []
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_proximity",
+        "relation": "refreshment_items must be near seating_area",
+        "participant_roles": [
+          "refreshment_items",
+          "seating_area"
+        ],
+        "required": true
+      },
+      {
+        "id": "remote_accessibility",
+        "relation": "remote_control must be accessible to seating_area",
+        "participant_roles": [
+          "remote_control",
+          "seating_area"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "set_refreshments",
+        "operation": "place refreshment_items on surface",
+        "participant_roles": [
+          "refreshment_items",
+          "surface"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "position_remote",
+        "operation": "place remote_control on surface",
+        "participant_roles": [
+          "remote_control",
+          "surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_items": [
+        {
+          "label": "Cups and plates",
+          "visual_description": "Red cups and white plates sitting on the large wooden desk in the foreground."
+        }
+      ],
+      "remote_control": [
+        {
+          "label": "Remote",
+          "visual_description": "Black remote control device sitting on the same large wooden desk."
+        }
+      ],
+      "surface": [
+        {
+          "label": "Large wooden desk",
+          "visual_description": "Prominent desk in the foreground with items on it."
+        },
+        {
+          "label": "Console table",
+          "visual_description": "Low table beneath the television."
+        },
+        {
+          "label": "Side tables",
+          "visual_description": "Small tables next to the armchairs."
+        }
+      ],
+      "seating_area": [
+        {
+          "label": "Armchairs",
+          "visual_description": "Two wooden armchairs positioned in the center of the room."
+        },
+        {
+          "label": "Rug",
+          "visual_description": "Large light-colored rug covering the floor under the furniture."
+        }
+      ]
+    },
+    "inspectable_regions": [],
+    "inspection_order": []
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

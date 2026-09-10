@@ -1,0 +1,176 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare living room for two people with refreshments and accessible TV control.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "refreshment_setting",
+        "entity_kind": "OBJECT",
+        "function": "Provides a serving vessel for beverages or food for one person.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "plate",
+          "cup",
+          "drinking vessel",
+          "serving dish"
+        ],
+        "required_properties": [
+          "holds beverage or food",
+          "portable"
+        ]
+      },
+      {
+        "id": "entertainment_control",
+        "entity_kind": "OBJECT",
+        "function": "Operates the television.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "remote",
+          "controller",
+          "button device"
+        ],
+        "required_properties": [
+          "operates television",
+          "handheld"
+        ]
+      },
+      {
+        "id": "surface",
+        "entity_kind": "REGION",
+        "function": "Flat area to hold refreshments and control.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "counter"
+        ],
+        "required_properties": [
+          "flat top",
+          "holds objects"
+        ]
+      },
+      {
+        "id": "seating_area",
+        "entity_kind": "FIXED_TARGET",
+        "function": "Area where people sit to watch TV.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "chair",
+          "sofa",
+          "armchair"
+        ],
+        "required_properties": [
+          "for sitting",
+          "facing television"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "refreshment_nearby_seating",
+        "relation": "nearby",
+        "participant_roles": [
+          "refreshment_setting",
+          "seating_area"
+        ],
+        "required": true
+      },
+      {
+        "id": "control_accessible_to_seating",
+        "relation": "accessible_to",
+        "participant_roles": [
+          "entertainment_control",
+          "seating_area"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "place_refreshment",
+        "operation": "place",
+        "participant_roles": [
+          "refreshment_setting",
+          "surface"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "place_control",
+        "operation": "place",
+        "participant_roles": [
+          "entertainment_control",
+          "surface"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "refreshment_setting": [
+        {
+          "label": "Plate and red cup",
+          "visual_description": "Located on the desk, appears twice"
+        }
+      ],
+      "entertainment_control": [
+        {
+          "label": "Black remote",
+          "visual_description": "Located on the desk"
+        }
+      ],
+      "surface": [
+        {
+          "label": "Coffee table",
+          "visual_description": "Central table with green top"
+        },
+        {
+          "label": "Left side table",
+          "visual_description": "Small table next to left chair"
+        },
+        {
+          "label": "Right side table",
+          "visual_description": "Small table next to right chair"
+        }
+      ],
+      "seating_area": [
+        {
+          "label": "Armchairs",
+          "visual_description": "Two black chairs facing the TV"
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "desk",
+        "label": "Wooden desk",
+        "visual_description": "Foreground desk containing remote and refreshments.",
+        "reason": "Contains source items to be moved."
+      },
+      {
+        "id": "coffee_table",
+        "label": "Coffee table",
+        "visual_description": "Central table in seating area.",
+        "reason": "Potential destination for items."
+      },
+      {
+        "id": "side_tables",
+        "label": "Side tables",
+        "visual_description": "Tables flanking the chairs.",
+        "reason": "Potential destinations for individual settings."
+      }
+    ],
+    "inspection_order": [
+      "desk",
+      "coffee_table",
+      "side_tables"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

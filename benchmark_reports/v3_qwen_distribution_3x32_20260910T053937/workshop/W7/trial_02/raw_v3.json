@@ -1,0 +1,197 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Find a fastening component, attach it to the workbench, and leave the robot arm on the table.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastening_component",
+        "entity_kind": "OBJECT",
+        "function": "The physical part that needs to be attached to the workbench to secure or assemble something.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "clip",
+          "fastener",
+          "metal piece"
+        ],
+        "required_properties": [
+          "compatible with workbench surface",
+          "able to secure assembly"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "REGION",
+        "function": "The surface where the fastening takes place.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "workbench"
+        ],
+        "required_properties": [
+          "flat surface",
+          "supportive structure"
+        ]
+      },
+      {
+        "id": "robot_arm",
+        "entity_kind": "OBJECT",
+        "function": "The manipulator used to handle the component and perform the fastening.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "robot",
+          "arm",
+          "manipulator"
+        ],
+        "required_properties": [
+          "capable of grasping",
+          "capable of precise placement"
+        ]
+      },
+      {
+        "id": "storage_container",
+        "entity_kind": "OBJECT",
+        "function": "Enclosed spaces that may hold the required component.",
+        "required_count": 2,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "cabinet",
+          "drawer",
+          "box",
+          "case"
+        ],
+        "required_properties": [
+          "enclosed volume",
+          "accessible via opening"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "compatible_with",
+        "relation": "The fastening component must be physically compatible with the marked location on the workbench.",
+        "participant_roles": [
+          "fastening_component",
+          "workbench"
+        ],
+        "required": true
+      },
+      {
+        "id": "manipulated_by",
+        "relation": "The robot arm handles the component during the fastening process.",
+        "participant_roles": [
+          "robot_arm",
+          "fastening_component"
+        ],
+        "required": true
+      },
+      {
+        "id": "returned_to",
+        "relation": "After the task, the robot arm must be left resting on the workbench.",
+        "participant_roles": [
+          "robot_arm",
+          "workbench"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "search_components",
+        "operation": "The robot arm opens and inspects storage containers to find the compatible fastening component.",
+        "participant_roles": [
+          "robot_arm",
+          "storage_container"
+        ],
+        "operation_count": 2
+      },
+      {
+        "id": "fasten_component",
+        "operation": "The robot arm places and secures the fastening component onto the workbench.",
+        "participant_roles": [
+          "robot_arm",
+          "fastening_component",
+          "workbench"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "place_robot",
+        "operation": "The robot arm moves to a safe resting position on the workbench.",
+        "participant_roles": [
+          "robot_arm",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastening_component": [
+        {
+          "label": "Yellow object on table",
+          "visual_description": "A small yellow rectangular object sitting on a black tray on the workbench surface."
+        }
+      ],
+      "workbench": [
+        {
+          "label": "Wooden Table",
+          "visual_description": "A brown wooden desk with two blue drawers underneath and a black cabinet on top."
+        }
+      ],
+      "robot_arm": [
+        {
+          "label": "White Robotic Arm",
+          "visual_description": "A large white articulated arm visible in the foreground, holding a yellow object in the third image."
+        }
+      ],
+      "storage_container": [
+        {
+          "label": "Cabinet",
+          "visual_description": "A tall blue cabinet standing against the wall behind the workbench."
+        },
+        {
+          "label": "Left Drawer",
+          "visual_description": "A blue drawer located under the left side of the workbench."
+        },
+        {
+          "label": "Right Drawer",
+          "visual_description": "A blue drawer located under the right side of the workbench."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "cabinet",
+        "label": "Blue Cabinet",
+        "visual_description": "A closed blue cabinet with a vertical handle.",
+        "reason": "Closed structure that may contain spare parts or tools."
+      },
+      {
+        "id": "left_drawer",
+        "label": "Left Drawer",
+        "visual_description": "A closed blue drawer under the table.",
+        "reason": "Closed structure that may contain tools or components."
+      },
+      {
+        "id": "right_drawer",
+        "label": "Right Drawer",
+        "visual_description": "A closed blue drawer under the table.",
+        "reason": "Closed structure that may contain tools or components."
+      }
+    ],
+    "inspection_order": [
+      "cabinet",
+      "left_drawer",
+      "right_drawer"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}

@@ -1,0 +1,223 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Locate fastening components in storage, apply them to workpieces using a tool, and return the tool to the workbench.",
+  "task_contract": {
+    "functional_roles": [
+      {
+        "id": "fastener",
+        "entity_kind": "OBJECT",
+        "function": "A component that secures the workpieces together.",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "screw",
+          "bolt",
+          "pin",
+          "clip"
+        ],
+        "required_properties": [
+          "threaded",
+          "rigid"
+        ]
+      },
+      {
+        "id": "tool",
+        "entity_kind": "OBJECT",
+        "function": "An implement used to manipulate the fastener.",
+        "required_count": 1,
+        "binding_policy": "REUSABLE",
+        "candidate_categories": [
+          "driver",
+          "wrench",
+          "pliers",
+          "screwdriver"
+        ],
+        "required_properties": [
+          "manipulatable",
+          "functional"
+        ]
+      },
+      {
+        "id": "workpiece",
+        "entity_kind": "OBJECT",
+        "function": "A part of the assembly being joined.",
+        "required_count": 2,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": [
+          "block",
+          "base",
+          "fixture",
+          "plate"
+        ],
+        "required_properties": [
+          "rigid",
+          "drillable"
+        ]
+      },
+      {
+        "id": "workbench",
+        "entity_kind": "REGION",
+        "function": "The surface where the task occurs and tools are returned.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "table",
+          "desk",
+          "bench"
+        ],
+        "required_properties": [
+          "flat",
+          "stable"
+        ]
+      },
+      {
+        "id": "storage_unit",
+        "entity_kind": "FIXED_TARGET",
+        "function": "A container where fasteners or tools are kept.",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [
+          "drawer",
+          "cabinet",
+          "compartment",
+          "bin"
+        ],
+        "required_properties": [
+          "enclosed",
+          "openable"
+        ]
+      }
+    ],
+    "functional_relations": [
+      {
+        "id": "compatible_with",
+        "relation": "The fastener must fit and secure the workpieces.",
+        "participant_roles": [
+          "fastener",
+          "workpiece"
+        ],
+        "required": true
+      },
+      {
+        "id": "fastened_to",
+        "relation": "The workpieces must be joined together.",
+        "participant_roles": [
+          "workpiece",
+          "workpiece"
+        ],
+        "required": true
+      },
+      {
+        "id": "operates_with",
+        "relation": "The tool is used to manipulate the fastener.",
+        "participant_roles": [
+          "tool",
+          "fastener"
+        ],
+        "required": true
+      },
+      {
+        "id": "left_on",
+        "relation": "The tool must end up resting on the workbench.",
+        "participant_roles": [
+          "tool",
+          "workbench"
+        ],
+        "required": true
+      }
+    ],
+    "operation_pairings": [
+      {
+        "id": "search_storage",
+        "operation": "Open and inspect the storage unit to find components.",
+        "participant_roles": [
+          "storage_unit",
+          "required_count_in_operation_pairing"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "apply_fastener",
+        "operation": "Insert and secure the fastener using the tool.",
+        "participant_roles": [
+          "tool",
+          "fastener",
+          "workpiece"
+        ],
+        "operation_count": 1
+      },
+      {
+        "id": "place_tool",
+        "operation": "Deposit the tool onto the workbench surface.",
+        "participant_roles": [
+          "tool",
+          "workbench"
+        ],
+        "operation_count": 1
+      }
+    ]
+  },
+  "observation_guidance": {
+    "visible_candidates_per_role": {
+      "fastener": [],
+      "tool": [],
+      "workpiece": [
+        {
+          "label": "yellow_object",
+          "visual_description": "Yellow rectangular block on a black base."
+        },
+        {
+          "label": "black_base",
+          "visual_description": "Black flat base underneath the yellow object."
+        }
+      ],
+      "workbench": [
+        {
+          "label": "desk",
+          "visual_description": "Wooden table with drawers and legs."
+        }
+      ],
+      "storage_unit": [
+        {
+          "label": "blue_cabinet",
+          "visual_description": "Tall blue cabinet with a door and handle."
+        },
+        {
+          "label": "left_drawer",
+          "visual_description": "Drawer on the left side of the desk."
+        },
+        {
+          "label": "right_drawer",
+          "visual_description": "Drawer on the right side of the desk."
+        }
+      ]
+    },
+    "inspectable_regions": [
+      {
+        "id": "blue_cabinet",
+        "label": "Blue Cabinet",
+        "visual_description": "Closed blue cabinet with handle.",
+        "reason": "Likely contains tools or large fasteners."
+      },
+      {
+        "id": "left_drawer",
+        "label": "Left Drawer",
+        "visual_description": "Closed desk drawer with handle.",
+        "reason": "Likely contains small hardware components."
+      },
+      {
+        "id": "right_drawer",
+        "label": "Right Drawer",
+        "visual_description": "Closed desk drawer with handle.",
+        "reason": "Likely contains small hardware components."
+      }
+    ],
+    "inspection_order": [
+      "blue_cabinet",
+      "left_drawer",
+      "right_drawer"
+    ]
+  },
+  "unsupported_reason": "",
+  "schema_version": 3
+}
