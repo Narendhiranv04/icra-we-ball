@@ -28,6 +28,43 @@ def normalize_id(value: Any) -> str:
     return re.sub(r"[^a-z0-9_]+", "_", str(value).strip().lower()).strip("_")
 
 
+# Keys of a canonical interaction group whose values are role identifiers.  The
+# V3 converter records the capability reading it chose alongside the group, and
+# those records name roles too.  Normalizing the group's own endpoints while
+# leaving these alone made the two disagree: a contract whose role ids were not
+# already lowercase slugs -- "Coffee_Cup" -- had every one of its operations
+# rejected as naming a participant the runtime holds in no form, while that
+# participant sat in the graph under its normalized name.
+_GROUP_ROLE_ID_FIELDS: tuple[str, ...] = (
+    "tool_role", "source_role", "target_role", "context_role", "anchor_role",
+)
+_GROUP_ROLE_ID_LIST_FIELDS: tuple[str, ...] = (
+    "v3_participant_roles", "v3_explicit_participant_roles",
+    "v3_raw_fm_participant_roles", "v3_witness_roles",
+    "v3_current_state_context_roles",
+)
+
+
+def _normalize_group_role_references(item: dict[str, Any]) -> None:
+    """Rewrite every role identifier a group carries, at any depth it carries one."""
+    for key in _GROUP_ROLE_ID_LIST_FIELDS:
+        values = item.get(key)
+        if isinstance(values, list):
+            item[key] = [normalize_id(value) for value in values if isinstance(value, str)]
+    assignments = item.get("v3_slot_assignments")
+    if isinstance(assignments, list):
+        rewritten = []
+        for row in assignments:
+            if not isinstance(row, dict):
+                continue
+            row = dict(row)
+            for key in _GROUP_ROLE_ID_FIELDS:
+                if isinstance(row.get(key), str):
+                    row[key] = normalize_id(row[key])
+            rewritten.append(row)
+        item["v3_slot_assignments"] = rewritten
+
+
 def sanitize_functional_graph(raw: Mapping[str, Any], *, domain: str | None = None) -> SanitizationResult:
     if not isinstance(raw, Mapping):
         return SanitizationResult({}, [{"code": "INVALID_DOCUMENT"}], True, False)
@@ -181,6 +218,7 @@ def sanitize_functional_graph(raw: Mapping[str, Any], *, domain: str | None = No
         keys = ["tool_role", "target_role"] + (["context_role"] if item.get("context_role") else [])
         for key in keys:
             item[key] = normalize_id(item.get(key, ""))
+        _normalize_group_role_references(item)
         gid = normalize_id(item.get("id", ""))
         if any(item[k] not in ids for k in keys) or not gid or gid in group_ids:
             record("INVALID_GROUP_REFERENCE", group, semantic=True)
@@ -194,6 +232,10 @@ def sanitize_functional_graph(raw: Mapping[str, Any], *, domain: str | None = No
         retained_groups.append(item)
         group_ids.add(gid)
     doc["interaction_groups"] = retained_groups
+    for key in ("current_state_operation_context_roles",):
+        values = doc.get(key)
+        if isinstance(values, list):
+            doc[key] = [normalize_id(value) for value in values if isinstance(value, str)]
     for key in ("inspectable_regions", "inspection_order"):
         if not isinstance(doc.get(key, []), list):
             record("IGNORED_OPTIONAL_METADATA", {key: doc[key]})
