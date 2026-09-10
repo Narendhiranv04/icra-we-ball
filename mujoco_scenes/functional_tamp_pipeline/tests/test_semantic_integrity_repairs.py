@@ -213,31 +213,52 @@ def test_quantified_relation_with_no_legal_reading_is_recorded_not_invented():
 # ---------------------------------------------------------------------------
 
 
-def test_relation_restating_a_capability_precondition_is_enforced_not_lost():
-    raw = document([
+def _fastening_roles():
+    return [
         role("tool", "reusable fastening implement", categories=["screwdriver"]),
         role("fastener", "manipulated joining component", categories=["screw"]),
         role("target", "fixed assembly receiving installed component", kind="FIXED_TARGET",
              policy="SHARED"),
-    ], relations=[relation("secures", "tool secures fastener to target", ["tool", "fastener"])],
+    ]
+
+
+def test_relation_restating_a_capability_precondition_is_enforced_not_lost():
+    """Either reading is acceptable; silently dropping the requirement is not."""
+    raw = document(
+        _fastening_roles(),
+        relations=[relation("secures", "tool secures fastener to target", ["tool", "fastener"])],
         operations=[operation("fasten", "fasten component at target",
                               ["tool", "fastener", "target"])])
     _, graph = compile_v3(raw, "workshop", WORKSHOP)
-    enforced = graph.metadata["canonicalization_trace"]["relations_enforced_by_operations"]
-    assert enforced, graph.metadata["executable_contract_missing_reasons"]
+    trace = graph.metadata["canonicalization_trace"]
+    compiled = {(r.subject_role, r.predicate, r.object_role) for r in graph.relations or ()}
+    compiled |= {
+        (group.tool_role, predicate, group.target_role)
+        for group in graph.operation_groups or ()
+        for predicate in group.required_relations or ()
+    }
+    assert ("driver", "COMPATIBLE_WITH", "fastener") in compiled or trace[
+        "relations_enforced_by_operations"], graph.metadata[
+            "executable_contract_missing_reasons"]
     assert graph.online_executable_contract_complete
 
 
-def test_relation_over_roles_no_operation_binds_still_blocks():
-    """The same wording, with nothing to enforce it, remains a real gap."""
-    raw = document([
-        role("tool", "reusable fastening implement", categories=["screwdriver"]),
-        role("fastener", "manipulated joining component", categories=["screw"]),
-        role("target", "fixed assembly receiving installed component", kind="FIXED_TARGET",
-             policy="SHARED"),
-    ], relations=[relation("secures", "tool secures fastener to target", ["tool", "fastener"])])
+def test_relation_wording_the_runtime_cannot_read_still_blocks():
+    """Wording no predicate covers is a real gap, not something to wave through."""
+    raw = document(
+        _fastening_roles(),
+        relations=[relation(
+            "tilt", "must maintain 45 degree tilt during operation", ["tool", "fastener"])],
+        operations=[operation("fasten", "fasten component at target",
+                              ["tool", "fastener", "target"])])
     _, graph = compile_v3(raw, "workshop", WORKSHOP)
-    assert not graph.metadata["canonicalization_trace"]["relations_enforced_by_operations"]
+    trace = graph.metadata["canonicalization_trace"]
+    assert not trace["relations_enforced_by_operations"]
+    assert any(
+        row.get("raw_phrase") == "must maintain 45 degree tilt during operation"
+        or row.get("relation") == "must maintain 45 degree tilt during operation"
+        for row in trace.get("unresolved_required_relations", [])
+    ), trace.get("unresolved_required_relations")
     assert not graph.online_executable_contract_complete
 
 

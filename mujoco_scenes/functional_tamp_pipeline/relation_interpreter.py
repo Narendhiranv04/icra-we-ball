@@ -129,6 +129,143 @@ _SEMANTIC_PREDICATE_CUES: dict[tuple[str, str], tuple[str, ...]] = {
     ),
 }
 
+# ---------------------------------------------------------------------------
+# Morphology-tolerant semantic cues
+# ---------------------------------------------------------------------------
+#
+# The contiguous phrase lists above match only wordings that have already been
+# seen.  "stirs" was listed and "stir" was not, so an imperative carried no
+# meaning at all; "suit_for", "must physically suit" and "is suitable for" all
+# say compatibility and none of them was listed.  Rather than keep appending
+# sentences, these patterns state the *stem inventory* of each meaning, so any
+# inflection of a word that expresses it reads the same way.
+#
+# They nominate candidates only.  Which nomination survives is still decided by
+# the predicate's endpoint signature, and a phrase that nominates nothing still
+# fails closed -- so a generous stem list cannot invent a relation, it can only
+# let an endpoint pair that admits exactly one predicate recognise the wording
+# the model actually used.
+_FIT_OR_COMPATIBILITY = r"\b(?:fit|suit|match|mate|compatib|conform|correspond|accommodat)\w*"
+# Verb forms only.  A nominalisation is not a statement about the two roles:
+# "must maintain 45 degree tilt during operation" names the activity and says
+# nothing the runtime can verify, and reading "operation" as "operates on"
+# turned an uninterpretable relation into a physical requirement.
+_TOOL_USE = (
+    r"\b(?:us(?:e|es|ed|ing|able)|appl(?:y|ies|ied|ying)|operat(?:e|es|ed|ing)|"
+    r"manipulat(?:e|es|ed|ing)|handl(?:e|es|ed|ing)|wield(?:s|ed|ing)?|"
+    r"employ(?:s|ed|ing)?|deploy(?:s|ed|ing)?)\b"
+    r"|\bact(?:s|ed|ing)?\s+(?:up)?on\b"
+    r"|\bwork(?:s|ed|ing)?\s+(?:on|with)\b"
+)
+# Fastening words only count where they are used as verbs.  The bare stem also
+# forms the attributive gerund the model uses for *kinds* -- "the fastening
+# component", "the fastening tool" -- and reading those as statements about the
+# action made "the tool acts on the fastening component" a mechanical-fit claim
+# instead of the causal statement it is.
+_FASTENING_STEMS = (
+    r"fasten|secur|attach|join|screw|bolt|instal|affix|mount|anchor|connect|"
+    r"thread|rivet|clip|glu|weld|clamp|fix"
+)
+_FASTENING_ACTION = (
+    rf"\b(?:{_FASTENING_STEMS})(?:s|es|ed|ing)?\b\s*"
+    rf"(?:to|onto|into|in|at|with|together|against)\b"
+    rf"|\b(?:{_FASTENING_STEMS})(?:s|es|ed)\b"
+    rf"|\b(?:is|are|be|been|being|must|should|needs?|has|have|to)\s+"
+    rf"(?:\w+\s+){{0,3}}?(?:{_FASTENING_STEMS})\w*"
+)
+_SUPPORT_PLACEMENT = (
+    r"\b(?:plac|position|rest|support|situat|locat|set|put|lay|stand|arrang|deposit|leav|left)\w*"
+    r"[^.;:]{0,30}?\b(?:on|onto|upon|atop|over)\b"
+    r"|\b(?:on|onto|upon|atop)\s+(?:the\s+|a\s+|an\s+)?(?:\w+\s+){0,2}?"
+    r"(?:surface|table|tabletop|top|platform|stand|shelf|shelves|counter|countertop|"
+    r"tray|bench|workbench|desk|region|area|zone)\b"
+    r"|\b(?:support|hold|bear|carr|underneath|beneath)\w*"
+)
+_PROXIMITY = (
+    r"\b(?:near|nearby|beside|adjacen\w*|proximate|proximity|alongside|"
+    r"next to|close to|by the side of|at hand)\b"
+)
+_ACCESSIBILITY = r"\b(?:access|reachab|reach)\w*|\bwithin reach\b"
+# "Between" is left out deliberately: it states where a thing sits relative to
+# two seats, which the domain already has its own predicate for, and reading it
+# as accessibility replaced a positional claim with a different one.
+_SHARED_BY_TWO = (
+    r"\b(?:shared|share|shares|sharing|common|mutual|joint|either|both|"
+    r"each of the two|all (?:the )?(?:people|viewers|occupants|users))\b"
+)
+
+_SEMANTIC_PREDICATE_PATTERNS: dict[tuple[str, str], tuple[str, ...]] = {
+    ("kitchen", "INSERTABLE_IN"): (
+        r"\b(?:insert|submerg|immers|dip|plung|introduc|lower)\w*",
+        _FIT_OR_COMPATIBILITY,
+        r"\b(?:go|goes|going|plac|put|set)\w*[^.;:]{0,30}?\b(?:in|into|inside|within)\b",
+        r"\b(?:stir|mix|agitat|whisk|blend|swirl|beat)\w*",
+    ),
+    ("kitchen", "REACHES_BOTTOM"): (
+        r"\b(?:reach|touch|extend|contact)\w*[^.;:]{0,25}?\b(?:bottom|base|floor|full depth)\b",
+        r"\b(?:deep|long)\s+enough\b",
+        r"\b(?:sufficient|adequate|enough)\s+(?:depth|length|reach)\b",
+        r"\b(?:full|entire|whole)\s+(?:depth|length)\b",
+        r"\b(?:stir|mix|agitat|whisk|blend)\w*[^.;:]{0,30}?\b(?:bottom|base|throughout|thoroughly)\b",
+    ),
+    ("living_room", "FITS_SET_ON"): (_SUPPORT_PLACEMENT, _FIT_OR_COMPATIBILITY),
+    ("living_room", "FITS_ON"): (_SUPPORT_PLACEMENT, _FIT_OR_COMPATIBILITY),
+    ("living_room", "NEAR_SEAT"): (
+        _PROXIMITY,
+        r"\b(?:for|serv|assign|allocat|dedicat|belong|own|personal|individual|"
+        r"respective|each)\w*[^.;:]{0,30}?"
+        r"\b(?:seat|seating|chair|sofa|couch|person|people|occupant|viewer)s?\b",
+    ),
+    ("living_room", "ACCESSIBLE_FROM_BOTH_SEATS"): (_ACCESSIBILITY, _SHARED_BY_TWO),
+    # In the workshop the three physical verifiers are separated by their
+    # endpoints alone -- a tool with a fastener, a tool with the site, a
+    # fastener with the site -- so one fastening vocabulary serves all three and
+    # the signature decides which relation a sentence stated.
+    # Tool-use wording -- "the tool acts on the component", "the tool is used to
+    # manipulate it" -- is causal semantics about what the task does, and the
+    # domain keeps that apart from the mechanical fit the runtime verifies.  Only
+    # fastening and fit vocabulary nominates a physical verifier here.
+    ("workshop", "COMPATIBLE_WITH"): (
+        _FASTENING_ACTION, _FIT_OR_COMPATIBILITY,
+        r"\b(?:driv|tighten|turn|rotat|torqu|engag)\w*",
+    ),
+    # Tool-use wording *is* admissible for reach, and only for reach: the domain
+    # has no causal predicate between a tool and the site, so there is no
+    # separation to preserve, and needing to get at the place is the robot's own
+    # precondition for acting there.  "The tool acts upon the fastening
+    # location" is a statement about reach and nothing else.
+    ("workshop", "REACHES_TARGET"): (
+        _FASTENING_ACTION, _FIT_OR_COMPATIBILITY, _ACCESSIBILITY, _TOOL_USE,
+        r"\b(?:driv|tighten|turn|rotat|torqu|engag)\w*",
+    ),
+    ("workshop", "COMPATIBLE_WITH_TARGET"): (
+        _FASTENING_ACTION, _FIT_OR_COMPATIBILITY,
+        r"\b(?:into|onto|in|at)\s+(?:the\s+|a\s+)?(?:\w+\s+){0,2}?"
+        r"(?:hole|recess|joint|slot|site|location|target|spot|point|workpiece|surface|position)\b",
+    ),
+}
+
+# Support and placement wordings say which of two things is the surface only
+# through the roles involved, so the same stems are offered in both directions
+# and the endpoint signature settles it.
+_INVERSE_DIRECTION_PATTERNS: dict[tuple[str, str], tuple[str, ...]] = {
+    ("kitchen", "INSERTABLE_IN"): (
+        r"\b(?:contain|hold|enclos|hous|receiv|accept|keep)\w*",
+        r"\b(?:is|are|be|been|being)\s+(?:\w+\s+){0,2}?fill\w*",
+    ),
+    ("living_room", "FITS_SET_ON"): (_SUPPORT_PLACEMENT,),
+    ("living_room", "FITS_ON"): (_SUPPORT_PLACEMENT,),
+    ("workshop", "COMPATIBLE_WITH"): (
+        r"\b(?:driven|engaged|fastened|tightened|turned|operated|applied|used|installed)\s+by\b",
+    ),
+    ("workshop", "COMPATIBLE_WITH_TARGET"): (
+        r"\b(?:receiv|accept|host|take)\w*[^.;:]{0,25}?"
+        r"\b(?:fastener|screw|bolt|component|part|fixing)s?\b",
+        r"\bthreaded for\b",
+    ),
+}
+
+
 # Linguistic cues that explicitly indicate inverse direction
 _INVERSE_DIRECTION_CUES: dict[tuple[str, str], tuple[str, ...]] = {
     ("kitchen", "INSERTABLE_IN"): (
@@ -193,6 +330,12 @@ def _extract_semantic_candidates(
                 candidates.add(pred_name)
                 break
 
+    for (d, pred_name), patterns in _SEMANTIC_PREDICATE_PATTERNS.items():
+        if d != d_norm or pred_name in candidates:
+            continue
+        if any(re.search(pattern, norm_phrase) for pattern in patterns):
+            candidates.add(pred_name)
+
     # Secondary: check reviewed domain alias tables
     for pred_name, aliases in _get_domain_alias_tables(d_norm).items():
         if pred_name in candidates:
@@ -222,6 +365,11 @@ def _extract_inverse_semantic_candidates(
             if cue_norm == norm_phrase or re.search(r"\b" + re.escape(cue_norm) + r"\b", norm_phrase):
                 candidates.add(pred_name)
                 break
+    for (d, pred_name), patterns in _INVERSE_DIRECTION_PATTERNS.items():
+        if d != d_norm or pred_name in candidates:
+            continue
+        if any(re.search(pattern, norm_phrase) for pattern in patterns):
+            candidates.add(pred_name)
     return candidates
 
 
@@ -246,9 +394,7 @@ def extract_relation_semantic_candidates(
         for name in sorted(_extract_inverse_semantic_candidates(domain, norm_phrase))
         if (name, "REVERSE") not in {(c.predicate_name, c.direction) for c in candidates}
     )
-    causal = _extract_task_causal_candidates(norm_phrase)
-    if causal:
-        name, reverse = causal
+    for name, reverse in all_task_causal_candidates(norm_phrase):
         candidates.append(RelationSemanticCandidate(
             name, "REVERSE" if reverse else "FORWARD", "TASK_CAUSAL_SEMANTICS"
         ))
@@ -316,6 +462,66 @@ _TASK_CAUSAL_RELATION_CUES: dict[str, tuple[str, ...]] = {
     ),
 }
 
+# Causal meanings by stem inventory, for the same reason as the physical
+# verifiers above: "stirs" was listed but "stir" was not, and "combine",
+# "uses_for_action" and "equipped_with" say things the exact lists never
+# happened to contain.  Each family stays lexically distinct from the others,
+# because two causal predicates can share an endpoint pair and then only the
+# wording tells them apart.
+_TASK_CAUSAL_RELATION_PATTERNS: dict[str, tuple[str, ...]] = {
+    "PROVIDES_MATERIAL_TO": (
+        r"\b(?:pour|transfer|dispens|decant|empt|tip|ladl|scoop)\w*",
+        r"\b(?:combin|blend|incorporat)\w*",
+        r"\b(?:add|adds|added|adding)\b",
+        r"\b(?:suppl|provid|feed|deliver|contribut|sourc)\w*",
+        r"\b(?:fill|fills|filled|filling)\b",
+        # A bare mention of contents is not a transfer; a directional particle
+        # after it is what makes "combine ingredients into the cup" one.
+        r"\b(?:ingredient|material|content|constituent)s?\b[^.;:]{0,20}?\b(?:into|onto|to|in)\b",
+    ),
+    "ACTS_ON": (
+        r"\b(?:stir|agitat|whisk|swirl|beat|churn|fold)(?:s|es|ed|ing)?\b",
+        r"\b(?:mix|mixes|mixed|mixing)\b",
+        _TOOL_USE,
+        r"\b(?:driv(?:e|es|en|ing)|tighten(?:s|ed|ing)?|turn(?:s|ed|ing)?|"
+        r"rotat(?:e|es|ed|ing)|torqu(?:e|es|ed|ing))\b",
+    ),
+    "PAIRED_WITH": (
+        # "Associated with" on its own is too vague to be a pairing claim; the
+        # domain requires an explicit pairing operation to corroborate it, so it
+        # is not nominated here.
+        r"\b(?:pair|accompan|complement|equip)\w*",
+        r"\b(?:has|have|having|includ|compris|com(?:e|es))\w*"
+        r"[^.;:]{0,20}?\b(?:part|utensil|spoon|fork|knife|cutlery|implement|accessor)\w*",
+        r"\b(?:serv|provid|arrang|plac|set|offer)\w*[^.;:]{0,25}?"
+        r"\b(?:with|alongside|together with|beside|next to|adjacent to)\b",
+        r"\b(?:is|are|be|goes|go)\s+(?:served\s+)?(?:together\s+)?with\b",
+        r"\b(?:alongside|together with)\b",
+    ),
+    "INSTALLED_AT": (_FASTENING_ACTION,),
+    "CONNECTED_TO": (
+        r"\b(?:connect|join|coupl|link|unit|bond|weld)(?:s|es|ed|ing)?\b\s*"
+        r"(?:to|with|at|into|together)\b",
+    ),
+    "SITUATED_BETWEEN": (
+        r"\bbetween\b",
+    ),
+}
+
+_TASK_CAUSAL_INVERSE_PATTERNS: dict[str, tuple[str, ...]] = {
+    "PROVIDES_MATERIAL_TO": (
+        r"\b(?:receiv|obtain|tak)\w*[^.;:]{0,25}?\bfrom\b",
+        r"\b(?:fill|suppl|provid|prepar|mad|mak|brew|produc|form|creat|constitut)\w*"
+        r"\s+(?:up\s+)?(?:by|from|with|of|out of)\b",
+        r"\b(?:combined|mixed|blended)\s+from\b",
+    ),
+    "ACTS_ON": (
+        r"\b(?:act|operat|manipulat|work|handl|us|appl|stir|mix|agitat|driv|turn)\w*"
+        r"\s+(?:up)?(?:on\s+)?by\b",
+    ),
+}
+
+
 _TASK_CAUSAL_INVERSE_CUES: dict[str, tuple[str, ...]] = {
     "PROVIDES_MATERIAL_TO": (
         "receives material from", "receives contents from", "receives coffee from",
@@ -350,6 +556,67 @@ _TASK_EFFECT_RELATION_CUES: dict[str, tuple[str, ...]] = {
     ),
 }
 
+# The same stem-inventory treatment for end states.  "contains" was listed and
+# "contained_in" was not, so the commonest way a model states that a transfer
+# has happened carried no meaning at all.
+_TASK_EFFECT_RELATION_PATTERNS: dict[str, tuple[str, ...]] = {
+    "CONTAINS": (
+        r"\b(?:contain|enclos|hous)\w*",
+        r"\bfill\w*",
+        # "Hold" alone is not containment: a surface holds the items standing on
+        # it as readily as a vessel holds what is in it, and reading "can hold
+        # the drinkware set" as containment added an end state the model never
+        # stated.  It counts when what is held is contents rather than an object.
+        r"\bhold\w*\s+(?:\w+\s+){0,2}?(?:contents?|material|ingredient|liquid|substance)s?\b",
+        r"\bhas\s+(?:the\s+)?(?:contents|material|ingredients?)\b",
+        r"\b(?:is|are|be|been|being)\s+(?:\w+\s+){0,2}?(?:in|inside|within)\b",
+    ),
+    "PLACED_ON": (
+        r"\b(?:plac|position|rest|support|situat|locat|set|put|lay|stand|leav|left|deposit)\w*"
+        r"[^.;:]{0,25}?\b(?:on|onto|upon|atop|over)\b",
+    ),
+}
+
+# A statement the model hedged is a guess about how the scene already is, not a
+# requirement the task imposes: "the fastener is potentially contained in the
+# cupboard" says where to look, and treating it as an end state the robot must
+# bring about invented a requirement the instruction never made.
+_HEDGED_CURRENT_STATE = re.compile(
+    r"\b(?:potential|possib|probab|likel|perhaps|maybe|presumab|suspect|apparent|"
+    r"seem|appear|may|might|could)\w*\b",
+    re.I,
+)
+
+
+def relation_states_a_hedged_possibility(raw_phrase: str) -> bool:
+    """Whether the wording marks itself as a guess about the current scene."""
+    return bool(_HEDGED_CURRENT_STATE.search(_normalize_text(raw_phrase)))
+
+
+# Where things are now, as opposed to where the task must put them.  "The
+# fastener and tool are found inside the storage container" is the model saying
+# where to look; read as a requirement it asked the robot to put its tools back
+# into a cupboard, which no instruction ever did.
+_STATES_PRESENT_WHEREABOUTS = re.compile(
+    r"\b(?:is|are|was|were|be|being|been)\s+(?:\w+\s+){0,2}?"
+    r"(?:found|discover|locat|situat|kept|stor|held|sitting|resting|hidden|conceal)\w*\s+"
+    r"(?:in|inside|within|on|at|under)\b"
+    r"|\b(?:found|discovered)\s+(?:in|inside|within|at|on)\b"
+    r"|\b(?:in|inside|within)\s+(?:the\s+|a\s+|an\s+)?(?:\w+\s+){0,2}?"
+    r"(?:storage|cabinet|cupboard|drawer|box|container|bin|chest|closet)s?\b",
+    re.I,
+)
+
+
+def relation_states_where_things_currently_are(raw_phrase: str) -> bool:
+    """Whether the wording describes the present scene rather than a requirement."""
+    normalized = _normalize_text(raw_phrase)
+    return bool(
+        _STATES_PRESENT_WHEREABOUTS.search(normalized)
+        or _HEDGED_CURRENT_STATE.search(normalized)
+    )
+
+
 _TRANSFER_OPERATION_CUES: tuple[str, ...] = (
     "transfer", "pour", "fill", "dispense", "load", "add",
 )
@@ -364,6 +631,9 @@ def interpret_task_effect_predicate(raw_phrase: str) -> str | None:
             or re.search(r"\b" + re.escape(cue_norm) + r"\b", norm_phrase)
             for cue in cues
         ):
+            return predicate
+    for predicate, patterns in _TASK_EFFECT_RELATION_PATTERNS.items():
+        if any(re.search(pattern, norm_phrase) for pattern in patterns):
             return predicate
     return None
 
@@ -467,6 +737,50 @@ def _extract_verb_particle_candidates(norm_phrase: str) -> list[tuple[str, str]]
         if re.search(pattern, norm_phrase):
             found.append((predicate, category))
     return found
+
+def _extract_task_causal_pattern_candidates(norm_phrase: str) -> list[tuple[str, bool]]:
+    """Every causal meaning the stem inventories nominate, inverse readings first."""
+    found: list[tuple[str, bool]] = []
+    for pred, patterns in _TASK_CAUSAL_INVERSE_PATTERNS.items():
+        if any(re.search(pattern, norm_phrase) for pattern in patterns):
+            found.append((pred, True))
+    inverse_named = {pred for pred, _ in found}
+    for pred, patterns in _TASK_CAUSAL_RELATION_PATTERNS.items():
+        if pred in inverse_named:
+            continue
+        if any(re.search(pattern, norm_phrase) for pattern in patterns):
+            found.append((pred, False))
+    return found
+
+
+def all_task_causal_candidates(norm_phrase: str) -> list[tuple[str, bool]]:
+    """The exact-cue reading, if any, together with every stem-nominated one."""
+    found: list[tuple[str, bool]] = []
+    exact = _extract_task_causal_candidates(norm_phrase)
+    if exact is not None:
+        found.append(exact)
+    for candidate in _extract_task_causal_pattern_candidates(norm_phrase):
+        if candidate[0] not in {pred for pred, _ in found}:
+            found.append(candidate)
+    return found
+
+
+def causal_endpoints_admit(
+    domain: str, predicate: str, subject_role: str, object_role: str, inverse: bool
+) -> bool:
+    """Whether the runtime lets this causal predicate relate these two roles.
+
+    Used only to choose between meanings the wording already nominated; a
+    predicate no wording nominated is never reachable from here.
+    """
+    from .semantic_typing import causal_predicate_endpoint_pairs
+
+    pairs = causal_predicate_endpoint_pairs(domain, predicate)
+    if not pairs:
+        return False
+    ordered = (object_role, subject_role) if inverse else (subject_role, object_role)
+    return ordered in pairs
+
 
 def _extract_task_causal_candidates(norm_phrase: str) -> tuple[str, bool] | None:
     """Deterministically check if phrase matches a task/causal semantic relation."""
@@ -624,8 +938,43 @@ def interpret_relation(
                 evidence=evidence,
             )
 
-    # 6. Check task/causal semantic relations if no physical verifier matched
-    causal_match = _extract_task_causal_candidates(norm_phrase)
+    # 6. Check task/causal semantic relations if no physical verifier matched.
+    # A wording can nominate several causal meanings at once -- "provided with"
+    # is both a transfer and an accompaniment -- and two causal predicates can
+    # share an endpoint pair.  Where the wording is plural, the runtime's own
+    # causal signature is allowed to choose between meanings the text already
+    # nominated, and anything still plural fails closed rather than being
+    # settled by the order the names happen to sort in.
+    causal_candidates = all_task_causal_candidates(norm_phrase)
+    causal_match: tuple[str, bool] | None = None
+    if len(causal_candidates) == 1:
+        causal_match = causal_candidates[0]
+    elif causal_candidates:
+        admitted = [
+            candidate for candidate in causal_candidates
+            if causal_endpoints_admit(d_norm, candidate[0], subject_role, object_role, candidate[1])
+        ]
+        evidence["task_causal_candidates"] = [
+            {"predicate": pred, "inverse": inv} for pred, inv in causal_candidates
+        ]
+        evidence["task_causal_admitted"] = [
+            {"predicate": pred, "inverse": inv} for pred, inv in admitted
+        ]
+        if len(admitted) == 1:
+            causal_match = admitted[0]
+        else:
+            status = "AMBIGUOUS_RELATION" if required else "SOFT_OPTIONAL_RELATION"
+            return RelationInterpretationResult(
+                status=status,
+                category="UNKNOWN",
+                interpreted_predicates=(),
+                reason=(
+                    f"Relation text {raw_phrase!r} nominates several task causal meanings "
+                    f"{sorted({pred for pred, _ in causal_candidates})} and the endpoints "
+                    f"({subject_role}, {object_role}) do not single one out"
+                ),
+                evidence=evidence,
+            )
     if causal_match is not None:
         pred_name, is_inverse = causal_match
         evidence["task_causal_predicate"] = pred_name

@@ -399,7 +399,11 @@ def test_v2_workshop_complete_fixture(v2_workshop_fixture):
 def test_v2_workshop_missing_relation_is_incomplete(v2_workshop_fixture):
     """Workshop fixture with uninterpretable relation fails closed and remains contract-incomplete."""
     doc = copy.deepcopy(v2_workshop_fixture)
-    doc["task_contract"]["functional_relations"][0]["relation"] = "magically welded at distance"
+    # Wording that nominates no runtime meaning at all.  It deliberately avoids
+    # fastening vocabulary: "welded at" is real fastening semantics, and a
+    # relation the interpreter can read is no longer a stand-in for one it cannot.
+    doc["task_contract"]["functional_relations"][0]["relation"] = (
+        "must maintain 45 degree tilt during operation")
     graph = compile_candidate_graph("workshop", "Workshop task", doc)
     assert graph.required_contract_complete is False
     assert len(graph.metadata["contract_missing_reasons"]) > 0
