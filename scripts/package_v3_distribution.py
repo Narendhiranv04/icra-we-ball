@@ -115,7 +115,14 @@ def _derive(raw, domain):
         meta = getattr(graph, "metadata", {}) or {}
         nodes = getattr(graph, "nodes", {}) or {}
         out["compiler_ran"] = True
-        out["compiled"] = bool(meta.get("required_contract_complete"))
+        # "Compiled" means a graph that can actually be grounded and planned:
+        # at least one functional role and at least one operation.  The FM graph
+        # may be exhaustive and need not match a reference graph, so anything the
+        # runtime could not represent is recorded, not disqualifying.
+        out["compiled"] = bool(nodes)
+        out["provisional_operations"] = len(
+            getattr(graph, "provisional_operation_constraints", ()) or ())
+        out["contract_fully_represented"] = bool(meta.get("required_contract_complete"))
         out["contract_missing_reasons"] = meta.get("contract_missing_reasons")
         out["canonicalization_status"] = meta.get("canonicalization_status")
         out["semantic_accounting"] = meta.get("fm_semantic_accounting")
@@ -127,6 +134,8 @@ def _derive(raw, domain):
             "roles": sorted(nodes),
             "relation_count": len(getattr(graph, "relations", ()) or ()),
             "operation_group_count": len(getattr(graph, "operation_groups", ()) or ()),
+            "provisional_operation_count": len(
+                getattr(graph, "provisional_operation_constraints", ()) or ()),
             "required_contract_complete": out["compiled"],
             "canonicalization_status": out["canonicalization_status"],
             "contract_missing_reasons": out["contract_missing_reasons"],

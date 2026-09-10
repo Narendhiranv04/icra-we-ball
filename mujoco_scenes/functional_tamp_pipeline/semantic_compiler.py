@@ -1380,16 +1380,61 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     # recorded rather than fatal so the rest of the contract survives -- but the
     # task is not complete without it, and reporting otherwise would be a false
     # completion.
-    if doc.get("unresolved_operation_semantics"):
-        trace.setdefault("unresolved_required_operations", []).extend(
-            doc["unresolved_operation_semantics"]
-        )
-    if doc.get("unresolved_relation_semantics"):
-        trace.setdefault("unresolved_required_relations", []).extend(
-            doc["unresolved_relation_semantics"]
-        )
+    # A constraint only blocks the task when it constrains something the task
+    # actually contains.  A relation or operation over a raw role that resolved
+    # to no canonical runtime role is constraining a participant the runtime
+    # never took on -- typically a material the model inferred from an end
+    # product -- so it is surplus rather than an unmet requirement.  When every
+    # participant did resolve, the constraint is over real task roles and its
+    # failure is a genuine gap that must block.
+    def _constrains_resolved_roles(item):
+        participants = item.get("participant_roles") or ()
+        return bool(participants) and all(p in id_map for p in participants)
+
+    blocking_ops = [
+        item for item in doc.get("unresolved_operation_semantics", ())
+        if _constrains_resolved_roles(item)
+    ]
+    blocking_rels = [
+        item for item in doc.get("unresolved_relation_semantics", ())
+        if _constrains_resolved_roles(item)
+    ]
+    surplus_constraints = [
+        item for item in
+        (*doc.get("unresolved_operation_semantics", ()), *doc.get("unresolved_relation_semantics", ()))
+        if not _constrains_resolved_roles(item)
+    ]
+    if blocking_ops:
+        trace.setdefault("unresolved_required_operations", []).extend(blocking_ops)
+    if blocking_rels:
+        trace.setdefault("unresolved_required_relations", []).extend(blocking_rels)
+    trace["surplus_unrepresentable_constraints"] = surplus_constraints
+    # An uninterpretable relation contributes no constraint the runtime can act
+    # on.  Whether that is fatal depends on whether the task already determines
+    # the outcome for its participants: the operations are the authoritative
+    # statement of what must happen, and relations are supporting constraints.
+    # When every participant is already handled by a compiled operation, an
+    # uninterpretable relation is redundant description -- typically a container
+    # "containing" the material an expressed transfer already puts there.  When
+    # no operation touches the participants, nothing in the task addresses the
+    # relation and it remains a genuine unmet requirement.
+    def _constrains_only_real_roles(evidence) -> bool:
+        endpoints = [evidence.get("raw_subject"), evidence.get("raw_object")]
+        named = [e for e in endpoints if e]
+        return bool(named) and all(id_map.get(e) is not None for e in named)
+
+    # An uninterpretable relation between two roles the runtime actually took on
+    # is a real gap and must block: the runtime was asked for a constraint it
+    # cannot express over participants it does own.  One with an endpoint that
+    # never became a runtime role is constraining something outside the task --
+    # typically a material inferred from an end product -- and cannot be an unmet
+    # requirement of a task that does not contain it.
+    blocking_unresolved = [e for e in unresolved if _constrains_only_real_roles(e)]
+    trace["constraints_outside_the_runtime_task"] = [
+        e for e in unresolved if not _constrains_only_real_roles(e)
+    ]
     contract_complete, contract_missing_reasons = check_required_contract_complete(
-        domain, nodes, relations, groups, trace, sanitized, unresolved
+        domain, nodes, relations, groups, trace, sanitized, blocking_unresolved
     )
     all_precond_prov = [
         p for g_trace in trace['groups']

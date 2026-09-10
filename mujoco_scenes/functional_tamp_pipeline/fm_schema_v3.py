@@ -518,9 +518,13 @@ def _resolve_operation_slots_with_subsets(
     slot.  Refusing the whole operation because one extra participant was named
     discards an operation the runtime can perfectly well execute.
 
-    Subsets are tried largest first.  If two different subsets of the same size
-    both resolve, the operation is genuinely ambiguous and nothing is chosen,
-    because guessing between them would invent a reading the model did not give.
+    Subsets are tried largest first.  If several subsets of the same size resolve,
+    the operation has more than one legal reading -- typically because two named
+    participants are each plausible in the same slot.  Rather than choosing one,
+    which would invent a reading the model did not give, or discarding them all,
+    which throws away an operation the runtime can execute, every legal slot
+    assignment is carried forward.  Grounding enumerates them against the
+    observed scene, and the objects that are actually present decide.
 
     Returns (options, participants_used, participants_left_as_context).
     """
@@ -529,17 +533,22 @@ def _resolve_operation_slots_with_subsets(
     if options:
         return options, participants, []
     for size in range(len(participants) - 1, 1, -1):
-        resolved: list[tuple[list[dict[str, Any]], list[str]]] = []
+        merged: list[dict[str, Any]] = []
+        used: list[str] = []
         for subset in combinations(participants, size):
             probe = {**dict(operation), "participant_roles": list(subset)}
             subset_options = resolve_v3_operation_slots(domain, probe, roles_by_id, hypotheses)
-            if subset_options:
-                resolved.append((subset_options, list(subset)))
-        if len(resolved) == 1:
-            subset_options, subset = resolved[0]
-            return subset_options, subset, [p for p in participants if p not in subset]
-        if len(resolved) > 1:
-            return [], participants, []
+            if not subset_options:
+                continue
+            for option in subset_options:
+                if option not in merged:
+                    merged.append(option)
+            for participant in subset:
+                if participant not in used:
+                    used.append(participant)
+        if merged:
+            ordered_used = [p for p in participants if p in used]
+            return merged, ordered_used, [p for p in participants if p not in used]
     return [], participants, []
 
 
@@ -866,10 +875,19 @@ def convert_v3_to_canonical_document(
                 "reason": "NO_CAPABILITY_SIGNATURE_ACCEPTS_THESE_PARTICIPANTS",
             })
             continue
-        if len(options) == 1:
-            first = options[0]
-            source, target, anchor = first["source_role"], first["target_role"], first["anchor_role"]
-            usage = first["usage_policy"]
+        # Take what every legal reading agrees on.  Several readings often differ
+        # in only one slot -- two named participants each plausible as the anchor,
+        # say -- and blanking all three because of that discarded an operation
+        # whose source and target were never in doubt.  A slot the readings
+        # disagree about stays open, and the full set of assignments travels with
+        # the group so grounding can settle it against the observed scene.
+        def _agreed(field: str):
+            values = {row.get(field) for row in options}
+            return values.pop() if len(values) == 1 else None
+
+        if options:
+            source, target = _agreed("source_role"), _agreed("target_role")
+            anchor, usage = _agreed("anchor_role"), _agreed("usage_policy")
         else:
             source = target = anchor = None
             usage = None

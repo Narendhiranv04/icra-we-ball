@@ -147,7 +147,13 @@ def test_multiple_slot_assignments_are_not_committed_to_first_option():
     ], operations=[operation("x", "place remote control", ["payload", "support", "context"])])
     group = convert_v3_to_canonical_document(raw, domain="living_room")["interaction_groups"][0]
     assert len(group["v3_slot_assignments"]) > 1
-    assert group["tool_role"] is group["target_role"] is None
+    # Every assignment travels with the group, so nothing is chosen by position.
+    # A slot is filled only where all assignments agree on it; a slot they
+    # disagree about stays open for grounding to settle.
+    for field, key in (("tool_role", "source_role"), ("target_role", "target_role"),
+                       ("context_role", "anchor_role")):
+        distinct = {row[key] for row in group["v3_slot_assignments"]}
+        assert group[field] == (next(iter(distinct)) if len(distinct) == 1 else None)
 
 
 @pytest.mark.parametrize("text,participants,capability", [

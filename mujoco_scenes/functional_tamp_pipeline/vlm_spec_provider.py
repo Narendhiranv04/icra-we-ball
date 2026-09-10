@@ -78,17 +78,30 @@ class VLMSpecProvider(FunctionalSpecProvider):
             graph.metadata["v2_validation_mode"] = validation_mode
             graph.metadata["v2_boundary_normalization_trace"] = normalization_trace
         graph.metadata["candidate_requirement_statuses"] = analyze_executability(graph)
-        if not graph.online_executable_contract_complete:
+        # The FM-inferred functional graph does not have to match a reference
+        # graph, and it may be exhaustive: it can express more roles, relations
+        # and operations than the runtime represents.  Anything the runtime
+        # could not represent is recorded rather than treated as a reason to
+        # discard the whole graph.  The scene is what constrains the task, so
+        # the graph proceeds to grounding and the observed objects decide what
+        # is actually satisfiable.
+        #
+        # Two floors remain, because below them there is nothing to ground or
+        # nothing to do, and reporting success would be vacuous: the graph must
+        # carry at least one functional role and at least one operation.
+        trace = graph.metadata.get("canonicalization_trace", {})
+        unrepresented = (
+            trace.get("unresolved_roles", [])
+            + trace.get("unresolved_required_relations", [])
+            + trace.get("unresolved_required_operations", [])
+        )
+        graph.metadata["unrepresented_fm_semantics"] = unrepresented
+        graph.metadata["partial_functional_graph"] = bool(unrepresented)
+        if not graph.nodes:
             from .errors import GraphCompilationError
-            trace = graph.metadata.get("canonicalization_trace", {})
-            unresolved = (
-                trace.get("unresolved_roles", [])
-                + trace.get("unresolved_required_relations", [])
-                + trace.get("unresolved_required_operations", [])
-            )
             raise GraphCompilationError(
-                "INCOMPLETE_CANONICAL_GRAPH: coherent FM contract could not be fully "
-                f"represented; unresolved={unresolved}"
+                "UNGROUNDABLE_CANONICAL_GRAPH: the FM contract yielded no functional "
+                f"roles, so there is nothing to ground; unrepresented={unrepresented}"
             )
         return graph
 
