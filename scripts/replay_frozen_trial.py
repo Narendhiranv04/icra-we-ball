@@ -159,7 +159,10 @@ def main() -> int:
     grounding = rj("graph_grounding_result.json", {}) or {}
     manifest = rj("run_manifest.json", {}) or {}
     plan = list(res.candidate_plan or ())
+    # Each domain writes its independent replay validation in its own place; a
+    # missing record must not read as an unvalidated plan.
     validation = (rj("action_sequence/replay_validation.json")
+                  or (rj("action_sequence/action_plan.json", {}) or {}).get("validation")
                   or (rj("action_plan.json", {}) or {}).get("validation") or {})
     row.update({
         "pipeline_status": res.status,
