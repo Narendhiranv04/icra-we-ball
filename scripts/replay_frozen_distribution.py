@@ -15,7 +15,8 @@ HERE = Path(__file__).resolve().parent
 DOMAINS = {"kitchen": [f"K{i}" for i in range(1, 13)],
            "living_room": [f"L{i}" for i in range(1, 11)],
            "workshop": [f"W{i}" for i in range(1, 11)]}
-STAGES = ["strict_v3_valid", "task_valid", "graph_compiled", "grounding_reached",
+STAGES = ["strict_v3_valid", "task_valid", "canonical_graph_emitted",
+          "executable_contract_complete", "grounding_reached",
           "complete_grounding", "astar_reached", "success", "outcome_correct"]
 
 
@@ -70,9 +71,21 @@ def main() -> int:
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--timeout", type=int, default=1500)
     ap.add_argument("--label", default="")
+    ap.add_argument("--domains", default="", help="comma-separated subset, e.g. living_room")
+    ap.add_argument("--variants", default="", help="comma-separated subset, e.g. L1,L4,L5")
+    ap.add_argument("--trials", default="", help="comma-separated subset, e.g. trial_01")
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     todo = list(jobs(args.root, args.out))
+    if args.domains:
+        keep = {d.strip() for d in args.domains.split(",") if d.strip()}
+        todo = [j for j in todo if j[0] in keep]
+    if args.variants:
+        keep = {v.strip() for v in args.variants.split(",") if v.strip()}
+        todo = [j for j in todo if j[1] in keep]
+    if args.trials:
+        keep = {t.strip() for t in args.trials.split(",") if t.strip()}
+        todo = [j for j in todo if j[2] in keep]
     print(f"{len(todo)} frozen trials to replay -> {args.out}", flush=True)
     t0 = time.perf_counter()
     done = 0

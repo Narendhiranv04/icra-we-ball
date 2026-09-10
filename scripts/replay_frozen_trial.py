@@ -36,6 +36,10 @@ def derive(raw, domain):
         "n_operation_groups": 0, "n_disabled_operations": 0,
         "disabled_operation_codes": [], "unresolved_role_codes": [],
         "contract_complete": False, "contract_missing_reasons": None,
+        "canonical_graph_emitted": False,
+        "executable_contract_complete": False,
+        "executable_contract_missing_reasons": None,
+        "non_scene_resolvable_blockers": [],
         "canonicalization_status": None, "n_provisional_ops": 0,
         "n_task_causal": 0, "n_unresolved_required_relations": 0,
         "n_unresolved_required_operations": 0,
@@ -79,6 +83,15 @@ def derive(raw, domain):
         out["n_unresolved_required_operations"] = len(trace.get("unresolved_required_operations", []))
         out["contract_complete"] = bool(meta.get("required_contract_complete"))
         out["contract_missing_reasons"] = [str(x)[:300] for x in (meta.get("contract_missing_reasons") or [])]
+        # "canonical graph emitted" and "executable contract complete" are two
+        # different facts and were previously reported under one name.
+        out["canonical_graph_emitted"] = bool(graph.nodes)
+        out["executable_contract_complete"] = bool(
+            meta.get("online_executable_contract_complete", meta.get("required_contract_complete")))
+        out["executable_contract_missing_reasons"] = [
+            str(x)[:300] for x in (meta.get("executable_contract_missing_reasons") or [])]
+        out["non_scene_resolvable_blockers"] = sorted(
+            {str(x) for x in (meta.get("non_scene_resolvable_blockers") or ())})
         out["canonicalization_status"] = meta.get("canonicalization_status")
         out["role_counts"] = {n: [graph.nodes[n].minimum_count, graph.nodes[n].maximum_count,
                                   graph.nodes[n].binding_policy] for n in sorted(graph.nodes)}
@@ -163,6 +176,8 @@ def main() -> int:
         "grounding_missing": [str(x)[:200] for x in (grounding.get("missing_requirements") or [])],
         "grounding_failure_kind": grounding.get("failure_kind"),
         "complete_grounding": bool(res.functional_spec_complete),
+        "grounding_sec": (manifest.get("logical_grounding_seconds")
+                          or (grounding.get("evidence") or {}).get("logical_grounding_seconds")),
         "astar_invocations": manifest.get("astar_invocations", 0),
         "astar_reached": bool(plan) or res.status == "ACTION_SEQUENCE_READY",
         "plan_length": len(plan),
@@ -182,6 +197,9 @@ def main() -> int:
     feas = row["feasible"]
     row["outcome_correct"] = bool(row.get("gt_full_task_satisfied")) if feas else bool(
         not row.get("gt_full_task_satisfied"))
+    # A reported completion that offline evaluation does not confirm.  On an
+    # infeasible variant any reported completion is one by construction.
+    row["false_completion"] = bool(row.get("success")) and not bool(row.get("gt_full_task_satisfied"))
     Path(args.row_out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.row_out).write_text(json.dumps(row, indent=2, default=str) + "\n")
     _prune_bulk_artifacts(run_dir)
