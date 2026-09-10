@@ -126,8 +126,9 @@ class MockSearchDomain:
 
 
 def test_classify_search_state_contract_incomplete():
-    """Incomplete task contract fails closed to CONTRACT_INCOMPLETE_NOT_SEARCHABLE."""
+    """A graph with no functional roles has nothing to look for."""
     graph = _build_test_graph(contract_complete=False)
+    graph.nodes.clear()
     contract = SearchRegionContract(
         domain="kitchen",
         canonical_region_ids=("D1", "D2", "C2", "B1", "C1"),
@@ -231,8 +232,14 @@ def test_classify_search_state_grounding_failure_not_search_recoverable():
     assert state == "GROUNDING_FAILURE_NOT_SEARCH_RECOVERABLE"
 
 
-def test_contract_incomplete_kitchen_fixture_performs_zero_pointless_search():
-    """Gate 8 criterion: contract-incomplete Kitchen fixture performs zero pointless search."""
+def test_contract_incomplete_graph_still_searches_for_a_missing_object():
+    """A partially represented contract may still be completed by looking.
+
+    Whether every FM semantic was representable says nothing about whether the
+    missing object is in a drawer. A role that is unbound, groundable, and
+    implicated in the failure is exactly what search exists to recover, so the
+    scene is inspected rather than written off.
+    """
     graph = _build_test_graph(domain="kitchen", contract_complete=False)
     contract = SearchRegionContract(
         domain="kitchen",
@@ -254,12 +261,15 @@ def test_contract_incomplete_kitchen_fixture_performs_zero_pointless_search():
         search_contract=contract,
     )
 
-    # Initial observation was called, but zero regions opened
+    # Initial observation was called, and the scene was actually inspected.
     assert domain.observe_initial_calls == 1
-    assert len(domain.opened_regions) == 0
-    assert inspected == ()
+    assert len(inspected) >= 1
+    assert domain.opened_regions, 'a searchable missing role must trigger inspection'
+    assert inspected, 'inspected regions must be reported'
     assert result.complete is False
-    assert result.evidence.get("search_state") == "CONTRACT_INCOMPLETE_NOT_SEARCHABLE"
+    # The scene was searched to exhaustion and still could not supply the role,
+    # which is a discovery outcome rather than a refusal to look.
+    assert result.evidence.get("search_state") == "SEARCH_EXHAUSTED"
 
 
 def test_complete_contract_fixture_with_invalid_visible_candidate_searches_for_alternative():

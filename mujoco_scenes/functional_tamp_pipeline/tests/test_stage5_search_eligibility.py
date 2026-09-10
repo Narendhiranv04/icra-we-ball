@@ -174,8 +174,9 @@ def test_search_predicates():
 
 
 def test_classify_contract_unexecutable():
-    """When online executable contract is incomplete, classification returns unexecutable."""
+    """Unexecutable means nothing to ground, not merely partially represented."""
     graph = _build_test_graph(online_complete=False)
+    graph.nodes.clear()
     contract = SearchRegionContract(
         domain="workshop",
         canonical_region_ids=("TOOL_DRAWER", "PARTS_BIN"),

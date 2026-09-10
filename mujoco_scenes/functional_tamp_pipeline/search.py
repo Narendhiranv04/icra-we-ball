@@ -190,7 +190,13 @@ def classify_fine_search_state(
         contract_complete = getattr(graph_f, "online_executable_contract_complete", None)
     if contract_complete is None:
         contract_complete = getattr(graph_f, "required_contract_complete", True)
-    if not contract_complete:
+    # Whether every FM semantic was representable does not decide whether the
+    # scene is worth searching.  A graph carrying an unbound role whose object
+    # sits in a closed drawer is precisely the case search exists for, and gating
+    # on full representability meant such graphs never opened anything.  A graph
+    # with no functional roles at all is the genuinely unexecutable case; the
+    # searchable-role test below is what settles the rest.
+    if not contract_complete and not graph_f.nodes:
         return CONTRACT_UNEXECUTABLE
 
     if grounding is not None and (grounding.complete or getattr(grounding, "satisfied", False)):
