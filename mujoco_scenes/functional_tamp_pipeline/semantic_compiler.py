@@ -589,9 +589,15 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             id_map[rid] = name
             owners[name] = role
             role_candidates = hypothesis.canonical_role_candidates or (name,)
+            # A candidate may be a planner context constant (a fixed region the
+            # planner references, such as a work surface or a serving area) rather
+            # than a perception-grounded role.  No domain declares acceptance
+            # categories for those, by design, so they contribute none here.
+            # Demanding categories for every candidate turned an ordinary role
+            # typing into a hard crash that aborted the whole run.
             semantic_categories = tuple(dict.fromkeys(
                 category for candidate in role_candidates
-                for category in ontology.get_system_role_semantic_categories(domain, candidate)
+                for category in ontology.get_role_semantic_categories_or_empty(domain, candidate)
             ))
             nodes[name] = FunctionalRole(name=name, entity_kind=canonical_kind, count=role['required_count'],
                 binding_policy=role['binding_policy'], semantic_categories=semantic_categories,
@@ -763,11 +769,11 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                         fixed_anchors = set(get_domain_system_fixed_anchors(domain))
                         if s not in nodes and s in fixed_anchors:
                             nodes[s] = FunctionalRole(name=s, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
-                                                      semantic_categories=ontology.get_system_role_semantic_categories(domain, s),
+                                                      semantic_categories=ontology.get_role_semantic_categories_or_empty(domain, s),
                                                       verification_mode='GEOMETRIC_ONLY')
                         if o not in nodes and o in fixed_anchors:
                             nodes[o] = FunctionalRole(name=o, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
-                                                      semantic_categories=ontology.get_system_role_semantic_categories(domain, o),
+                                                      semantic_categories=ontology.get_role_semantic_categories_or_empty(domain, o),
                                                       verification_mode='GEOMETRIC_ONLY')
                         validate_predicate_signature(domain=domain, predicate=p, subject_kind=nodes[s].entity_kind,
                             subject_role=s, object_kind=nodes[o].entity_kind, object_role=o)
@@ -1035,7 +1041,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 entity_kind='FIXED_TARGET',
                 count=1,
                 binding_policy='SHARED',
-                semantic_categories=ontology.get_system_role_semantic_categories(domain, ctx_role_id),
+                semantic_categories=ontology.get_role_semantic_categories_or_empty(domain, ctx_role_id),
                 verification_mode='GEOMETRIC_ONLY',
                 role_resolution_status='EXPLICIT_CONTEXT_SET_CANONICALIZATION',
                 canonical_role_candidates=(ctx_role_id,),
@@ -1078,7 +1084,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                     nodes[ctx_role_id] = FunctionalRole(
                         name=ctx_role_id, entity_kind='FIXED_TARGET', count=1,
                         binding_policy='SHARED',
-                        semantic_categories=ontology.get_system_role_semantic_categories(domain, ctx_role_id),
+                        semantic_categories=ontology.get_role_semantic_categories_or_empty(domain, ctx_role_id),
                         verification_mode='GEOMETRIC_ONLY',
                         role_resolution_status='OPERATION_ASSISTED',
                         canonical_role_candidates=(ctx_role_id,),
@@ -1178,11 +1184,11 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 fixed_anchors = set(get_domain_system_fixed_anchors(domain))
                 if s_r not in nodes and s_r in fixed_anchors:
                     nodes[s_r] = FunctionalRole(name=s_r, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
-                                              semantic_categories=ontology.get_system_role_semantic_categories(domain, s_r),
+                                              semantic_categories=ontology.get_role_semantic_categories_or_empty(domain, s_r),
                                               verification_mode='GEOMETRIC_ONLY')
                 if o_r not in nodes and o_r in fixed_anchors:
                     nodes[o_r] = FunctionalRole(name=o_r, entity_kind='FIXED_TARGET', count=1, binding_policy='SHARED',
-                                              semantic_categories=ontology.get_system_role_semantic_categories(domain, o_r),
+                                              semantic_categories=ontology.get_role_semantic_categories_or_empty(domain, o_r),
                                               verification_mode='GEOMETRIC_ONLY')
                 validate_predicate_signature(domain=domain, predicate=p, subject_kind=nodes[s_r].entity_kind,
                     subject_role=s_r, object_kind=nodes[o_r].entity_kind, object_role=o_r)
@@ -1232,7 +1238,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                         entity_kind='FIXED_TARGET',
                         count=1,
                         binding_policy='SHARED',
-                        semantic_categories=ontology.get_system_role_semantic_categories(
+                        semantic_categories=ontology.get_role_semantic_categories_or_empty(
                             domain, executable_context_role
                         ),
                         verification_mode='GEOMETRIC_ONLY',

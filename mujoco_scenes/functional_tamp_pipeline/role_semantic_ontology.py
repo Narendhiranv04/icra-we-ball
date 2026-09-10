@@ -423,3 +423,20 @@ def normalize_semantic_label(label: str) -> str | None:
     if not label:
         return None
     return get_semantic_label_normalizer().get(_normalize_label_text(label))
+
+
+def get_role_semantic_categories_or_empty(domain: str, canonical_role_id: str) -> tuple[str, ...]:
+    """Acceptance categories for a role, or empty when the role declares none.
+
+    Planner context constants -- fixed regions the planner references, such as a
+    work surface or a serving area -- are deliberately absent from the ontology
+    because they are not grounded by perception.  Callers that may legitimately
+    encounter one need the absence to be a value rather than an exception.
+    """
+    # Delegates to the authoritative accessor so that semantic acceptance keeps a
+    # single source of truth across the GT and VLM paths; only the absence of a
+    # declaration is turned into a value here.
+    try:
+        return tuple(get_system_role_semantic_categories(domain, canonical_role_id))
+    except KeyError:
+        return ()
