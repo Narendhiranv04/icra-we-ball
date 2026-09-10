@@ -72,7 +72,8 @@ def _derive(raw, domain):
     conversion, same compiler, and the compiler's own completeness verdict.
     """
     from mujoco_scenes.functional_tamp_pipeline.fm_schema_v3 import (
-        normalize_and_validate_v3_contract, convert_v3_to_canonical_document,
+        normalize_v3_live_document, validate_v3_live_contract,
+        convert_v3_to_canonical_document,
     )
     instruction = CANONICAL_TASK_INSTRUCTIONS.get(domain, "")
     out = {
@@ -88,16 +89,22 @@ def _derive(raw, domain):
     if raw is None:
         out["strict_v3_error"] = "NO_PARSEABLE_FM_CONTENT"
         return out
+    # Strict wire validity is about the response alone: does it parse, match the
+    # V3 schema, and reference only what it declared.  It deliberately excludes
+    # canonical conversion, which is the separate question of whether the runtime
+    # can represent the task the contract describes.
     try:
-        normalized, trace = normalize_and_validate_v3_contract(
+        normalized, trace = normalize_v3_live_document(
             raw, domain=domain, task_instruction=instruction)
+        validate_v3_live_contract(normalized, domain=None)
         out.update(strict_v3_valid=True, normalized=normalized,
                    normalization_trace=trace)
     except Exception as exc:
         out["strict_v3_error"] = f"{type(exc).__name__}: {exc}"
         return out
     try:
-        canonical = convert_v3_to_canonical_document(normalized, domain=domain)
+        canonical = convert_v3_to_canonical_document(
+            normalized, domain=domain, task_instruction=instruction)
         out.update(task_valid=True, canonical_document=canonical)
     except Exception as exc:
         out["task_error"] = f"{type(exc).__name__}: {exc}"
