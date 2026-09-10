@@ -446,7 +446,13 @@ def _minimum_distinct_objects(role: dict) -> int | None:
     if role.get('min_count') is not None:
         return role['min_count']
     if str(role.get('binding_policy')) in {'REUSABLE', 'SHARED'}:
-        return 1
+        try:
+            count = int(role.get('required_count', 1))
+        except (TypeError, ValueError):
+            count = 1
+        # Restating a minimum that equals the count would change the compiled
+        # graph's fingerprint without changing what it means.
+        return 1 if count > 1 else None
     return None
 
 
@@ -520,6 +526,7 @@ def check_executable_contract_complete(
     sanitized: Any,
     blocking_unresolved: Sequence[Any],
     declared_physical_operations: int = 0,
+    unresolved_relations: Sequence[Any] | None = None,
 ) -> tuple[bool, list[str]]:
     """Whether the task the FM actually required is executable as compiled.
 
@@ -553,7 +560,8 @@ def check_executable_contract_complete(
         missing.append("Sanitizer reported semantic incompleteness")
     for name, item in (
         ("operations", trace.get("unresolved_required_operations")),
-        ("relations", trace.get("unresolved_required_relations")),
+        ("relations", trace.get("unresolved_required_relations")
+         if unresolved_relations is None else unresolved_relations),
     ):
         if item:
             missing.append(f"Required {name} the runtime cannot represent: {item}")
@@ -1621,6 +1629,19 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         row = accounting_by_element.get((kind, item.get("id"))) or {}
         return str(row.get("requirement_provenance") or "UNDETERMINED")
 
+    unrepresented_role_ids = {
+        rid for rid, hypothesis in role_hypotheses.items()
+        if rid not in id_map and rid not in planner_context_id_map
+        and hypothesis.status == "UNREPRESENTED_SEMANTIC"
+    }
+
+    def _every_resolved_participant_still_acted_on(participants) -> bool:
+        """Whether the runtime roles this semantic mentions still have work to do."""
+        acted_on = {group.tool_role for group in groups} | {group.target_role for group in groups}
+        acted_on |= {group.context_role for group in groups if group.context_role}
+        resolved = [id_map[p] for p in participants if p in id_map]
+        return bool(resolved) and all(role in acted_on for role in resolved)
+
     def _demotion_verdict(kind, item):
         """Whether an unrepresentable semantic may be recorded as surplus."""
         participants = list(item.get("participant_roles") or ())
@@ -1629,6 +1650,19 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         provenance = _requirement_provenance(kind, item)
         if provenance in DEMOTABLE_REQUIREMENT_PROVENANCE:
             return True, provenance
+        # A participant the runtime has no role family for at all -- a material
+        # this domain models no source for, which the model inferred from a
+        # finished result -- is a limit of the runtime's task universe rather
+        # than a mapping failure.  Recording that without blocking is only safe
+        # while every role the semantic *does* mention still has an operation
+        # acting on it: otherwise the loss leaves a participant of the task with
+        # nothing to do, which is exactly how a plan came to report a task done
+        # having never stated it.
+        if (
+            any(p in unrepresented_role_ids for p in participants)
+            and _every_resolved_participant_still_acted_on(participants)
+        ):
+            return True, "RUNTIME_UNREPRESENTABLE_PARTICIPANT"
         return False, provenance
 
     blocking_ops, blocking_rels, surplus_constraints = [], [], []
@@ -1747,13 +1781,15 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         (blocking_unresolved if required
          else trace["constraints_outside_the_runtime_task"]).append(annotated)
     # The same relations were recorded as unresolved while the groups were still
-    # being built, before there was any operation to compare them against.
-    if enforced_phrases:
-        trace["unresolved_required_relations"] = [
-            item for item in trace.get("unresolved_required_relations", ())
-            if (item.get("raw_subject"), item.get("raw_phrase"), item.get("raw_object"))
-            not in enforced_phrases
-        ]
+    # being built, before there was any operation to compare them against.  The
+    # strict audit keeps them: it asks whether *everything* the model said was
+    # representable.  Only the executable view, which asks whether the task can
+    # be carried out, drops what an operation already enforces.
+    executable_unresolved_relations = [
+        item for item in trace.get("unresolved_required_relations", ())
+        if (item.get("raw_subject"), item.get("raw_phrase"), item.get("raw_object"))
+        not in enforced_phrases
+    ]
     contract_complete, contract_missing_reasons = check_required_contract_complete(
         domain, nodes, relations, groups, trace, sanitized, blocking_unresolved
     )
@@ -1764,6 +1800,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     executable_complete, executable_missing_reasons = check_executable_contract_complete(
         domain, nodes, groups, trace, sanitized, blocking_unresolved,
         declared_physical_operations=declared_physical_operations,
+        unresolved_relations=executable_unresolved_relations,
     )
     all_precond_prov = [
         p for g_trace in trace['groups']

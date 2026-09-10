@@ -124,6 +124,11 @@ _region["required"] = ["id", "label", "visual_description", "reason"]
 _region["additionalProperties"] = False
 
 
+# Keys the normalizer adds for the runtime's own accounting.  They travel with
+# the document but are never validated as wire content.
+_RUNTIME_ONLY_DOCUMENT_KEYS = frozenset({"structurally_unusable_elements"})
+
+
 def is_v3_document(doc: Mapping[str, Any]) -> bool:
     return isinstance(doc, Mapping) and doc.get("schema_version") == 3 and "task_contract" in doc
 
@@ -132,6 +137,91 @@ _ROBOT_SELF = re.compile(
     r"\b(robot(?:ic)?(?:\s+(?:arm|body|platform|system))?|manipulator|gripper|end[ -]?effector(?:\s+attachment)?)\b",
     re.IGNORECASE,
 )
+
+
+_UNDECLARED_ROBOT_SELF = re.compile(
+    r"^(robot|robotic|manipulator|gripper|end[ _-]?effector|arm)(_|$)|"
+    r"(_|^)(robot|agent|executor)(_agent|_arm|_self)?$",
+    re.IGNORECASE,
+)
+
+
+def _repair_structural_wire_noise(
+    normalized: dict[str, Any], trace: list[dict[str, Any]]
+) -> None:
+    """Repair the wire noise that carries no semantics, and nothing else.
+
+    Two repairs, both deterministic and both recorded:
+
+    An exact duplicate participant says nothing the single mention did not --
+    "accessible to person, person" is one accessibility claim -- so the list is
+    deduplicated.  Rejecting the whole contract over it discarded every other
+    coherent semantic the model expressed.
+
+    A reference to the robot itself is a reference to the executor, which is
+    definitionally not one of the task's participants; the same removal already
+    happens for a robot role the model declared, and an undeclared reference to
+    it is the same thing written more loosely.
+
+    Nothing else is repaired.  An undeclared participant that names a real
+    thing -- a person, a part -- is missing semantics and stays a wire failure,
+    because inventing a declaration for it would assert a role the model never
+    gave.  An element left with too few participants to state a relation is not
+    quietly dropped either: it is carried out separately so that the stage which
+    accounts for required semantics still sees it.
+    """
+    contract = normalized.get("task_contract", {})
+    declared = {
+        str(role.get("id")) for role in contract.get("functional_roles", [])
+        if isinstance(role, dict)
+    }
+    unusable: list[dict[str, Any]] = []
+    for collection, minimum in (("functional_relations", 2), ("operation_pairings", 2)):
+        kept = []
+        for entry in contract.get(collection, []) or []:
+            if not isinstance(entry, dict):
+                kept.append(entry)
+                continue
+            participants = list(entry.get("participant_roles", ()) or ())
+            deduplicated = list(dict.fromkeys(participants))
+            if deduplicated != participants:
+                trace.append({
+                    "code": "DUPLICATE_PARTICIPANT_DEDUPLICATED",
+                    "collection": collection, "element_id": entry.get("id"),
+                    "raw_participant_roles": participants,
+                    "normalized_participant_roles": deduplicated,
+                })
+            robots = [p for p in deduplicated
+                      if p not in declared and _UNDECLARED_ROBOT_SELF.search(str(p))]
+            if robots:
+                deduplicated = [p for p in deduplicated if p not in robots]
+                trace.append({
+                    "code": "UNDECLARED_ROBOT_SELF_PARTICIPANT_REMOVED",
+                    "collection": collection, "element_id": entry.get("id"),
+                    "removed_participants": robots,
+                })
+            item = deepcopy(entry)
+            item["participant_roles"] = deduplicated
+            if len(deduplicated) < minimum:
+                unusable.append({
+                    "element_kind": "relation" if collection == "functional_relations" else "operation",
+                    "id": entry.get("id"),
+                    "relation": entry.get("relation"),
+                    "operation": entry.get("operation"),
+                    "participant_roles": deduplicated,
+                    "raw_participant_roles": participants,
+                    "reason": "TOO_FEW_DISTINCT_PARTICIPANTS_TO_STATE_A_RELATION",
+                })
+                trace.append({
+                    "code": "STRUCTURALLY_UNUSABLE_ELEMENT_CARRIED_OUT",
+                    "collection": collection, "element_id": entry.get("id"),
+                    "participant_roles": deduplicated,
+                })
+                continue
+            kept.append(item)
+        contract[collection] = kept
+    if unusable:
+        normalized["structurally_unusable_elements"] = unusable
 
 
 def normalize_v3_live_document(
@@ -227,6 +317,7 @@ def normalize_v3_live_document(
             else:
                 kept.append(candidate)
         visible[role_id] = kept
+    _repair_structural_wire_noise(normalized, trace)
     guidance = normalized.get("observation_guidance", {})
     regions = guidance.get("inspectable_regions", [])
     kept_regions = []
@@ -1194,6 +1285,26 @@ def convert_v3_to_canonical_document(
     canonical["current_state_operation_context_roles"] = sorted(
         set(canonical.get("current_state_operation_context_roles", ())) | relation_only_context
     )
+    for item in v3_doc.get("structurally_unusable_elements", ()) or ():
+        # Repaired down to too little to state anything, and therefore still a
+        # semantic the runtime could not represent rather than one it repaired
+        # away.
+        record = {
+            "id": item.get("id"),
+            "participant_roles": list(item.get("participant_roles", ())),
+            "reason": item.get("reason"),
+            "requirement_provenance": "INSTRUCTION_CLAUSE_SUPPORT",
+        }
+        if item.get("element_kind") == "operation":
+            unresolved_operation_semantics.append({
+                **record, "operation": item.get("operation"),
+                "semantic_capability_candidates": [],
+            })
+        else:
+            unresolved_relation_semantics.append({
+                **record, "relation": item.get("relation"), "category": "UNRESOLVED_REQUIRED_SEMANTIC",
+                "provenance": "FM_EXPLICIT_SEMANTIC",
+            })
     canonical["unresolved_operation_semantics"] = list(unresolved_operation_semantics)
     for item in unresolved_operation_semantics:
         for row in canonical["fm_semantic_accounting"]:
@@ -1325,8 +1436,12 @@ def convert_v3_to_canonical_document(
 def validate_v3_live_contract(
     doc: Mapping[str, Any], *, domain: str | None = None, task_instruction: str = ""
 ) -> dict[str, Any]:
+    # Runtime bookkeeping the normalizer attaches is not model output and is not
+    # part of the wire contract, so the schema never sees it.
+    wire = {key: value for key, value in dict(doc).items()
+            if key not in _RUNTIME_ONLY_DOCUMENT_KEYS}
     try:
-        jsonschema.validate(instance=dict(doc), schema=LIVE_RESPONSE_SCHEMA_V3)
+        jsonschema.validate(instance=wire, schema=LIVE_RESPONSE_SCHEMA_V3)
     except jsonschema.ValidationError as exc:
         raise MalformedVLMSpecificationError(f"V3 schema validation failed: {exc.message}") from exc
     _validate_declared_references(doc)
