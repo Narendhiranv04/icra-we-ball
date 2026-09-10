@@ -28,6 +28,7 @@ from .fm_schema_v3 import is_v3_document
 from .errors import VLMSpecificationError
 from .operation_slot_completion import capability_anchor_roles
 from .robot_capability_registry import (
+    effect_achieved_by_compiled_operation,
     extract_operation_semantic_candidates,
     is_non_physical_operation_phrase,
 )
@@ -1036,6 +1037,9 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             trace['relations'].append(evidence)
             return None
 
+    # End states the FM stated, held until the operations they would be the end
+    # state of have been compiled.
+    pending_task_effects: list[dict[str, Any]] = []
     for rel in doc['functional_relations']:
         from .relation_interpreter import (
             has_compatible_explicit_effect_operation,
@@ -1073,9 +1077,20 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             trace['relations'].append(pairing_evidence)
             trace['task_causal_relations'].append(pairing_evidence)
             continue
-        operation_matches, source_operation_id = has_compatible_explicit_effect_operation(
-            effect_predicate or '', raw_subject, raw_object, doc.get('interaction_groups', [])
-        )
+        # A stated end state is corroborated against the *compiled* operation,
+        # which does not exist yet at this point in the pass, so the decision is
+        # deferred to after the groups are built.  A literal object has nothing
+        # to compile against and is settled here as before.
+        if effect_predicate and raw_subject in id_map and not object_is_literal:
+            if raw_object in id_map:
+                pending_task_effects.append({
+                    'predicate': effect_predicate,
+                    'raw_subject': raw_subject, 'raw_object': raw_object,
+                    'raw_phrase': raw_phrase, 'expected': rel.get('expected', True),
+                    'relation': rel,
+                })
+                continue
+        operation_matches, source_operation_id = (False, None)
         if (
             effect_predicate
             and raw_subject in id_map
@@ -1694,6 +1709,54 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         grouped_triples = {(g.tool_role, p, g.target_role) for g in groups for p in g.required_relations}
         grouped_triples |= {(g.tool_role, p, g.context_role) for g in groups for p in g.context_relations}
         relations = [r for r in relations if (r.subject_role, r.predicate, r.object_role) not in grouped_triples]
+    # Now that the operations are compiled, settle the end states that were
+    # waiting for them.  An end state a compiled operation brings about is
+    # recorded as that operation's effect; one no operation brings about is
+    # not an effect the task achieves, so it goes back through the ordinary
+    # relation path and blocks if nothing represents it.
+    for pending in pending_task_effects:
+        canonical_subject = id_map.get(pending['raw_subject'])
+        canonical_object = id_map.get(pending['raw_object'])
+        achieved_by = (
+            effect_achieved_by_compiled_operation(
+                domain, pending['predicate'], canonical_subject, canonical_object, groups)
+            if canonical_subject and canonical_object else None
+        )
+        if achieved_by is None:
+            # Nothing the task does brings this state about, so it is not an
+            # effect of it.  It goes back through the ordinary relation path,
+            # where it is either given a physical reading or recorded as a
+            # requirement the runtime could not represent.  Dropping it here
+            # would remove a stated requirement for no better reason than that
+            # no operation happened to match it.
+            rel = pending['relation']
+            add_relation(
+                pending['raw_subject'], pending['raw_phrase'], pending['raw_object'],
+                expected=pending['expected'],
+                unordered=rel.get('unordered_participants', False),
+            )
+            continue
+        effect = TaskEffectRelation(
+            subject_role=canonical_subject,
+            predicate=pending['predicate'],
+            object_value=canonical_object,
+            object_is_literal=False,
+            source_operation_id=achieved_by,
+            raw_subject=pending['raw_subject'],
+            raw_phrase=pending['raw_phrase'],
+            raw_object=pending['raw_object'],
+        )
+        task_effect_relations.append(effect)
+        trace['relations'].append({
+            'raw_subject': pending['raw_subject'],
+            'raw_phrase': pending['raw_phrase'],
+            'raw_object': pending['raw_object'],
+            'status': 'TASK_EFFECT_SEMANTICS',
+            'category': 'TASK_EFFECT_SEMANTICS',
+            'canonical': effect.to_dict(),
+            'provenance': 'FM_EXPLICIT_SEMANTIC',
+            'corroborated_by_compiled_operation': achieved_by,
+        })
     # Search region discovery/order is handled separately from functional typing.
     proposed, ranking = [], []
     if domain != 'living_room':

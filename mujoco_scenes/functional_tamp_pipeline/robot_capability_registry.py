@@ -109,6 +109,13 @@ class RobotCapability:
     required_relation_templates: tuple[tuple[str, str, str], ...]
     planner_operation: str
     semantic_cues: tuple[str, ...] = ()
+    # What carrying this capability out brings about, as (predicate, subject
+    # slot, object slot) over the slots "source", "target" and "anchor".  This
+    # is knowledge about the robot's own actions, in the same category as the
+    # preconditions above, and it is only ever used to recognize that an end
+    # state the FM stated is the end state of an operation the FM independently
+    # expressed.  It never creates an operation from a stated end state.
+    achieved_effects: tuple[tuple[str, str, str], ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -121,6 +128,7 @@ class RobotCapability:
             "required_relation_templates": [list(t) for t in self.required_relation_templates],
             "planner_operation": self.planner_operation,
             "semantic_cues": list(self.semantic_cues),
+            "achieved_effects": [list(row) for row in self.achieved_effects],
         }
 
 
@@ -194,6 +202,10 @@ CANONICAL_ROBOT_CAPABILITIES: dict[str, tuple[RobotCapability, ...]] = {
                 ("source", "REACHES_BOTTOM", "target"),
             ),
             planner_operation="PROVIDE_SOUP_EATING_UTENSIL",
+            # A utensil going into a bowl is an insertion, which this capability's own
+            # preconditions already check; calling it a placement-on would need
+            # a carrier reading the endpoint families do not admit.
+            achieved_effects=(),
             semantic_cues=(
                 "eating utensil", "provide utensil", "place utensil", "serve soup",
                 "spoon soup", "eat soup",
@@ -212,6 +224,7 @@ CANONICAL_ROBOT_CAPABILITIES: dict[str, tuple[RobotCapability, ...]] = {
             allowed_anchor_roles=(),
             required_relation_templates=(),
             planner_operation="POUR",
+            achieved_effects=(("CONTAINS", "target", "source"),),
             semantic_cues=(
                 "pour", "pouring", "transfer", "transferring", "pour coffee", "pour water",
                 "dispense", "dispensing", "fill", "filling", "fill cup", "pour liquid",
@@ -239,6 +252,7 @@ CANONICAL_ROBOT_CAPABILITIES: dict[str, tuple[RobotCapability, ...]] = {
                 ("source", "NEAR_SEAT", "anchor"),
             ),
             planner_operation="SUPPORT_DRINKWARE",
+            achieved_effects=(("PLACED_ON", "target", "source"),),
             semantic_cues=(
                 "drinkware", "support drinkware", "personal support",
                 "personal support group", "cup and saucer", "cup saucer",
@@ -265,6 +279,7 @@ CANONICAL_ROBOT_CAPABILITIES: dict[str, tuple[RobotCapability, ...]] = {
                 ("source", "ACCESSIBLE_FROM_BOTH_SEATS", "anchor"),
             ),
             planner_operation="SUPPORT_ENTERTAINMENT_CONTROL",
+            achieved_effects=(("PLACED_ON", "target", "source"),),
             semantic_cues=(
                 "entertainment", "remote", "remote control", "control",
                 "shared entertainment", "shared entertainment group",
@@ -292,6 +307,8 @@ CANONICAL_ROBOT_CAPABILITIES: dict[str, tuple[RobotCapability, ...]] = {
                 ("target", "COMPATIBLE_WITH_TARGET", "anchor"),
             ),
             planner_operation="DRIVE_FASTENER_INTO_TARGET",
+            achieved_effects=(("INSTALLED_AT", "target", "anchor"),
+                                ("CONNECTED_TO", "target", "anchor"),),
             semantic_cues=(
                 "fasten", "fastening", "drive screw", "drive fastener", "fasten joint",
                 "secure joint", "repair joint", "tighten screw",
@@ -316,6 +333,7 @@ CANONICAL_ROBOT_CAPABILITIES: dict[str, tuple[RobotCapability, ...]] = {
             allowed_anchor_roles=(),
             required_relation_templates=(),
             planner_operation="PLACE",
+            achieved_effects=(("PLACED_ON", "source", "target"),),
             semantic_cues=(
                 "return", "returning", "return driver", "return tool", "place driver",
                 "return to workbench", "put back", "return reusable item to support",
@@ -662,3 +680,42 @@ def abstract_slots_for_operation(
             capability_id="|".join(sorted({s.capability_id for s in entries})),
         ))
     return tuple(merged)
+
+
+def effect_achieved_by_compiled_operation(
+    domain: str,
+    predicate: str,
+    canonical_subject: str,
+    canonical_object: str,
+    groups: Sequence[Any],
+) -> str | None:
+    """The compiled operation whose execution brings this end state about, if any.
+
+    Matched against the *compiled* interpretation rather than the raw wire
+    slots.  V3 participants are unordered and the group they end up in has
+    since been through id normalization, joint role typing, slot completion,
+    context elision and composite lowering, so the raw layout is not what the
+    runtime is going to execute -- and testing against it made corroboration
+    depend on how the model happened to order its participants.
+
+    This recognizes direction only.  It never creates an operation from a
+    stated end state: the group has to already exist because the FM expressed
+    the operation independently.
+    """
+    for group in groups:
+        capability = getattr(group, "capability_id", None) or ""
+        slots = {
+            "source": getattr(group, "tool_role", None),
+            "target": getattr(group, "target_role", None),
+            "anchor": getattr(group, "context_role", None),
+        }
+        for declared in get_robot_capabilities(domain):
+            if declared.capability_id != capability:
+                continue
+            for achieved, subject_slot, object_slot in declared.achieved_effects:
+                if achieved != predicate:
+                    continue
+                if (slots.get(subject_slot) == canonical_subject
+                        and slots.get(object_slot) == canonical_object):
+                    return str(getattr(group, "id", "")) or capability
+    return None

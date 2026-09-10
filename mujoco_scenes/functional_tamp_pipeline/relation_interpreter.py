@@ -255,6 +255,11 @@ def extract_relation_semantic_candidates(
     effect = interpret_task_effect_predicate(raw_phrase)
     if effect:
         candidates.append(RelationSemanticCandidate(effect, "FORWARD", "TASK_EFFECT_SEMANTICS"))
+    # A verb separated from its particle nominates the same meaning as the
+    # adjacent form; it is added rather than substituted, so a sentence that
+    # matches both ways yields one candidate.
+    for predicate, category in _extract_verb_particle_candidates(norm_phrase):
+        candidates.append(RelationSemanticCandidate(predicate, "FORWARD", category))
     return tuple(dict.fromkeys(candidates))
 
 
@@ -418,6 +423,50 @@ def has_compatible_explicit_pairing_operation(
             return True, str(group.get("id", "")) or None
     return False, None
 
+
+# ---------------------------------------------------------------------------
+# Verb-particle relations, where the verb and its preposition are not adjacent
+# ---------------------------------------------------------------------------
+#
+# English routinely separates a phrasal verb from its particle: "combined to
+# form a drink IN a cup", "placed neatly ON the table", "joined firmly AT the
+# marked location".  A contiguous cue list cannot match any of those, so a
+# sentence carrying perfectly ordinary transfer or placement semantics was read
+# as carrying none, and the relation became an unrepresentable requirement.
+#
+# These are linguistic families, not phrases: a set of verb stems and the set
+# of directional particles that family takes, matched across a bounded gap
+# inside one clause.  A sentence boundary always stops the match, so the verb
+# and the particle have to belong to the same statement.
+_VERB_PARTICLE_FAMILIES: tuple[tuple[str, str, str, str], ...] = (
+    # (predicate, category, verb stems, directional particles)
+    ("PROVIDES_MATERIAL_TO", "TASK_CAUSAL_SEMANTICS",
+     r"combin|mix|blend|pour|transfer|dispens|fill|decant|top up",
+     r"into|onto|in|to"),
+    ("PLACED_ON", "TASK_EFFECT_SEMANTICS",
+     r"plac|put|set|position|rest|arrang|lay|stand|seat|deposit",
+     r"on|onto|upon|atop|over"),
+    ("INSTALLED_AT", "TASK_CAUSAL_SEMANTICS",
+     r"instal|fasten|secur|screw|bolt|affix|attach|mount|driv",
+     r"at|into|in|onto|on|through"),
+    ("CONNECTED_TO", "TASK_CAUSAL_SEMANTICS",
+     r"connect|join|coupl|coupled|link|coupling",
+     r"to|with|at|into|together"),
+)
+
+# The gap may not cross a clause boundary, and it may not swallow a second verb
+# phrase; forty characters is about one noun phrase with a modifier.
+_PARTICLE_GAP = r"[^.;:]{0,40}?"
+
+
+def _extract_verb_particle_candidates(norm_phrase: str) -> list[tuple[str, str]]:
+    """Predicates whose verb and directional particle both appear in one clause."""
+    found: list[tuple[str, str]] = []
+    for predicate, category, verbs, particles in _VERB_PARTICLE_FAMILIES:
+        pattern = (rf"\b(?:{verbs})\w*\b{_PARTICLE_GAP}\b(?:{particles})\b")
+        if re.search(pattern, norm_phrase):
+            found.append((predicate, category))
+    return found
 
 def _extract_task_causal_candidates(norm_phrase: str) -> tuple[str, bool] | None:
     """Deterministically check if phrase matches a task/causal semantic relation."""

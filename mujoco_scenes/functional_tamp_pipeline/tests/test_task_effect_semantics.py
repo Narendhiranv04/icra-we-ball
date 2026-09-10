@@ -68,8 +68,54 @@ def test_declared_endpoint_state_relation_is_effect_of_explicit_transfer():
     effect = graph.task_effect_relations[0]
     assert effect.category == "TASK_EFFECT_SEMANTICS"
     assert effect.object_is_literal is False
-    assert effect.source_operation_id == "transfer"
+    # The effect is attributed to the operation as *compiled*, not to the raw
+    # wire group.  V3 participants are unordered and the group they end up in
+    # has since been through id normalization, joint typing, slot completion,
+    # context elision and composite lowering, so the raw layout is not what the
+    # runtime executes; corroborating against it made the attribution depend on
+    # the order the model happened to list its participants in.
+    assert effect.source_operation_id == graph.operation_groups[0].id
     assert not graph.metadata["canonicalization_trace"]["unresolved_required_relations"]
+    corroborated = [
+        row for row in graph.metadata["canonicalization_trace"]["relations"]
+        if row.get("corroborated_by_compiled_operation")
+    ]
+    assert corroborated, "the operation that achieves the effect must be recorded"
+
+
+def test_a_stated_end_state_no_operation_achieves_is_not_an_effect():
+    """The adversarial counterpart: an end state needs an operation to achieve it.
+
+    The same containment sentence, with the transfer removed.  Nothing the task
+    does brings the state about, so it is not the task's effect -- and it is
+    not quietly dropped either: it goes back through the relation path and
+    blocks, because the FM did state it.
+    """
+    raw = _doc(
+        [_role("source", "source of coffee"), _role("carrier", "container for coffee")],
+        [_contains("carrier", "source")],
+        [],
+    )
+    graph = compile_candidate_graph("kitchen", "the carrier holds the coffee", raw)
+    assert not graph.task_effect_relations, "no operation achieves it, so it is no effect"
+    trace = graph.metadata["canonicalization_trace"]
+    recorded = (trace["unresolved_required_relations"] + trace["relations"]
+                + trace.get("constraints_outside_the_runtime_task", []))
+    assert any("contains" in str(row) for row in recorded), "it must still be accounted for"
+
+
+def test_an_end_state_is_not_credited_to_an_unrelated_operation():
+    """Corroboration is per operation, not "some operation exists"."""
+    raw = _doc(
+        [_role("source", "source of coffee"), _role("carrier", "container for coffee"),
+         _role("stirrer", "implement used to stir the coffee")],
+        [_contains("carrier", "source")],
+        [{"id": "stir", "function": "stir", "tool_role": "stirrer",
+          "target_role": "carrier", "required_relations": [], "context_relations": []}],
+    )
+    graph = compile_candidate_graph("kitchen", "stir the coffee", raw)
+    achieved = {e.source_operation_id for e in graph.task_effect_relations}
+    assert "stir" not in achieved, "stirring does not put the coffee in the cup"
 
 
 def test_undeclared_non_groundable_content_is_preserved_as_effect_literal():

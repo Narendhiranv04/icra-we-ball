@@ -666,24 +666,16 @@ def _relation_options(domain: str, relation: Mapping[str, Any], hypotheses: Mapp
     options: list[dict[str, Any]] = []
     for semantic in extract_relation_semantic_candidates(domain, relation["relation"]):
         pairs = relation_canonical_role_pairs(domain, semantic.predicate_name, semantic.category)
-        if semantic.category == "TASK_EFFECT_SEMANTICS":
-            # Carrier orientation is linguistic, so both arrangements are kept
-            # until an operation corroborates the state edge -- but one endpoint
-            # still has to be able to carry the other.  Accepting every pair let
-            # "the cup contains coffee and water" decompose into a claim that
-            # the coffee contains the water, which the model never made and
-            # which then blocked the contract as unrepresentable.
-            carriers = {
-                role for side in (left, right)
-                for role in hypotheses[side].canonical_role_candidates
-                if canonical_role_family(domain, role) in {"DESTINATION", "SUPPORT", "PAYLOAD"}
-            }
-            pairs = {
-                (subject, object_)
-                for subject in hypotheses[left].canonical_role_candidates
-                for object_ in hypotheses[right].canonical_role_candidates
-                if {subject, object_} & carriers
-            }
+        if semantic.category == "TASK_EFFECT_SEMANTICS" and not pairs:
+            # A stated end state relates two *different* kinds of participant:
+            # something carries, and something is carried.  The declared family
+            # signature says which, and only that keeps a distributive sentence
+            # honest.  Requiring merely that one endpoint *could* carry was not
+            # enough -- with "the cups and the soup bowls are placed on the
+            # table" both cups and bowls can carry, so the pair (cup, bowl) was
+            # admitted and the runtime recorded a claim that the cup goes on
+            # the bowl, which the model never made.
+            pairs = set()
         for subject_raw, object_raw in ((left, right), (right, left)):
             subject_types = set(hypotheses[subject_raw].canonical_role_candidates)
             object_types = set(hypotheses[object_raw].canonical_role_candidates)
@@ -1784,17 +1776,15 @@ def convert_v3_to_canonical_document(
                 ),
             ),
         })
-    for edge in canonical["functional_relations"]:
-        effect = interpret_task_effect_predicate(edge["relation"])
-        participants = {edge["subject_role"], edge["object_role"]}
-        for group in groups:
-            if participants != {group["tool_role"], group["target_role"]}:
-                continue
-            if effect == "CONTAINS":
-                edge["subject_role"], edge["object_role"] = group["target_role"], group["tool_role"]
-            elif effect == "PLACED_ON":
-                edge["subject_role"], edge["object_role"] = group["tool_role"], group["target_role"]
-            break
+    # A stated end state used to be re-oriented here to match the raw group's
+    # slot layout, and the stage that corroborated it matched against that same
+    # layout, so the two agreed only because both were wrong in the same way.
+    # A slot position is a call-signature convention, not a claim about the
+    # world: the runtime happens to hold the support as an operation's source,
+    # which turned "the setting is on the table" into "the table is on the
+    # setting".  Orientation now comes from the reading, which the declared
+    # endpoint families settle, and corroboration matches the compiled
+    # operation rather than the wire order.
 
     # Reconcile the accounting against the raw contract.  Every raw role,
     # relation and operation must leave a trace of what became of it, so that a

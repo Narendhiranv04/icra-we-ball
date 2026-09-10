@@ -764,6 +764,29 @@ def _causal_pairs(domain: str, predicate: str) -> set[tuple[str, str]]:
     return set()
 
 
+# Which kinds of participant a stated end state relates.  A task effect is not
+# a precondition the robot checks, but it is still a claim about what its two
+# endpoints *are*: something contains a material, and something is placed on a
+# support.  Declared at the level of role families rather than role names, so a
+# new role of a known family is covered without another table.
+_TASK_EFFECT_FAMILY_PAIRS: dict[str, tuple[frozenset[str], frozenset[str]]] = {
+    "CONTAINS": (frozenset({"DESTINATION"}), frozenset({"SOURCE", "PAYLOAD", "COMPONENT"})),
+    "PLACED_ON": (frozenset({"PAYLOAD", "DESTINATION", "INSTRUMENT", "COMPONENT"}),
+                  frozenset({"SUPPORT", "FIXED_TARGET"})),
+}
+
+
+def _task_effect_pairs(domain: str, predicate: str) -> set[tuple[str, str]]:
+    families = _TASK_EFFECT_FAMILY_PAIRS.get(predicate)
+    if families is None:
+        return set()
+    subject_families, object_families = families
+    declared = _FAMILY_FOR_DOMAIN_ROLE.get(domain, {})
+    subjects = [role for role, family in declared.items() if family in subject_families]
+    objects = [role for role, family in declared.items() if family in object_families]
+    return {(s, o) for s in subjects for o in objects if s != o}
+
+
 def relation_canonical_role_pairs(
     domain: str, predicate: str, category: str
 ) -> set[tuple[str, str]]:
@@ -775,6 +798,8 @@ def relation_canonical_role_pairs(
         return {(s, o) for s in signature.allowed_subject_roles for o in signature.allowed_object_roles}
     if category == "TASK_CAUSAL_SEMANTICS":
         return _causal_pairs(domain, predicate)
+    if category == "TASK_EFFECT_SEMANTICS":
+        return _task_effect_pairs(domain, predicate)
     return set()
 
 
@@ -856,23 +881,36 @@ def build_role_type_hypotheses(
         phrase = str(relation.get("relation", relation.get("predicate", "")))
         pairs: set[tuple[str, str]] = set()
         meanings = extract_relation_semantic_candidates(domain, phrase)
-        if any(meaning.category == "TASK_EFFECT_SEMANTICS" for meaning in meanings):
-            # Desired/resulting state is not a static endpoint-type precondition.
-            continue
+        # One phrase can carry several readings at once: "the control is
+        # supported by the surface" states an end state *and* says that the
+        # surface is a support.  Dropping the whole relation because one reading
+        # was a task effect threw the endpoint evidence away with it, and the
+        # only place that evidence existed was this sentence.
+        #
+        # Several readings are a disjunction, so the constraint is the union of
+        # what each reading admits.  A union can only under-constrain, never
+        # narrow onto the wrong reading -- which is what taking one reading
+        # alone would risk, since "the cup contains the coffee" read only as an
+        # insertion would type the coffee as the thing inserted.
+        readings: list[str] = []
         for meaning in meanings:
-            if meaning.category == "PHYSICAL_VERIFIER":
-                current = relation_canonical_role_pairs(domain, meaning.predicate_name, meaning.category)
-                if meaning.predicate_name in {"NEAR_SEAT", "ACCESSIBLE_FROM_BOTH_SEATS", "COMPATIBLE_WITH"}:
-                    current |= {(o, s) for s, o in current}
-            elif meaning.category == "TASK_CAUSAL_SEMANTICS":
-                current = relation_canonical_role_pairs(domain, meaning.predicate_name, meaning.category)
-            else: continue
+            current = relation_canonical_role_pairs(domain, meaning.predicate_name, meaning.category)
+            if not current:
+                continue
+            if meaning.category == "PHYSICAL_VERIFIER" and meaning.predicate_name in {
+                "NEAR_SEAT", "ACCESSIBLE_FROM_BOTH_SEATS", "COMPATIBLE_WITH"
+            }:
+                current |= {(o, s) for s, o in current}
             if meaning.direction == "REVERSE": current = {(o, s) for s, o in current}
             if relation.get("unordered_participants"):
                 current |= {(o, s) for s, o in current}
             pairs |= current
+            readings.append(f"{meaning.category}:{meaning.predicate_name}:{meaning.direction}")
         if pairs:
-            binary_constraints.append((rs, ro, pairs, {"source": "RELATION_TEXT", "raw_phrase": phrase}))
+            binary_constraints.append((rs, ro, pairs, {
+                "source": "RELATION_TEXT", "raw_phrase": phrase,
+                "readings_unioned": readings,
+            }))
 
     for operation in document.get("interaction_groups", ()) or document.get("operations", ()):
         rs = operation.get("tool_role") or operation.get("source_role")
