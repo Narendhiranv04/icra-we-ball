@@ -1103,6 +1103,12 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 for capability in extract_operation_semantic_candidates(domain, raw_op)
             )
             if requires_explicit_context:
+                # The anchor is not supplied when the model did not express it.
+                # Seats look like permanent scene furniture, but the requirement
+                # that a placement be reachable from both of them is task
+                # semantics, not geometry: it is exactly what separates doing the
+                # job from putting the object down somewhere.  Supplying it would
+                # assert a constraint the model never made.
                 trace['disabled_groups'].append({
                     'raw_group': group,
                     'status': 'MISSING_EXPLICIT_OPERATION_CONTEXT',
