@@ -188,7 +188,10 @@ CANONICAL_ROBOT_CAPABILITIES: dict[str, tuple[RobotCapability, ...]] = {
             semantic_description="Support personal drinkware on an adjacent surface near a seating location.",
             allowed_source_roles=("PERSONAL_CUP_SAUCER_REGION", "DRINKWARE_SUPPORT"),
             allowed_target_roles=("CUP_SAUCER_SET", "DRINKWARE"),
-            allowed_anchor_roles=("SEATING_POSITION", "SEATING_PAIR"),
+            # NEAR_SEAT is checked against one seating position.  Listing the
+            # pair as well made the two anchor forms look interchangeable, and
+            # the predicate that has to verify the result does not accept it.
+            allowed_anchor_roles=("SEATING_POSITION",),
             required_relation_templates=(
                 ("source", "FITS_SET_ON", "target"),
                 ("source", "NEAR_SEAT", "anchor"),
@@ -212,7 +215,9 @@ CANONICAL_ROBOT_CAPABILITIES: dict[str, tuple[RobotCapability, ...]] = {
             semantic_description="Support shared remote control on a central surface accessible from multiple seating positions.",
             allowed_source_roles=("SHARED_REMOTE_REGION", "REMOTE_SUPPORT"),
             allowed_target_roles=("REMOTE", "REMOTE_CONTROL"),
-            allowed_anchor_roles=("SEATING_PAIR", "SEATING_POSITION"),
+            # Being reachable from both seats is a property of the pair.  One
+            # individual seating position cannot witness it.
+            allowed_anchor_roles=("SEATING_PAIR",),
             required_relation_templates=(
                 ("source", "FITS_ON", "target"),
                 ("source", "ACCESSIBLE_FROM_BOTH_SEATS", "anchor"),
@@ -298,12 +303,30 @@ def get_robot_capability_registry_hash() -> str:
     return hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 
 
+def operation_action_phrase(raw_phrase: str, participant_roles: Sequence[str] = ()) -> str:
+    """The operation phrase with the participant names it repeats taken out.
+
+    A capability is identified by the action; the participants are given
+    separately.  Leaving their names in the text let "place the fastening_tool
+    on the workbench" read as a fastening, because a cue matched inside the
+    tool's own name -- and the runtime then induced a second fastening for it.
+    """
+    normalized = _phrase(raw_phrase)
+    for role in sorted(participant_roles or (), key=len, reverse=True):
+        role_words = _phrase(role)
+        if not role_words:
+            continue
+        normalized = re.sub(rf"\b{re.escape(role_words)}\b", " ", normalized)
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
 def extract_operation_semantic_candidates(
     domain: str,
     raw_phrase: str,
+    participant_roles: Sequence[str] = (),
 ) -> tuple[RobotCapability, ...]:
     """Extract physical capability meanings from text without endpoint filtering."""
-    norm_text = _phrase(raw_phrase)
+    norm_text = operation_action_phrase(raw_phrase, participant_roles)
     if not norm_text or is_non_physical_operation_phrase(raw_phrase):
         return ()
     matched: list[RobotCapability] = []
@@ -311,13 +334,16 @@ def extract_operation_semantic_candidates(
         if norm_text in (_phrase(capability.capability_id), _phrase(capability.planner_operation)):
             matched.append(capability)
             continue
+        # Word boundaries, not raw substrings: "fasten" does not occur in
+        # "fastening tool" as a word, and treating it as a hit made every phrase
+        # naming that tool look like a fastening.
         if any(
             (cue_norm := _phrase(cue)) == norm_text
-            or (len(cue_norm) >= 4 and cue_norm in norm_text)
+            or (len(cue_norm) >= 4 and re.search(rf"\b{re.escape(cue_norm)}\b", norm_text))
             for cue in capability.semantic_cues
         ):
             matched.append(capability)
-    leading = norm_text.split(maxsplit=1)[0]
+    leading = norm_text.split(maxsplit=1)[0] if norm_text else ""
     if not matched and domain == "living_room" and leading in {
         "transfer", "move", "relocate", "place", "position", "transport",
     }:

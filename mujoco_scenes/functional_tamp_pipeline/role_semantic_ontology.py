@@ -387,8 +387,17 @@ _CACHED_LABEL_NORMALIZER: dict[str, str] | None = None
 
 
 def _normalize_label_text(label: str) -> str:
-    """Lexically normalize a free-text semantic label for lookup."""
-    return " ".join(str(label).strip().lower().replace("_", " ").split()).replace(" ", "_")
+    """Lexically normalize a free-text semantic label for lookup.
+
+    Detectors, model contracts and this configuration all write compound labels
+    differently: ``coffee_source``, ``coffee source``, ``Coffee-Source``.  They
+    name the same thing, so all the ordinary separators collapse to one form.
+    Treating only underscores as separators made a hyphenated spelling of a
+    category the runtime itself declares read as an unknown label.
+    """
+    import re as _re
+    collapsed = _re.sub(r"[\s_\-/]+", " ", str(label).strip().lower())
+    return "_".join(collapsed.split())
 
 
 def get_semantic_label_normalizer() -> dict[str, str]:
