@@ -179,12 +179,41 @@ def capability_slots(domain: str, capability: RobotCapability) -> dict[str, tupl
 
 @dataclass
 class ExpressedSemantics:
-    """What the FM said, anywhere in its contract, about spatial task context."""
+    """What the FM said about spatial task context, and what each phrase is about.
+
+    Evidence is gathered across the whole graph, because the model may state a
+    setting's proximity in a role's function, in a relation, or in the operation
+    phrase itself.  But a phrase is evidence *for* an operation only when it is
+    connected to it: a shared-access requirement written about one placement
+    must not license a seating reference for an unrelated one.  So every phrase
+    carries the roles it is about, and an anchor completion asks only for the
+    phrases connected to the operation it is completing.
+
+    The model's own restatement of the task is the exception.  It is about the
+    task rather than about any one participant, so it counts when the anchor it
+    licenses is admissible for only one of the operations the model expressed --
+    which is the "connection is unique" condition, read off the capabilities
+    rather than guessed at.
+    """
 
     domain: str
-    texts: tuple[tuple[str, str], ...] = ()          # (origin, normalized text)
+    # (origin, normalized text, the role ids the phrase is about)
+    texts: tuple[tuple[str, str, frozenset[str]], ...] = ()
     seating_roles: tuple[dict[str, Any], ...] = ()   # the FM's seating-typed roles
+    # anchor canonical role -> ids of the expressed operations whose capability admits it
+    anchor_admitting_operations: dict[str, frozenset[str]] = field(default_factory=dict)
     trace: list[dict[str, Any]] = field(default_factory=list)
+
+    def _in_scope(self, origin: str, about: frozenset[str], semantics: FixedAnchorSemantics,
+                  operation_id: str, participants: frozenset[str]) -> bool:
+        if about & participants:
+            return True
+        if origin == f"OPERATION:{operation_id}":
+            return True
+        if origin == "TASK_SUMMARY":
+            admitting = self.anchor_admitting_operations.get(semantics.canonical_role, frozenset())
+            return admitting == frozenset({operation_id})
+        return False
 
     @property
     def _denotes_several_seats(self) -> bool:
@@ -204,26 +233,42 @@ class ExpressedSemantics:
             for role in self.seating_roles
         )
 
-    def witnesses(self, semantics: FixedAnchorSemantics) -> list[dict[str, Any]]:
+    def witnesses(
+        self,
+        semantics: FixedAnchorSemantics,
+        *,
+        operation_id: str = "",
+        participants: Sequence[str] = (),
+    ) -> list[dict[str, Any]]:
+        scope = frozenset(participants)
+
+        def connected(origin: str, about: frozenset[str]) -> bool:
+            return self._in_scope(origin, about, semantics, operation_id, scope)
+
         found = [
             {"origin": origin, "text": text}
-            for origin, text in self.texts if semantics.cue_matches(text)
+            for origin, text, about in self.texts
+            if semantics.cue_matches(text) and connected(origin, about)
         ]
         if semantics.quantification != "SET":
             return found
         if self._denotes_several_seats:
-            found.append({
-                "origin": "FM_ROLE_CARDINALITY",
-                "text": "the FM's seating reference stands for two or more seats",
-            })
             # Accessibility asserted toward a seating reference that stands for
             # several seats *is* the shared-access requirement, however the model
             # worded it.  Insisting on the word "both" would demand our own
             # phrasing of a semantic the model already gave.
             found.extend(
                 {"origin": origin, "text": text}
-                for origin, text in self.texts if _ACCESS_CUE.search(text)
+                for origin, text, about in self.texts
+                if _ACCESS_CUE.search(text) and connected(origin, about)
             )
+            if found:
+                # Cardinality says the pair exists; it never says on its own that
+                # anything must be reachable from both of its seats.
+                found.append({
+                    "origin": "FM_ROLE_CARDINALITY",
+                    "text": "the FM's seating reference stands for two or more seats",
+                })
         return found
 
 
@@ -243,13 +288,14 @@ def collect_expressed_semantics(
     function, in a relation, or in the operation phrase itself, and any of those
     is the model saying it.
     """
-    texts: list[tuple[str, str]] = []
+    texts: list[tuple[str, str, frozenset[str]]] = []
     seating: list[dict[str, Any]] = []
     for role in contract.get("functional_roles", ()) or ():
         scopes = role_text_scopes(dict(role))
+        about = frozenset({str(role.get("id"))})
         for scope, text in scopes.items():
             if text:
-                texts.append((f"ROLE:{role.get('id')}:{scope}", text))
+                texts.append((f"ROLE:{role.get('id')}:{scope}", text, about))
         hypothesis = hypotheses.get(str(role.get("id")))
         candidates = set(getattr(hypothesis, "canonical_role_candidates", ()) or ())
         if candidates and all(
@@ -268,19 +314,43 @@ def collect_expressed_semantics(
     summary = _normalized(contract.get("task_summary", ""))
     if summary:
         # The model's own restatement of the task is its wording too, and it is
-        # often where it says a thing must be reachable from both seats.
-        texts.append(("TASK_SUMMARY", summary))
+        # often where it says a thing must be reachable from both seats.  It is
+        # about the task rather than any one participant, so it carries no roles
+        # and is admitted only under the uniqueness condition above.
+        texts.append(("TASK_SUMMARY", summary, frozenset()))
     for relation in contract.get("functional_relations", ()) or ():
-        texts.append((f"RELATION:{relation.get('id')}", _normalized(relation.get("relation", ""))))
-    for operation in contract.get("operation_pairings", ()) or contract.get("interaction_groups", ()) or ():
+        texts.append((
+            f"RELATION:{relation.get('id')}",
+            _normalized(relation.get("relation", "")),
+            frozenset(str(p) for p in relation.get("participant_roles", ()) or ()),
+        ))
+    operations = list(contract.get("operation_pairings", ()) or contract.get("interaction_groups", ()) or ())
+    for operation in operations:
         texts.append((
             f"OPERATION:{operation.get('id')}",
             _normalized(operation.get("operation") or operation.get("function") or ""),
+            frozenset(str(p) for p in operation.get("participant_roles", ()) or ()),
         ))
     for row in contract.get("explicit_context_sets", ()) or ():
-        texts.append((f"CONTEXT_SET:{row.get('source_id')}", _normalized(row.get("runtime_role", ""))))
+        texts.append((
+            f"CONTEXT_SET:{row.get('source_id')}",
+            _normalized(row.get("runtime_role", "")),
+            frozenset({str(row.get("source_id"))}),
+        ))
+    # Which expressed operations could take each anchor at all.  This is what
+    # makes a task-level statement's connection unique or ambiguous.
+    admitting: dict[str, set[str]] = {}
+    for operation in operations:
+        phrase = str(operation.get("operation") or operation.get("function") or "")
+        participants = [str(p) for p in operation.get("participant_roles", ()) or ()]
+        for capability in extract_operation_semantic_candidates(domain, phrase, participants):
+            for anchor in capability_anchor_roles(domain, capability):
+                admitting.setdefault(anchor, set()).add(str(operation.get("id")))
     return ExpressedSemantics(
         domain=domain, texts=tuple(texts), seating_roles=tuple(seating),
+        anchor_admitting_operations={
+            anchor: frozenset(ids) for anchor, ids in admitting.items()
+        },
     )
 
 
@@ -408,6 +478,8 @@ def _participant_slot_fit(
     allowed: Sequence[str],
     hypotheses: Mapping[str, Any],
     evidence: ExpressedSemantics,
+    operation_id: str = "",
+    scope_participants: Sequence[str] = (),
 ) -> SlotFit | None:
     """How, if at all, a named participant can occupy this slot.
 
@@ -454,7 +526,8 @@ def _participant_slot_fit(
         if semantics.justification == STRUCTURALLY_ENTAILED:
             return SlotFit(role, "SYSTEM_ANCHOR_STRUCTURALLY_ENTAILED_BY_CAPABILITY",
                            realized_by_system_anchor=True)
-        witnesses = evidence.witnesses(semantics)
+        witnesses = evidence.witnesses(
+            semantics, operation_id=operation_id, participants=scope_participants)
         if witnesses:
             return SlotFit(
                 role, "FM_EXPRESSED_QUANTIFIED_SEMANTIC_REALIZED_BY_SYSTEM_ANCHOR",
@@ -472,6 +545,8 @@ def _complete_slot(
     slot: str,
     allowed: Sequence[str],
     evidence: ExpressedSemantics,
+    operation_id: str = "",
+    scope_participants: Sequence[str] = (),
 ) -> tuple[str, str, list[dict[str, Any]]] | None:
     """Supply an unnamed slot, or refuse to."""
     selectable = [role for role in allowed if role in set(get_domain_selectable_roles(domain))]
@@ -488,7 +563,8 @@ def _complete_slot(
                 supplied.append((role, [{"origin": "CAPABILITY_STRUCTURE",
                                          "text": semantics.justification}]))
                 continue
-            witnesses = evidence.witnesses(semantics)
+            witnesses = evidence.witnesses(
+                semantics, operation_id=operation_id, participants=scope_participants)
             if witnesses:
                 supplied.append((role, witnesses))
         if len(supplied) == 1:
@@ -609,7 +685,9 @@ def complete_operation_slots(
                 for participant in participants
                 if participant not in used
                 and (fit := _participant_slot_fit(
-                    domain, participant, slot, slots[slot], hypotheses, evidence)) is not None
+                    domain, participant, slot, slots[slot], hypotheses, evidence,
+                    operation_id=str(operation.get("id") or ""),
+                    scope_participants=participants)) is not None
             ]
             if len(fits) > 1:
                 conflict = True
@@ -635,7 +713,10 @@ def complete_operation_slots(
         for slot in SLOT_ORDER:
             if slot not in slots or slot in assignment:
                 continue
-            supplied = _complete_slot(domain, slot, slots[slot], evidence)
+            supplied = _complete_slot(
+                domain, slot, slots[slot], evidence,
+                operation_id=str(operation.get("id") or ""),
+                scope_participants=participants)
             if supplied is None:
                 break
             canonical_role, how, slot_witnesses = supplied

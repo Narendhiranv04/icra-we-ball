@@ -467,31 +467,49 @@ def classify_non_scene_resolvable_blockers(
     return sorted(dict.fromkeys(blockers))
 
 
-def _minimum_distinct_objects(role: dict) -> int | None:
+def _minimum_distinct_objects(domain: str, canonical_role: str, role: dict) -> int | None:
     """How many separate physical things a role needs at minimum.
 
     ``required_count`` is how many times the task needs this participant, which
-    for a REUSABLE or SHARED role is not how many of them must exist: one coffee
-    jar serves both cups, and one stirrer stirs both.  Reading the count as a
-    demand for that many objects made a scene holding the single reusable source
-    the task needs look short of one, and reported the objects as undiscovered.
+    is not how many of them must exist.  Whether one instance can serve several
+    applications is a physical fact about the runtime's own role -- pouring from
+    a jar does not consume the jar, and a stirrer is used and set down again --
+    and the runtime declares it, per canonical role, in one place.
 
-    An explicit binding cardinality from the model still wins; this only decides
-    what its plain count means.
+    The FM is asked for the task's meaning, not for that convention, so the
+    ``binding_policy`` word it writes is evidence about the task rather than the
+    authority on reuse.  Reading a reusable source declared "2 DISTINCT" as a
+    demand for two jars made a scene holding the one the task needs look short
+    of an object, and reported it as undiscovered.
+
+    An explicit binding cardinality from the model wins outright, and so does an
+    explicit DISTINCT: that word is the model asserting separate instances, and
+    the runtime's reuse declaration says what reuse is *admissible* rather than
+    what the task asked for.  It decides only where the model said nothing --
+    for a role the runtime induced itself, or two equivalent declarations it
+    consolidated.
     """
     explicit = (role.get('binding_cardinality') or {}).get('minimum_distinct_physical_objects')
     if explicit is not None:
         return explicit
     if role.get('min_count') is not None:
         return role['min_count']
-    if str(role.get('binding_policy')) in {'REUSABLE', 'SHARED'}:
-        try:
-            count = int(role.get('required_count', 1))
-        except (TypeError, ValueError):
-            count = 1
+    try:
+        count = int(role.get('required_count', 1))
+    except (TypeError, ValueError):
+        count = 1
+    if count <= 1:
         # Restating a minimum that equals the count would change the compiled
         # graph's fingerprint without changing what it means.
-        return 1 if count > 1 else None
+        return None
+    if str(role.get('binding_policy')) in {'REUSABLE', 'SHARED'}:
+        return 1
+    # A role the model declared DISTINCT is the model saying separate instances
+    # are needed -- which is what the wire contract asks that word to mean.  The
+    # runtime's reuse declaration says what is *admissible*, not what the task
+    # asked for, so it does not overrule an explicit claim here.  Where the model
+    # said nothing, because the runtime induced the role itself or consolidated
+    # two equivalent declarations, the reuse declaration does decide.
     return None
 
 
@@ -608,9 +626,17 @@ def check_executable_contract_complete(
     # execute, whatever the reason -- an unmappable phrase, a self-pairing, a
     # reuse cardinality it cannot honour.  The only exception is a transition
     # the domain planner owns, which was never a functional operation.
+    surplus_operation_ids = {
+        str((item.get("raw_group") or {}).get("id") or item.get("id"))
+        for item in trace.get("surplus_unrepresentable_constraints", ())
+    } | {
+        str(item.get("id")) for item in trace.get("surplus_unrepresentable_constraints", ())
+    }
     blocked_operations = [
         entry for entry in trace.get("disabled_groups", ())
         if entry.get("status") != "ABSORBED_INTO_PLANNER_CONTEXT"
+        # An operation already recorded as surplus is not a second blocker.
+        and str((entry.get("raw_group") or {}).get("id")) not in surplus_operation_ids
     ]
     if blocked_operations:
         missing.append(f"Operations disabled during compilation: {blocked_operations}")
@@ -731,9 +757,14 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 # declarations is handled where the node is built, because there
                 # the count is application multiplicity rather than a second
                 # participant.
-                policy = 'DISTINCT'
-                minimum = total
-                reusable = False
+                # Two roles the model declared separately are two participants
+                # it enumerated.  How many separate *objects* that needs is
+                # still the runtime's question, and the answer is the same one
+                # it gives everywhere else: a reusable function may be one
+                # instance however many applications it serves.
+                reusable = role_may_be_reused_across_applications(domain, name)
+                policy = 'REUSABLE' if reusable else 'DISTINCT'
+                minimum = 1 if reusable else total
                 nodes[name] = replace(
                     node, count=total, min_count=minimum, max_count=total,
                     binding_policy=policy,
@@ -787,7 +818,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             nodes[name] = FunctionalRole(name=name, entity_kind=canonical_kind, count=role['required_count'],
                 binding_policy=role['binding_policy'], semantic_categories=semantic_categories,
                 description=role.get('description', ''), semantic_hints=tuple(role['required_properties']),
-                min_count=_minimum_distinct_objects(role),
+                min_count=_minimum_distinct_objects(domain, name, role),
                 max_count=role.get('binding_cardinality', {}).get('maximum_distinct_physical_objects', role.get('max_count')),
                 preference=role.get('binding_cardinality', {}).get('preferred', role.get('preference')),
                 verification_mode=('GEOMETRIC_ONLY' if domain == 'workshop' and canonical_kind == 'FIXED_TARGET'
@@ -1078,6 +1109,10 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     from .robot_capability_registry import interpret_operation
     raw_groups = doc.get('interaction_groups') or doc.get('operations') or []
     groups = []
+    # Operations whose slots name a role the runtime took on in no form.  Held
+    # aside until the provenance test below can say whether losing each one
+    # loses a requirement.
+    unmapped_operations: list[dict[str, Any]] = []
     for group in raw_groups:
         tool_raw = group.get('tool_role') or group.get('source_role')
         target_raw = group.get('target_role')
@@ -1100,7 +1135,14 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             and role_id not in id_map and role_id not in planner_context_id_map
         })
         if unrepresented_slots:
-            trace['unresolved_required_operations'].append({
+            # Whether losing this operation loses a requirement is the same
+            # question asked of every other unrepresentable semantic, so it gets
+            # the same answer from the same place.  Recording it here without
+            # asking meant an operation over a material the runtime models
+            # nothing for -- filling a bowl with soup, for "serve one soup" --
+            # blocked the executable contract even though the soup serving the
+            # instruction did ask for compiled perfectly well.
+            unmapped_operations.append({
                 'id': group.get('id', raw_op),
                 'operation': raw_op,
                 'participant_roles': list(v3_participants),
@@ -1710,6 +1752,23 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         and hypothesis.status == "UNREPRESENTED_SEMANTIC"
     }
 
+    def _instruction_names_input(raw_role_id: str) -> bool:
+        """Whether the instruction names this participant as a process input.
+
+        A material the instruction asks a process to be carried out *with* is a
+        requirement it created.  A material the model proposed because a
+        finished product implies one -- a soup supply for "serve one soup" -- is
+        not, and only the second may be recorded as surplus.
+        """
+        from .fm_schema_v3 import instruction_names_as_task_input, _provenance_terms
+        role = next((r for r in doc.get('functional_roles', ()) if r.get('id') == raw_role_id), None)
+        if role is None:
+            return False
+        terms = _provenance_terms(" ".join(str(role.get(field, "")) for field in (
+            "id", "function", "description")))
+        terms |= _provenance_terms(" ".join(role.get("candidate_categories", ()) or ()))
+        return instruction_names_as_task_input(terms, task)
+
     def _every_resolved_participant_still_acted_on(participants) -> bool:
         """Whether the runtime roles this semantic mentions still have work to do."""
         acted_on = {group.tool_role for group in groups} | {group.target_role for group in groups}
@@ -1733,16 +1792,25 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         # acting on it: otherwise the loss leaves a participant of the task with
         # nothing to do, which is exactly how a plan came to report a task done
         # having never stated it.
+        unrepresented = [p for p in participants if p in unrepresented_role_ids]
         if (
-            any(p in unrepresented_role_ids for p in participants)
+            unrepresented
             and _every_resolved_participant_still_acted_on(participants)
+            and not any(_instruction_names_input(p) for p in unrepresented)
         ):
             return True, "RUNTIME_UNREPRESENTABLE_PARTICIPANT"
+        if unrepresented and any(_instruction_names_input(p) for p in unrepresented):
+            # The instruction names this participant among the inputs of a
+            # process it asks for -- "make each coffee using coffee and water".
+            # That the runtime cannot represent it is a limit of the runtime,
+            # and the task is not executable without it.
+            return False, "INSTRUCTION_NAMED_TASK_INPUT"
         return False, provenance
 
     blocking_ops, blocking_rels, surplus_constraints = [], [], []
     for kind, collection, blocking in (
-        ("operation", doc.get("unresolved_operation_semantics", ()), blocking_ops),
+        ("operation", list(doc.get("unresolved_operation_semantics", ()) or ())
+         + unmapped_operations, blocking_ops),
         ("relation", doc.get("unresolved_relation_semantics", ()), blocking_rels),
     ):
         for item in collection:

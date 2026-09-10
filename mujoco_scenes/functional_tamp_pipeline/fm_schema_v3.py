@@ -20,12 +20,16 @@ from .errors import MalformedVLMSpecificationError, TaskSpecificationValidationE
 from .fm_schema_v2 import RESPONSE_SCHEMA_V2
 from .relation_interpreter import extract_relation_semantic_candidates, interpret_task_effect_predicate
 from .robot_capability_registry import (
+    ABSTRACT_ROLE_PROVENANCE,
+    leads_with_abstract_task_directive,
     extract_operation_semantic_candidates,
     get_robot_capabilities,
     is_non_physical_operation_phrase,
 )
 from .operation_slot_completion import (
     ExpressedSemantics,
+    _slot_cardinality,
+    _slot_role_kind,
     capability_anchor_roles,
     collect_expressed_semantics,
     complete_operation_slots,
@@ -718,6 +722,172 @@ def _resolve_operation_slots_with_subsets(
     return [], participants, []
 
 
+_SLOT_FIELD_TYPES: tuple[tuple[str, str, str], ...] = (
+    ("tool_role", "source_role", "source_type"),
+    ("target_role", "target_role", "target_type"),
+    ("context_role", "anchor_role", "anchor_type"),
+)
+_SLOT_FIELD_TO_SLOT = {"tool_role": "source", "target_role": "target", "context_role": "anchor"}
+
+
+def _is_abstract_directive_over_unrepresented_participant(
+    operation: Mapping[str, Any], hypotheses: Mapping[str, Any]
+) -> bool:
+    """Whether this is a desired end state rather than an operation to execute.
+
+    "Serve the soup to the person", "hand the bowl to the recipient": the phrase
+    states what must be true when the task is done, and one of the participants
+    is something the runtime represents in no form at all -- a person.  Reading
+    that as a motion means inventing a physical endpoint for it, which is how a
+    bowl came to be moved into a person.
+
+    Both halves are required.  A phrase built from a directive whose
+    participants the runtime *can* represent is left alone, because the model
+    routinely words a real capability that way -- "provide the eating utensil"
+    is how it asks for the utensil placement -- and such an operation has
+    already been matched to its capability before this is consulted.
+    """
+    phrase = str(operation.get("operation") or operation.get("function") or "")
+    if not leads_with_abstract_task_directive(phrase):
+        return False
+    return any(
+        _runtime_says_nothing_about(hypotheses.get(participant))
+        for participant in operation.get("participant_roles", ()) or ()
+    )
+
+
+def _runtime_says_nothing_about(hypothesis: Any) -> bool:
+    """Whether the runtime holds this participant in no form it can act on.
+
+    Two ways that happens: nothing typed it at all, or nothing narrowed it and
+    every canonical role is still nominally possible -- which is not a reading
+    of the participant but the absence of one.  A person is the usual case: the
+    runtime models where a person sits, never the person.
+    """
+    if hypothesis is None:
+        return True
+    candidates = getattr(hypothesis, "canonical_role_candidates", ()) or ()
+    if not candidates:
+        return True
+    return getattr(hypothesis, "status", "") == "UNCONSTRAINED_ROLE_TYPE" and len(candidates) > 3
+
+
+def _split_generic_participant_per_operation_form(
+    domain: str,
+    canonical: dict[str, Any],
+    roles_by_id: dict[str, Any],
+    hypotheses: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    """Give one generically-worded participant a role per form its operations need.
+
+    The prompt asks the model to keep apart participants whose jobs differ -- a
+    support belonging to one person is not a support deliberately shared, an
+    implement used on a drink is not the one a person eats with -- and it often
+    does not.  It writes one "surface" role and uses it in both placements, or
+    one "spoon" role counted four times for stirring and for eating.
+
+    One raw role became one canonical role, so the first reading won and the
+    second operation was rejected as incompatible with its own endpoints -- a
+    shared-control placement told that its support was the personal one.
+
+    Each operation says which form it needs, and when the role's own wording
+    singled out none of them, honouring both is reading the model rather than
+    correcting it.  The raw role keeps the first form and is recorded as the
+    witness for the others.  Nothing is invented: every form supplied is one an
+    expressed operation demanded, all the forms belong to the one family the
+    role's own wording put it in, and a role that named its own form
+    specifically is left alone.
+    """
+    demands: dict[str, list[tuple[dict[str, Any], str, str, str]]] = {}
+    for group in canonical.get("interaction_groups", ()) or ():
+        for field, option_key, type_key in _SLOT_FIELD_TYPES:
+            rid = group.get(field)
+            if not rid or rid not in roles_by_id:
+                continue
+            types = {
+                row.get(type_key) for row in group.get("v3_slot_assignments", ()) or ()
+                if row.get(option_key) == rid and row.get(type_key)
+            }
+            if len(types) != 1:
+                continue
+            demands.setdefault(rid, []).append((group, field, option_key, types.pop()))
+
+    synthesized: list[dict[str, Any]] = []
+    for rid, rows in sorted(demands.items()):
+        wanted = {want for _group, _field, _key, want in rows}
+        if len(wanted) < 2:
+            continue
+        hypothesis = hypotheses.get(rid)
+        candidates = set(getattr(hypothesis, "canonical_role_candidates", ()) or ())
+        # Only a participant whose own wording left the form open.  A role the
+        # model described specifically enough to pick one is not reinterpreted.
+        if len(candidates) < 2 or not wanted <= candidates:
+            continue
+        families = {canonical_role_family(domain, want) for want in wanted}
+        if len(families) != 1 or families == {"OTHER"}:
+            continue
+        keep = sorted(wanted)[0]
+        for group, field, option_key, want in rows:
+            if want == keep:
+                continue
+            slot = _SLOT_FIELD_TO_SLOT[field]
+            try:
+                count = int(group.get("required_target_count", 1) or 1)
+            except (TypeError, ValueError):
+                count = 1
+            role_id = f"fm_form__{rid}__{want}"
+            if role_id in roles_by_id:
+                continue
+            required_count, binding_policy = _slot_cardinality(domain, slot, want, count)
+            role = {
+                "id": role_id,
+                "entity_kind": _slot_role_kind(domain, want),
+                "function": (
+                    f"{canonical_role_family(domain, want).lower().replace('_', ' ')} participant "
+                    f"the expressed {group.get('function')!r} operation requires in this form"
+                ),
+                "description": (
+                    "The FM named one participant for several operations that need different "
+                    "forms of it; this holds the form this operation requires, and the FM's own "
+                    "role is recorded as the witness."
+                ),
+                "required_count": required_count,
+                "binding_policy": binding_policy,
+                "candidate_categories": [],
+                "required_properties": [],
+                "visible_candidates": [],
+                "canonical_role": want,
+                "provenance": ABSTRACT_ROLE_PROVENANCE,
+                "induced_by_operation": group.get("id"),
+                "induced_slot": slot,
+                "fm_witness_role": rid,
+            }
+            roles_by_id[role["id"]] = role
+            canonical["functional_roles"].append(role)
+            synthesized.append(role)
+            group[field] = role["id"]
+            for row in group.get("v3_slot_assignments", ()) or ():
+                if row.get(option_key) == rid:
+                    row[option_key] = role["id"]
+            for key in ("v3_participant_roles", "v3_explicit_participant_roles"):
+                values = group.get(key) or []
+                group[key] = [role["id"] if value == rid else value for value in values]
+            canonical.setdefault("generic_participant_form_realizations", []).append({
+                "code": "FM_GENERIC_PARTICIPANT_REALIZED_PER_OPERATION_FORM",
+                "fm_role": rid,
+                "operation_id": group.get("id"),
+                "slot": slot,
+                "canonical_role": want,
+                "forms_demanded": sorted(wanted),
+                "form_kept_on_the_fm_role": keep,
+                "provenance": ABSTRACT_ROLE_PROVENANCE,
+            })
+    if synthesized:
+        canonical["functional_constraint_interpretation"].extend(
+            canonical.get("generic_participant_form_realizations", ()))
+    return synthesized
+
+
 def _decompose_nary_relation(
     domain: str, relation: Mapping[str, Any], hypotheses: Mapping[str, Any]
 ) -> list[dict[str, Any]]:
@@ -872,6 +1042,48 @@ def _provenance_terms(text: str) -> set[str]:
     """Content words usable as evidence of shared reference between two texts."""
     words = re.findall(r"[a-zA-Z]+", str(text).replace("_", " ").lower())
     return {w for w in words if len(w) > 3 and w not in _PROVENANCE_STOPWORDS}
+
+
+# Words that put what follows in an input position: the instruction is naming
+# what a process is carried out *with*, not what it produces.
+_INSTRUCTION_INPUT_MARKER = re.compile(
+    r"\b(using|use|with|from|out of|made (?:of|from)|consisting of|composed of)\b", re.I
+)
+
+
+def instruction_clauses(instruction: str) -> list[str]:
+    """The instruction's clauses, so a term can be read in the company it keeps."""
+    parts: list[str] = []
+    for sentence in re.split(r"[.;]", str(instruction or "")):
+        for clause in re.split(r",\s*(?:and|then|or)\s+|,\s+", sentence):
+            clause = clause.strip()
+            if clause:
+                parts.append(clause)
+    return parts
+
+
+def instruction_names_as_task_input(element_terms: set[str], instruction: str) -> bool:
+    """Whether the instruction names this element among some process's inputs.
+
+    "Make each coffee using coffee and water" names two inputs.  "Serve one
+    soup" and "serve each soup bowl with its own eating utensil" name a product
+    and an accompaniment; neither says the soup is poured from anything.
+
+    That difference is what separates a requirement the instruction created
+    from a mechanism the model inferred from a finished result -- a soup
+    supply, a cooking vessel -- and it decides whether losing an
+    unrepresentable participant loses a requirement or only a proposal.  It is
+    read off the instruction alone; no reference graph is consulted.
+    """
+    if not element_terms:
+        return False
+    for clause in instruction_clauses(instruction):
+        match = _INSTRUCTION_INPUT_MARKER.search(clause)
+        if not match:
+            continue
+        if element_terms & _provenance_terms(clause[match.end():]):
+            return True
+    return False
 
 
 def classify_requirement_provenance(
@@ -1111,6 +1323,25 @@ def convert_v3_to_canonical_document(
                 **dict(operation), "category": "NON_PHYSICAL_TASK_DIRECTIVE",
             })
             continue
+        if _is_abstract_directive_over_unrepresented_participant(operation, hypotheses):
+            # A desired end state, not a motion: the phrase states what must be
+            # true when the task is done and one participant is something the
+            # runtime holds in no form -- a person.  Asked before seating,
+            # because a participant nothing typed is nominally admissible
+            # everywhere, so "serve the soup to the diner" could otherwise be
+            # seated as putting the diner in the bowl.
+            canonical.setdefault("non_physical_operations", []).append({
+                **dict(operation),
+                "category": "ABSTRACT_TASK_DIRECTIVE_WITH_NO_PHYSICAL_ENDPOINT",
+            })
+            canonical["functional_constraint_interpretation"].append({
+                "code": "ABSTRACT_TASK_DIRECTIVE_WITH_NO_PHYSICAL_ENDPOINT",
+                "operation_id": operation["id"],
+                "operation": operation["operation"],
+                "participant_roles": list(operation["participant_roles"]),
+                "provenance": "NON_PHYSICAL_DIRECTIVE",
+            })
+            continue
         capabilities = extract_operation_semantic_candidates(
             domain, operation["operation"], operation["participant_roles"])
         options, slot_participants, context_participants = _resolve_operation_slots_with_subsets(
@@ -1187,6 +1418,19 @@ def convert_v3_to_canonical_document(
             # Record it and continue; completeness checking decides whether the
             # task still stands, which surfaces as a graph compilation failure
             # rather than discarding the whole contract as malformed.
+            if _is_abstract_directive_over_unrepresented_participant(operation, hypotheses):
+                canonical.setdefault("non_physical_operations", []).append({
+                    **dict(operation),
+                    "category": "ABSTRACT_TASK_DIRECTIVE_WITH_NO_PHYSICAL_ENDPOINT",
+                })
+                canonical["functional_constraint_interpretation"].append({
+                    "code": "ABSTRACT_TASK_DIRECTIVE_WITH_NO_PHYSICAL_ENDPOINT",
+                    "operation_id": operation["id"],
+                    "operation": operation["operation"],
+                    "participant_roles": list(operation["participant_roles"]),
+                    "provenance": "NON_PHYSICAL_DIRECTIVE",
+                })
+                continue
             unresolved_operation_semantics.append({
                 "id": operation["id"],
                 "operation": operation["operation"],
@@ -1221,6 +1465,19 @@ def convert_v3_to_canonical_document(
                 canonical.setdefault("planner_context_transitions", []).append(absorbed)
                 canonical["functional_constraint_interpretation"].append(absorbed)
                 continue
+            if _is_abstract_directive_over_unrepresented_participant(operation, hypotheses):
+                canonical.setdefault("non_physical_operations", []).append({
+                    **dict(operation),
+                    "category": "ABSTRACT_TASK_DIRECTIVE_WITH_NO_PHYSICAL_ENDPOINT",
+                })
+                canonical["functional_constraint_interpretation"].append({
+                    "code": "ABSTRACT_TASK_DIRECTIVE_WITH_NO_PHYSICAL_ENDPOINT",
+                    "operation_id": operation["id"],
+                    "operation": operation["operation"],
+                    "participant_roles": list(operation["participant_roles"]),
+                    "provenance": "NON_PHYSICAL_DIRECTIVE",
+                })
+                continue
             unresolved_operation_semantics.append({
                 "id": operation["id"],
                 "operation": operation["operation"],
@@ -1249,6 +1506,11 @@ def convert_v3_to_canonical_document(
             "v3_explicit_context_set_id": operation.get("explicit_context_set_id"),
         })
     canonical["interaction_groups"] = groups
+    form_roles = _split_generic_participant_per_operation_form(
+        domain, canonical, roles_by_id, hypotheses)
+    if form_roles:
+        induced_roles.extend(form_roles)
+        hypotheses = build_role_type_hypotheses(domain, canonical)
     # A relation the model wrote to state the very requirement a compiled
     # operation already carries is not a second constraint the runtime failed to
     # represent.  Once SUPPORT_DRINKWARE is identified the runtime owns

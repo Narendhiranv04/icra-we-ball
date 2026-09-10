@@ -54,6 +54,48 @@ def is_non_physical_operation_phrase(raw_phrase: str) -> bool:
     return normalized.split(maxsplit=1)[0] in _NON_PHYSICAL_LEADING_ACTIONS
 
 
+# Words that state what must be true when the task is done, rather than a
+# motion the robot makes.  The robot's own actions are motions: place, transfer,
+# insert, stir, fasten, return.  "Serve the soup", "prepare the coffee",
+# "provide a refreshment" are not motions, and inventing a physical endpoint for
+# one -- moving a bowl into a person -- puts words in the model's mouth.
+#
+# The same words are also legitimate cues for real capabilities: "serve soup" is
+# how the model usually asks for the eating utensil.  So this is consulted only
+# after capability matching has already failed, never instead of it.
+_ABSTRACT_TASK_DIRECTIVE_ACTIONS = frozenset({
+    "serve", "serves", "serving", "served",
+    "prepare", "prepares", "preparing", "prepared",
+    "provide", "provides", "providing", "provided",
+    "arrange", "arranges", "arranging", "arranged",
+    "distribute", "distributes", "distributing", "distributed",
+    "offer", "offers", "offering", "offered",
+    "assign", "assigns", "assigning", "assigned",
+    "ensure", "ensures", "ensuring", "ensured",
+    "hand", "hands", "handing", "handed",
+    "deliver", "delivers", "delivering", "delivered",
+})
+
+# A motion the runtime recognises anywhere in the phrase keeps it physical, so a
+# directive that also says how it is to be carried out is not reinterpreted.
+_PHYSICAL_MOTION_WORD = re.compile(
+    r"\b(place\w*|put\w*|insert\w*|pour\w*|fill\w*|transfer\w*|move\w*|"
+    r"stir\w*|mix\w*|fasten\w*|screw\w*|drive\w*|tighten\w*|attach\w*|"
+    r"return\w*|deposit\w*|position\w*|set down|lay\w*|combine\w*|add\w*)\b",
+    re.I,
+)
+
+
+def leads_with_abstract_task_directive(raw_phrase: str) -> bool:
+    """Whether the phrase states a desired end state instead of a motion."""
+    normalized = _phrase(raw_phrase)
+    if not normalized:
+        return False
+    if _PHYSICAL_MOTION_WORD.search(normalized):
+        return False
+    return normalized.split(maxsplit=1)[0] in _ABSTRACT_TASK_DIRECTIVE_ACTIONS
+
+
 @dataclass(frozen=True)
 class RobotCapability:
     """A physical capability executable by the robot runtime in a domain."""
