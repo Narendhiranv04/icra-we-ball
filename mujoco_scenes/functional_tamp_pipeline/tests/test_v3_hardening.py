@@ -297,17 +297,34 @@ def test_two_explicit_per_seat_access_edges_conjoin_via_explicit_move_target():
     assert accounting["left_access"] == accounting["right_access"] == "GROUNDED_TASK_RELATION"
 
 
+def _no_pair_invented(canonical):
+    """No synthetic context-set role and no explicit context set were created."""
+    invented = [r["id"] for r in canonical["functional_roles"]
+                if str(r["id"]).startswith("fm_context_set__")]
+    return not invented and not canonical.get("explicit_context_sets")
+
+
 def test_single_per_seat_access_edge_does_not_invent_missing_pair_member():
+    """One access edge cannot become a seat pair; the missing member is not supplied.
+
+    The edge has no legal orientation, so it is recorded as an unresolved
+    required semantic rather than aborting the contract. What must never happen
+    is the runtime inventing the second seat to make the edge fit.
+    """
     raw = document(
         _living_context_roles(),
         relations=[relation("left_access", "accessible to", ["remote", "seat_left"])],
         operations=[operation("move", "move to", ["remote", "shared"])],
     )
-    with pytest.raises(TaskSpecificationValidationError, match="FM_INTERNAL_RELATION_PARTICIPANT_CONTRADICTION"):
-        convert_v3_to_canonical_document(raw, domain="living_room")
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    assert _no_pair_invented(canonical)
+    assert [u["id"] for u in canonical["unresolved_relation_semantics"]] == ["left_access"]
+    accounting = {row["raw_id"]: row["disposition"] for row in canonical["fm_semantic_accounting"]}
+    assert accounting["left_access"] == "UNRESOLVED_REQUIRED_SEMANTIC"
 
 
 def test_per_seat_access_edges_without_explicit_shared_move_target_do_not_create_pair():
+    """Two per-seat edges with no shared destination still do not form a pair."""
     raw = document(
         _living_context_roles(),
         relations=[
@@ -315,8 +332,9 @@ def test_per_seat_access_edges_without_explicit_shared_move_target_do_not_create
             relation("right_access", "accessible to", ["remote", "seat_right"]),
         ],
     )
-    with pytest.raises(TaskSpecificationValidationError, match="FM_INTERNAL_RELATION_PARTICIPANT_CONTRADICTION"):
-        convert_v3_to_canonical_document(raw, domain="living_room")
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    assert _no_pair_invented(canonical)
+    assert {u["id"] for u in canonical["unresolved_relation_semantics"]} == {"left_access", "right_access"}
 
 
 def test_between_relation_builds_explicit_seating_pair_context():
@@ -335,12 +353,22 @@ def test_between_relation_builds_explicit_seating_pair_context():
 
 
 def test_quantified_relation_missing_member_fails_closed():
+    """A "both" relation naming one member contributes nothing and invents nothing.
+
+    It fails closed in the sense that matters: no pair is synthesised and no
+    relation is emitted from it. It is recorded as an unresolved required
+    semantic rather than aborting the whole contract.
+    """
     raw = document(
         _living_context_roles(include_remote=False)[:2],
         relations=[relation("access", "accessible to both", ["shared", "seat_left"])],
     )
-    with pytest.raises(TaskSpecificationValidationError, match="FM_INTERNAL_RELATION_PARTICIPANT_CONTRADICTION"):
-        convert_v3_to_canonical_document(raw, domain="living_room")
+    canonical = convert_v3_to_canonical_document(raw, domain="living_room")
+    assert _no_pair_invented(canonical)
+    assert canonical["functional_relations"] == []
+    assert [u["id"] for u in canonical["unresolved_relation_semantics"]] == ["access"]
+    accounting = {row["raw_id"]: row["disposition"] for row in canonical["fm_semantic_accounting"]}
+    assert accounting["access"] == "UNRESOLVED_REQUIRED_SEMANTIC"
 
 
 def test_quantified_relation_never_discards_unrelated_extra_participant():

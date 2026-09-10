@@ -719,6 +719,7 @@ def convert_v3_to_canonical_document(
 
     relations = []
     current_state_relations = []
+    unresolved_relation_semantics = []
     operation_pairs = [set(item.get("participant_roles", [])) for item in normalized_operations]
     for relation in normalized_relations:
         phrase_norm = re.sub(r"[_\-/]+", " ", str(relation["relation"])).lower()
@@ -746,11 +747,22 @@ def convert_v3_to_canonical_document(
         options = _relation_options(domain, relation, hypotheses)
         semantic_candidates = extract_relation_semantic_candidates(domain, relation["relation"])
         if semantic_candidates and not options:
-            raise TaskSpecificationValidationError(
-                "FM_INTERNAL_RELATION_PARTICIPANT_CONTRADICTION: "
-                f"relation {relation['id']!r} ({relation['relation']!r}) has no valid "
-                f"orientation for participant_roles={relation['participant_roles']}"
-            )
+            # The runtime recognises the predicate but can give it no legal
+            # orientation over these participants -- typically because the model
+            # named a material or content as a participant where the runtime
+            # models only the vessel.  That is one relation the runtime cannot
+            # represent, not a contradictory task.  Record it as an unresolved
+            # required semantic and carry on; completeness checking downstream
+            # decides whether the task still stands without it.  Aborting the
+            # whole contract here discarded every other coherent relation and
+            # operation the model had expressed.
+            unresolved_relation_semantics.append({
+                **dict(relation),
+                "category": "UNRESOLVED_REQUIRED_SEMANTIC",
+                "provenance": "FM_EXPLICIT_SEMANTIC",
+                "reason": "NO_LEGAL_ORIENTATION_FOR_PARTICIPANTS",
+            })
+            continue
         left, right = relation["participant_roles"]
         endpoint_orientations = {(row["subject_role"], row["object_role"]) for row in options}
         if len(endpoint_orientations) == 1:
@@ -840,6 +852,12 @@ def convert_v3_to_canonical_document(
     canonical["current_state_operation_context_roles"] = sorted(
         set(canonical.get("current_state_operation_context_roles", ())) | relation_only_context
     )
+    canonical["unresolved_relation_semantics"] = [
+        {"id": item["id"], "relation": item["relation"],
+         "participant_roles": list(item.get("participant_roles", ())),
+         "reason": item.get("reason", "")}
+        for item in unresolved_relation_semantics
+    ]
     instruction_terms = _provenance_terms(task_instruction)
     operation_participants = {
         participant
@@ -864,7 +882,10 @@ def convert_v3_to_canonical_document(
                 participates_in_expressed_operation=role["id"] in operation_participants,
             ),
         })
-    relation_dispositions = {item["id"]: "CURRENT_STATE_CONTEXT" for item in current_state_relations}
+    relation_dispositions = {
+        item["id"]: "UNRESOLVED_REQUIRED_SEMANTIC" for item in unresolved_relation_semantics
+    }
+    relation_dispositions.update({item["id"]: "CURRENT_STATE_CONTEXT" for item in current_state_relations})
     relation_dispositions.update({item["id"]: "GROUNDED_TASK_RELATION" for item in relations})
     for item in normalized_relations:
         if item.get("source_relation_ids") and item["id"] in relation_dispositions:
