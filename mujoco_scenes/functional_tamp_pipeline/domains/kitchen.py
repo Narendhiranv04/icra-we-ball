@@ -16,7 +16,9 @@ from mujoco_scenes.symbolic_planning import (
 from mujoco_scenes.symbolic_planning_core import SymbolicAction, SymbolicProblem
 
 from ..models import FunctionalSpecification, PipelineResult
-from ..outcome_classifier import classify_pipeline_outcome, complete_planning_contract
+from ..outcome_classifier import (
+    classify_pipeline_outcome, complete_planning_contract, executable_graph_compiled,
+)
 from ..planning import plan_with_common_astar
 
 
@@ -873,7 +875,7 @@ def run_to_plan(
             failure_reason=str(ground_result.unsatisfied_relations or ground_result.missing_roles or "NO_COMPLETE_FUNCTIONAL_WITNESS"),
             outcome_category=classify_pipeline_outcome(
                 task_specification_valid=True,
-                graph_compiled=True,
+                graph_compiled=executable_graph_compiled(specification),
                 individual_candidates_sufficient=ground_result.failure_kind != "OBJECT_DISCOVERY_FAILURE",
                 functional_assignment_complete=False,
             ).category,
@@ -961,7 +963,7 @@ def run_to_plan(
             canonicalization_succeeded=True,
             functional_spec_complete=spec_complete,
             outcome_category=classify_pipeline_outcome(
-                task_specification_valid=True, graph_compiled=True,
+                task_specification_valid=True, graph_compiled=executable_graph_compiled(specification),
                 individual_candidates_sufficient=ground_result.failure_kind != "OBJECT_DISCOVERY_FAILURE",
                 functional_assignment_complete=ground_result.complete,
                 planning_invoked=True, plan_complete=is_full_plan,
@@ -980,7 +982,7 @@ def run_to_plan(
             failure_reason=f"NO_MEANINGFUL_CANDIDATE_PLAN: {exc}" if mode == "vlm" else f"CANDIDATE_GRAPH_UNSATISFIABLE: {exc}",
             outcome_category=classify_pipeline_outcome(
                 task_specification_valid=True,
-                graph_compiled=True,
+                graph_compiled=executable_graph_compiled(specification),
                 individual_candidates_sufficient=True,
                 functional_assignment_complete=ground_result.complete,
                 planning_invoked=True,

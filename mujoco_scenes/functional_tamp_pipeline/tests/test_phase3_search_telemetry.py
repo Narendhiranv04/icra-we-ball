@@ -12,6 +12,7 @@ from mujoco_scenes.functional_tamp_pipeline.models import (
     FunctionalRequirementGraph,
     FunctionalRole,
     GraphGroundingResult,
+    OperationGroup,
     PipelineResult,
     SatisfactionResult,
 )
@@ -37,6 +38,7 @@ def _make_dummy_spec(
     candidate_regions: tuple[str, ...] = ("D1", "D2", "C2", "B1", "C1"),
     region_ranking: tuple[str, ...] = ("D1", "D2", "C2", "B1", "C1"),
     source: str = "GT_FUNCTIONAL_SPEC_ONLY",
+    with_operation: bool = False,
 ) -> FunctionalRequirementGraph:
     nodes = {
         "tool": FunctionalRole(
@@ -46,10 +48,20 @@ def _make_dummy_spec(
             semantic_categories=("spoon",),
         )
     }
+    groups: tuple[OperationGroup, ...] = ()
+    if with_operation:
+        nodes["target"] = FunctionalRole(
+            name="target", entity_kind="OBJECT", count=1, semantic_categories=("cup",),
+        )
+        groups = (OperationGroup(
+            id="dummy_operation", function="DUMMY", tool_role="tool", target_role="target",
+            required_target_count=1, usage_policy="DEDICATED_PER_TARGET",
+        ),)
     return FunctionalRequirementGraph(
         domain=domain,
         task_instruction="dummy task",
         nodes=nodes,
+        operation_groups=groups,
         candidate_regions=candidate_regions,
         region_ranking=region_ranking,
         source=source,
@@ -296,7 +308,15 @@ def test_kitchen_stage_events_sequence_and_enrichment(tmp_path: Path):
 
 # 7. Central search event policy and seed enrichment
 def test_central_search_event_enrichment(tmp_path: Path):
-    dummy_spec = _make_dummy_spec(domain="workshop", candidate_regions=("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"), region_ranking=("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"), source="VLM_FUNCTIONAL_SPEC")
+    # A completed plan needs a graph that states something to bring about and a
+    # grounding that bound it, so the stub carries both.  Without them the run
+    # correctly reports only a partial sequence, and this test is about the
+    # search telemetry rather than about planning completeness.
+    dummy_spec = _make_dummy_spec(
+        domain="workshop", candidate_regions=("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"),
+        region_ranking=("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"),
+        source="VLM_FUNCTIONAL_SPEC", with_operation=True,
+    )
     dummy_result = PipelineResult(
         domain="workshop",
         variant="W1",
@@ -330,6 +350,7 @@ def test_central_search_event_enrichment(tmp_path: Path):
             status="ACTION_SEQUENCE_READY",
             complete=True,
             assignment={"driver": "d1", "fastener": "f1", "work_surface": "w1"},
+            operation_bindings={"dummy_operation": [{"tool_id": "d1", "target_id": "f1"}]},
         )
         def fake_search(adapter, spec, search_order=None, observer=None, **kwargs):
             if observer is not None:

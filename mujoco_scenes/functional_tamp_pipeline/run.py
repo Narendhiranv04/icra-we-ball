@@ -27,7 +27,9 @@ try:
     from .role_semantic_ontology import get_runtime_semantic_ontology_hash
     from .audit import compute_prompt_and_schema_hash
     from .robot_capability_registry import get_robot_capability_registry_hash
-    from .outcome_classifier import classify_pipeline_outcome, complete_planning_contract
+    from .outcome_classifier import (
+        classify_pipeline_outcome, complete_planning_contract, executable_graph_compiled,
+    )
 except ImportError:
     from mujoco_scenes.functional_tamp_pipeline.errors import (
         PipelineError, VLMSpecificationError, ReplaySpecificationError, SearchRegionContractError
@@ -42,7 +44,9 @@ except ImportError:
     from mujoco_scenes.functional_tamp_pipeline.role_semantic_ontology import get_runtime_semantic_ontology_hash
     from mujoco_scenes.functional_tamp_pipeline.audit import compute_prompt_and_schema_hash
     from mujoco_scenes.functional_tamp_pipeline.robot_capability_registry import get_robot_capability_registry_hash
-    from mujoco_scenes.functional_tamp_pipeline.outcome_classifier import classify_pipeline_outcome, complete_planning_contract
+    from mujoco_scenes.functional_tamp_pipeline.outcome_classifier import (
+        classify_pipeline_outcome, complete_planning_contract, executable_graph_compiled,
+    )
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -734,7 +738,7 @@ def _run_pipeline_impl(
             canonicalization_succeeded=True,
             functional_spec_complete=False,
             outcome_category=classify_pipeline_outcome(
-                task_specification_valid=True, graph_compiled=True,
+                task_specification_valid=True, graph_compiled=executable_graph_compiled(state.specification),
                 search_exhausted=True,
                 individual_candidates_sufficient=_individual_candidates_sufficient(satisfaction),
                 functional_assignment_complete=False,
@@ -816,7 +820,7 @@ def _run_pipeline_impl(
             search_statistics=planned.search.statistics,
             candidate_search_statistics=planned.search.statistics,
             outcome_category=classify_pipeline_outcome(
-                task_specification_valid=True, graph_compiled=True,
+                task_specification_valid=True, graph_compiled=executable_graph_compiled(state.specification),
                 individual_candidates_sufficient=True,
                 functional_assignment_complete=satisfaction.complete,
                 planning_invoked=True, plan_complete=is_full_plan,
@@ -843,7 +847,7 @@ def _run_pipeline_impl(
             canonicalization_succeeded=True,
             functional_spec_complete=False,
             outcome_category=classify_pipeline_outcome(
-                task_specification_valid=True, graph_compiled=True,
+                task_specification_valid=True, graph_compiled=executable_graph_compiled(state.specification),
                 individual_candidates_sufficient=True,
                 functional_assignment_complete=satisfaction.complete,
                 planning_invoked=True, plan_complete=False,

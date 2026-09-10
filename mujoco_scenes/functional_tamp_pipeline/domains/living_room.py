@@ -16,7 +16,9 @@ from mujoco_scenes.region_ablation import create_region_semantic_detector
 from mujoco_scenes.region_ablation2 import DEFAULT_EVALUATION_CONFIG
 
 from ..models import FunctionalSpecification, PipelineResult
-from ..outcome_classifier import classify_pipeline_outcome, complete_planning_contract
+from ..outcome_classifier import (
+    classify_pipeline_outcome, complete_planning_contract, executable_graph_compiled,
+)
 from .. import role_semantic_ontology as semantic_ontology
 from ..scene_graph import ObservedNode, ObservedObject, ObservedRelation, ObservedSceneGraph
 
@@ -456,7 +458,7 @@ def run_to_plan(
             canonicalization_succeeded=True,
             outcome_category=classify_pipeline_outcome(
                 task_specification_valid=True,
-                graph_compiled=True,
+                graph_compiled=executable_graph_compiled(specification),
                 individual_candidates_sufficient=ground_result.failure_kind != "OBJECT_DISCOVERY_FAILURE",
                 functional_assignment_complete=False,
             ).category,
@@ -614,7 +616,7 @@ def run_to_plan(
                 failure_reason="UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement",
                 outcome_category=classify_pipeline_outcome(
                     task_specification_valid=True,
-                    graph_compiled=True,
+                    graph_compiled=executable_graph_compiled(specification),
                     individual_candidates_sufficient=True,
                     functional_assignment_complete=False,
                 ).category)
@@ -648,7 +650,7 @@ def run_to_plan(
             failure_reason=f"CANDIDATE_GRAPH_UNSATISFIABLE: {fail_detail}",
             outcome_category=classify_pipeline_outcome(
                 task_specification_valid=True,
-                graph_compiled=True,
+                graph_compiled=executable_graph_compiled(specification),
                 individual_candidates_sufficient=True,
                 functional_assignment_complete=ground_result.complete,
                 planning_invoked=True,
@@ -705,7 +707,7 @@ def run_to_plan(
         canonicalization_succeeded=True,
         functional_spec_complete=spec_complete,
         outcome_category=classify_pipeline_outcome(
-            task_specification_valid=True, graph_compiled=True,
+            task_specification_valid=True, graph_compiled=executable_graph_compiled(specification),
             individual_candidates_sufficient=ground_result.failure_kind != "OBJECT_DISCOVERY_FAILURE",
             functional_assignment_complete=ground_result.complete,
             planning_invoked=True, plan_complete=is_full_plan,

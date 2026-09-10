@@ -25,7 +25,18 @@ from .predicate_registry import validate_predicate_signature
 from .fm_schema_v2 import is_v2_document
 from .fm_schema_v3 import is_v3_document
 from .errors import VLMSpecificationError
-from .robot_capability_registry import extract_operation_semantic_candidates
+from .operation_slot_completion import capability_anchor_roles
+from .robot_capability_registry import (
+    extract_operation_semantic_candidates,
+    is_non_physical_operation_phrase,
+)
+
+
+# Provenance values that mean an element was never a task requirement, and so may
+# be recorded as surplus rather than blocking executable completeness.
+DEMOTABLE_REQUIREMENT_PROVENANCE = frozenset({
+    "OBSERVATION_ONLY", "CURRENT_STATE_CONTEXT", "NON_PHYSICAL_DIRECTIVE",
+})
 
 
 def causal_position(role: dict, document: dict) -> set[str]:
@@ -417,6 +428,28 @@ def resolve_role_type_hypotheses(
     return build_role_type_hypotheses(domain, document, weak_mapper=_map_role)
 
 
+def _minimum_distinct_objects(role: dict) -> int | None:
+    """How many separate physical things a role needs at minimum.
+
+    ``required_count`` is how many times the task needs this participant, which
+    for a REUSABLE or SHARED role is not how many of them must exist: one coffee
+    jar serves both cups, and one stirrer stirs both.  Reading the count as a
+    demand for that many objects made a scene holding the single reusable source
+    the task needs look short of one, and reported the objects as undiscovered.
+
+    An explicit binding cardinality from the model still wins; this only decides
+    what its plain count means.
+    """
+    explicit = (role.get('binding_cardinality') or {}).get('minimum_distinct_physical_objects')
+    if explicit is not None:
+        return explicit
+    if role.get('min_count') is not None:
+        return role['min_count']
+    if str(role.get('binding_policy')) in {'REUSABLE', 'SHARED'}:
+        return 1
+    return None
+
+
 def check_required_contract_complete(
     domain: str,
     nodes: dict[str, Any],
@@ -477,6 +510,71 @@ def check_required_contract_complete(
 
     complete = len(missing) == 0
     return complete, missing
+
+
+def check_executable_contract_complete(
+    domain: str,
+    nodes: dict[str, Any],
+    groups: Sequence[Any],
+    trace: dict[str, Any],
+    sanitized: Any,
+    blocking_unresolved: Sequence[Any],
+    declared_physical_operations: int = 0,
+) -> tuple[bool, list[str]]:
+    """Whether the task the FM actually required is executable as compiled.
+
+    Weaker than the strict check, which asks whether *everything* the FM said
+    could be represented; a model that over-specifies -- inventing a material a
+    finished result implies, or naming the cupboard something lives in -- fails
+    the strict check while still expressing an executable task.
+
+    Stricter than "some node compiled", which was the whole of the previous
+    gate: an operation the runtime could not seat now blocks here, and is
+    reported as a graph compilation failure rather than being carried into
+    grounding and scored as a missing object.
+
+    A contract that expressed no operation at all is left alone: nothing was
+    lost in compiling it, and whether such a graph can be a *completed task* is
+    settled separately, where a plan drawn from a graph with no operations is
+    refused.  A contract that expressed physical operations and kept none of
+    them is a different matter, and is reported here.
+    """
+    missing: list[str] = []
+    if not nodes:
+        missing.append("No valid functional roles compiled")
+    if declared_physical_operations and not groups:
+        missing.append(
+            f"The FM expressed {declared_physical_operations} physical operation(s) and none "
+            "survived compilation, so the graph states no change to bring about"
+        )
+    if getattr(sanitized, "semantically_incomplete", False):
+        # The structural repair pass had to drop a reference the model declared,
+        # so something it said is gone rather than merely unrepresented.
+        missing.append("Sanitizer reported semantic incompleteness")
+    for name, item in (
+        ("operations", trace.get("unresolved_required_operations")),
+        ("relations", trace.get("unresolved_required_relations")),
+    ):
+        if item:
+            missing.append(f"Required {name} the runtime cannot represent: {item}")
+    # An operation the compiler switched off is an operation the runtime cannot
+    # execute, whatever the reason -- an unmappable phrase, a self-pairing, a
+    # reuse cardinality it cannot honour.  The only exception is a transition
+    # the domain planner owns, which was never a functional operation.
+    blocked_operations = [
+        entry for entry in trace.get("disabled_groups", ())
+        if entry.get("status") != "ABSORBED_INTO_PLANNER_CONTEXT"
+    ]
+    if blocked_operations:
+        missing.append(f"Operations disabled during compilation: {blocked_operations}")
+    if blocking_unresolved:
+        missing.append(f"Uninterpretable required relations: {list(blocking_unresolved)}")
+    # A role the runtime could type nothing for is not listed here.  Whatever it
+    # made unrepresentable -- an operation, a relation -- is recorded above by
+    # the stage that needed it; a role that nothing needed is the model
+    # declaring a participant outside the runtime's task universe, which the
+    # strict check reports without claiming the task cannot be executed.
+    return len(missing) == 0, missing
 
 
 def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequirementGraph:
@@ -567,23 +665,63 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 allow_counted_context=(domain == 'living_room' and name == 'SEATING_POSITION'),
             ):
                 id_map[rid] = name
-                trace['merged_roles'].append({'code': 'CONSOLIDATED_EQUIVALENT_FM_INSTANCES', 'raw_ids': [owners[name]['id'], rid], 'canonical_role': name})
                 node = nodes[name]
-                total = node.count + int(role.get('required_count', 1))
+                added = int(role.get('required_count', 1))
+                total = node.count + added
+                # Merging two FM roles that describe the same causal function
+                # adds up how many applications the task needs, which is not the
+                # same as how many separate physical things it needs.  Forcing
+                # DISTINCT here turned one reusable coffee jar serving two cups
+                # into a demand for two jars, and the scene holding one was
+                # reported as missing an object.  Distinctness is only asserted
+                # when the FM asserted it: a role the model called REUSABLE or
+                # SHARED stays that way, and one physical instance may cover
+                # every application.
+                # Two roles the model declared separately are two participants
+                # it enumerated, whatever binding policy it wrote on each, so the
+                # consolidated role needs that many distinct objects.  The case
+                # the model states with a *count* rather than with separate
+                # declarations is handled where the node is built, because there
+                # the count is application multiplicity rather than a second
+                # participant.
+                policy = 'DISTINCT'
+                minimum = total
+                reusable = False
                 nodes[name] = replace(
-                    node, count=total, min_count=total, max_count=total,
-                    binding_policy='DISTINCT',
+                    node, count=total, min_count=minimum, max_count=total,
+                    binding_policy=policy,
                     semantic_hints=tuple(dict.fromkeys(node.semantic_hints + tuple(role['required_properties']))),
                 )
+                trace['merged_roles'].append({
+                    'code': 'CONSOLIDATED_EQUIVALENT_FM_INSTANCES',
+                    'raw_ids': [owners[name]['id'], rid],
+                    'canonical_role': name,
+                    'application_multiplicity': total,
+                    'minimum_distinct_physical_objects': minimum,
+                    'binding_policy': policy,
+                    'reason': (
+                        'REUSABLE_FUNCTION_MAY_BE_ONE_INSTANCE' if reusable
+                        else 'FM_DECLARED_SEPARATE_INSTANCES'
+                    ),
+                })
                 # Process additional property evidence below.
             else:
                 trace['unresolved_roles'].append({'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': role, 'collision_with': owners[name]['id']})
                 continue
         else:
-            if name in set(get_domain_system_fixed_anchors(domain)):
-                canonical_kind = 'FIXED_TARGET'
-            elif name in {'PERSONAL_CUP_SAUCER_REGION', 'SHARED_REMOTE_REGION'}:
-                canonical_kind = 'REGION'
+            if name in allowed:
+                # The runtime role decides what kind of thing this is.  Keeping
+                # the model's own entity_kind let a stirrer it happened to call a
+                # REGION reach a predicate that only accepts objects, and the
+                # signature check then aborted the whole contract.
+                canonical_kind = _canonical_role_kind(domain, name)
+                if canonical_kind != role['entity_kind']:
+                    trace['roles'].append({
+                        'raw_id': rid, 'canonical_role': name,
+                        'status': 'ENTITY_KIND_FOLLOWS_CANONICAL_ROLE',
+                        'declared_entity_kind': role['entity_kind'],
+                        'canonical_entity_kind': canonical_kind,
+                    })
             else:
                 canonical_kind = role['entity_kind']
             id_map[rid] = name
@@ -602,7 +740,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             nodes[name] = FunctionalRole(name=name, entity_kind=canonical_kind, count=role['required_count'],
                 binding_policy=role['binding_policy'], semantic_categories=semantic_categories,
                 description=role.get('description', ''), semantic_hints=tuple(role['required_properties']),
-                min_count=role.get('binding_cardinality', {}).get('minimum_distinct_physical_objects', role.get('min_count')),
+                min_count=_minimum_distinct_objects(role),
                 max_count=role.get('binding_cardinality', {}).get('maximum_distinct_physical_objects', role.get('max_count')),
                 preference=role.get('binding_cardinality', {}).get('preferred', role.get('preference')),
                 verification_mode=('GEOMETRIC_ONLY' if domain == 'workshop' and canonical_kind == 'FIXED_TARGET'
@@ -901,8 +1039,36 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         v3_slot_assignments = group.get('v3_slot_assignments', [])
         v3_participants = group.get('v3_participant_roles', [])
 
+        # A slot assignment naming a raw role the runtime took on in no form at
+        # all cannot be carried forward.  Indexing it raised a bare KeyError from
+        # the provider, which surfaced as a pipeline exception with no diagnosis
+        # rather than as a recorded unrepresentable operation.  A participant the
+        # runtime holds as a planner context constant is represented, so it is
+        # not counted here and the absorption paths below still see it.
+        unrepresented_slots = sorted({
+            role_id
+            for row in v3_slot_assignments
+            for key in ("source_role", "target_role")
+            if (role_id := row.get(key))
+            and role_id not in id_map and role_id not in planner_context_id_map
+        })
+        if unrepresented_slots:
+            trace['unresolved_required_operations'].append({
+                'id': group.get('id', raw_op),
+                'operation': raw_op,
+                'participant_roles': list(v3_participants),
+                'reason': 'SLOT_PARTICIPANT_HAS_NO_RUNTIME_ROLE',
+                'unrepresented_participants': unrepresented_slots,
+            })
+            trace['disabled_groups'].append({
+                'raw_group': group,
+                'status': 'UNINSTANTIABLE_MISSING_ROLE',
+                'unrepresented_participants': unrepresented_slots,
+            })
+            continue
+
         if len(v3_slot_assignments) > 1:
-            capabilities = extract_operation_semantic_candidates(domain, raw_op)
+            capabilities = extract_operation_semantic_candidates(domain, raw_op, v3_participants)
             capability_records = [{
                 'capability_id': capability.capability_id,
                 'planner_operation': capability.planner_operation,
@@ -920,8 +1086,10 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 reuse_policy=first['usage_policy'],
                 slot_assignments=tuple({
                     **row,
-                    'source_node': id_map[row['source_role']],
-                    'target_node': id_map[row['target_role']],
+                    'source_node': id_map.get(row['source_role'])
+                    or planner_context_id_map.get(row['source_role']),
+                    'target_node': id_map.get(row['target_role'])
+                    or planner_context_id_map.get(row['target_role']),
                     'anchor_node': (
                         id_map.get(row.get('anchor_role'))
                         or planner_context_id_map.get(row.get('anchor_role'))
@@ -966,6 +1134,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             })
             continue
 
+
         if not tool_raw or not target_raw or tool_raw not in id_map or target_raw not in id_map:
             if v3_participants:
                 trace['unresolved_required_operations'].append({
@@ -979,7 +1148,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             len(nodes[id_map[tool_raw]].canonical_role_candidates) > 1
             or len(nodes[id_map[target_raw]].canonical_role_candidates) > 1
         ):
-            capabilities = extract_operation_semantic_candidates(domain, raw_op)
+            capabilities = extract_operation_semantic_candidates(domain, raw_op, v3_participants)
             capability_records = []
             for capability in capabilities:
                 capability_records.append({
@@ -1003,8 +1172,10 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 reuse_policy=policy,
                 slot_assignments=tuple({
                     **row,
-                    'source_node': id_map[row['source_role']],
-                    'target_node': id_map[row['target_role']],
+                    'source_node': id_map.get(row['source_role'])
+                    or planner_context_id_map.get(row['source_role']),
+                    'target_node': id_map.get(row['target_role'])
+                    or planner_context_id_map.get(row['target_role']),
                     'anchor_node': id_map.get(row.get('anchor_role')) if row.get('anchor_role') else None,
                 } for row in v3_slot_assignments),
             )
@@ -1035,7 +1206,14 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             id_map.get(ctx_raw) or planner_context_id_map.get(ctx_raw)
         ) if ctx_raw else None
 
-        if ctx_raw in planner_context_id_map and ctx_role_id not in nodes:
+        # A context the planner owns is not a functional role, so it never
+        # becomes a node; materialising it made the runtime graph carry a
+        # planner constant and the interface validator rejected the contract.
+        if (
+            ctx_raw in planner_context_id_map
+            and ctx_role_id not in nodes
+            and ctx_role_id in set(get_domain_system_fixed_anchors(domain))
+        ):
             nodes[ctx_role_id] = FunctionalRole(
                 name=ctx_role_id,
                 entity_kind='FIXED_TARGET',
@@ -1058,7 +1236,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
 
         is_v2 = is_v2_document(raw)
         if not ctx_role_id and not is_v3_document(raw):
-            semantic_capabilities = extract_operation_semantic_candidates(domain, raw_op)
+            semantic_capabilities = extract_operation_semantic_candidates(domain, raw_op, v3_participants)
             capability_anchors = {
                 anchor for capability in semantic_capabilities
                 for anchor in capability.allowed_anchor_roles
@@ -1098,21 +1276,31 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             explicit_capability_ids = {
                 row.get('capability_id') for row in v3_slot_assignments if row.get('capability_id')
             }
-            requires_explicit_context = any(
-                capability.capability_id in explicit_capability_ids and capability.allowed_anchor_roles
-                for capability in extract_operation_semantic_candidates(domain, raw_op)
+            requires_context = any(
+                capability.capability_id in explicit_capability_ids
+                and capability_anchor_roles(domain, capability)
+                for capability in extract_operation_semantic_candidates(domain, raw_op, v3_participants)
             )
-            if requires_explicit_context:
-                # The anchor is not supplied when the model did not express it.
-                # Seats look like permanent scene furniture, but the requirement
-                # that a placement be reachable from both of them is task
-                # semantics, not geometry: it is exactly what separates doing the
-                # job from putting the object down somewhere.  Supplying it would
-                # assert a constraint the model never made.
+            if requires_context:
+                # By this point the anchor has either been named by the model,
+                # or supplied by slot completion on the model's own evidence, or
+                # deliberately withheld because the model expressed no such
+                # requirement.  Arriving here with none means the third case, so
+                # the operation is recorded as one the runtime cannot seat rather
+                # than executed without the context it depends on.
                 trace['disabled_groups'].append({
                     'raw_group': group,
-                    'status': 'MISSING_EXPLICIT_OPERATION_CONTEXT',
-                    'reason': 'V3 operation capability requires FM-expressed anchor/context evidence',
+                    'status': 'MISSING_OPERATION_CONTEXT_SEMANTIC',
+                    'reason': (
+                        'Capability requires a fixed spatial reference and the FM '
+                        'expressed no semantic that reference could stand for'
+                    ),
+                })
+                trace['unresolved_required_operations'].append({
+                    'id': group.get('id', raw_op),
+                    'operation': raw_op,
+                    'participant_roles': list(v3_participants),
+                    'reason': 'MISSING_OPERATION_CONTEXT_SEMANTIC',
                 })
                 continue
 
@@ -1407,30 +1595,58 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     # recorded rather than fatal so the rest of the contract survives -- but the
     # task is not complete without it, and reporting otherwise would be a false
     # completion.
-    # A constraint only blocks the task when it constrains something the task
-    # actually contains.  A relation or operation over a raw role that resolved
-    # to no canonical runtime role is constraining a participant the runtime
-    # never took on -- typically a material the model inferred from an end
-    # product -- so it is surplus rather than an unmet requirement.  When every
-    # participant did resolve, the constraint is over real task roles and its
-    # failure is a genuine gap that must block.
-    def _constrains_resolved_roles(item):
-        participants = item.get("participant_roles") or ()
-        return bool(participants) and all(p in id_map for p in participants)
+    # Whether losing an unrepresentable semantic matters is a question about why
+    # the FM required it, not about whether the mapper happened to name all its
+    # participants.  A role that failed to map is a runtime limitation; treating
+    # that as evidence the semantic was irrelevant let a fastening the
+    # instruction plainly demands disappear because the model also named the
+    # bench, and let a coffee the task asks for disappear because the model
+    # routed it through a vessel the runtime does not model.
+    #
+    # A semantic may be set aside only when its own provenance says it was never
+    # a task requirement: something read off the images, a report of where things
+    # currently sit, or a non-physical directive.  Anything an instruction clause
+    # supports, or that follows from an operation the FM expressed, stays as an
+    # unresolved required semantic and blocks executable completeness.
+    accounting_by_element = {
+        (row.get("element_kind"), row.get("raw_id")): row
+        for row in doc.get("fm_semantic_accounting", ())
+    }
+    current_state_roles = set(doc.get("current_state_operation_context_roles", ()))
 
-    blocking_ops = [
-        item for item in doc.get("unresolved_operation_semantics", ())
-        if _constrains_resolved_roles(item)
-    ]
-    blocking_rels = [
-        item for item in doc.get("unresolved_relation_semantics", ())
-        if _constrains_resolved_roles(item)
-    ]
-    surplus_constraints = [
-        item for item in
-        (*doc.get("unresolved_operation_semantics", ()), *doc.get("unresolved_relation_semantics", ()))
-        if not _constrains_resolved_roles(item)
-    ]
+    def _requirement_provenance(kind, item):
+        recorded = item.get("requirement_provenance")
+        if recorded:
+            return str(recorded)
+        row = accounting_by_element.get((kind, item.get("id"))) or {}
+        return str(row.get("requirement_provenance") or "UNDETERMINED")
+
+    def _demotion_verdict(kind, item):
+        """Whether an unrepresentable semantic may be recorded as surplus."""
+        participants = list(item.get("participant_roles") or ())
+        if participants and all(p in current_state_roles for p in participants):
+            return True, "CURRENT_STATE_CONTEXT"
+        provenance = _requirement_provenance(kind, item)
+        if provenance in DEMOTABLE_REQUIREMENT_PROVENANCE:
+            return True, provenance
+        return False, provenance
+
+    blocking_ops, blocking_rels, surplus_constraints = [], [], []
+    for kind, collection, blocking in (
+        ("operation", doc.get("unresolved_operation_semantics", ()), blocking_ops),
+        ("relation", doc.get("unresolved_relation_semantics", ()), blocking_rels),
+    ):
+        for item in collection:
+            demotable, provenance = _demotion_verdict(kind, item)
+            annotated = {**dict(item), "requirement_provenance": provenance}
+            if demotable:
+                surplus_constraints.append({
+                    **annotated, "status": "SURPLUS_NON_REQUIRED_SEMANTIC",
+                })
+            else:
+                blocking.append({
+                    **annotated, "status": "UNRESOLVED_REQUIRED_SEMANTIC",
+                })
     if blocking_ops:
         trace.setdefault("unresolved_required_operations", []).extend(blocking_ops)
     if blocking_rels:
@@ -1445,23 +1661,109 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     # "containing" the material an expressed transfer already puts there.  When
     # no operation touches the participants, nothing in the task addresses the
     # relation and it remains a genuine unmet requirement.
-    def _constrains_only_real_roles(evidence) -> bool:
-        endpoints = [evidence.get("raw_subject"), evidence.get("raw_object")]
-        named = [e for e in endpoints if e]
-        return bool(named) and all(id_map.get(e) is not None for e in named)
+    def _uninterpretable_relation_is_required(evidence) -> tuple[bool, str]:
+        """Same provenance test, for a relation the interpreter could not orient."""
+        endpoints = [e for e in (evidence.get("raw_subject"), evidence.get("raw_object")) if e]
+        if endpoints and all(e in current_state_roles for e in endpoints):
+            return False, "CURRENT_STATE_CONTEXT"
+        row = next(
+            (r for key, r in accounting_by_element.items()
+             if key[0] == "relation" and r.get("canonical_representation") == evidence.get("raw_phrase")),
+            {},
+        )
+        provenance = str(row.get("requirement_provenance") or "UNDETERMINED")
+        return provenance not in DEMOTABLE_REQUIREMENT_PROVENANCE, provenance
 
-    # An uninterpretable relation between two roles the runtime actually took on
-    # is a real gap and must block: the runtime was asked for a constraint it
-    # cannot express over participants it does own.  One with an endpoint that
-    # never became a runtime role is constraining something outside the task --
-    # typically a material inferred from an end product -- and cannot be an unmet
-    # requirement of a task that does not contain it.
-    blocking_unresolved = [e for e in unresolved if _constrains_only_real_roles(e)]
-    trace["constraints_outside_the_runtime_task"] = [
-        e for e in unresolved if not _constrains_only_real_roles(e)
-    ]
+    def _enforced_by_compiled_operation(evidence) -> dict[str, Any] | None:
+        """Whether a compiled operation already carries what this relation states.
+
+        Once an operation is identified the runtime owns its physical
+        preconditions and verifies them.  The model restating one of them in its
+        own words -- "the driver secures the fastener to the location", "the cup
+        contains the coffee" -- is the evidence that justified the capability,
+        not a second constraint the runtime failed to represent.  Only a
+        predicate the compiled capability itself enforces, over roles that
+        operation binds, is treated this way.
+        """
+        from .relation_interpreter import extract_relation_semantic_candidates
+        phrase = str(evidence.get("raw_phrase", ""))
+        meanings = {
+            candidate.predicate_name
+            for candidate in extract_relation_semantic_candidates(domain, phrase)
+        }
+        endpoints = {
+            id_map.get(role)
+            for role in (evidence.get("raw_subject"), evidence.get("raw_object"))
+            if role
+        }
+        endpoints.discard(None)
+        for group in groups:
+            bound = {group.tool_role, group.target_role}
+            if group.context_role:
+                bound.add(group.context_role)
+            if not endpoints or not endpoints <= bound:
+                continue
+            owned = {predicate for _, predicate, _ in (group.physical_preconditions or ())}
+            owned |= set(group.required_relations) | set(group.context_relations)
+            if meanings & owned:
+                return {
+                    "code": "RELATION_ENFORCED_BY_COMPILED_OPERATION",
+                    "operation_id": group.id,
+                    "capability_id": group.capability_id,
+                    "enforced_predicates": sorted(meanings & owned),
+                    "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+                }
+            if not meanings:
+                # Prose the runtime can give no meaning at all, over exactly the
+                # roles this operation binds -- "the tool is used to fasten the
+                # component to the location".  Every constraint the runtime can
+                # express over those roles the operation already asserts and
+                # verifies, so there is nothing further to represent.  A relation
+                # over roles no operation binds still blocks.
+                return {
+                    "code": "RELATION_OVER_OPERATION_BOUND_ROLES_WITH_NO_RUNTIME_MEANING",
+                    "operation_id": group.id,
+                    "capability_id": group.capability_id,
+                    "enforced_predicates": sorted(owned),
+                    "provenance": "ROBOT_CAPABILITY_PRECONDITION",
+                }
+        return None
+
+    blocking_unresolved = []
+    trace["constraints_outside_the_runtime_task"] = []
+    trace["relations_enforced_by_operations"] = list(
+        doc.get("relations_enforced_by_operations", ()) or ())
+    enforced_phrases: set[tuple[Any, ...]] = set()
+    for evidence in unresolved:
+        enforced = _enforced_by_compiled_operation(evidence)
+        if enforced is not None:
+            trace["relations_enforced_by_operations"].append({**dict(evidence), **enforced})
+            enforced_phrases.add((
+                evidence.get("raw_subject"), evidence.get("raw_phrase"), evidence.get("raw_object"),
+            ))
+            continue
+        required, provenance = _uninterpretable_relation_is_required(evidence)
+        annotated = {**dict(evidence), "requirement_provenance": provenance}
+        (blocking_unresolved if required
+         else trace["constraints_outside_the_runtime_task"]).append(annotated)
+    # The same relations were recorded as unresolved while the groups were still
+    # being built, before there was any operation to compare them against.
+    if enforced_phrases:
+        trace["unresolved_required_relations"] = [
+            item for item in trace.get("unresolved_required_relations", ())
+            if (item.get("raw_subject"), item.get("raw_phrase"), item.get("raw_object"))
+            not in enforced_phrases
+        ]
     contract_complete, contract_missing_reasons = check_required_contract_complete(
         domain, nodes, relations, groups, trace, sanitized, blocking_unresolved
+    )
+    declared_physical_operations = sum(
+        1 for operation in (doc.get('raw_v3_contract', {}) or {}).get('operation_pairings', ())
+        if not is_non_physical_operation_phrase(str(operation.get('operation', '')))
+    ) if is_v3_document(raw) else len(raw_groups)
+    executable_complete, executable_missing_reasons = check_executable_contract_complete(
+        domain, nodes, groups, trace, sanitized, blocking_unresolved,
+        declared_physical_operations=declared_physical_operations,
     )
     all_precond_prov = [
         p for g_trace in trace['groups']
@@ -1485,8 +1787,9 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             'raw_vlm_response': raw, 'raw_decomposition': raw, 'structural_sanitizer': sanitized.to_dict(),
             'canonicalization_trace': trace, 'canonicalization_status': 'PARTIAL' if partial else 'FULL',
             'required_contract_complete': contract_complete,
-            'online_executable_contract_complete': contract_complete,
+            'online_executable_contract_complete': executable_complete,
             'contract_missing_reasons': contract_missing_reasons,
+            'executable_contract_missing_reasons': executable_missing_reasons,
             'is_v2_specification': is_v2_document(raw),
             'is_v3_specification': is_v3_document(raw),
             'precondition_provenance': all_precond_prov,

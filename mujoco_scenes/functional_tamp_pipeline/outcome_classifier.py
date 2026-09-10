@@ -22,13 +22,26 @@ class PipelineOutcome:
 
 
 def complete_planning_contract(specification, grounding, search_statistics, validation) -> bool:
-    """Return whether the original task—not a projected subgraph—was fully planned."""
+    """Return whether the original task—not a projected subgraph—was fully planned.
+
+    The check over operation bindings is vacuously true for a graph carrying no
+    operations, which is how a workshop trial once reported the fastening done
+    after picking a screwdriver up and putting it back down, and how a kitchen
+    trial reported two coffees served having only ever laid out a spoon.  A task
+    with nothing to bring about is not a task, and a task whose required
+    operations the runtime could not represent was not the task that got planned.
+    """
     operation_bindings = getattr(grounding, "operation_bindings", {})
-    operations_complete = all(
+    operation_groups = tuple(specification.operation_groups)
+    operations_complete = bool(operation_groups) and all(
         group.id in operation_bindings
         and len(operation_bindings[group.id]) >= group.required_target_count
-        for group in specification.operation_groups
+        for group in operation_groups
     )
+    executable_contract = bool(getattr(
+        specification, "online_executable_contract_complete",
+        getattr(specification, "required_contract_complete", True),
+    ))
     return bool(
         getattr(grounding, "complete", False)
         and not search_statistics.get("is_partial", False)
@@ -37,7 +50,22 @@ def complete_planning_contract(specification, grounding, search_statistics, vali
         and validation.get("status", "VALID") == "VALID"
         and validation.get("goal_status", "GOAL_SATISFIED") == "GOAL_SATISFIED"
         and operations_complete
+        and executable_contract
     )
+
+
+def executable_graph_compiled(specification) -> bool:
+    """Whether the compiled graph represents the task's required semantics.
+
+    The outcome taxonomy reserves GRAPH_COMPILATION_FAILURE for coherent FM
+    semantics the runtime cannot represent.  Reporting "compiled" for any graph
+    that merely held a node sent such trials on to grounding and let them be
+    scored as discovery or assignment problems, which is the wrong attribution.
+    """
+    return bool(getattr(
+        specification, "online_executable_contract_complete",
+        getattr(specification, "required_contract_complete", True),
+    ))
 
 
 def classify_pipeline_outcome(
