@@ -598,8 +598,16 @@ def test_kitchen_operation_rejects_meal_utensil_as_beverage_stirrer():
         role("container", "receiving vessel for beverage"),
         role("meal_utensil", "eating utensil for consuming soup", categories=["SPOON"]),
     ], operations=[operation("stir", "stir beverage", ["meal_utensil", "container"])])
-    with pytest.raises(TaskSpecificationValidationError, match="MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS"):
-        normalize_and_validate_v3_contract(invalid, domain="kitchen")
+    # A soup eating utensil is still refused as a beverage stirrer: no group is
+    # created for the operation and the contract does not complete.  What changed
+    # is that this is an unexecutable operation rather than a malformed task.
+    normalized, _ = normalize_and_validate_v3_contract(invalid, domain="kitchen")
+    canonical = convert_v3_to_canonical_document(
+        normalized, domain="kitchen", task_instruction="stir the beverage")
+    assert canonical["interaction_groups"] == []
+    assert [u["id"] for u in canonical["unresolved_operation_semantics"]] == ["stir"]
+    accounting = {row["raw_id"]: row["disposition"] for row in canonical["fm_semantic_accounting"]}
+    assert accounting["stir"] == "UNRESOLVED_REQUIRED_SEMANTIC"
 
     valid = document([
         role("container", "receiving vessel for coffee beverage"),

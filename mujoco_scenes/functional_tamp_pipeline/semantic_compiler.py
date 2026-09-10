@@ -1375,6 +1375,19 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         ranking = list(dict.fromkeys(region_ids[r] for r in doc['inspection_order'] if isinstance(r, str) and r in region_ids))
         ranking.extend(r for r in proposed if r not in ranking)
     partial = sanitized.semantically_incomplete or bool(unverified_required or unresolved or trace['unresolved_roles'] or trace['disabled_groups'])
+    # Semantics the converter could not represent must block completeness.  An
+    # operation the runtime cannot seat, or a relation it cannot orient, is
+    # recorded rather than fatal so the rest of the contract survives -- but the
+    # task is not complete without it, and reporting otherwise would be a false
+    # completion.
+    if doc.get("unresolved_operation_semantics"):
+        trace.setdefault("unresolved_required_operations", []).extend(
+            doc["unresolved_operation_semantics"]
+        )
+    if doc.get("unresolved_relation_semantics"):
+        trace.setdefault("unresolved_required_relations", []).extend(
+            doc["unresolved_relation_semantics"]
+        )
     contract_complete, contract_missing_reasons = check_required_contract_complete(
         domain, nodes, relations, groups, trace, sanitized, unresolved
     )

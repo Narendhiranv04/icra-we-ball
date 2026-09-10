@@ -123,14 +123,33 @@ def test_living_personal_and_shared_slots_resolve():
     assert (s_group["tool_role"], s_group["target_role"], s_group["context_role"]) == ("support", "remote", "seats")
 
 
+def _operation_unresolved_and_incomplete(raw, domain, instruction=""):
+    """An operation the runtime cannot seat is recorded, never substituted.
+
+    The contract survives conversion so the rest of its semantics are preserved,
+    but no interaction group is fabricated for the operation and the contract is
+    reported incomplete, which surfaces downstream as a graph compilation
+    failure rather than a malformed task.
+    """
+    from mujoco_scenes.functional_tamp_pipeline.semantic_compiler import compile_candidate_graph
+    normalized, _ = normalize_and_validate_v3_contract(raw, domain=domain)
+    canonical = convert_v3_to_canonical_document(
+        normalized, domain=domain, task_instruction=instruction)
+    graph = compile_candidate_graph(domain, instruction, canonical)
+    return (
+        canonical["interaction_groups"] == []
+        and bool(canonical.get("unresolved_operation_semantics"))
+        and not graph.metadata.get("required_contract_complete")
+    )
+
+
 def test_workshop_missing_fastener_fails_but_complete_slots_resolve():
     missing = document(
         [role("tool", "reusable fastening tool"),
          role("target", "fixed assembly receiving installed component", kind="FIXED_TARGET", policy="SHARED")],
         operations=[operation("fasten", "fasten component at target", ["tool", "target"])],
     )
-    with pytest.raises(TaskSpecificationValidationError):
-        normalize_and_validate_v3_contract(missing, domain="workshop")
+    assert _operation_unresolved_and_incomplete(missing, "workshop", "complete the fastening")
     complete = copy.deepcopy(missing)
     complete["task_contract"]["functional_roles"].append(role("fastener", "manipulated joining component"))
     complete["task_contract"]["operation_pairings"][0]["participant_roles"].append("fastener")
@@ -230,8 +249,7 @@ def test_fresh_l1_display_cannot_replace_missing_seating_context_in_v3():
             old_op["source_role"], old_op["target_role"], old_op["anchor_role"],
         ], old_op["operation_count"])],
     )
-    with pytest.raises(TaskSpecificationValidationError):
-        normalize_and_validate_v3_contract(raw, domain="living_room")
+    assert _operation_unresolved_and_incomplete(raw, "living_room", "prepare the living room")
 
 
 def test_fresh_w3_participant_set_still_fails_when_fastener_is_omitted():
@@ -243,5 +261,4 @@ def test_fresh_w3_participant_set_still_fails_when_fastener_is_omitted():
             old_op["source_role"], old_op["target_role"], old_op["anchor_role"],
         ], old_op["operation_count"])],
     )
-    with pytest.raises(TaskSpecificationValidationError):
-        normalize_and_validate_v3_contract(raw, domain="workshop")
+    assert _operation_unresolved_and_incomplete(raw, "workshop", "complete the fastening")

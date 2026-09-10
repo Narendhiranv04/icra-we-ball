@@ -11,7 +11,7 @@ from copy import deepcopy
 import hashlib
 import json
 import re
-from itertools import permutations, product
+from itertools import combinations, permutations, product
 from typing import Any, Mapping
 
 import jsonschema
@@ -504,6 +504,45 @@ def _relation_options(domain: str, relation: Mapping[str, Any], hypotheses: Mapp
     return [dict(row) for row in sorted({tuple(sorted(item.items())) for item in options})]
 
 
+def _resolve_operation_slots_with_subsets(
+    domain: str,
+    operation: Mapping[str, Any],
+    roles_by_id: Mapping[str, Any],
+    hypotheses: Mapping[str, Any],
+) -> tuple[list[dict[str, Any]], list[str], list[str]]:
+    """Resolve capability slots, falling back to subsets of the named participants.
+
+    The model routinely names a participant the capability has no slot for, as in
+    placing a bowl on a table *with* a utensil: the placement itself takes a
+    payload and a destination, and the utensil is context rather than a third
+    slot.  Refusing the whole operation because one extra participant was named
+    discards an operation the runtime can perfectly well execute.
+
+    Subsets are tried largest first.  If two different subsets of the same size
+    both resolve, the operation is genuinely ambiguous and nothing is chosen,
+    because guessing between them would invent a reading the model did not give.
+
+    Returns (options, participants_used, participants_left_as_context).
+    """
+    participants = list(dict.fromkeys(operation["participant_roles"]))
+    options = resolve_v3_operation_slots(domain, operation, roles_by_id, hypotheses)
+    if options:
+        return options, participants, []
+    for size in range(len(participants) - 1, 1, -1):
+        resolved: list[tuple[list[dict[str, Any]], list[str]]] = []
+        for subset in combinations(participants, size):
+            probe = {**dict(operation), "participant_roles": list(subset)}
+            subset_options = resolve_v3_operation_slots(domain, probe, roles_by_id, hypotheses)
+            if subset_options:
+                resolved.append((subset_options, list(subset)))
+        if len(resolved) == 1:
+            subset_options, subset = resolved[0]
+            return subset_options, subset, [p for p in participants if p not in subset]
+        if len(resolved) > 1:
+            return [], participants, []
+    return [], participants, []
+
+
 def _decompose_nary_relation(
     domain: str, relation: Mapping[str, Any], hypotheses: Mapping[str, Any]
 ) -> list[dict[str, Any]]:
@@ -720,6 +759,7 @@ def convert_v3_to_canonical_document(
     relations = []
     current_state_relations = []
     unresolved_relation_semantics = []
+    unresolved_operation_semantics = []
     operation_pairs = [set(item.get("participant_roles", [])) for item in normalized_operations]
     for relation in normalized_relations:
         phrase_norm = re.sub(r"[_\-/]+", " ", str(relation["relation"])).lower()
@@ -790,7 +830,17 @@ def convert_v3_to_canonical_document(
             })
             continue
         capabilities = extract_operation_semantic_candidates(domain, operation["operation"])
-        options = resolve_v3_operation_slots(domain, operation, roles_by_id, hypotheses)
+        options, slot_participants, context_participants = _resolve_operation_slots_with_subsets(
+            domain, operation, roles_by_id, hypotheses
+        )
+        if context_participants:
+            operation = {
+                **dict(operation),
+                "participant_roles": slot_participants,
+                "current_state_context_roles": list(dict.fromkeys(
+                    [*operation.get("current_state_context_roles", ()), *context_participants]
+                )),
+            }
         canonical.setdefault("role_operation_consistency_audit", []).append({
             "operation_id": operation["id"],
             "raw_operation": operation["operation"],
@@ -802,11 +852,20 @@ def convert_v3_to_canonical_document(
             "provenance": "FM_EXPLICIT_OPERATION",
         })
         if capabilities and not options:
-            raise TaskSpecificationValidationError(
-                "MISSING_OR_CONTRADICTORY_OPERATION_PARTICIPANTS: "
-                f"operation {operation['id']!r} ({operation['operation']!r}) cannot instantiate "
-                f"any supported capability from participant_roles={operation['participant_roles']}"
-            )
+            # The runtime recognises the operation but can seat none of its
+            # participants in a capability signature, even over subsets.  That is
+            # one operation the runtime cannot execute, not a contradictory task.
+            # Record it and continue; completeness checking decides whether the
+            # task still stands, which surfaces as a graph compilation failure
+            # rather than discarding the whole contract as malformed.
+            unresolved_operation_semantics.append({
+                "id": operation["id"],
+                "operation": operation["operation"],
+                "participant_roles": list(operation["participant_roles"]),
+                "semantic_capability_candidates": [cap.capability_id for cap in capabilities],
+                "reason": "NO_CAPABILITY_SIGNATURE_ACCEPTS_THESE_PARTICIPANTS",
+            })
+            continue
         if len(options) == 1:
             first = options[0]
             source, target, anchor = first["source_role"], first["target_role"], first["anchor_role"]
@@ -852,6 +911,13 @@ def convert_v3_to_canonical_document(
     canonical["current_state_operation_context_roles"] = sorted(
         set(canonical.get("current_state_operation_context_roles", ())) | relation_only_context
     )
+    canonical["unresolved_operation_semantics"] = list(unresolved_operation_semantics)
+    for item in unresolved_operation_semantics:
+        for row in canonical["fm_semantic_accounting"]:
+            if row.get("element_kind") == "operation" and row.get("raw_id") == item["id"]:
+                row["disposition"] = "UNRESOLVED_REQUIRED_SEMANTIC"
+                row["reason"] = item["reason"]
+                break
     canonical["unresolved_relation_semantics"] = [
         {"id": item["id"], "relation": item["relation"],
          "participant_roles": list(item.get("participant_roles", ())),
