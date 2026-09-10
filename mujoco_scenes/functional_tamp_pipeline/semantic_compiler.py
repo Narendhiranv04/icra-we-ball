@@ -1181,8 +1181,21 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             trace['disabled_groups'].append({'raw_group': group, 'status': 'UNSUPPORTED_OPERATOR', 'reason': f'Invalid count or policy: count={count}, policy={policy}'})
             continue
 
-        # Singleton interaction requirements in Workshop:
-        if domain == 'workshop' and count == 1:
+        # Physical requirements implied by the operation's capability signature.
+        #
+        # Once an operation is identified and its roles are bound, the relations
+        # it needs are not a separate claim to be recovered from the model's free
+        # text -- they are stated by the capability itself.  A stirring needs the
+        # stirrer to fit inside the cup and reach its bottom; a fastening needs
+        # the driver to suit the fastener and reach the target.  Deriving them
+        # here yields exactly the relations the reference graph carries, with
+        # nothing extrapolated and nothing invented.
+        #
+        # This was previously reachable only for single-application workshop
+        # operations, so the kitchen and living room compiled operations that
+        # knew their own required relations and never materialised any, leaving
+        # the graph without the physical constraints its own operations depend on.
+        if op_interp.succeeded:
             for phrase in group.get('required_relations', []):
                 add_relation(tool_raw, phrase, target_raw)
             for phrase in group.get('context_relations', []):
