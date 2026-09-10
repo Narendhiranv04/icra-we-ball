@@ -149,13 +149,16 @@ def test_unknown_operation_never_falls_back_to_participant_order():
 def test_multiple_slot_assignments_are_not_committed_to_first_option():
     # Two roles the model described identically are each plausible in the same
     # slot, so the operation has more than one legal reading.
+    # Two participants the model described in no way that distinguishes them
+    # are each plausible in either remaining slot, so the fastening has more
+    # than one legal reading.
     raw = document([
-        role("support_a", "shared central support surface", kind="REGION", policy="SHARED"),
-        role("support_b", "shared central support surface", kind="REGION", policy="SHARED"),
-        role("payload", "entertainment remote control"),
-        role("seats", "shared seating context", kind="FIXED_TARGET", policy="SHARED"),
-    ], operations=[operation("x", "place remote control", ["payload", "support_a", "support_b", "seats"])])
-    group = convert_v3_to_canonical_document(raw, domain="living_room")["interaction_groups"][0]
+        role("implement", "reusable fastening implement", categories=["screwdriver"]),
+        role("thing_one", "component of the assembly"),
+        role("thing_two", "component of the assembly"),
+    ], operations=[operation("x", "fasten joint", ["thing_one", "thing_two", "implement"])])
+    canonical = convert_v3_to_canonical_document(raw, domain="workshop")
+    group = canonical["interaction_groups"][0]
     assert len(group["v3_slot_assignments"]) > 1
     # Every assignment travels with the group, so nothing is chosen by position.
     # A slot is filled only where all assignments agree on it; a slot they
@@ -207,12 +210,38 @@ def test_object_receiving_fastening_attachment_is_fixed_target_family():
 
 
 @pytest.mark.parametrize("kind", ["relation", "operation"])
-def test_duplicate_participants_fail_manual_structural_validation(kind):
+def test_exact_duplicate_participant_is_repaired_and_recorded(kind):
+    """A repeated participant says nothing twice, so the repetition is removed.
+
+    Here nothing is left to state a relation with, so the element is carried out
+    of the contract into the runtime's own accounting rather than dropped: the
+    stage that decides whether required semantics survived still sees it.
+    """
     raw = document([role("tool", "tool")],
                    relations=[relation("x", "compatible", ["tool", "tool"])] if kind == "relation" else (),
                    operations=[operation("x", "move", ["tool", "tool"])] if kind == "operation" else ())
-    with pytest.raises(MalformedVLMSpecificationError, match="DUPLICATE_.*_PARTICIPANT"):
-        normalize_and_validate_v3_contract(raw)
+    normalized, trace = normalize_and_validate_v3_contract(raw)
+    assert any(row["code"] == "DUPLICATE_PARTICIPANT_DEDUPLICATED" for row in trace)
+    assert any(row["code"] == "STRUCTURALLY_UNUSABLE_ELEMENT_CARRIED_OUT" for row in trace)
+    carried = normalized["structurally_unusable_elements"]
+    assert [item["id"] for item in carried] == ["x"]
+    assert carried[0]["reason"] == "TOO_FEW_DISTINCT_PARTICIPANTS_TO_STATE_A_RELATION"
+
+
+@pytest.mark.parametrize("kind", ["relation", "operation"])
+def test_deduplicated_element_keeps_its_remaining_participants(kind):
+    """Deduplication leaves a usable statement when enough participants remain."""
+    roles = [role("driver", "reusable fastening implement"),
+             role("fastener", "manipulated joining component")]
+    parts = ["driver", "fastener", "fastener"]
+    raw = document(roles,
+                   relations=[relation("x", "compatible with", parts)] if kind == "relation" else (),
+                   operations=[operation("x", "fasten joint", parts)] if kind == "operation" else ())
+    normalized, trace = normalize_and_validate_v3_contract(raw, domain="workshop")
+    assert any(row["code"] == "DUPLICATE_PARTICIPANT_DEDUPLICATED" for row in trace)
+    assert "structurally_unusable_elements" not in normalized
+    collection = "functional_relations" if kind == "relation" else "operation_pairings"
+    assert normalized["task_contract"][collection][0]["participant_roles"] == ["driver", "fastener"]
 
 
 def test_inspection_order_is_repaired_from_region_declarations():

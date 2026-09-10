@@ -399,6 +399,18 @@ def _base_canonical_document(doc: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+# Wording that says where things *currently* are, as opposed to where the task
+# must put them.  A bare "storage" or "support surface" is not enough: a
+# workbench a tool must be left on is a destination, and setting it aside as
+# present state would drop a requirement.
+_CURRENT_LOCATION_WORDING = re.compile(
+    r"\b(initial|initially|currently|starting position|staging|"
+    r"current (?:location|position|place|resting)|present location|source location|"
+    r"(?:in|from) storage|storage (?:location|position|area|region)|"
+    r"stored (?:on|in|at)|where .{0,20}(?:currently|already) (?:sits?|is|are))\b",
+    re.IGNORECASE,
+)
+
 _QUANTIFIED_CONTEXT_TEXT = re.compile(
     r"\b(both|all|pair|each|between(?:\s+(?:the\s+)?two)?|accessible\s+from\s+both)\b",
     re.IGNORECASE,
@@ -616,6 +628,43 @@ def _relation_options(domain: str, relation: Mapping[str, Any], hypotheses: Mapp
     return [dict(row) for row in sorted({tuple(sorted(item.items())) for item in options})]
 
 
+def _contextual_participants(
+    domain: str,
+    operation: Mapping[str, Any],
+    participants: Sequence[str],
+    roles_by_id: Mapping[str, Mapping[str, Any]],
+    hypotheses: Mapping[str, Any],
+) -> set[str]:
+    """Participants that may be set aside to make an over-specified operation fit.
+
+    Being a REGION or a FIXED_TARGET was the old test, and it is not enough: a
+    seating anchor, a fastening target and a serving destination are all
+    non-objects and all essential, and dropping one silently removes a
+    requirement.  A participant may only be set aside when something says it is
+    context rather than a participant of the change: the interpreter already
+    elided it as present state, its own wording describes where things
+    currently sit, it types into a family this domain recognizes but realizes
+    with no role, or the runtime could type it as nothing at all.
+    """
+    from .semantic_typing import context_only_families, role_text_scopes, canonical_role_family
+    elided = set(operation.get("current_state_context_roles", ()) or ())
+    contextual: set[str] = set()
+    context_families = context_only_families(domain)
+    for rid in participants:
+        role = roles_by_id.get(rid) or {}
+        candidates = tuple(getattr(hypotheses.get(rid), "canonical_role_candidates", ()) or ())
+        families = {canonical_role_family(domain, candidate) for candidate in candidates}
+        text = " ".join(value for value in role_text_scopes(dict(role)).values() if value)
+        if (
+            rid in elided
+            or not candidates
+            or (context_families and families and families <= set(context_families))
+            or _CURRENT_LOCATION_WORDING.search(text)
+        ):
+            contextual.add(rid)
+    return contextual
+
+
 def _resolve_operation_slots_with_subsets(
     domain: str,
     operation: Mapping[str, Any],
@@ -644,15 +693,7 @@ def _resolve_operation_slots_with_subsets(
     options = resolve_v3_operation_slots(domain, operation, roles_by_id, hypotheses)
     if options:
         return options, participants, []
-    # Only a contextual participant may be set aside to make an operation fit.
-    # A REGION or FIXED_TARGET named alongside a placement is a reference the
-    # capability has no slot for -- a bowl placed on a table *at* a marked spot.
-    # An OBJECT is a thing the model wants handled, so dropping it to force a
-    # fit would quietly change the task rather than interpret it.
-    droppable = {
-        rid for rid in participants
-        if str((roles_by_id.get(rid) or {}).get("entity_kind", "OBJECT")) != "OBJECT"
-    }
+    droppable = _contextual_participants(domain, operation, participants, roles_by_id, hypotheses)
     if not droppable:
         return [], participants, []
     for size in range(len(participants) - 1, 1, -1):
@@ -1080,8 +1121,28 @@ def convert_v3_to_canonical_document(
             # participants its capability structurally involves.  Supply the
             # rest as typed existential requirements, which search and grounding
             # resolve, rather than discarding an operation the task needs.
+            #
+            # Tried twice: once as written, and once with the participants that
+            # only say where things currently sit set aside, because a placement
+            # naming its staging tray is under-specified about its destination
+            # and over-specified about its origin at the same time.
             completed = complete_operation_slots(
                 domain, operation, roles_by_id, hypotheses, expressed)
+            elided = _contextual_participants(
+                domain, operation, list(operation["participant_roles"]), roles_by_id, hypotheses)
+            if completed is None and elided:
+                reduced = [p for p in operation["participant_roles"] if p not in elided]
+                if reduced:
+                    completed = complete_operation_slots(
+                        domain, {**dict(operation), "participant_roles": reduced},
+                        roles_by_id, hypotheses, expressed)
+                    if completed is not None:
+                        operation = {
+                            **dict(operation), "participant_roles": reduced,
+                            "current_state_context_roles": list(dict.fromkeys([
+                                *operation.get("current_state_context_roles", ()), *sorted(elided),
+                            ])),
+                        }
             if completed is not None:
                 for role in completed.synthesized_roles:
                     canonical["functional_roles"].append(role)
@@ -1094,6 +1155,10 @@ def convert_v3_to_canonical_document(
                 ]))
                 context_participants = []
                 operation = {**dict(operation), "participant_roles": slot_participants}
+                if operation.get("current_state_context_roles"):
+                    canonical["current_state_operation_context_roles"] = sorted(
+                        set(canonical.get("current_state_operation_context_roles", ()))
+                        | set(operation["current_state_context_roles"]))
                 canonical.setdefault("operation_induced_slot_completions", []).append(completed.trace)
                 canonical["functional_constraint_interpretation"].append(completed.trace)
                 hypotheses = build_role_type_hypotheses(domain, canonical)
