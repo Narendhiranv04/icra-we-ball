@@ -78,6 +78,27 @@ _NOT_A_RECEIVING_FEATURE = (
     r"(?!\s+(?:holes?|recess(?:es)?|seats?|sites?|slots?|threads?|openings?|bores?|locations?))"
 )
 
+# What kind of thing an implement is.  The action words below appear just as
+# readily in the passive -- "liquid to be mixed into the beverage", "holds the
+# coffee mixture" -- where they describe what happens *to* the role, so an
+# action alone never makes something an implement.
+_IMPLEMENT_KIND = re.compile(
+    r"\b(tools?|implements?|instruments?|utensils?|cutlery|"
+    r"spoons?|forks?|knives|knife|stirrers?|whisks?|sticks?|spatulas?|ladles?|"
+    r"drivers?|screwdrivers?|wrench(?:es)?|drills?|pliers?|spanners?)\b",
+    re.I,
+)
+
+# What an implement is *for*: the model states the action, not the thing acted on.
+_IMPLEMENT_ACTION = re.compile(
+    r"\b(stir\w*|mix\w*|blend\w*|agitat\w*|whisk\w*|swirl\w*|"
+    r"eat\w*|scoop\w*|"
+    r"driv\w*|tighten\w*|fasten\w*|screw\w*|apply\w*|"
+    r"used (?:to|for) (?:stir|mix|eat|drive|turn|tighten|apply|fasten)\w*)\b",
+    re.I,
+)
+
+
 _FAMILY_CUES: dict[str, str] = {
     # "Ingredient" only says source when the role is the ingredient or supplies
     # one.  A container that "receives coffee and water ingredients" mentions the
@@ -88,7 +109,17 @@ _FAMILY_CUES: dict[str, str] = {
         r"(?:raw|dry|solid|liquid|powdered) ingredients?|"
         r"raw material|stock of|reservoir|material for (?:the )?(?:coffee|drink|beverage|soup)|"
         r"holding (?:dry|drinking|raw)|contains? (?:dry )?(?:coffee|water|material|ingredient|liquid)|"
-        r"liquid base|base for (?:the )?(?:coffee|drink|beverage))\b"
+        r"liquid base|base for (?:the )?(?:coffee|drink|beverage)|"
+        # The name of a material is a name for the thing it comes out of.  A
+        # role offered as "coffee beans" or "broth" is the model describing a
+        # supply, and reading it as no kind of participant at all left it with
+        # every canonical role as a candidate -- which is neither a reading nor
+        # an honest refusal.  Whether this domain *has* a source role for that
+        # material is decided further down, and separately.
+        r"broths?|stews?|curr(?:y|ies)|"
+        r"instant coffee|ground coffee|coffee (?:beans?|grounds?|powder|granules)|"
+        r"(?:tap|bottled|filtered|drinking|hot|boiling) water|water supply|liquid solvent|"
+        r"(?:soup|coffee|food|drink|water) (?:substance|portion|contents?|material))\b"
     ),
     "DESTINATION": (
         r"\b(receiv(?:e|es|ing|er)|destination|containers?|vessels?|receptacles?|"
@@ -286,6 +317,42 @@ def _declared_families(domain: str) -> set[str]:
     } | set(context_only_families(domain))
 
 
+ACCEPTANCE_VOCABULARY = "RUNTIME_ACCEPTANCE_CATEGORY"
+
+
+def acceptance_vocabulary_match(domain: str, role: dict[str, Any]) -> tuple[str, ...]:
+    """Runtime roles whose own acceptance vocabulary the model's categories name.
+
+    Grounding decides whether an observed label suits a role by comparing it
+    with that role's declared acceptance categories.  When the model's
+    candidate_categories name one of those very categories, the two layers are
+    talking about the same thing, and compile-time typing ought to reach the
+    role grounding would accept.  Leaving them unconnected meant a coffee
+    source offered as a "jar" -- a category coffee_source itself declares --
+    was read as a cupboard to search, and the coffee it supplies was lost.
+
+    Only a unique match counts.  "spoon" is declared by both the coffee stirrer
+    and the soup eating utensil, so it says which family the role belongs to and
+    not which role it is; the rest of the wording has to settle that.
+    """
+    from .role_semantic_ontology import (
+        get_all_system_role_semantic_categories,
+        _normalize_label_text,
+    )
+    offered = {
+        _normalize_label_text(category)
+        for category in (role.get("candidate_categories") or ())
+        if category
+    }
+    if not offered:
+        return ()
+    declared = get_all_system_role_semantic_categories(domain)
+    return tuple(sorted(
+        name for name, categories in declared.items()
+        if offered & {_normalize_label_text(category) for category in categories}
+    ))
+
+
 def detect_role_families(domain: str, role: dict[str, Any]) -> tuple[set[str], dict[str, set[str]]]:
     """Nominate semantic families from the whole role, keeping scope provenance."""
     scopes = role_text_scopes(role)
@@ -299,6 +366,18 @@ def detect_role_families(domain: str, role: dict[str, Any]) -> tuple[set[str], d
         if matched:
             families.add(family)
             provenance[family] = matched
+    # Only where the role's own account of its job said nothing.  What the model
+    # says a thing is *for* outranks a category it listed: "contain coffee
+    # powder", offered among categories including "cup", is a supply and not a
+    # cup.  The vocabulary decides when the purpose is silent, which is the gap
+    # it was added for -- "Liquid for coffee", offered as a kettle.
+    if not any("PURPOSE_TEXT" in scope_names for scope_names in provenance.values()):
+        accepted = acceptance_vocabulary_match(domain, role)
+        if len(accepted) == 1:
+            family = canonical_role_family(domain, accepted[0])
+            if family in declared:
+                families.add(family)
+                provenance.setdefault(family, set()).add(ACCEPTANCE_VOCABULARY)
     return families, provenance
 
 
@@ -340,15 +419,70 @@ def _resolve_family_precedence(
             authoritative.discard(family)
             applied.append(rule)
 
+    # The model naming a role's acceptance vocabulary is the two semantic layers
+    # agreeing about what the thing is, and that outranks a family picked up
+    # from a word in passing.
+    by_vocabulary = {
+        family for family, scope_names in provenance.items()
+        if ACCEPTANCE_VOCABULARY in scope_names
+    }
+    if len(by_vocabulary) == 1:
+        for family in sorted(authoritative - by_vocabulary):
+            drop(family, "RUNTIME_ACCEPTANCE_VOCABULARY_OVER_INCIDENTAL_CUE")
+        authoritative |= by_vocabulary
+
     # A structure the model describes as holding or enclosing the things the
-    # task needs is somewhere to search, not one of those things.
+    # task needs is somewhere to search, not one of those things.  But being
+    # closable is not being a cupboard: a jar of coffee is openable and is
+    # still the coffee supply, and reading it as somewhere to search lost the
+    # coffee from the task.  So the storage sense has to come from what the
+    # model says the thing is *for*, or from what it calls it -- not from a
+    # property listed in passing.
+    named_storage = {
+        key: value for key, value in scopes.items() if key in {"PURPOSE_TEXT", "NAME_TEXT"}
+    }
     if (
         _in_any_scope(_STORAGE_STRUCTURE, scopes)
         and _in_any_scope(_STORES_THINGS, scopes)
+        and (
+            _in_any_scope(_STORAGE_STRUCTURE, named_storage)
+            or _in_any_scope(_STORES_THINGS, named_storage)
+        )
     ):
         for family in ("COMPONENT", "INSTRUMENT", "SOURCE", "DESTINATION", "PAYLOAD"):
             drop(family, "STORAGE_STRUCTURE_IS_NOT_ITS_CONTENTS")
         authoritative.add("STORAGE_CONTEXT")
+    # A role whose stated purpose is an implement's action is the implement, not
+    # the material it works on and not the vessel it goes into.  "Stir the
+    # coffee mixture", offered as a spoon that "fits in a vessel", was read as
+    # a receptacle because a passing property mentioned one.
+    if (
+        "INSTRUMENT" in authoritative
+        and _IMPLEMENT_ACTION.search(purpose)
+        and _in_any_scope(_IMPLEMENT_KIND, scopes)
+    ):
+        for family in ("SOURCE", "DESTINATION"):
+            drop(family, "STATED_IMPLEMENT_ACTION_OVER_WHAT_IT_ACTS_ON")
+    # And the converse.  The action words read just as well in the passive --
+    # "liquid to be mixed with coffee", "holds the coffee mixture" -- where they
+    # say what happens *to* the role.  Something the model never calls an
+    # implement is not one just because mixing was mentioned near it, so long as
+    # the model said what it is some other way.
+    elif (
+        "INSTRUMENT" in authoritative
+        and len(authoritative) > 1
+        and not _in_any_scope(_IMPLEMENT_KIND, scopes)
+    ):
+        drop("INSTRUMENT", "AN_ACTION_WORD_ALONE_IS_NOT_AN_IMPLEMENT")
+    # A material named as a material is that material, whatever the job
+    # description says about where it ends up.  "Hot food item served in the
+    # bowl", offered as "soup broth stew", was read as the bowl.
+    if (
+        "SOURCE" in authoritative
+        and {"IDENTITY_TEXT", "NAME_TEXT"} & provenance.get("SOURCE", set())
+        and provenance.get("DESTINATION", set()) == {"PURPOSE_TEXT"}
+    ):
+        drop("DESTINATION", "MATERIAL_IDENTITY_OVER_WHERE_IT_IS_PUT")
     # A place the model describes as storage is where things are kept, not where
     # the task is asked to put them.
     if "STORAGE_CONTEXT" in authoritative and re.search(
@@ -561,6 +695,14 @@ def function_semantic_evidence(
     families, provenance = detect_role_families(domain, role)
     authoritative, precedence_rules = _resolve_family_precedence(domain, families, scopes, provenance)
     preferred = _preferred_roles(domain, role, authoritative, scopes)
+    accepted = acceptance_vocabulary_match(domain, role)
+    if len(accepted) == 1 and accepted[0] in runtime_roles and ACCEPTANCE_VOCABULARY in (
+        provenance.get(canonical_role_family(domain, accepted[0]), set())
+    ) and canonical_role_family(domain, accepted[0]) in authoritative:
+        # The vocabulary is what nominated this family, and grounding would
+        # accept an object of this category for this role, so this is the role
+        # and not merely its family.
+        preferred = {accepted[0]}
 
     if not preferred and weak_preference in runtime_roles:
         preferred.add(weak_preference)

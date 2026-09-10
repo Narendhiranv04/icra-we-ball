@@ -269,6 +269,14 @@ _TASK_CAUSAL_RELATION_CUES: dict[str, tuple[str, ...]] = {
         "provides fluid to", "provides fillable fluid to", "provides content to",
         "provides content for", "provides coffee for blend", "provides water for blend",
         "supplies fluid to", "supplies solid to",
+        # Combining and mixing are how the model usually words a transfer into a
+        # vessel.  The symmetric ones appear in the inverse list too, because
+        # "combined with" asserts no direction and the endpoint signature is
+        # what decides which way round the runtime can read it.
+        "combine into", "combines into", "combined into", "combine in", "combined in",
+        "added to", "adds to", "add to", "added into", "adds into",
+        "mixed into", "mixes into", "mixed with", "mixes with", "combined with",
+        "combine with", "combines with", "mixes", "mixed",
     ),
     "ACTS_ON": (
         "acts on", "operates on", "manipulates", "manipulates interior of", "stirs contents of",
@@ -286,6 +294,8 @@ _TASK_CAUSAL_RELATION_CUES: dict[str, tuple[str, ...]] = {
         "must accompany", "accompanied by", "provided with", "accommodates eating utensil",
         "associated for serving", "is served with", "placed adjacent to serving of",
         "associated with serving", "associated with servicing", "associated with soup", "assigned to serve",
+        # Ordinary ways to say the same thing, each one a frozen trial's wording.
+        "accompanies", "accompany", "to accompany", "goes with", "comes with",
     ),
     "INSTALLED_AT": (
         "installed at", "installed in", "secured at", "secured in", "fastened at", "fastened in",
@@ -309,6 +319,11 @@ _TASK_CAUSAL_INVERSE_CUES: dict[str, tuple[str, ...]] = {
         "receives transfer from", "receiving from", "transferred from",
         "requires contents from", "receives content from",
         "receives ingredient from", "receives food from",
+        # The carrier described by what it was made from.
+        "prepared from", "prepared with", "prepared by combination",
+        "prepared by combination of", "made from", "made with", "made of",
+        "combined from", "mixed from", "brewed from", "brewed with",
+        "mixed with", "mixes with", "combined with", "combine with", "combines with",
     ),
     "ACTS_ON": (
         "manipulated by", "operated by", "acted on by", "stirred by", "mixed by",

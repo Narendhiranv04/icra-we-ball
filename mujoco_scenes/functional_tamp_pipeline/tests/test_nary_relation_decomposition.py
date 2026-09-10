@@ -75,8 +75,13 @@ def test_every_nary_participant_survives_into_the_accounting():
 
 
 def test_decomposition_emits_one_edge_per_pair_and_keeps_the_predicate():
+    """A predicate the runtime cannot read at all is decomposed over every pair.
+
+    With no reading to constrain it, no pair can be preferred, so none is
+    dropped and the phrase travels with each edge for the stages downstream.
+    """
     canonical = _convert([{
-        "id": "ingredients", "relation": "made_from",
+        "id": "ingredients", "relation": "belongs_with",
         "participant_roles": ["beverage", "grounds", "liquid"], "required": True,
     }])
     edges = [r for r in canonical["functional_relations"]
@@ -87,7 +92,26 @@ def test_decomposition_emits_one_edge_per_pair_and_keeps_the_predicate():
         frozenset(("beverage", "liquid")),
         frozenset(("grounds", "liquid")),
     }
-    assert all(e["relation"] == "made_from" for e in edges)
+    assert all(e["relation"] == "belongs_with" for e in edges)
+
+
+def test_a_readable_predicate_only_keeps_the_pairs_it_can_be_read_over():
+    """"The beverage is made from grounds and water" says nothing about the two.
+
+    Once the runtime can read the phrase, the readings are what decide which
+    pairs survive: each ingredient supplies the carrier, and neither supplies
+    the other.  Emitting that third edge would invent a claim the model never
+    made.
+    """
+    canonical = _convert([{
+        "id": "ingredients", "relation": "made_from",
+        "participant_roles": ["beverage", "grounds", "liquid"], "required": True,
+    }])
+    edges = [r for r in canonical["functional_relations"]
+             if r["id"].startswith("ingredients__")]
+    pairs = {frozenset((e["subject_role"], e["object_role"])) for e in edges}
+    assert frozenset(("grounds", "liquid")) not in pairs
+    assert pairs == {frozenset(("beverage", "grounds")), frozenset(("beverage", "liquid"))}
 
 
 def test_genuine_contradiction_path_is_still_reachable():
