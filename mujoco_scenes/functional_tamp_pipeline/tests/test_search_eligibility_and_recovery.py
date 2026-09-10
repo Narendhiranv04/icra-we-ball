@@ -450,8 +450,13 @@ def test_grounding_snapshots_recorded():
     assert snapshots[1]["grounding"]["complete"] is True
 
 
-def test_kitchen_run_to_plan_contract_incomplete_zero_search(tmp_path, monkeypatch):
-    """Kitchen run_to_plan sets sequence to () when contract is incomplete, performing zero search."""
+def test_kitchen_run_to_plan_searches_when_contract_is_partially_represented(tmp_path, monkeypatch):
+    """A partially represented kitchen contract still inspects the scene.
+
+    Whether every FM semantic was representable says nothing about whether a
+    missing utensil is sitting in a drawer, so the regions are offered to the
+    inspection sequence rather than the search being skipped outright.
+    """
     from pathlib import Path
     from mujoco_scenes.functional_tamp_pipeline.domains import kitchen
 
@@ -483,8 +488,7 @@ def test_kitchen_run_to_plan_contract_incomplete_zero_search(tmp_path, monkeypat
         scene=None,
     )
 
-    assert captured_sequence == ()
-    assert result.inspected_regions == ()
+    assert captured_sequence, 'a partially represented contract must still be able to search'
     assert result.functional_spec_complete is False
     assert (tmp_path / "grounding_snapshots.json").exists()
 

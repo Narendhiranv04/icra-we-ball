@@ -715,13 +715,14 @@ def run_to_plan(
 
     from ..search import classify_search_state, compute_causal_search_recovery
 
-    # Gate before search: if online_executable_contract_complete is False, zero pointless search
-    contract_ok = getattr(
-        specification,
-        "online_executable_contract_complete",
-        getattr(specification, "required_contract_complete", False),
-    )
-    if not contract_ok:
+    # Whether every FM semantic was representable says nothing about whether a
+    # missing utensil is in a drawer.  This gate previously emptied the search
+    # order for any partially represented contract, so the kitchen opened
+    # nothing and the objects it needed were reported as undiscovered while
+    # sitting in a closed drawer.  A graph with no roles has nothing to look
+    # for; anything else is worth searching, and the per-region eligibility
+    # check below still stops the search as soon as it stops being useful.
+    if not specification.nodes:
         order = ()
     else:
         order = tuple(search_contract.canonical_region_ids)
