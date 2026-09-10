@@ -45,6 +45,48 @@ _GROUP_ROLE_ID_LIST_FIELDS: tuple[str, ...] = (
 )
 
 
+# Field names whose value is a role identifier, wherever they occur.  The
+# converter records a good deal beside the graph -- which capability reading it
+# chose, which semantics it could not represent, which participants only say
+# where things currently sit -- and all of it names roles.  Normalizing the
+# graph while leaving those records alone made the two disagree, and the
+# disagreement was silent: a semantic the runtime could not represent was
+# looked up under the model's spelling, found nothing, and was reported as a
+# blocking requirement even where the compiler had already accounted for it.
+_ROLE_REFERENCE_FIELDS: frozenset[str] = frozenset({
+    "tool_role", "source_role", "target_role", "context_role", "anchor_role",
+    "subject_role", "object_role", "raw_subject", "raw_object",
+    "fm_witness_role", "source_id", "raw_role_id",
+})
+_ROLE_REFERENCE_LIST_FIELDS: frozenset[str] = frozenset({
+    "participant_roles", "explicit_participant_roles", "raw_fm_participant_roles",
+    "current_state_context_roles", "unrepresented_participants",
+    "v3_participant_roles", "v3_explicit_participant_roles",
+    "v3_raw_fm_participant_roles", "v3_witness_roles",
+    "v3_current_state_context_roles", "member_role_ids",
+})
+
+
+def _normalize_role_references(value: Any) -> Any:
+    """Rewrite every role identifier the document carries, at any depth."""
+    if isinstance(value, dict):
+        result = {}
+        for key, item in value.items():
+            if key in _ROLE_REFERENCE_FIELDS and isinstance(item, str) and item:
+                result[key] = normalize_id(item)
+            elif key in _ROLE_REFERENCE_LIST_FIELDS and isinstance(item, list):
+                result[key] = [
+                    normalize_id(entry) if isinstance(entry, str) else _normalize_role_references(entry)
+                    for entry in item
+                ]
+            else:
+                result[key] = _normalize_role_references(item)
+        return result
+    if isinstance(value, list):
+        return [_normalize_role_references(entry) for entry in value]
+    return value
+
+
 def _normalize_group_role_references(item: dict[str, Any]) -> None:
     """Rewrite every role identifier a group carries, at any depth it carries one."""
     for key in _GROUP_ROLE_ID_LIST_FIELDS:
@@ -236,6 +278,15 @@ def sanitize_functional_graph(raw: Mapping[str, Any], *, domain: str | None = No
         values = doc.get(key)
         if isinstance(values, list):
             doc[key] = [normalize_id(value) for value in values if isinstance(value, str)]
+    for key in (
+        "unresolved_operation_semantics", "unresolved_relation_semantics",
+        "current_state_relations", "relations_enforced_by_operations",
+        "planner_context_transitions", "explicit_context_sets",
+        "operation_induced_slot_completions", "functional_constraint_interpretation",
+        "role_operation_consistency_audit", "non_physical_operations",
+    ):
+        if key in doc:
+            doc[key] = _normalize_role_references(doc[key])
     for key in ("inspectable_regions", "inspection_order"):
         if not isinstance(doc.get(key, []), list):
             record("IGNORED_OPTIONAL_METADATA", {key: doc[key]})
