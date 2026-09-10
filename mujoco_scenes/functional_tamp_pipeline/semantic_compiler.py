@@ -1110,12 +1110,20 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 })
                 continue
 
+        # Slot resolution may already have identified the capability from the
+        # participant signature when the phrase carried no text evidence.  Pass
+        # it through rather than re-deriving from the same uninformative phrase.
+        hinted = {
+            row.get("capability_id") for row in (v3_slot_assignments or [])
+            if row.get("capability_id")
+        }
         op_interp = interpret_operation(
             domain=domain,
             raw_phrase=raw_op,
             source_role=tool_role_id,
             target_role=target_role_id,
             anchor_role=ctx_role_id,
+            capability_hint=next(iter(hinted)) if len(hinted) == 1 else None,
         )
 
         if not op_interp.succeeded:

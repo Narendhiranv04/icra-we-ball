@@ -19,7 +19,11 @@ import jsonschema
 from .errors import MalformedVLMSpecificationError, TaskSpecificationValidationError
 from .fm_schema_v2 import RESPONSE_SCHEMA_V2
 from .relation_interpreter import extract_relation_semantic_candidates, interpret_task_effect_predicate
-from .robot_capability_registry import extract_operation_semantic_candidates, is_non_physical_operation_phrase
+from .robot_capability_registry import (
+    extract_operation_semantic_candidates,
+    get_robot_capabilities,
+    is_non_physical_operation_phrase,
+)
 from .semantic_typing import build_role_type_hypotheses, relation_canonical_role_pairs
 
 
@@ -532,10 +536,23 @@ def _resolve_operation_slots_with_subsets(
     options = resolve_v3_operation_slots(domain, operation, roles_by_id, hypotheses)
     if options:
         return options, participants, []
+    # Only a contextual participant may be set aside to make an operation fit.
+    # A REGION or FIXED_TARGET named alongside a placement is a reference the
+    # capability has no slot for -- a bowl placed on a table *at* a marked spot.
+    # An OBJECT is a thing the model wants handled, so dropping it to force a
+    # fit would quietly change the task rather than interpret it.
+    droppable = {
+        rid for rid in participants
+        if str((roles_by_id.get(rid) or {}).get("entity_kind", "OBJECT")) != "OBJECT"
+    }
+    if not droppable:
+        return [], participants, []
     for size in range(len(participants) - 1, 1, -1):
         merged: list[dict[str, Any]] = []
         used: list[str] = []
         for subset in combinations(participants, size):
+            if any(p not in subset and p not in droppable for p in participants):
+                continue
             probe = {**dict(operation), "participant_roles": list(subset)}
             subset_options = resolve_v3_operation_slots(domain, probe, roles_by_id, hypotheses)
             if not subset_options:
@@ -597,7 +614,20 @@ def resolve_v3_operation_slots(
     roles_by_id: Mapping[str, Mapping[str, Any]],
     hypotheses: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
-    capabilities = extract_operation_semantic_candidates(domain, str(operation["operation"]))
+    phrase = str(operation["operation"])
+    capabilities = extract_operation_semantic_candidates(domain, phrase)
+    # The model often names an operation with a bare noun or a generic verb --
+    # "manipulation", "placement", "combine" -- which identifies no capability by
+    # wording alone.  The participants still do: a driver, a fastener and a fixed
+    # target admit exactly one capability signature.  So when the phrase says
+    # nothing, every capability is considered and the result is accepted only if
+    # exactly one of them can seat these participants.  A phrase that is not a
+    # physical operation at all is left alone, and an ambiguous fit is refused
+    # rather than guessed.
+    inferred_from_participants = False
+    if not capabilities and not is_non_physical_operation_phrase(phrase):
+        capabilities = tuple(get_robot_capabilities(domain))
+        inferred_from_participants = True
     participants = tuple(operation["participant_roles"])
     options: list[dict[str, Any]] = []
     for capability in capabilities:
@@ -640,7 +670,18 @@ def resolve_v3_operation_slots(
                     "usage_policy": "SEQUENTIAL_REUSE_ALLOWED" if binding in {"REUSABLE", "SHARED"} else "DEDICATED_PER_TARGET",
                 })
     unique = {json.dumps(item, sort_keys=True): item for item in options}
-    return [unique[key] for key in sorted(unique)]
+    resolved = [unique[key] for key in sorted(unique)]
+    if inferred_from_participants:
+        # Inference is only admissible when the participants pick out a single
+        # capability.  If several could seat them, the operation is genuinely
+        # undetermined and choosing one would invent semantics the model never
+        # expressed.
+        identified = {row.get("capability_id") for row in resolved}
+        if len(identified) != 1:
+            return []
+        for row in resolved:
+            row["capability_provenance"] = "INFERRED_FROM_PARTICIPANT_SIGNATURE"
+    return resolved
 
 
 # ---------------------------------------------------------------------------

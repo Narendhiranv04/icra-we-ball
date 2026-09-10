@@ -200,7 +200,26 @@ def classify_fine_search_state(
         return CONTRACT_UNEXECUTABLE
 
     if grounding is not None and (grounding.complete or getattr(grounding, "satisfied", False)):
-        return GROUNDING_COMPLETE
+        # A complete grounding that rests on unverified candidates is not a
+        # reason to stop looking.  Open-world matching admits a candidate whose
+        # label the runtime cannot confirm, which is what keeps a plausible
+        # object in play, but settling for one while a drawer is still shut
+        # would bind the task to whatever happened to be visible.  While any
+        # role is held only by UNKNOWN evidence and regions remain unopened,
+        # searching continues; the assignment already prefers confirmed
+        # candidates, so opening a region can only improve it.
+        evidence = grounding.evidence if isinstance(grounding.evidence, dict) else {}
+        provenance = evidence.get("binding_provenance") or {}
+        unverified = any(
+            isinstance(row, dict) and row.get("semantic_status") == "UNKNOWN"
+            for row in provenance.values()
+        )
+        canonical = (
+            getattr(search_contract, "canonical_region_ids", ())
+            if search_contract is not None else ()
+        )
+        if not (unverified and [r for r in canonical if r not in set(inspected_regions)]):
+            return GROUNDING_COMPLETE
 
     canonical_regions = (
         getattr(search_contract, "canonical_region_ids", ())

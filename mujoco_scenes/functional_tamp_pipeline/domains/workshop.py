@@ -265,7 +265,20 @@ class WorkshopPlanningCompiler:
                 subject, obj = _resolve_obj(subject_role), _resolve_obj(object_role)
                 rel = observed.get_relation(predicate, subject, obj) if observed and subject and obj else None
                 return rel is not None and rel.status == "TRUE"
-            disabled_operations = specification.metadata.get("canonicalization_trace", {}).get("disabled_groups", [])
+            # Only a disabled *fastening* bears on whether fastening is viable.
+            # Any other operation the compiler could not map -- returning the
+            # tool, a search step -- says nothing about whether the joint can be
+            # driven, and vetoing on all of them deleted the SCREW action
+            # whenever one unrelated operation failed to compile, leaving the
+            # give-up fallback below as the entire plan.
+            _all_disabled = specification.metadata.get("canonicalization_trace", {}).get("disabled_groups", [])
+            disabled_operations = [
+                entry for entry in _all_disabled
+                if "fasten" in str(entry.get("raw_group", {}).get("function", "")).lower()
+                or "screw" in str(entry.get("raw_group", {}).get("function", "")).lower()
+                or "drive" in str(entry.get("raw_group", {}).get("function", "")).lower()
+                or entry.get("capability_id") == "FASTEN_JOINT"
+            ]
             has_group = bool(specification.operation_groups or specification.metadata.get("canonicalization_trace", {}).get("groups", []))
             insertion_ok = (("fastener", "COMPATIBLE_WITH_TARGET", "repair_target") in triples or has_group) and verified("fastener", "COMPATIBLE_WITH_TARGET", "repair_target")
             compat_ok = (("driver", "COMPATIBLE_WITH", "fastener") in triples or has_group) and verified("driver", "COMPATIBLE_WITH", "fastener")

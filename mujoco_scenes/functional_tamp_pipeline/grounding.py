@@ -822,9 +822,18 @@ def ground_graph(
         cands_unk: list[str] = []
         blocked_property = any(item['role'] == role_name for item in graph_f.metadata.get('unverified_required_properties', []))
         for instance_id, node in sorted(graph_o.nodes.items()):
-            if blocked_property:
-                continue
             status, details = evaluate_node_for_role(node, role)
+            if blocked_property and status == "TRUE":
+                # The role carries a required property the runtime has no
+                # predicate for -- "heat resistant" on a bowl, say.  That is a
+                # reason not to *assert* the candidate satisfies it, not a reason
+                # to pretend the candidate does not exist.  Skipping every
+                # candidate outright left the role with nothing to bind and
+                # reported the objects as undiscovered while they sat in plain
+                # view.  The match is admitted as unproven instead, so physical
+                # and relational evidence can still settle the assignment.
+                status = "UNKNOWN"
+                details = {**(details or {}), "unverified_required_property": True}
             evaluations[(role_name, instance_id)] = details
             if status == "TRUE":
                 cands_true.append(instance_id)
@@ -886,8 +895,18 @@ def ground_graph(
         )
 
     # Pigeonhole principle capacity check for distinct objects
+    def _distinct_instances_needed(role) -> int:
+        # REUSABLE means one instance may serve repeatedly, so such a role
+        # consumes exactly one distinct object however many applications it
+        # takes part in.  Counting its full application count as distinct
+        # objects overstated demand -- a single reusable coffee source counted
+        # as two jars -- and rejected scenes that in fact hold enough objects.
+        if role.binding_policy == "REUSABLE":
+            return 1
+        return role.minimum_count
+
     total_distinct_objs_required = sum(
-        role.minimum_count for role in roles.values()
+        _distinct_instances_needed(role) for role in roles.values()
         if role.entity_kind == "OBJECT" and not role.shared
     )
     available_candidate_objects = set().union(
@@ -926,6 +945,13 @@ def ground_graph(
         role = roles[r_name]
         min_c = role.minimum_count
         max_c = role.maximum_count
+        # REUSABLE means one instance *may* serve every application, not that it
+        # must.  Sharing a single instance therefore has to be among the options
+        # considered, or a reusable source declared with a count of two demands
+        # two distinct objects and a scene holding one is judged short.  Larger
+        # counts stay available, since more instances may still be needed.
+        if role.binding_policy == "REUSABLE":
+            min_c = 1
         if role.preference == "minimize_distinct":
             role_count_options[r_name] = list(range(min_c, max_c + 1))
         else:

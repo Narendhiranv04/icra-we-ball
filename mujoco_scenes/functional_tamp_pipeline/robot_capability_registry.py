@@ -339,6 +339,7 @@ def interpret_operation(
     source_role: str,
     target_role: str,
     anchor_role: str | None = None,
+    capability_hint: str | None = None,
 ) -> OperationInterpretationResult:
     """Safely map free-form operation text to a robot capability.
 
@@ -380,6 +381,18 @@ def interpret_operation(
 
     # 1. Semantic candidates based on text evidence
     semantic_matches = set(extract_operation_semantic_candidates(d_norm, raw_phrase))
+
+    # A caller that already identified the capability from the participant
+    # signature supplies it here.  The model frequently names an operation with a
+    # bare noun -- "manipulation", "placement" -- which carries no text evidence,
+    # while its participants determine exactly one capability.  The hint is only
+    # honoured when the phrase itself yields nothing, so text evidence still wins
+    # wherever it exists, and the hint must name a real capability of the domain.
+    if not semantic_matches and capability_hint:
+        semantic_matches = {
+            capability for capability in capabilities
+            if capability.capability_id == capability_hint
+        }
 
     if not semantic_matches:
         return OperationInterpretationResult(
