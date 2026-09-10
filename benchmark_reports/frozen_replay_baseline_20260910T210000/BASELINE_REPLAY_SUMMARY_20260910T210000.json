@@ -1,0 +1,841 @@
+{
+  "label": "BEFORE",
+  "total_trials": 96,
+  "overall": {
+    "strict_v3_valid": 81,
+    "task_valid": 81,
+    "graph_compiled": 75,
+    "grounding_reached": 75,
+    "complete_grounding": 9,
+    "astar_reached": 16,
+    "success": 9,
+    "outcome_correct": 36
+  },
+  "outcome_categories": {
+    "OBJECT_DISCOVERY_FAILURE": 19,
+    "TASK_SPECIFICATION_FAILURE": 18,
+    "FUNCTIONAL_ASSIGNMENT_FAILURE": 39,
+    "PLANNING_FAILURE": 8,
+    "null": 3,
+    "SUCCESS": 9
+  },
+  "per_domain": {
+    "kitchen": {
+      "strict_v3_valid": 33,
+      "task_valid": 33,
+      "graph_compiled": 30,
+      "grounding_reached": 30,
+      "complete_grounding": 3,
+      "astar_reached": 4,
+      "success": 3,
+      "outcome_correct": 18,
+      "trials": 36,
+      "outcome_categories": {
+        "OBJECT_DISCOVERY_FAILURE": 16,
+        "TASK_SPECIFICATION_FAILURE": 4,
+        "FUNCTIONAL_ASSIGNMENT_FAILURE": 10,
+        "PLANNING_FAILURE": 1,
+        "null": 2,
+        "SUCCESS": 3
+      }
+    },
+    "living_room": {
+      "strict_v3_valid": 23,
+      "task_valid": 23,
+      "graph_compiled": 23,
+      "grounding_reached": 23,
+      "complete_grounding": 2,
+      "astar_reached": 2,
+      "success": 2,
+      "outcome_correct": 12,
+      "trials": 30,
+      "outcome_categories": {
+        "OBJECT_DISCOVERY_FAILURE": 3,
+        "FUNCTIONAL_ASSIGNMENT_FAILURE": 18,
+        "TASK_SPECIFICATION_FAILURE": 7,
+        "SUCCESS": 2
+      }
+    },
+    "workshop": {
+      "strict_v3_valid": 25,
+      "task_valid": 25,
+      "graph_compiled": 22,
+      "grounding_reached": 22,
+      "complete_grounding": 4,
+      "astar_reached": 10,
+      "success": 4,
+      "outcome_correct": 6,
+      "trials": 30,
+      "outcome_categories": {
+        "PLANNING_FAILURE": 7,
+        "TASK_SPECIFICATION_FAILURE": 7,
+        "FUNCTIONAL_ASSIGNMENT_FAILURE": 11,
+        "SUCCESS": 4,
+        "null": 1
+      }
+    }
+  },
+  "per_variant": {
+    "K1": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE"
+      ],
+      "stops": [
+        "('coffee_source', 'water_source')",
+        "('soup_container', 'coffee_source')",
+        "NO_COMPLETE_FUNCTIONAL_WITNESS"
+      ]
+    },
+    "K2": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 1,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "PLANNING_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE"
+      ],
+      "stops": [
+        "",
+        "('coffee_source', 'water_source')",
+        "NO_COMPLETE_FUNCTIONAL_WITNESS"
+      ]
+    },
+    "K3": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 1,
+      "grounding_reached": 1,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        null,
+        null
+      ],
+      "stops": [
+        "'Coffee_Powder'",
+        "'soup_bowl'",
+        "NO_COMPLETE_FUNCTIONAL_WITNESS"
+      ]
+    },
+    "K4": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE"
+      ],
+      "stops": [
+        "('coffee_container', 'soup_container', 'coffee_source')",
+        "NO_COMPLETE_FUNCTIONAL_WITNESS"
+      ]
+    },
+    "K5": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 2,
+      "astar_reached": 2,
+      "success": 2,
+      "outcome_correct": 0,
+      "outcomes": [
+        "SUCCESS",
+        "SUCCESS",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "",
+        "NO_COMPLETE_FUNCTIONAL_WITNESS"
+      ]
+    },
+    "K6": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 1,
+      "astar_reached": 1,
+      "success": 1,
+      "outcome_correct": 0,
+      "outcomes": [
+        "SUCCESS",
+        "OBJECT_DISCOVERY_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "",
+        "({'group': 'coffee_stirring', 'tool': 'object_0007', 'target': 'object_0001', 'subject_id'",
+        "NO_COMPLETE_FUNCTIONAL_WITNESS"
+      ]
+    },
+    "K7": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "OBJECT_DISCOVERY_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE"
+      ],
+      "stops": [
+        "('coffee_container', 'coffee_source', 'water_source')",
+        "('coffee_stirrer',)",
+        "('water_source',)"
+      ]
+    },
+    "K8": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 2,
+      "graph_compiled": 2,
+      "grounding_reached": 2,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE"
+      ],
+      "stops": [
+        "('soup_container',)",
+        "NO_COMPLETE_FUNCTIONAL_WITNESS",
+        "UNDECLARED_PARTICIPANT: operation_pairings[4] references ['Person']"
+      ]
+    },
+    "K9": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "OBJECT_DISCOVERY_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "({'group': 'coffee_stirring', 'tool': 'object_0006', 'target': 'object_0001', 'subject_id'",
+        "NO_COMPLETE_FUNCTIONAL_WITNESS"
+      ]
+    },
+    "K10": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 2,
+      "graph_compiled": 2,
+      "grounding_reached": 2,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "OBJECT_DISCOVERY_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "('coffee_source',)",
+        "DUPLICATE_OPERATION_PARTICIPANT: operation_pairings[1]",
+        "NO_COMPLETE_FUNCTIONAL_WITNESS"
+      ]
+    },
+    "K11": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 2,
+      "grounding_reached": 2,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE"
+      ],
+      "stops": [
+        "('coffee_source',)",
+        "('water_source',)",
+        "Predicate 'INSERTABLE_IN' in domain 'kitchen' expects object entity_kind in ('OBJECT',), g"
+      ]
+    },
+    "K12": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 2,
+      "graph_compiled": 2,
+      "grounding_reached": 2,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ],
+      "stops": [
+        "('coffee_source',)",
+        "NO_COMPLETE_FUNCTIONAL_WITNESS",
+        "No meaningful functional roles recovered"
+      ]
+    },
+    "L1": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "NO_GLOBAL_REGION_ASSIGNMENT",
+        "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement"
+      ]
+    },
+    "L2": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 2,
+      "graph_compiled": 2,
+      "grounding_reached": 2,
+      "complete_grounding": 1,
+      "astar_reached": 1,
+      "success": 1,
+      "outcome_correct": 0,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "SUCCESS"
+      ],
+      "stops": [
+        "",
+        "No meaningful functional roles recovered",
+        "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement"
+      ]
+    },
+    "L3": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 1,
+      "task_valid": 1,
+      "graph_compiled": 1,
+      "grounding_reached": 1,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "('REMOTE',)",
+        "No meaningful functional roles recovered"
+      ]
+    },
+    "L4": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 1,
+      "astar_reached": 1,
+      "success": 1,
+      "outcome_correct": 0,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "SUCCESS",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "",
+        "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement"
+      ]
+    },
+    "L5": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "NO_GLOBAL_REGION_ASSIGNMENT",
+        "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement"
+      ]
+    },
+    "L6": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE"
+      ],
+      "stops": [
+        "('CUP_SAUCER_SET',)",
+        "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement"
+      ]
+    },
+    "L7": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 2,
+      "graph_compiled": 2,
+      "grounding_reached": 2,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ],
+      "stops": [
+        "DUPLICATE_RELATION_PARTICIPANT: functional_relations[1]",
+        "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement"
+      ]
+    },
+    "L8": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 2,
+      "graph_compiled": 2,
+      "grounding_reached": 2,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "DUPLICATE_RELATION_PARTICIPANT: functional_relations[2]",
+        "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement"
+      ]
+    },
+    "L9": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 1,
+      "task_valid": 1,
+      "graph_compiled": 1,
+      "grounding_reached": 1,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "DUPLICATE_RELATION_PARTICIPANT: functional_relations[2]",
+        "NO_GLOBAL_REGION_ASSIGNMENT",
+        "No meaningful functional roles recovered"
+      ]
+    },
+    "L10": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "OBJECT_DISCOVERY_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE"
+      ],
+      "stops": [
+        "('CUP_SAUCER_SET', 'PERSONAL_CUP_SAUCER_REGION')",
+        "NO_GLOBAL_REGION_ASSIGNMENT"
+      ]
+    },
+    "W1": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 2,
+      "astar_reached": 2,
+      "success": 2,
+      "outcome_correct": 0,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "SUCCESS",
+        "SUCCESS"
+      ],
+      "stops": [
+        "",
+        "REACHES_TARGET, COMPATIBLE_WITH_TARGET, REACHES_TARGET(None, None), COMPATIBLE_WITH_TARGET"
+      ]
+    },
+    "W2": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 1,
+      "grounding_reached": 1,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ],
+      "stops": [
+        "Role 'MAIN_WORKBENCH_ZONE' is a planner context constant and must not appear as a G_F role",
+        "fastener, fastener"
+      ]
+    },
+    "W3": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "PLANNING_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "COMPATIBLE_WITH, COMPATIBLE_WITH(driver, fastener), COMPATIBLE_WITH(driver, fastener), COM",
+        "Deterministic symbolic search found no valid plan",
+        "fastener, fastener"
+      ]
+    },
+    "W4": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 2,
+      "grounding_reached": 2,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "Role 'MAIN_WORKBENCH_ZONE' is a planner context constant and must not appear as a G_F role",
+        "fastener, fastener"
+      ]
+    },
+    "W5": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 1,
+      "task_valid": 1,
+      "graph_compiled": 1,
+      "grounding_reached": 1,
+      "complete_grounding": 0,
+      "astar_reached": 1,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "PLANNING_FAILURE"
+      ],
+      "stops": [
+        "",
+        "UNDECLARED_PARTICIPANT: functional_relations[0] references ['target_assembly']",
+        "UNDECLARED_PARTICIPANT: operation_pairings[0] references ['robot_agent']"
+      ]
+    },
+    "W6": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 2,
+      "graph_compiled": 2,
+      "grounding_reached": 2,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        null,
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "",
+        "NO_VALID_TYPE_OBJECT_ASSIGNMENT",
+        "fastener, fastener"
+      ]
+    },
+    "W7": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 2,
+      "graph_compiled": 2,
+      "grounding_reached": 2,
+      "complete_grounding": 1,
+      "astar_reached": 1,
+      "success": 1,
+      "outcome_correct": 0,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "SUCCESS"
+      ],
+      "stops": [
+        "",
+        "V3 schema validation failed: ['workbench'] is too short",
+        "fastener, fastener"
+      ]
+    },
+    "W8": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 1,
+      "astar_reached": 1,
+      "success": 1,
+      "outcome_correct": 0,
+      "outcomes": [
+        "SUCCESS",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "",
+        "COMPATIBLE_WITH_TARGET, COMPATIBLE_WITH, REACHES_TARGET, COMPATIBLE_WITH_TARGET(None, None",
+        "fastener, fastener"
+      ]
+    },
+    "W9": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "graph_compiled": 3,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 3,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "PLANNING_FAILURE",
+        "PLANNING_FAILURE",
+        "PLANNING_FAILURE"
+      ],
+      "stops": [
+        ""
+      ]
+    },
+    "W10": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 2,
+      "graph_compiled": 2,
+      "grounding_reached": 2,
+      "complete_grounding": 0,
+      "astar_reached": 2,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "PLANNING_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "PLANNING_FAILURE"
+      ],
+      "stops": [
+        "",
+        "DUPLICATE_RELATION_PARTICIPANT: functional_relations[1]"
+      ]
+    }
+  },
+  "stop_reasons": {
+    "": 17,
+    "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement": 13,
+    "NO_COMPLETE_FUNCTIONAL_WITNESS": 12,
+    "fastener, fastener": 7,
+    "No meaningful functional roles recovered": 5,
+    "NO_GLOBAL_REGION_ASSIGNMENT": 4,
+    "('coffee_source',)": 3,
+    "Role 'MAIN_WORKBENCH_ZONE' is a planner context constant and must not appear as a G_F role in domain 'workshop'": 3,
+    "('water_source',)": 2,
+    "('coffee_source', 'water_source')": 2,
+    "('CUP_SAUCER_SET', 'PERSONAL_CUP_SAUCER_REGION')": 2,
+    "DUPLICATE_RELATION_PARTICIPANT: functional_relations[1]": 2,
+    "DUPLICATE_RELATION_PARTICIPANT: functional_relations[2]": 2,
+    "DUPLICATE_OPERATION_PARTICIPANT: operation_pairings[1]": 1,
+    "Predicate 'INSERTABLE_IN' in domain 'kitchen' expects object entity_kind in ('OBJECT',), got 'REGION'": 1,
+    "('soup_container', 'coffee_source')": 1,
+    "'Coffee_Powder'": 1,
+    "'soup_bowl'": 1,
+    "('coffee_container', 'soup_container', 'coffee_source')": 1,
+    "({'group': 'coffee_stirring', 'tool': 'object_0007', 'target': 'object_0001', 'subject_id': 'object_0007', 'object_id': ": 1,
+    "('coffee_stirrer',)": 1,
+    "('coffee_container', 'coffee_source', 'water_source')": 1,
+    "UNDECLARED_PARTICIPANT: operation_pairings[4] references ['Person']": 1,
+    "('soup_container',)": 1,
+    "({'group': 'coffee_stirring', 'tool': 'object_0006', 'target': 'object_0001', 'subject_id': 'object_0006', 'object_id': ": 1,
+    "('REMOTE',)": 1,
+    "('CUP_SAUCER_SET',)": 1,
+    "REACHES_TARGET, COMPATIBLE_WITH_TARGET, REACHES_TARGET(None, None), COMPATIBLE_WITH_TARGET(None, None), COMPATIBLE_WITH_": 1,
+    "Deterministic symbolic search found no valid plan": 1,
+    "COMPATIBLE_WITH, COMPATIBLE_WITH(driver, fastener), COMPATIBLE_WITH(driver, fastener), COMPATIBLE_WITH(driver, fastener)": 1,
+    "UNDECLARED_PARTICIPANT: operation_pairings[0] references ['robot_agent']": 1,
+    "UNDECLARED_PARTICIPANT: functional_relations[0] references ['target_assembly']": 1,
+    "NO_VALID_TYPE_OBJECT_ASSIGNMENT": 1,
+    "V3 schema validation failed: ['workbench'] is too short": 1,
+    "COMPATIBLE_WITH_TARGET, COMPATIBLE_WITH, REACHES_TARGET, COMPATIBLE_WITH_TARGET(None, None), COMPATIBLE_WITH(None, None)": 1
+  },
+  "compile_missing_reason_heads": {
+    "Sanitizer reported semantic incompleteness": 41,
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'position_control', 'function': 'Place the entertainmen": 2,
+    "Unresolved required relations: [{'raw_subject': 'fastening_tool', 'raw_phrase': 'The fastening tool is used to": 2,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_ingredient', 'entity_kind': 'OBJECT', 'function': 'Raw material f": 1,
+    "Unresolved required operations: [{'id': 'prepare_coffee', 'operation': 'Add ingredients and stir', 'participan": 1,
+    "Unresolved required relations: [{'id': 'refreshment_proximity', 'relation': 'is_near', 'participant_roles': ['": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'seat', 'entity_kind': 'OBJECT', 'function': 'A piece of furniture for ": 1,
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'relocate_control', 'function': 'move_entertainment_con": 1,
+    "Unresolved required operations: [{'id': 'place_control', 'operation': 'place', 'participant_roles': ['entertai": 1,
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'relocate_control', 'function': 'move', 'tool_role': 's": 1,
+    "Unresolved required relations: [{'id': 'control_accessible_to_chairs', 'relation': 'is accessible to', 'partic": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'entertainment_control', 'entity_kind": 1,
+    "Unresolved required operations: [{'id': 'place_refreshment_setting', 'operation': 'Place Refreshment Setting.'": 1,
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'position_control', 'function': 'move_to', 'tool_role':": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'seating', 'entity_kind': 'OBJECT', '": 1,
+    "Unresolved required operations: [{'id': 'place_entertainment_control', 'operation': 'move_and_place', 'partici": 1,
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'move_control', 'function': 'place entertainment_contro": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'accessible_surface', 'entity_kind': ": 1,
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'position_remote', 'function': 'place remote_control on": 1,
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'place_control', 'function': 'Place entertainment_contr": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'person', 'entity_kind': 'OBJECT', 'function': 'Receiver of refreshment": 1,
+    "Unresolved required operations: [{'id': 'operation_2', 'operation': 'place', 'participant_roles': ['entertainm": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'marked_location', 'entity_kind': 'FI": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'compatible_component', 'entity_kind': 'OBJECT', 'function': 'Provides ": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'compatible_component', 'entity_kind': 'OBJECT', 'function': 'The physi": 1,
+    "Unresolved required relations: [{'raw_subject': 'fastening_tool', 'raw_phrase': 'fastening_tool secures fasten": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'storage_structure', 'entity_kind': '": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'storage_unit', 'entity_kind': 'REGIO": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'storage_container', 'entity_kind': '": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'storage', 'entity_kind': 'FIXED_TARG": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'fastening_tool', 'entity_kind': 'OBJ": 1
+  },
+  "disabled_operation_codes": {
+    "UNINSTANTIABLE_MISSING_ROLE": 12,
+    "UNSUPPORTED_OPERATOR": 9
+  }
+}
