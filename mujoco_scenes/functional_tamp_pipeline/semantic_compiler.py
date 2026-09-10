@@ -429,6 +429,44 @@ def resolve_role_type_hypotheses(
     return build_role_type_hypotheses(domain, document, weak_mapper=_map_role)
 
 
+# ---------------------------------------------------------------------------
+# Can observing more of the scene still fix this?
+# ---------------------------------------------------------------------------
+#
+# Grounding grows only the observed scene graph, so a compile blocker is worth
+# taking to search exactly when more observation could settle it.  A role whose
+# canonical type is still provisional, or an existential slot with no object
+# bound yet, is that kind of blocker: inspecting a region may supply the
+# candidate that decides it.  An operation the runtime has no capability for, a
+# relation it can give no legal reading, a participant it holds in no form --
+# no amount of looking changes any of those, and enumerating assignment
+# hypotheses for such a graph cannot alter the reported outcome.  It only costs
+# time, and on the frozen distribution it cost minutes per trial.
+
+NON_SCENE_RESOLVABLE_BLOCKERS: tuple[tuple[str, str], ...] = (
+    ('unresolved_required_operations', 'REQUIRED_OPERATION_HAS_NO_RUNTIME_CAPABILITY'),
+    ('disabled_groups', 'EXPRESSED_OPERATION_DISABLED_DURING_COMPILATION'),
+)
+
+
+def classify_non_scene_resolvable_blockers(
+    trace: dict[str, Any],
+    groups: Sequence[Any],
+    unresolved_relations: Sequence[Any],
+    declared_physical_operations: int,
+) -> list[str]:
+    """Blockers that observing more of the scene cannot resolve."""
+    blockers: list[str] = []
+    if declared_physical_operations and not groups:
+        blockers.append('NO_EXPRESSED_PHYSICAL_OPERATION_SURVIVED_COMPILATION')
+    for key, code in NON_SCENE_RESOLVABLE_BLOCKERS:
+        if trace.get(key):
+            blockers.append(code)
+    if unresolved_relations:
+        blockers.append('REQUIRED_RELATION_HAS_NO_CANONICAL_INTERPRETATION')
+    return sorted(dict.fromkeys(blockers))
+
+
 def _minimum_distinct_objects(role: dict) -> int | None:
     """How many separate physical things a role needs at minimum.
 
@@ -1839,6 +1877,8 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         declared_physical_operations=declared_physical_operations,
         unresolved_relations=executable_unresolved_relations,
     )
+    non_scene_resolvable = classify_non_scene_resolvable_blockers(
+        trace, groups, executable_unresolved_relations, declared_physical_operations)
     all_precond_prov = [
         p for g_trace in trace['groups']
         for p in g_trace.get('preconditions_provenance', [])
@@ -1864,6 +1904,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             'online_executable_contract_complete': executable_complete,
             'contract_missing_reasons': contract_missing_reasons,
             'executable_contract_missing_reasons': executable_missing_reasons,
+            'non_scene_resolvable_blockers': non_scene_resolvable,
             'is_v2_specification': is_v2_document(raw),
             'is_v3_specification': is_v3_document(raw),
             'precondition_provenance': all_precond_prov,

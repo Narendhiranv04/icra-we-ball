@@ -777,11 +777,41 @@ def _materialize_type_hypothesis(
     )
 
 
+# Deterministic work bounds.  Both are backstops behind real pruning, not
+# substitutes for it: with prefix pruning in place no frozen trial comes near
+# either, and exhausting one is recorded in the result rather than swallowed.
+PROVISIONAL_TYPE_HYPOTHESIS_BUDGET = 4096
+JOINT_ASSIGNMENT_PREFIX_BUDGET = 2_000_000
+
+
+def _non_scene_resolvable_blockers(graph_f: FunctionalRequirementGraph) -> tuple[str, ...]:
+    """Compile blockers no amount of further observation can settle."""
+    metadata = getattr(graph_f, "metadata", None) or {}
+    return tuple(metadata.get("non_scene_resolvable_blockers") or ())
+
+
 def _ground_provisional_graph(
     graph_f: FunctionalRequirementGraph,
     graph_o: ObservedSceneGraph,
     domain_context: dict[str, Any] | None,
 ) -> GraphGroundingResult:
+    blockers = _non_scene_resolvable_blockers(graph_f)
+    if blockers:
+        # Every reading of the provisional types would be scored against the
+        # same non-executable contract, so the cross-product cannot change what
+        # is reported -- it only costs time, and it cost minutes per trial on
+        # graphs whose operations had all been rejected at compile time.
+        return GraphGroundingResult(
+            status="INFEASIBLE" if (domain_context or {}).get("search_exhausted", True) else "INCOMPLETE",
+            complete=False,
+            unresolved_constraints=tuple(blockers),
+            evidence={
+                "non_scene_resolvable_blockers": list(blockers),
+                "type_hypotheses_evaluated": 0,
+                "skipped_reason": "OBSERVATION_CANNOT_RESOLVE_THESE_BLOCKERS",
+            },
+            failure_kind="FUNCTIONAL_ASSIGNMENT_FAILURE",
+        )
     provisional = [
         (name, tuple(role.canonical_role_candidates))
         for name, role in sorted(graph_f.nodes.items())
@@ -789,7 +819,24 @@ def _ground_provisional_graph(
     ]
     candidates = []
     failures = []
+    hypotheses_examined = 0
     for types in product(*[domain for _, domain in provisional]):
+        hypotheses_examined += 1
+        if hypotheses_examined > PROVISIONAL_TYPE_HYPOTHESIS_BUDGET:
+            # Recorded, never silent: the readings are enumerated in a fixed
+            # order, so stopping is deterministic, and the result says that the
+            # question was left open rather than answered.
+            return GraphGroundingResult(
+                status="INCOMPLETE",
+                complete=False,
+                unresolved_constraints=("PROVISIONAL_TYPE_SEARCH_BUDGET_EXHAUSTED",),
+                evidence={
+                    "type_hypotheses_evaluated": hypotheses_examined - 1,
+                    "provisional_type_hypothesis_budget": PROVISIONAL_TYPE_HYPOTHESIS_BUDGET,
+                    "provisional_roles": [name for name, _ in provisional],
+                },
+                failure_kind="FUNCTIONAL_ASSIGNMENT_FAILURE",
+            )
         tau_nodes = dict(zip((name for name, _ in provisional), types))
         rename = {name: tau_nodes.get(name, name) for name in graph_f.nodes}
         relation_options = []
@@ -944,6 +991,15 @@ def ground_graph(
         "individual_candidates_sufficient": individual_candidates_sufficient,
     }
 
+    def _search_evidence() -> dict[str, Any]:
+        evidence = {"joint_assignment_prefixes_examined": prefixes_examined}
+        if prefix_diagnostics:
+            evidence["pruned_prefix_diagnostics"] = prefix_diagnostics[:20]
+        if budget_exhausted:
+            evidence["joint_assignment_search_budget_exhausted"] = True
+            evidence["joint_assignment_prefix_budget"] = JOINT_ASSIGNMENT_PREFIX_BUDGET
+        return evidence
+
     if missing_roles_definitive:
         return GraphGroundingResult(
             status="INFEASIBLE" if search_exhausted else "INCOMPLETE",
@@ -1024,6 +1080,120 @@ def ground_graph(
     # Generate all role count configurations
     all_count_configs = list(product(*[role_count_options[r] for r in role_names]))
 
+    # ------------------------------------------------------------------
+    # Ordered enumeration with prefix pruning
+    # ------------------------------------------------------------------
+    # The joint assignment used to be built as a full Cartesian product of
+    # per-role candidate combinations and only then checked, so every
+    # constraint violation was discovered after the whole tuple existed.  A
+    # scene with a dozen candidates for each of six roles therefore paid for
+    # millions of tuples that a two-role prefix already ruled out.
+    #
+    # The roles are still visited in the same order and each role's
+    # combinations are still offered in the same order, so the first complete
+    # assignment found -- the one that gets reported -- is unchanged.  A prefix
+    # is abandoned only when a constraint over the roles already assigned is
+    # definitively FALSE, which every completion of that prefix would have hit
+    # in turn.  UNKNOWN never prunes, so nothing that could still be settled by
+    # relational or physical evidence is lost.
+    group_verdicts: dict[tuple[Any, ...], tuple[str, list[dict[str, Any]], list[dict[str, Any]]]] = {}
+    prefix_diagnostics: list[dict[str, Any]] = []
+    prefixes_examined = 0
+    budget_exhausted = False
+
+    def _as_list(value: Any) -> list[str]:
+        return [value] if isinstance(value, str) else list(value)
+
+    def _required_distinct_tools(grp, target_list: list[str]) -> int:
+        source_role = roles[grp.tool_role]
+        return (
+            min(source_role.minimum_count, len(target_list))
+            if source_role.binding_policy == "DISTINCT" else 1
+        )
+
+    def _group_verdict(grp, tool_list, target_list, context_list):
+        required = _required_distinct_tools(grp, target_list)
+        key = (grp.id, tuple(tool_list), tuple(target_list),
+               tuple(context_list) if context_list is not None else None, required)
+        if key not in group_verdicts:
+            group_verdicts[key] = _evaluate_operation_group(
+                grp, list(tool_list), list(target_list), graph_o,
+                list(context_list) if context_list is not None else None,
+                required_distinct_tools=required,
+            )
+        return group_verdicts[key]
+
+    def _prefix_impossible(partial: dict[str, Any], assigned: set[str]) -> bool:
+        for grp in graph_f.operation_groups:
+            needed = {grp.tool_role, grp.target_role}
+            if grp.context_role:
+                needed.add(grp.context_role)
+            if not needed <= assigned or grp.tool_role not in roles:
+                continue
+            status, diagnostics, _ = _group_verdict(
+                grp,
+                _as_list(partial[grp.tool_role]),
+                _as_list(partial[grp.target_role]),
+                _as_list(partial[grp.context_role]) if grp.context_role else None,
+            )
+            if status == "FALSE":
+                prefix_diagnostics.extend(diagnostics[:2])
+                return True
+        for relation in graph_f.relations:
+            if (relation.subject_role, relation.predicate, relation.object_role) in operation_managed_edges:
+                continue
+            if relation.subject_role not in assigned or relation.object_role not in assigned:
+                continue
+            for s_id in _as_list(partial[relation.subject_role]):
+                for o_id in _as_list(partial[relation.object_role]):
+                    if s_id == o_id:
+                        continue
+                    observed = graph_o.get_relation(relation.predicate, s_id, o_id)
+                    status = observed.status if observed else "UNKNOWN"
+                    if status == "UNKNOWN":
+                        continue
+                    if (status == "FALSE") == bool(relation.expected):
+                        return True
+        return False
+
+    def _ordered_combos(role_combos_for_config):
+        """Yield the same tuples product() would, minus the impossible prefixes."""
+        nonlocal prefixes_examined, budget_exhausted
+        partial: dict[str, Any] = {}
+        chosen: list[Any] = []
+        assigned: set[str] = set()
+
+        def walk(index: int, used: frozenset[str]):
+            nonlocal prefixes_examined, budget_exhausted
+            if index == len(role_names):
+                yield tuple(chosen)
+                return
+            r_name = role_names[index]
+            role = roles[r_name]
+            disjoint = role.entity_kind == "OBJECT" and not role.shared
+            for selected_tagged in role_combos_for_config[index]:
+                ids = [item[0] for item in selected_tagged]
+                if disjoint and any(instance in used for instance in ids):
+                    continue
+                if budget_exhausted:
+                    return
+                prefixes_examined += 1
+                if prefixes_examined > JOINT_ASSIGNMENT_PREFIX_BUDGET:
+                    budget_exhausted = True
+                    return
+                partial[r_name] = ids[0] if len(ids) == 1 else list(ids)
+                chosen.append(selected_tagged)
+                assigned.add(r_name)
+                if not _prefix_impossible(partial, assigned):
+                    yield from walk(index + 1, used | set(ids) if disjoint else used)
+                chosen.pop()
+                assigned.discard(r_name)
+                partial.pop(r_name, None)
+                if budget_exhausted:
+                    return
+
+        yield from walk(0, frozenset())
+
     unsatisfied_relations_recorded: list[dict[str, Any]] = []
     unresolved_relations_recorded: list[dict[str, Any]] = []
     valid_assignments: list[tuple[dict[str, Any], dict[str, list[dict[str, Any]]], dict[str, Any]]] = []
@@ -1049,7 +1219,7 @@ def ground_graph(
         if any(len(combos) == 0 for combos in role_combos_for_config):
             continue
 
-        for combo in product(*role_combos_for_config):
+        for combo in _ordered_combos(role_combos_for_config):
             assignment_map: dict[str, Any] = {}
             used_instances: set[str] = set()
             conflict = False
@@ -1106,17 +1276,8 @@ def ground_graph(
                 tool_list = [tools] if isinstance(tools, str) else list(tools)
                 target_list = [targets] if isinstance(targets, str) else list(targets)
                 context_list = ([contexts] if isinstance(contexts, str) else list(contexts)) if contexts is not None else None
-                source_role = roles[grp.tool_role]
-                required_distinct_tools = (
-                    min(source_role.minimum_count, len(target_list))
-                    if source_role.binding_policy == "DISTINCT"
-                    else 1
-                )
-
-                grp_stat, grp_diags, grp_matching = _evaluate_operation_group(
-                    grp, tool_list, target_list, graph_o, context_list,
-                    required_distinct_tools=required_distinct_tools,
-                )
+                grp_stat, grp_diags, grp_matching = _group_verdict(
+                    grp, tool_list, target_list, context_list)
                 if grp_stat == "FALSE":
                     combo_status = "FALSE"
                     unsatisfied_relations_recorded.extend(grp_diags)
@@ -1313,7 +1474,8 @@ def ground_graph(
             unsatisfied_relations=(),
             unresolved_constraints=(),
             evidence={"valid_assignment_count": len(valid_assignments), "binding_provenance": chosen_provenance,
-                      "operation_binding_complete": True, **plausibility_evidence},
+                      "operation_binding_complete": True, **plausibility_evidence,
+                      **_search_evidence()},
         )
 
     if not search_exhausted:
@@ -1334,14 +1496,21 @@ def ground_graph(
                 "unresolved_relations": unresolved_relations_recorded,
                 "unsatisfied_relations": unsatisfied_relations_recorded,
                 **plausibility_evidence,
+                **_search_evidence(),
             },
             failure_kind=None,
         )
 
     # Search is exhausted: check if failure was due to unresolved UNKNOWN evidence vs definitive FALSE
-    if has_unknown_combination or missing_roles_potential or unresolved_relations_recorded:
+    # An exhausted work budget is not a verdict.  It means the enumeration was
+    # stopped before it could settle the question, so the honest report is the
+    # unsettled one rather than a definitive infeasibility.
+    if (has_unknown_combination or missing_roles_potential
+            or unresolved_relations_recorded or budget_exhausted):
         unres = list(missing_roles_potential)
         unres.extend(r.get("predicate", "UNKNOWN") for r in unresolved_relations_recorded)
+        if budget_exhausted:
+            unres.append("JOINT_ASSIGNMENT_SEARCH_BUDGET_EXHAUSTED")
         return GraphGroundingResult(
             status="INCOMPLETE",
             complete=False,
@@ -1354,6 +1523,7 @@ def ground_graph(
                 "search_exhausted": True,
                 "unresolved_relations": unresolved_relations_recorded,
                 **plausibility_evidence,
+                **_search_evidence(),
             },
             failure_kind="FUNCTIONAL_ASSIGNMENT_FAILURE",
         )
@@ -1375,6 +1545,7 @@ def ground_graph(
             "search_exhausted": True,
             "unsatisfied_relations": unsatisfied_relations_recorded,
             **plausibility_evidence,
+            **_search_evidence(),
         },
         failure_kind=(
             "FUNCTIONAL_ASSIGNMENT_FAILURE"
@@ -1406,9 +1577,19 @@ def ground_verified_candidate_subgraph(graph_f, graph_o, context=None):
             candidate = project_functional_graph_to_roles(graph_f, keep)
             verified = ground_graph(candidate, graph_o, context)
             if verified.complete and verified.assignment:
+                # The kept subset's own plausibility says nothing about the task
+                # that was asked for.  Reporting it let a trial whose fastener
+                # had no candidate at all be attributed to joint assignment
+                # rather than to discovery, because the projection that dropped
+                # the fastener naturally found every remaining role sufficient.
+                original = full.evidence or {}
                 return replace(verified, complete=False, status='PARTIAL_VERIFIED_GROUNDING',
                     missing_roles=tuple(sorted(set(names) - keep)),
                     failure_kind=full.failure_kind,
                     evidence={**verified.evidence, 'candidate_roles': list(selected),
-                              'original_grounding_status': full.status, 'search_exhausted': True})
+                              'original_grounding_status': full.status, 'search_exhausted': True,
+                              'projected_role_plausibility': verified.evidence.get('role_plausibility'),
+                              'role_plausibility': original.get('role_plausibility'),
+                              'individual_candidates_sufficient': original.get(
+                                  'individual_candidates_sufficient')})
     return full
