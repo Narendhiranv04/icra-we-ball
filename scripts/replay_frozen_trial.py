@@ -206,7 +206,7 @@ def main() -> int:
     # by construction -- it scored a tautology and credited behaviour it had not
     # measured.  Not claiming completion is reported separately, as
     # false_completion; this asks whether an infeasibility conclusion was reached.
-    from mujoco_scenes.functional_tamp_pipeline.outcome_classifier import outcome_is_correct
+    from mujoco_scenes.evaluation_outcome import outcome_is_correct
     row["outcome_correct"] = outcome_is_correct(
         gt_feasible=bool(feas),
         task_satisfied=bool(row.get("gt_full_task_satisfied")),

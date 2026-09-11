@@ -9,7 +9,7 @@ shared rule and the refutation, so the tautology cannot come back.
 """
 from __future__ import annotations
 
-from mujoco_scenes.functional_tamp_pipeline.outcome_classifier import (
+from mujoco_scenes.evaluation_outcome import (
     INFEASIBILITY_CONCLUDED_STATUSES,
     outcome_is_correct,
 )
@@ -48,6 +48,8 @@ def test_both_scorers_use_this_one_rule():
                    "scripts/evaluate_heldout_matrix.py"):
         source = (repo / script).read_text()
         assert "outcome_is_correct" in source, f"{script} does not use the shared rule"
+        assert "evaluation_outcome" in source, (
+            f"{script} must take the rule from the scoring layer, not the pipeline")
         assert "PLANNING_PROVEN_INFEASIBLE" not in source, (
             f"{script} still carries its own copy of the status list")
         assert '"NO_MEANINGFUL_CANDIDATE_PLAN",\n' not in source, (

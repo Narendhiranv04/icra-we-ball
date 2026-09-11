@@ -194,9 +194,7 @@ def evaluate_all_variants(
             # Correctness determination (Section U)
             # One shared rule with the frozen-replay scorer, so the same
             # behaviour cannot score differently offline and live.
-            from mujoco_scenes.functional_tamp_pipeline.outcome_classifier import (
-                outcome_is_correct,
-            )
+            from mujoco_scenes.evaluation_outcome import outcome_is_correct
             outcome_correct = outcome_is_correct(
                 gt_feasible=bool(is_feasible), task_satisfied=bool(full_task_sat),
                 false_completion=bool(false_completion),

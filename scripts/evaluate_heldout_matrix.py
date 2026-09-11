@@ -155,9 +155,7 @@ def evaluate_heldout_variants(
             # while omitting INFEASIBLE, so an actual infeasibility conclusion
             # scored as wrong here and a partial plan scored as right.  Held-out
             # and main numbers were therefore not comparable.
-            from mujoco_scenes.functional_tamp_pipeline.outcome_classifier import (
-                outcome_is_correct,
-            )
+            from mujoco_scenes.evaluation_outcome import outcome_is_correct
             outcome_correct = outcome_is_correct(
                 gt_feasible=bool(is_feasible), task_satisfied=bool(full_task_sat),
                 false_completion=bool(false_completion),
