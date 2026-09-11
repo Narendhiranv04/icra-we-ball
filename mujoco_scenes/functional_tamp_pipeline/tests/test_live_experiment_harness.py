@@ -240,3 +240,34 @@ def test_the_runner_will_not_start_without_being_told_what_kind_of_run_it_is():
         capture_output=True, text=True, cwd=str(REPO))
     assert result.returncode != 0
     assert "--run-type" in (result.stderr + result.stdout)
+
+
+def test_the_live_sampler_is_the_one_the_offline_numbers_were_measured_on():
+    """A live run under a different sampler is not the experiment that was measured.
+
+    Every offline number for this pipeline comes from the archived 3x32 V3
+    distribution.  If the live run samples differently, a drop cannot be
+    attributed to the pipeline rather than to the sampler, and the offline
+    numbers stop predicting anything.  So the runner's sampler is pinned to the
+    archived manifest's own record of how those responses were drawn.
+    """
+    module = _runner_module()
+    manifest = REPO / module.FROZEN_DISTRIBUTION
+    if not manifest.is_file():
+        pytest.skip(f"archived distribution not present: {module.FROZEN_DISTRIBUTION}")
+    frozen = json.loads(manifest.read_text())["model_config"]
+    sampler = module.SAMPLER
+    assert sampler["TAMP_FM_TEMPERATURE"] == str(frozen["temperature"])
+    assert sampler["TAMP_FM_TOP_P"] == str(frozen["top_p"])
+    assert sampler["TAMP_FM_TOP_K"] == str(frozen["top_k"])
+    assert sampler["TAMP_FM_PRESENCE_PENALTY"] == str(frozen["presence_penalty"])
+    assert sampler["TAMP_FM_MAX_TOKENS"] == str(frozen["max_tokens"])
+    assert sampler["TAMP_FM_SCHEMA_VERSION"] == str(frozen["schema_version"])
+    assert (sampler["TAMP_FM_ENABLE_THINKING"] == "true") is bool(frozen["thinking"])
+
+
+def test_the_repetitions_are_not_ten_copies_of_one_greedy_draw():
+    """The 10x design measures sampling variance, which needs a sampler that varies."""
+    module = _runner_module()
+    assert float(module.SAMPLER["TAMP_FM_TEMPERATURE"]) > 0.0, (
+        "a greedy sampler makes ten repetitions ten copies of one draw")

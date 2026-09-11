@@ -71,15 +71,28 @@ def _model_revision(record: dict) -> str:
 # Everything that changes what the model returns, set explicitly rather than
 # inherited.  A shell variable must not be able to alter an experiment quietly,
 # so each is passed and each is recorded, and the two come from one dict.
+#
+# The values are not chosen here: they are the sampler of the archived 3x32 V3
+# distribution (benchmark_reports/v3_qwen_distribution_3x32_20260910T053937,
+# model_config), which is the configuration every offline measurement of this
+# pipeline was made against.  Running live under a different sampler would make
+# the live numbers unattributable -- a drop could be the pipeline or could be
+# the sampler, with no way to tell them apart.  In particular thinking is on and
+# the temperature is 0.6: the repetitions exist to measure that variance, and a
+# greedy sampler would make ten repetitions ten copies of one draw.
+# test_the_live_sampler_is_the_one_the_offline_numbers_were_measured_on pins
+# these against the archived manifest.
+FROZEN_DISTRIBUTION = (
+    "benchmark_reports/v3_qwen_distribution_3x32_20260910T053937/collection_manifest.json")
 SAMPLER = {
     "TAMP_FM_MAX_TOKENS": "24000",
     "TAMP_FM_SCHEMA_VERSION": "3",
-    "TAMP_FM_TEMPERATURE": "0.0",
-    "TAMP_FM_TOP_P": "1.0",
-    "TAMP_FM_TOP_K": "-1",
-    "TAMP_FM_PRESENCE_PENALTY": "0.0",
+    "TAMP_FM_TEMPERATURE": "0.6",
+    "TAMP_FM_TOP_P": "0.95",
+    "TAMP_FM_TOP_K": "20",
+    "TAMP_FM_PRESENCE_PENALTY": "1.0",
     "TAMP_FM_REPETITION_PENALTY": "1.0",
-    "TAMP_FM_ENABLE_THINKING": "false",
+    "TAMP_FM_ENABLE_THINKING": "true",
     "TAMP_FM_VIEWS": "3",
 }
 
