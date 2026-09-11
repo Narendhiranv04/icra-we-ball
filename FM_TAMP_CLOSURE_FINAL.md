@@ -340,10 +340,25 @@ impossible. Those are genuinely different achievements, and they are now reporte
 separately — the safety property as the false-completion count (0/96, unchanged),
 the competence property as outcome-correct (7/36).
 
-Both scorers now call one function,
-`outcome_classifier.outcome_is_correct`, and a test asserts neither keeps a
-private copy of the status list, so offline and live can no longer score the same
-behaviour differently.
+There turned out to be a **third** definition, in the held-out matrix evaluator,
+broken in the opposite direction: it credited `NO_MEANINGFUL_CANDIDATE_PLAN` — a
+partial plan — while omitting `INFEASIBLE` entirely, so an actual infeasibility
+conclusion scored as *wrong* there and a partial plan scored as *right*. Held-out
+and main-benchmark numbers were therefore never comparable.
+
+Enumerating what the pipeline actually emits also shows that five of the statuses
+named across those whitelists — `NO_VALID_GROUNDING`,
+`NO_VALID_COMPLETE_ASSIGNMENT`, `PLANNING_PROVEN_INFEASIBLE`,
+`TASK_REJECTED_UNSUPPORTED`, `NO_SEARCH_REGIONS_DECLARED` — are **never produced
+by any code path**. In practice the rule reduces to `{INFEASIBLE,
+EXHAUSTED_NO_VALID_GROUNDING}`, and all 7 credited trials are `INFEASIBLE`. The
+dead names are retained in the canonical set so a future path that does emit them
+is scored correctly, but they were carrying no weight.
+
+All three scorers now call one function,
+`outcome_classifier.outcome_is_correct`, and tests assert that none keeps a
+private copy of the status list and that a partial plan is never credited as a
+conclusion.
 
 **This is a −29-trial correction to a headline number with no change to the
 system.** It is reported because a 74% that cannot be reproduced by the live

@@ -149,20 +149,19 @@ def evaluate_heldout_variants(
             cand_sat = cand_stats.get("satisfied_goals", 0)
             cand_cov = (cand_sat / cand_total) if cand_total > 0 else 0.0
 
-            if is_feasible:
-                outcome_correct = bool(full_task_sat)
-            else:
-                outcome_correct = bool(
-                    not full_task_sat
-                    and not false_completion
-                    and pipeline_res.status in (
-                        "NO_VALID_GROUNDING",
-                        "NO_MEANINGFUL_CANDIDATE_PLAN",
-                        "TASK_REJECTED_UNSUPPORTED",
-                        "NO_SEARCH_REGIONS_DECLARED",
-                        "EXHAUSTED_NO_VALID_GROUNDING",
-                    )
-                )
+            # One shared rule with the main evaluator and the frozen-replay
+            # scorer.  This file used to carry a third definition that credited
+            # NO_MEANINGFUL_CANDIDATE_PLAN -- a partial plan, not a conclusion --
+            # while omitting INFEASIBLE, so an actual infeasibility conclusion
+            # scored as wrong here and a partial plan scored as right.  Held-out
+            # and main numbers were therefore not comparable.
+            from mujoco_scenes.functional_tamp_pipeline.outcome_classifier import (
+                outcome_is_correct,
+            )
+            outcome_correct = outcome_is_correct(
+                gt_feasible=bool(is_feasible), task_satisfied=bool(full_task_sat),
+                false_completion=bool(false_completion),
+                pipeline_status=pipeline_res.status)
 
             manifest: Dict[str, Any] = {}
             man_p = run_dir / "run_manifest.json"
