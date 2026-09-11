@@ -72,7 +72,19 @@ every spawned trial and recorded in the frozen identity.
 **3. The seeded detector path was not the path taken.** `semantic_grounding.py`
 constructs YOLO-World twice, and `MUJOCO_SEMANTIC_PROCESS_ISOLATION` defaults to
 `"0"`, so the in-process constructor is what nearly every run uses. Only the
-isolated worker had been seeded.
+isolated worker had been seeded. A test now walks every function that builds a
+detector and requires the seeding call to come first in that same function, so a
+fifth construction site cannot be added without one.
+
+**4. Confirmed evidence was discarded by a weaker observation.** See §C.3 -- this
+is the one that actually moved outcomes.
+
+**5. The two runners pinned different environments.** The replay driver pinned
+`PYTHONHASHSEED`, `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `TOKENIZERS_PARALLELISM`
+and `MUJOCO_GL`; the live runner pinned none of them, so the experiment would
+have run under a configuration no offline measurement was ever made under. Both
+now take `REPRODUCIBLE_CHILD_ENV` from one dict, and the identity records every
+entry.
 
 ### C.2 The residual, and why it is not closed
 
@@ -97,12 +109,46 @@ flips with it. `osmesa` CPU rendering is unavailable in this environment
 (`AttributeError: 'NoneType' object has no attribute 'glGetError'`), so it cannot
 be eliminated here.
 
-### C.3 Consequence for the experiment
+### C.3 What actually stabilised it
 
-The 10x32 therefore measures **end-to-end stochastic robustness** -- FM sampling
-*and* residual perception variance -- not FM-only sampling robustness. That is a
-property of the system, now characterised rather than unknown, and it must be
-stated as such in the paper.
+The renderer jitter is real and unfixed, but it turned out not to be sufficient
+on its own to move a trial's outcome. A fourth defect was doing that.
+
+Precedence between an authoritative cached observation and a later, weaker
+re-observation was written as `a.get(k) or b.get(k) or c.get(k)`. For a
+container-valued field that is wrong: an observation validated with
+`reason_codes == []` is reporting that it found **no problems**, and an empty
+list is falsy, so the chain fell through to a later observation's complaints. A
+belief that had been checked and confirmed could therefore be discarded by one
+that had not -- and `SEMANTIC_LABEL_UNKNOWN` on the weak observation is a
+lack-of-evidence code, which made the confirmed hypotheses vanish entirely.
+
+`_first_declared` now takes the value from the first source that actually
+declares the key. Applied to `reason_codes` and `alternatives` only: `status`
+and `canonical_label` are scalars where `None` genuinely means absent, so
+truthiness is correct there and was left alone.
+
+With that fixed, a marginal confidence shift from the renderer no longer
+propagates into a different outcome, because the retained belief survives it.
+
+### C.4 Measured outcome-level stability
+
+<!--STABILITY-->
+
+### C.5 Consequence for the experiment
+
+Renderer output is not bitwise reproducible and cannot be made so in this
+environment. Three renders of one identical scene, same state and camera, give
+three different images (mean pixel 166.008038194 / 166.007935113 /
+166.008051215).
+
+What matters for the experiment is whether that reaches the *outcome*, and with
+evidence retention fixed it no longer does on the trial where it used to. The
+honest statement is therefore narrow and empirical, not a guarantee: pixel-level
+reproducibility is absent, outcome-level reproducibility is measured across
+repeated full replays, and the measured figure is in §C.4. Any residual
+instability is end-to-end -- FM sampling *and* perception -- not FM-only, and the
+paper should say so.
 
 ---
 
