@@ -14,7 +14,43 @@ Emitted by `scripts/freeze_method_identity.py` into `METHOD_FREEZE.json`; every
 field is computed from the artifact it describes, so the freeze cannot silently
 stop describing the tree it names.
 
-<!--IDENTITY-->
+```
+git sha                     8805a56f32a8c31ec1404b55070e4f6fc6dd7759
+branch                      vlm-testing-pipeline
+committed                   2026-09-12T04:44:58+05:30
+identity_sha256             875478341c4b5e8cda994e9959cfd519af9404c62f781fc04453d35558126d26
+
+prompt_and_schema_sha256    bfd7433e19a1dd81d89e7ec50446b7cf5599304579663ba1bd9b0803ca25a521
+capability_registry_sha256  98055ba6579345151cd1b7a9ccea32fc2ad47dd0f51f51cf40e3eb9cdb01aef7
+runtime_ontology_sha256     4fee971c3f494023adadc94fa350d3d9e27d81dbe41c001c2b8fc1d20bf49d41
+schema_version              3
+
+workshop_config_sha256      9b847075051a2d147dfcd628034eb59c16a1311564eed08ef77058b76d12a889
+workshop_geometry_sha256    3e41034f4765325856d85a05e0d0f161dfad4e89100c03868e03c992662524e9
+semantic_grounding_sha256   7e5a57e631b21374f1ad8f6fd00cac9e6ec6987302801b7a7a5e466bd69dc957
+determinism_module_sha256   a8667ce9e27097799859e1d104ef27369de92e4102b96fe09b68f9820578545a
+
+evaluator_module_sha256     e0b7178ee42d3b817751d8b03f7ee1b34341afe8e859b4596ddd2088805f5ba3
+completion_claimed          ['ACTION_SEQUENCE_READY']
+infeasibility_concluded     ['EXHAUSTED_NO_VALID_GROUNDING', 'INFEASIBLE', 'NO_VALID_COMPLETE_ASSIGNMENT', 'PLANNING_PROVEN_INFEASIBLE']
+
+benchmark grid              32 variants {'kitchen': 12, 'living_room': 10, 'workshop': 10}
+```
+
+Reproducible child environment, passed to every spawned trial by both the
+replay driver and the live runner (these cannot be set in process -- the
+interpreter reads `PYTHONHASHSEED` at startup and the numeric libraries read the
+thread counts when they first load):
+
+```
+{
+  "MKL_NUM_THREADS": "2",
+  "MUJOCO_GL": "egl",
+  "OMP_NUM_THREADS": "2",
+  "PYTHONHASHSEED": "0",
+  "TOKENIZERS_PARALLELISM": "false"
+}
+```
 
 ---
 
@@ -95,7 +131,10 @@ add up; §E.1 explains the defect that produced it.
 
 ## C. Determinism
 
-<!--DETERMINISM-->
+**Outcome-level reproducibility is achieved. Pixel-level reproducibility is
+not, and cannot be in this environment.** Five defects were found; the fifth is
+the one that connected the renderer to the results. Detail in §C.1-C.5, with the
+measured 96-row proof in §C.4.
 
 ### C.1 What was wrong, and what each fix bought
 
@@ -424,7 +463,17 @@ python -m pytest mujoco_scenes/functional_tamp_pipeline/tests mujoco_scenes/test
 python scripts/audit_no_gt_leakage.py      # must print FINDINGS: 0
 ```
 
-<!--TESTS-->
+```
+2221 passed, 49 failed, 12 errors, 3 skipped
+FINDINGS: 0
+```
+
+49 failed and 12 errors are pre-existing; §F.1 triages every group. Failures
+went 52 -> 49 across this pass, exactly the three stale Workshop assertions
+fixed, and passes went 2203 -> 2221, exactly the tests added. **No regressions.**
+
+No warning in any class indicating a nondeterministic operation, an algorithm
+fallback, NaN, invalid geometry, overflow, or precision loss.
 
 ### F.1 Pre-existing failures, triaged
 
@@ -461,7 +510,19 @@ guard invariants this experiment depends on:
 Frozen. Every field is recorded in the identity, and the runner aborts if any of
 it differs from what an existing output root was started with.
 
-<!--SAMPLER-->
+```
+{
+  "TAMP_FM_ENABLE_THINKING": "true",
+  "TAMP_FM_MAX_TOKENS": "28000",
+  "TAMP_FM_PRESENCE_PENALTY": "1.0",
+  "TAMP_FM_REPETITION_PENALTY": "1.0",
+  "TAMP_FM_SCHEMA_VERSION": "3",
+  "TAMP_FM_TEMPERATURE": "0.6",
+  "TAMP_FM_TOP_K": "20",
+  "TAMP_FM_TOP_P": "0.95",
+  "TAMP_FM_VIEWS": "3"
+}
+```
 
 Thinking is **on** and temperature is **0.6**: the repetitions exist to measure
 sampling variance, and a greedy sampler would make ten repetitions ten copies of
