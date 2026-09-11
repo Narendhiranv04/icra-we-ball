@@ -225,6 +225,12 @@ class YOLOWorldSemanticDetector:
         if self.process_isolation:
             self._start_worker()
         else:
+            # The in-process path, which is the default: process isolation is
+            # opt-in via MUJOCO_SEMANTIC_PROCESS_ISOLATION.  Seeding only the
+            # isolated worker left the path almost every run actually takes
+            # completely unseeded.
+            from mujoco_scenes.determinism import enable_deterministic_inference
+            self.determinism = enable_deterministic_inference()
             try:
                 from ultralytics import YOLOWorld
             except ImportError as error:
