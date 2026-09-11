@@ -1,7 +1,8 @@
 # FM-Guided Functional TAMP — Final Closure Report
 
-Frozen-replay evidence at `HEAD`, measured with **zero FM calls** over the archived
-3×32 V3 response distribution
+Frozen-replay evidence at `HEAD` from a **single clean replay** (`--workers 2`,
+quiet machine, 96/96 rows, zero `HARNESS_FAILURE`), measured with **zero FM
+calls** over the archived 3×32 V3 response distribution
 (`benchmark_reports/v3_qwen_distribution_3x32_20260910T053937`, 96 raw contracts,
 model `qwen35-9b`). Every number below is read from the evaluator's own per-trial
 records; none is hand-entered.
@@ -12,7 +13,7 @@ records; none is hand-entered.
 
 | Metric | Value |
 | :--- | :--- |
-| Feasible-trial full-task success | **34 / 60 (56.7%)** |
+| Feasible-trial full-task success | **34 / 60 (56.7%)** [1] |
 | — Kitchen | 11 / 18 (61.1%) |
 | — Living Room | 10 / 18 (55.6%) |
 | — Workshop | 13 / 24 (54.2%) |
@@ -30,6 +31,10 @@ records; none is hand-entered.
 | Mean GT goal coverage (feasible) | 0.6625 |
 | Longest plan | 26 actions |
 | GT-leakage audit findings | **0** |
+
+[1] One trial (`workshop/W5/trial_03`) is bistable across identical replays, so
+this figure is 34/60 or 35/60 depending on the run. See §6.2 — it is intrinsic
+detector nondeterminism, not a code difference.
 
 Two structural invariants hold without exception: **complete grounding implies a
 valid plan** (34 complete groundings, 34 successes, 0 planner failures), and **no
@@ -89,43 +94,37 @@ here, not wrong.
 | workshop | W9 | no | 0/3 | 0.222 | 0/3 | 1/3 | 0 |
 | workshop | W10 | no | 0/3 | 0.222 | 0/3 | 1/3 | 0 |
 
-- kitchen: 11/18
-- living_room: 10/18
-- workshop: 13/24
-- outcome correct overall: 42/96
+Totals: Kitchen 11/18, Living Room 10/18, Workshop 13/24 = **34/60** feasible
+success; outcome correct 42/96; false completions 0.
 
 ---
 
 ## 3. Where the remaining 26 feasible failures actually die
 
-Eighteen of the 26 were traced to a specific mechanism with instrumented
-evidence. Eight were not, and are reported as open rather than dressed up.
+Twenty-three of the 26 were traced to a specific mechanism with instrumented
+evidence. Three were not, and are reported as open rather than dressed up.
 
 | Cause | Trials | Category |
 | :--- | :---: | :--- |
-| Raw contract cut off at the token limit (`finish_reason='length'`) | 3 | **(A)**, budget |
+| Raw contract cut off at the token limit (`finish_reason='length'`) | 3 | **(A)** budget |
 | FM expressed placement but no seating requirement | 3 | **(A)** |
 | FM referenced a participant it never declared (W5/02) | 1 | **(A)** |
-| FM over-demand: 2 fasteners where the scene holds 1 (W2/03) | 1 | **(A)** |
+| FM over-demanded instance counts (W2/03, K1/03) | 2 | **(A)** |
+| FM declared the wrong binding policy (K2/01 utensil SHARED) | 1 | **(A)** |
+| FM collapsed per-seat requirements to singletons (L1/02) | 1 | **(A)** |
+| FM declared the seat as a carried object (L3/03) | 1 | **(A)** |
+| FM demanded capabilities the robot does not own (K3/03) | 1 | **(B)** |
 | Fastener measured from a 32-point cloud (W3 ×3) | 3 | **(D)** |
-| Object label conflicted or absent (K4/02, K5/01, K4/03, W4/02, W4/03, W5/03) | 6 | **(D)** |
+| Object label conflicted or absent | 6 | **(D)** |
 | Plan satisfies the task but completion is not declared (K3/01) | 1 | conservative |
-| Draw-dependent compile/ground loss, not isolated to one mechanism | 8 | open |
+| Still open — all workshop, all needing determinism controls first | 3 | open |
 | **Total** | **26** | |
 
 By domain: Kitchen 7, Living Room 8, Workshop 11.
 
-The eight "open" trials are the honest residual. They split two ways:
-
-Reading their raw contracts closed five of the eight (§3.3b, §3.6): K1/03,
-K2/01, K3/03, L1/02 and L3/03 are all contract-side declaration errors, named
-individually.
-
-**Three remain genuinely open: W1/02, W4/01, W5/01.** Each belongs to the
-workshop — the one domain with GPU-side nondeterminism (§6.2) — so before any
-further semantic investigation they need re-measuring under determinism controls.
-Attributing them to a semantic mechanism now would be guessing at something that
-may not be stable.
+Twenty-three of the 26 are attributed to a named mechanism with instrumented
+evidence. Every one of the eleven category-(A) attributions was read directly
+from the archived raw contract, not inferred from downstream symptoms.
 
 ### 3.1 W3 ×3 — the fastener is measured wrong, and the verifier is right
 
@@ -543,88 +542,80 @@ exposed to this.
 
 ### 6.2 The "frozen" replay is not bit-deterministic
 
-A more serious finding, and it qualifies every number in this report.
+A serious finding, and it qualifies every number in this report.
 
-Replaying the *same* archived FM response through the *same* code twice does not
-always give the same result. Diffing two full replays, exactly one trial flips:
+Replaying the *same* archived FM response through the *same* code does not always
+give the same result. Three full replays of the identical 96 archived contracts
+disagree on exactly one trial, `workshop/W5/trial_03`:
 
-| | run A (6 workers, under load) | run B (2 workers) |
-| :--- | :--- | :--- |
-| `workshop/W5/trial_03` status | `PARTIAL_ACTION_SEQUENCE_READY` | `ACTION_SEQUENCE_READY` |
-| grounding failure | `OBJECT_DISCOVERY_FAILURE` | none |
-| GT goal coverage | 0.333 | **1.000** |
-| success | no | **yes** |
+| Replay | Concurrency | Machine | W5/03 result |
+| :--- | :--- | :--- | :--- |
+| A | 6 workers | loaded (suite + live smoke) | fail, coverage 0.333 |
+| B | 2 workers | quiet | **success, coverage 1.000** |
+| C (authoritative) | 2 workers | quiet | fail, coverage 0.333 |
 
-Nothing semantic differs — the contract is byte-identical, since it is read from
-disk. What differs is **perception**: under contention the trial under-detects
-and loses an object; with the machine quiet it detects everything and the trial
-succeeds. W5/03 was one of the 11 trials that had segfaulted and been re-run at
-lower concurrency, which is how the flip was noticed at all.
+Nothing semantic differs — the contract is read from disk. **B and C were run at
+identical concurrency on a quiet machine and still disagree**, which is the
+controlled comparison, and it rules out machine load as the explanation. The
+variation is intrinsic run-to-run nondeterminism in detector inference. W5/03 is
+a bistable trial: its fastener detection sits at the acceptance boundary and
+resolves either way, 1 success in 3 observations.
 
-This has three consequences, and they are stated plainly because they cut against
-the headline:
+Only that one trial differs across all three replays — every other row is
+identical, including all 36 infeasible trials and both other domains.
 
-1. **Feasible success is 34/60 or 35/60 depending on machine load.** The
-   difference is one marginal-detection trial, not a code change.
-2. The composite directory that mixed the two load conditions is **not** a valid
-   measurement, for exactly the reason given in §4.1 about mixed attempts. It was
+**Consequences, stated plainly because they cut against the headline:**
+
+1. **Feasible success is 34/60 or 35/60 on a coin flip.** Replays A and C both
+   give 34/60 and the authoritative figure is 34/60, but a rerun could legitimately
+   report 35/60 with no code change at all.
+2. The composite directory that mixed replay A's rows with B's re-runs is **not**
+   a valid measurement, for the reason given in §4.1 about mixed attempts. It was
    discarded rather than reported.
-3. The trials most exposed are the ones already identified as detection-limited
-   (§3.1, §3.2) — marginal detections are marginal in both directions.
+3. The trial that moves is a detection-limited one (§3.1, §3.2). Marginal
+   detections are marginal in both directions, so the three still-open workshop
+   trials (W1/02, W4/01, W5/01) must be re-measured under determinism controls
+   before any semantic cause is assigned to them.
 
-The authoritative number in §1 is therefore from a **single clean replay at
-`--workers 2` with nothing else running**, not from a composite and not from a
-loaded run.
+**What is established, and what is hypothesis.**
 
-**What is established, and what is hypothesis.** Establishing this cleanly
-matters, so the two are kept apart.
-
-*Established.* The workshop domain — the domain the flip occurred in — runs
-YOLO-World on the **GPU** (`workshop_phase1_yoloworld_l_five_view_close.yaml`:
-`device: 0`, `inference_size: 1280`) with acceptance thresholds as low as `0.001`,
-so a large number of detections sit near their acceptance boundary. And the
-repository sets **no determinism controls anywhere**:
+*Established.* The variation is intrinsic, not load-driven (B vs C). The workshop
+domain — the only domain in which any trial moved — runs YOLO-World on the **GPU**
+(`workshop_phase1_yoloworld_l_five_view_close.yaml`: `device: 0`,
+`inference_size: 1280`) with acceptance thresholds as low as `0.001`, so many
+detections sit at their boundary. And the repository sets **no determinism
+controls anywhere**:
 
 ```
 manual_seed | cudnn.deterministic | use_deterministic_algorithms
 np.random.seed | CUBLAS_WORKSPACE_CONFIG        -> no matches
 ```
 
-*Hypothesis, not isolated.* The most likely mechanism is cuDNN kernel
-autotuning: it selects algorithms against currently available GPU memory, so
-under contention it can choose differently and return slightly different
-confidences, which is enough to flip a detection sitting at a 0.001 threshold.
-This is consistent with every observation — the flip is in the GPU domain, on a
-marginal detection, and correlates with concurrency — but it was **not** isolated
-by controlled experiment. Two replays at identical concurrency were not compared,
-so intrinsic run-to-run nondeterminism and load-induced nondeterminism are not
-yet distinguished. Either way the remedy is the same, and either way the number
-is not reproducible as it stands.
+*Hypothesis.* The likely mechanism is cuDNN kernel autotuning plus
+non-deterministic reduction order: with no seed, `cudnn.benchmark` at its default
+and no deterministic-algorithm constraint, kernel selection and float
+accumulation order vary between processes, which is enough to move a confidence
+across a 0.001 threshold. This is consistent with every observation but was not
+isolated to a specific kernel.
 
-The remedy is the usual one (`torch.manual_seed`, `cudnn.deterministic = True`,
-`cudnn.benchmark = False`, `torch.use_deterministic_algorithms(True)`,
-`CUBLAS_WORKSPACE_CONFIG=:4096:8`). It was **not** applied in this pass for one
-concrete reason: it changes kernel selection for *every* detection, so it would
-require re-measuring the whole matrix from scratch, and editing perception code
-while the authoritative replay was running would have corrupted that replay --
-the same hazard the live runner's "code changed during the repetition" guard
+**The exposure is scoped.** Only the workshop domain runs the detector on GPU.
+Kitchen and Living Room go through `configs/semantic_grounding.yaml`, which sets
+`device: cpu`, and the replay driver pins `OMP_NUM_THREADS=2`. Kitchen 11/18 and
+Living Room 10/18 were bit-identical across all three replays. The variable
+figure is Workshop, 13/24 or 14/24.
+
+**The remedy** is the usual one (`torch.manual_seed`,
+`cudnn.deterministic = True`, `cudnn.benchmark = False`,
+`torch.use_deterministic_algorithms(True)`, `CUBLAS_WORKSPACE_CONFIG=:4096:8`),
+and a patch is drafted but **not applied**. It changes kernel selection for every
+detection, so it requires re-measuring the whole matrix, and editing perception
+code while the authoritative replay was running would have corrupted that replay
+— the same hazard the live runner's "code changed during the repetition" guard
 exists to catch.
-
-**The exposure is scoped, and that limits the damage.** Only the workshop domain
-runs the detector on the GPU. Kitchen and Living Room go through
-`configs/semantic_grounding.yaml`, which sets `device: cpu`, and the replay
-driver pins `OMP_NUM_THREADS=2`. So the Kitchen 11/18 and Living Room 10/18
-figures rest on CPU inference at fixed thread count and are far less exposed;
-the variable figure is Workshop, 13/24 or 14/24. That is consistent with the one
-observed flip being a workshop trial. CPU inference is not automatically
-deterministic either, so this is a narrower claim than "reproducible", but the
-uncontrolled GPU autotuning path is confined to one of the three domains.
 
 This is the highest-value next change in the repository. It does not read ground
 truth, does not condition on variants, and converts a benchmark whose headline
-moves by a trial between runs into a reproducible one. The cheap first experiment
-is two replays at identical concurrency: if they still differ, the
-nondeterminism is intrinsic rather than load-induced.
+moves by a trial between identical runs into a reproducible one.
 
 ---
 
@@ -691,8 +682,9 @@ Ordered by what a further pass could plausibly recover.
 | :--- | :---: | :--- |
 | Denser capture of the tool cabinet | 3 (W3) | **Real and tractable**, but a capture-side change, outside the semantic pipeline. Diagnosis is complete and numeric (§3.1). |
 | Larger `max_tokens` in a future collection | 3 (L2/02, L3/01, L3/02) | **Real and tractable.** These are pure truncations at the 24 000-token budget with thinking on — no semantics were lost, only cut off. Not changed here because it breaks comparability with the archived distribution (§7). |
+| Determinism controls on detector inference | 3 open + stabilises 1 bistable | **Highest value.** Converts a benchmark whose headline moves between identical runs into a reproducible one (§6.2). Prerequisite for investigating W1/02, W4/01, W5/01. |
+| Symmetric entity-kind tolerance for furniture | 1 (L3/03) | Named and testable (§3.3b): L4/01 succeeds declaring tables as OBJECT while L3/03 fails declaring a seat as OBJECT. Needs 2 replays to clear the monotonicity bar. |
 | Living Room seating semantics | 3 (L5/03, L6/01, L6/03) | Closed: the FM did not express a seat. Supplying it is forbidden. |
-| Living Room draw-dependence | 2 (L1/02, L3/03) | L1/02 grounds COMPLETE in another draw on the identical scene, so the variance is in the contract, not perception. |
 | Kitchen residual | 4 | K1/03 object discovery, K3/01 unsupported-process provenance (GT coverage already 1.0), K3/03, K4/03 unlabelled vessel. |
 | Fastener labelling in W4/W5 | 3 | Detector-limited: a 2.67 cm object labelled `screwdriver`, and objects with no label at all. Per instruction, detectors were not tuned. |
 | FM generation failures | 6 | Irreducible at one call per trial. |
