@@ -34,9 +34,16 @@ def main():
     if not ids:
         raise SystemExit('Preflight blocked: endpoint exposes no models')
     model='qwen35-9b' if 'qwen35-9b' in ids else ids[0]
-    env=dict(os.environ,TAMP_FM_BASE_URL=args.base_url,TAMP_FM_MODEL=model,TAMP_FM_MAX_TOKENS='24000',PYTHONPATH='.')
+    # The schema version has to be pinned here.  The replay drivers set it and
+    # this one did not, so a live matrix launched without it in the environment
+    # silently ran the V2 contract against the V3 pipeline and scored zero
+    # across the board -- which looks like a catastrophic result and is only a
+    # missing variable.
+    env=dict(os.environ,TAMP_FM_BASE_URL=args.base_url,TAMP_FM_MODEL=model,
+             TAMP_FM_MAX_TOKENS='24000',TAMP_FM_SCHEMA_VERSION='3',PYTHONPATH='.')
     command=[sys.executable,'scripts/evaluate_vlm_functional_tamp.py','--mode','vlm','--spec-source','live','--output-root',str(args.output_root)]
-    print(f'Frozen commit: {sha}; model: {model}; output: {args.output_root}',flush=True)
+    print(f'Frozen commit: {sha}; model: {model}; schema: v3; '
+          f'max_tokens: 24000; output: {args.output_root}',flush=True)
     result=subprocess.run(command,env=env)
     after_sha=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
     after_dirty=subprocess.check_output(['git','status','--porcelain'],text=True).strip()

@@ -147,6 +147,20 @@ _ROBOT_SELF = re.compile(
 )
 
 
+# A reference to a person, or to the room the task happens in, names something
+# the runtime holds in no form and the prompt already says is not a role: "people
+# who only determine how many portions are needed change counts.  They are not
+# roles and not things to be handled."  Written into a participant list without a
+# declaration, it is the same non-participant written more loosely.
+_UNDECLARED_NON_PARTICIPANT = re.compile(
+    r"^(?:the[_ ])?(?:person|people|persons|human|humans|user|users|occupant|occupants|"
+    r"viewer|viewers|guest|guests|individual|individuals|recipient|recipients|diner|diners)"
+    r"(?:[_ ]\d+)?$"
+    r"|^(?:the[_ ])?(?:living[_ ]?room|kitchen|workshop|room|scene|environment|world|"
+    r"workspace|work[_ ]?area)$",
+    re.IGNORECASE,
+)
+
 _UNDECLARED_ROBOT_SELF = re.compile(
     r"^(robot|robotic|manipulator|gripper|end[ _-]?effector|arm)(_|$)|"
     r"(_|^)(robot|agent|executor)(_agent|_arm|_self)?$",
@@ -225,10 +239,18 @@ def _repair_structural_wire_noise(
     model answering the schema instead of the task, so it denotes nothing in the
     world and removing it takes no semantics with it.
 
-    Nothing else is repaired.  An undeclared participant that names a real
-    thing -- a person, a part -- is missing semantics and stays a wire failure,
-    because inventing a declaration for it would assert a role the model never
-    gave.  An element left with too few participants to state a relation is not
+    A reference to a person, or to the room the task happens in, is removed on
+    the same footing as the robot: the prompt tells the model that people are
+    not roles and not things to be handled, so an undeclared reference to one
+    denotes no participant, and rejecting an otherwise coherent contract over it
+    threw away every semantic the model did express.
+
+    Nothing else is repaired.  An undeclared participant that names a real thing
+    the runtime could act on -- a part, a payload -- is missing semantics and
+    stays a wire failure, because inventing a declaration for it would assert a
+    role the model never gave: its kind, its cardinality and what would count as
+    an instance of it are all absent, and every one of those would have to be
+    chosen here rather than read.  An element left with too few participants to state a relation is not
     quietly dropped either: it is carried out separately so that the stage which
     accounts for required semantics still sees it.
     """
@@ -262,6 +284,16 @@ def _repair_structural_wire_noise(
                     "collection": collection, "element_id": entry.get("id"),
                     "removed_participants": robots,
                 })
+            people = [p for p in deduplicated
+                       if p not in declared and _UNDECLARED_NON_PARTICIPANT.match(str(p).strip())]
+            if people:
+                deduplicated = [p for p in deduplicated if p not in people]
+                trace.append({
+                    "code": "UNDECLARED_NON_PARTICIPANT_REMOVED",
+                    "collection": collection, "element_id": entry.get("id"),
+                    "removed_participants": people,
+                    "provenance": "FM_REFERENCE_TO_A_NON_PARTICIPANT",
+                })
             echoes = [p for p in deduplicated
                       if p not in declared and _names_only_wire_schema_fields(p)]
             if echoes:
@@ -293,6 +325,34 @@ def _repair_structural_wire_noise(
         contract[collection] = kept
     if unusable:
         normalized["structurally_unusable_elements"] = unusable
+
+    # The same region declared twice under the same id is one region.  The
+    # model's own inspection order lists it once, which is the model saying so,
+    # and rejecting the contract over the repeated declaration discarded every
+    # semantic in it.  Only an exact repeat of an id is collapsed; the first
+    # declaration is kept, and anything it said differently the second time is
+    # recorded rather than merged.
+    guidance = normalized.get("observation_guidance", {})
+    regions = guidance.get("inspectable_regions", []) or []
+    seen: dict[str, Any] = {}
+    deduplicated_regions = []
+    for region in regions:
+        if not isinstance(region, dict):
+            deduplicated_regions.append(region)
+            continue
+        region_id = str(region.get("id"))
+        if region_id in seen:
+            trace.append({
+                "code": "DUPLICATE_INSPECTION_REGION_DECLARATION_COLLAPSED",
+                "region_id": region_id,
+                "kept_declaration": seen[region_id],
+                "discarded_declaration": region,
+            })
+            continue
+        seen[region_id] = region
+        deduplicated_regions.append(region)
+    if len(deduplicated_regions) != len(regions):
+        guidance["inspectable_regions"] = deduplicated_regions
 
 
 def normalize_v3_live_document(
