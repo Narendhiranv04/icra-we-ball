@@ -160,6 +160,11 @@ class WorkshopPhase1InspectionController:
             min_cluster_points=track_cfg.get("min_cluster_points", 10),
             volume_margin_m=self.raw_config.get("perception", {}).get("volume_margin_m", 0.08),
             min_points_per_mask=self.raw_config.get("perception", {}).get("min_points_per_mask", 8),
+            # The size constraint on what a label can be belongs to the fused
+            # measurement, so it is given to the tracker rather than applied in
+            # one backend's association loop, where it only ever ran for oracle
+            # masks while the production path went without it.
+            physical_prior=self.raw_config.get("semantic_physical_prior", {}),
             stage_object_merge_distance_threshold_m=track_cfg.get(
                 "stage_object_merge_distance_threshold_m", 0.0),
             fusion_config=fusion_cfg,

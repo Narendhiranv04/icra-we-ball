@@ -22,6 +22,23 @@ from mujoco_scenes.workshop_phase1.types import (
 )
 
 
+def _physical_prior_multipliers(
+    physical_prior: dict[str, Any] | None, maximum_dimension_m: float | None
+) -> dict[str, float]:
+    """Per-label score multipliers implied by how big the fused object is.
+
+    Returns an empty mapping when the domain declares no prior or the extent is
+    not measured, so the fusion is unchanged wherever the constraint is unknown.
+    """
+    if not physical_prior or not physical_prior.get("enabled", False):
+        return {}
+    if maximum_dimension_m is None or not np.isfinite(maximum_dimension_m):
+        return {}
+    threshold = float(physical_prior.get("small_object_max_dimension_m", 0.08))
+    bucket = "small_object" if float(maximum_dimension_m) < threshold else "large_object"
+    return {str(k).lower(): float(v) for k, v in (physical_prior.get(bucket) or {}).items()}
+
+
 class PersistentInstanceTracker:
     """Associates 2D detections across 5 camera views and across sequential inspection stages."""
 
@@ -35,6 +52,7 @@ class PersistentInstanceTracker:
         min_points_per_mask: int = 8,
         stage_object_merge_distance_threshold_m: float = 0.0,
         fusion_config: dict[str, Any] | None = None,
+        physical_prior: dict[str, Any] | None = None,
     ) -> None:
         self.cluster_distance_threshold_m = cluster_distance_threshold_m
         self.track_match_distance_threshold_m = track_match_distance_threshold_m
@@ -45,6 +63,7 @@ class PersistentInstanceTracker:
         self.stage_object_merge_distance_threshold_m = float(
             stage_object_merge_distance_threshold_m)
         self.fusion_config = dict(fusion_config or {})
+        self.physical_prior = dict(physical_prior or {})
 
         self._tracks: dict[str, ObservedObjectTrack] = {}
         self._next_instance_idx: int = 1
@@ -89,6 +108,8 @@ class PersistentInstanceTracker:
     def _compute_consensus_semantic_belief(
         observations: list[dict[str, Any]],
         fusion_config: dict[str, Any] | None = None,
+        physical_prior: dict[str, Any] | None = None,
+        maximum_dimension_m: float | None = None,
     ) -> dict[str, Any]:
         """Aggregate multi-view semantic observations using consensus fusion with ambiguity tracking."""
         if not observations:
@@ -166,10 +187,22 @@ class PersistentInstanceTracker:
         label_views: dict[str, set[str]] = defaultdict(set)
         label_confidence_sum: dict[str, float] = defaultdict(float)
         score_by_label: dict[str, float] = defaultdict(float)
+        # How big the thing is constrains what it can be, and the fused cloud is
+        # where that is known -- a single view cannot tell a near screwdriver
+        # from a far one.  A 4 cm object was being labelled a power driver,
+        # which is 22 cm, in every view that saw it, and no amount of agreement
+        # between views makes that reading physically possible.  The domain
+        # declares the constraint once, as multipliers on each label for a small
+        # and a large object; a multiplier of zero says this label is not
+        # available at this size.  It scales what the detector proposed and can
+        # never propose a label of its own.
+        prior_multipliers = _physical_prior_multipliers(physical_prior, maximum_dimension_m)
         for label in labels:
             supporting = [entry for (cam, canon), entry in per_camera_label.items() if canon == label]
             views = len({entry["camera_id"] for entry in supporting})
             score = sum(entry["score"] for entry in supporting)
+            if label in prior_multipliers:
+                score *= float(prior_multipliers[label])
             mean_conf = float(np.mean([entry["confidence"] for entry in supporting])) if supporting else 0.0
             label_views[label] = {entry["camera_id"] for entry in supporting}
             label_confidence_sum[label] = score
@@ -202,6 +235,12 @@ class PersistentInstanceTracker:
         else:
             raise ValueError(f"Unknown winner_policy: {winner_policy}")
 
+        # A label the prior scored to zero is not a candidate at all.  Leaving it
+        # in the ordering let it win by tie-break when every reading was ruled
+        # out, which is worse than admitting the object is unidentified.
+        admissible = [record for record in label_records if record["score"] > 0.0]
+        if admissible:
+            label_records = admissible
         winner = label_records[0]
         runner = label_records[1] if len(label_records) > 1 else None
 
@@ -271,6 +310,16 @@ class PersistentInstanceTracker:
             },
             "label_confidence_sum": dict(label_confidence_sum),
         }
+
+    @staticmethod
+    def _maximum_dimension_m(points: Any) -> float | None:
+        """Largest axis-aligned extent of a fused cloud, or None if unmeasurable."""
+        array = np.asarray(points, dtype=float)
+        if array.ndim != 2 or len(array) < 2:
+            return None
+        extent = array.max(axis=0) - array.min(axis=0)
+        value = float(np.max(extent))
+        return value if np.isfinite(value) else None
 
     @staticmethod
     def _inside(point: np.ndarray, minimum: np.ndarray, maximum: np.ndarray) -> bool:
@@ -536,7 +585,9 @@ class PersistentInstanceTracker:
                     track.crop_evidence.update(st_obj["crops_by_camera"])
                     track.semantic_observations.extend(st_obj["semantic_observations"])
                     track.current_semantic_belief = self._compute_consensus_semantic_belief(
-                        track.semantic_observations, fusion_config=self.fusion_config
+                        track.semantic_observations, fusion_config=self.fusion_config,
+                        physical_prior=self.physical_prior,
+                        maximum_dimension_m=self._maximum_dimension_m(fused_pts),
                     )
                     track.current_measurement_evidence = self._measurement_evidence(
                         t_id, stage_index, source_region_id, st_obj)
@@ -547,7 +598,9 @@ class PersistentInstanceTracker:
                 if i not in matched_stage_indices:
                     new_id = self._allocate_instance_id()
                     sem_belief = self._compute_consensus_semantic_belief(
-                        st_obj["semantic_observations"], fusion_config=self.fusion_config
+                        st_obj["semantic_observations"], fusion_config=self.fusion_config,
+                        physical_prior=self.physical_prior,
+                        maximum_dimension_m=self._maximum_dimension_m(st_obj["points"]),
                     )
                     new_track = ObservedObjectTrack(
                         instance_id=new_id,
@@ -573,7 +626,9 @@ class PersistentInstanceTracker:
             for st_obj in stage_objects:
                 new_id = self._allocate_instance_id()
                 sem_belief = self._compute_consensus_semantic_belief(
-                    st_obj["semantic_observations"], fusion_config=self.fusion_config
+                    st_obj["semantic_observations"], fusion_config=self.fusion_config,
+                    physical_prior=self.physical_prior,
+                    maximum_dimension_m=self._maximum_dimension_m(st_obj["points"]),
                 )
                 new_track = ObservedObjectTrack(
                     instance_id=new_id,

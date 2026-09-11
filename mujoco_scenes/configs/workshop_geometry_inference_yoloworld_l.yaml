@@ -16,8 +16,16 @@ measurement:
   minimum_interface_points: 5
   minimum_resolvable_interface_extent_m: 0.00035
   slot_anisotropy_ratio: 4.5
-  slot_min_transverse_length_m: 0.006
-  slot_max_transverse_length_m: 0.015
+  # A drive slot is a groove, and a groove is millimetres across.  This window
+  # had been widened to [6 mm, 15 mm], which is the range of a screw *head*
+  # diameter, so any Phillips head whose point cloud segmented slightly
+  # elongated was classified as a slot: six of the archived screw measurements
+  # came out SLOT_LIKE with transverse extents of 9 to 14 mm, and the
+  # compatibility verifier then correctly refused a cross-drive screw for a
+  # cross-drive driver.  The bound is back to the one the base measurement
+  # configuration uses and that an actual slot groove satisfies.
+  slot_min_transverse_length_m: 0.0
+  slot_max_transverse_length_m: 0.0031
   hex_radial_symmetry_ratio: 1.25
 
 target:
