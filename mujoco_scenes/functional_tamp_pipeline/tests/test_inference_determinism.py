@@ -82,3 +82,49 @@ def test_the_opt_out_exists_but_is_not_the_default():
     assert "TAMP_NONDETERMINISTIC_INFERENCE" in source
     report = enable_deterministic_inference()
     assert report.get("status") != "DISABLED_BY_ENV"
+
+
+def test_hash_seed_is_pinned_for_every_spawned_trial():
+    """Set iteration order must not vary between runs.
+
+    Two replays of the same archived responses disagreed on kitchen/K7/trial_01:
+    one left coffee_container unseated with an 8-action plan, the other left
+    coffee_source unseated with a 20-action plan.  Varying PYTHONHASHSEED
+    reproduces exactly those two results (seed 1 vs seeds 2 and 3), so the cause
+    is hash-order dependence in a choice among equally ranked candidates.
+
+    It cannot be fixed in-process: the interpreter reads PYTHONHASHSEED at
+    startup, so it has to be in the environment of every spawned trial.
+    """
+    for script in ("scripts/replay_frozen_distribution.py",
+                   "scripts/run_live_repeat_experiment.py"):
+        source = (REPO / script).read_text()
+        assert 'PYTHONHASHSEED="0"' in source, (
+            f"{script} spawns trials without pinning PYTHONHASHSEED")
+
+
+def test_the_determinism_report_says_when_the_hash_seed_is_unpinned():
+    """Silence about an unpinned hash seed would read as determinism."""
+    import os
+    import importlib
+    import mujoco_scenes.determinism as det
+    saved = os.environ.pop("PYTHONHASHSEED", None)
+    try:
+        importlib.reload(det)
+        report = det.enable_deterministic_inference()
+        assert "NOT REPRODUCIBLE" in str(report.get("PYTHONHASHSEED"))
+    finally:
+        if saved is not None:
+            os.environ["PYTHONHASHSEED"] = saved
+        importlib.reload(det)
+
+
+def test_the_live_identity_records_the_hash_seed():
+    """A run whose hash seed is not on the record cannot be reproduced."""
+    import importlib.util
+    runner = REPO / "scripts" / "run_live_repeat_experiment.py"
+    spec = importlib.util.spec_from_file_location("_live_runner_det", runner)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    identity = module._frozen_identity(base_url="u", variant_set="ALL", run_type="full")
+    assert identity.get("pythonhashseed") == "0"

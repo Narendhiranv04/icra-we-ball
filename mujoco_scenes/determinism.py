@@ -60,6 +60,12 @@ def enable_deterministic_inference(seed: int = DEFAULT_SEED) -> dict[str, object
     os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
     state["CUBLAS_WORKSPACE_CONFIG"] = os.environ["CUBLAS_WORKSPACE_CONFIG"]
 
+    # PYTHONHASHSEED cannot be set from here: the interpreter reads it at
+    # startup, so by the time this runs the hash seed is already fixed.  It is
+    # recorded rather than assumed, because without it set-iteration order -- and
+    # so a choice among equally ranked candidates -- varies between processes.
+    state["PYTHONHASHSEED"] = os.environ.get("PYTHONHASHSEED", "<unset: NOT REPRODUCIBLE>")
+
     import random
     random.seed(seed)
 
