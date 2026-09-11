@@ -210,7 +210,9 @@ def test_thinking_disabled_by_default_in_adapter_payload(tmp_path):
     assert call_payload["response_format"]["type"] == "json_schema"
     assert call_payload["response_format"]["json_schema"]["strict"] is True
     assert call_payload["response_format"]["json_schema"]["schema"] == LIVE_RESPONSE_SCHEMA_V2
-    assert call_payload["max_tokens"] == 8192
+    # The frozen budget: 39 of the 91 archived responses that finished are
+    # longer than the old 8192 default, so it would have truncated 43% of them.
+    assert call_payload["max_tokens"] == 24000
     assert adapter.metrics.requirement_calls == 1
     assert adapter.metrics.total_calls == 1
 

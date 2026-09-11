@@ -117,6 +117,43 @@ def can_merge_roles(a: dict, b: dict, document: dict, *, allow_counted_context: 
     return True
 
 
+def _anchor_is_a_singular_place(domain: str, anchor: str) -> bool:
+    """Whether two roles naming this anchor cannot be two members of a set."""
+    from .fm_schema_v3 import _anchor_is_a_singular_place as check
+
+    return check(domain, anchor)
+
+
+def fm_statements_naming_both(document: dict, first: str, second: str) -> list[dict[str, Any]]:
+    """FM operations and relations that name both of these raw roles together.
+
+    Read off the raw contract rather than the compiled graph, because that is
+    where the model's own grouping of participants survives: "fasten the
+    fastener to the workpiece at the marked location" names all four in one
+    statement, and by the time slots are assigned the n-ary grouping is gone.
+    """
+    raw = document.get("raw_v3_contract") or {}
+    found: list[dict[str, Any]] = []
+    for kind, key in (("operation", "operation_pairings"), ("relation", "functional_relations")):
+        for item in raw.get(key, ()) or ():
+            participants = set(item.get("participant_roles", ()) or ())
+            if {first, second} <= participants:
+                found.append({
+                    "kind": kind, "id": item.get("id"),
+                    "text": str(item.get("operation") or item.get("relation") or ""),
+                    "participant_roles": sorted(participants),
+                })
+    for relation in document.get("functional_relations", ()) or ():
+        pair = {relation.get("subject_role"), relation.get("object_role")}
+        if pair == {first, second}:
+            found.append({
+                "kind": "relation", "id": relation.get("id"),
+                "text": str(relation.get("relation") or ""),
+                "participant_roles": sorted(p for p in pair if p),
+            })
+    return found
+
+
 def _map_role(domain: str, role: dict, doc: dict) -> tuple[str | None, str]:
     position = causal_position(role, doc)
     if domain == 'kitchen':
@@ -695,7 +732,8 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
         get_domain_selectable_roles,
         get_domain_system_fixed_anchors,
     )
-    allowed = set(get_domain_selectable_roles(domain)) | set(get_domain_system_fixed_anchors(domain))
+    system_fixed_anchors = set(get_domain_system_fixed_anchors(domain))
+    allowed = set(get_domain_selectable_roles(domain)) | system_fixed_anchors
     planner_constants = set(get_domain_planner_context_constants(domain))
     role_hypotheses = resolve_role_type_hypotheses(domain, doc)
     for role in doc['functional_roles']:
@@ -832,6 +870,48 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                     ),
                 })
                 # Process additional property evidence below.
+            elif (
+                name in system_fixed_anchors
+                and _anchor_is_a_singular_place(domain, name)
+                and nodes[name].count == 1
+                and int(role.get('required_count', 1)) == 1
+                and hypothesis.canonical_role_candidates == (name,)
+                and role_hypotheses[owners[name]['id']].canonical_role_candidates == (name,)
+                and (together := fm_statements_naming_both(doc, owners[name]['id'], rid))
+            ):
+                # Two FM roles describing one fixed place the task acts on: the
+                # object being fastened and the marked spot on the bench it is
+                # fastened at.  The runtime holds that place as a single
+                # non-manipulable reference, and the model put both names in one
+                # statement of its own -- "fasten the fastener to the workpiece
+                # at the marked location" -- which is what says they are two
+                # aspects of one thing rather than two participants.  Lowering
+                # them onto the one anchor keeps both raw names resolvable, so
+                # the relations the model wrote about either of them land on the
+                # place they are about instead of being reported as relations
+                # over a role that could not be typed.
+                #
+                # Narrow on purpose: only a system fixed anchor, never a
+                # selectable asset, so this cannot merge two things the robot
+                # would have had to find separately; only when each role's own
+                # reading is that anchor and nothing else; only at cardinality
+                # one, because the anchor is one place; and only when the model
+                # itself named them together.  Two roles that land on the same
+                # anchor and are never named in one statement stay a collision.
+                id_map[rid] = name
+                nodes[name] = replace(
+                    nodes[name],
+                    semantic_hints=tuple(dict.fromkeys(
+                        nodes[name].semantic_hints + tuple(role['required_properties']))),
+                )
+                trace['merged_roles'].append({
+                    'code': 'COMPOSITE_RECEIVING_CONTEXT_LOWERED_TO_ONE_ANCHOR',
+                    'raw_ids': [owners[name]['id'], rid],
+                    'canonical_role': name,
+                    'fm_statements_naming_both': together,
+                    'provenance': 'FM_EXPLICIT_SEMANTIC',
+                })
+                continue
             else:
                 trace['unresolved_roles'].append({'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': role, 'collision_with': owners[name]['id']})
                 continue

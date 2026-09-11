@@ -58,7 +58,7 @@ Only the instruction creates requirements. Do not invent a material, a supply, o
 
 PASS 2 - THE SCENE. Now use the three photographs, and only for guidance: what appears to be present, where things currently sit, and which closed or storage structures could be opened and searched. Being visible never makes something required. Where something currently sits is present state, not a goal, unless the instruction asks for it to go there or stay there.
 
-ROLES. entity_kind is OBJECT for an independently movable item, REGION for an area or surface that can be a destination, FIXED_TARGET for a fixed reference or interaction point that is not carried around. required_count is how many physical instances the task needs. binding_policy is DISTINCT when separate instances are needed, REUSABLE when one instance can serve repeatedly, SHARED for a single thing deliberately common to several. candidate_categories are ordinary names the thing might go by; required_properties are qualities it must have.
+ROLES. entity_kind is OBJECT for an independently movable item, REGION for an area or surface that can be a destination, FIXED_TARGET for a fixed reference or interaction point that is not carried around. required_count is how many times the task needs this participant, which is not the same as how many of them have to exist: two people each getting their own cup is a cup role with a count of two, and one jar the coffee is poured from twice is a jar role with a count of two as well. binding_policy is what says how those come down to physical things: DISTINCT when each time needs its own separate instance, REUSABLE when one instance can serve every time, SHARED for a single thing deliberately common to several. candidate_categories are ordinary names the thing might go by; required_properties are qualities it must have.
 
 RELATIONS say what must hold for the task to count as done: one thing must suit or fit another, one must depend on another, or things must end up in a particular arrangement. Do not state a relation that merely reports how the scene already looks. When the instruction says both, all, each, between, or a pair, name every declared role the phrase covers instead of inventing one combined role.
 
@@ -1253,13 +1253,190 @@ def _planner_context_transition(
     }
 
 
+# Wording that marks a role as one more of the same kind rather than another
+# aspect of one thing.  "Another fixed assembly receiving the component" is the
+# model enumerating a second assembly, and merging it into the first would
+# delete a requirement it stated.
+_ENUMERATES_A_FURTHER_INSTANCE = re.compile(
+    r"\b(?:another|other|second|third|fourth|additional|further|extra|"
+    r"next|remaining|each|every|both|either)\b", re.I)
+
+
+def _role_enumerates_a_further_instance(role: Mapping[str, Any]) -> bool:
+    text = " ".join(str(role.get(key, "")) for key in ("id", "function", "description"))
+    return bool(_ENUMERATES_A_FURTHER_INSTANCE.search(re.sub(r"[_\-]+", " ", text)))
+
+
+def _anchor_is_a_singular_place(domain: str, anchor: str) -> bool:
+    """Whether two roles naming this anchor cannot be two members of a set.
+
+    Living Room declares SEATING_POSITION for one seat and SEATING_PAIR for
+    both, so two roles that each read as a seating position may perfectly well
+    be the two seats the model enumerated, and merging them would erase the
+    enumeration -- which is how this lowering first destroyed an explicit
+    seating pair.  Where the domain offers no set form of an anchor's family,
+    the place it names is singular and two roles naming it are two descriptions
+    of one thing.
+    """
+    from .operation_slot_completion import FIXED_ANCHOR_SEMANTICS, anchor_semantics
+    from .semantic_typing import canonical_role_family
+
+    semantics = anchor_semantics(domain, anchor)
+    family = semantics.family if semantics else canonical_role_family(domain, anchor)
+    return not any(
+        item.domain == domain and item.family == family and item.quantification == "SET"
+        for item in FIXED_ANCHOR_SEMANTICS
+    )
+
+
+def _lower_composite_receiving_context(
+    domain: str,
+    contract: dict[str, Any],
+    canonical: dict[str, Any],
+    roles_by_id: dict[str, Any],
+    hypotheses: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    """Collapse two FM roles that name one fixed place the task acts on.
+
+    The model routinely describes the receiving context of a fastening twice --
+    "the object to be fastened" and "the specific spot on the workbench for the
+    fastening" -- and the runtime holds that place as one non-manipulable
+    reference.  Left as two participants, the operation had four where its
+    capability has three slots and was discarded whole, taking the fastening the
+    model plainly expressed with it.
+
+    Narrow on purpose.  Only a system fixed anchor, never a selectable asset, so
+    this can never merge two things the robot would have had to find separately.
+    Only when each role's own reading is that one anchor and nothing else, at
+    cardinality one, because the anchor is one place.  And only when the model
+    itself named both in one statement, which is what says they are two aspects
+    of one thing rather than two participants it enumerated.  Two roles that
+    land on the same anchor and are never named together are left colliding.
+    """
+    from .semantic_typing import canonical_role_family
+    from .system_context_registry import get_domain_system_fixed_anchors
+
+    anchors = set(get_domain_system_fixed_anchors(domain))
+    by_anchor: dict[str, list[str]] = {}
+    for role in contract["functional_roles"]:
+        rid = str(role["id"])
+        candidates = tuple(getattr(hypotheses.get(rid), "canonical_role_candidates", ()) or ())
+        if len(candidates) != 1 or candidates[0] not in anchors:
+            continue
+        if not _anchor_is_a_singular_place(domain, candidates[0]):
+            continue
+        try:
+            count = int(role.get("required_count", 1))
+        except (TypeError, ValueError):
+            count = 1
+        if count != 1:
+            continue
+        by_anchor.setdefault(candidates[0], []).append(rid)
+
+    statements = [
+        *({"kind": "operation", "id": item.get("id"),
+           "text": str(item.get("operation") or ""),
+           "participants": set(item.get("participant_roles", ()) or ())}
+          for item in contract["operation_pairings"]),
+        *({"kind": "relation", "id": item.get("id"),
+           "text": str(item.get("relation") or ""),
+           "participants": set(item.get("participant_roles", ()) or ())}
+          for item in contract["functional_relations"]),
+    ]
+
+    lowerings: list[dict[str, Any]] = []
+    for anchor, members in sorted(by_anchor.items()):
+        if len(members) < 2:
+            continue
+        keeper, aspects = members[0], members[1:]
+        for aspect in aspects:
+            together = [
+                {"kind": row["kind"], "id": row["id"], "text": row["text"],
+                 "participant_roles": sorted(row["participants"])}
+                for row in statements
+                if {keeper, aspect} <= row["participants"]
+            ]
+            if not together:
+                continue
+            if any(_role_enumerates_a_further_instance(roles_by_id.get(rid) or {})
+                   for rid in (keeper, aspect)):
+                continue
+            for item in contract["operation_pairings"]:
+                item["participant_roles"] = list(dict.fromkeys(
+                    keeper if p == aspect else p for p in item.get("participant_roles", ()) or ()))
+            for item in contract["functional_relations"]:
+                item["participant_roles"] = list(dict.fromkeys(
+                    keeper if p == aspect else p for p in item.get("participant_roles", ()) or ()))
+            contract["functional_roles"] = [
+                role for role in contract["functional_roles"] if str(role["id"]) != aspect]
+            canonical["functional_roles"] = [
+                role for role in canonical.get("functional_roles", ())
+                if str(role.get("id")) != aspect]
+            aspect_role = dict(roles_by_id.pop(aspect, {}))
+            keeper_role = dict(roles_by_id.get(keeper) or {})
+            keeper_role["required_properties"] = list(dict.fromkeys([
+                *(keeper_role.get("required_properties") or ()),
+                *(aspect_role.get("required_properties") or ()),
+            ]))
+            keeper_role["fm_composite_aspect_roles"] = list(dict.fromkeys([
+                *(keeper_role.get("fm_composite_aspect_roles") or ()), aspect]))
+            roles_by_id[keeper] = keeper_role
+            for collection in (contract["functional_roles"], canonical.get("functional_roles", [])):
+                for index, role in enumerate(collection):
+                    if str(role.get("id")) == keeper:
+                        collection[index] = keeper_role
+            # A statement whose only two participants were the two aspects was
+            # relating one place to itself, and once they are one role it says
+            # nothing further about the scene.  It is recorded here rather than
+            # dropped quietly, because a relation that disappears without a
+            # reason is indistinguishable from one that was not understood.
+            absorbed = [
+                {"kind": "relation", "id": item.get("id"),
+                 "text": str(item.get("relation") or ""),
+                 "reason": "BOTH_PARTICIPANTS_ARE_ASPECTS_OF_THE_SAME_ANCHOR"}
+                for item in contract["functional_relations"]
+                if len(set(item.get("participant_roles", ()) or ())) < 2
+            ]
+            contract["functional_relations"] = [
+                item for item in contract["functional_relations"]
+                if len(set(item.get("participant_roles", ()) or ())) >= 2
+            ]
+            absorbed += [
+                {"kind": "operation", "id": item.get("id"),
+                 "text": str(item.get("operation") or ""),
+                 "reason": "BOTH_PARTICIPANTS_ARE_ASPECTS_OF_THE_SAME_ANCHOR"}
+                for item in contract["operation_pairings"]
+                if len(set(item.get("participant_roles", ()) or ())) < 2
+            ]
+            contract["operation_pairings"] = [
+                item for item in contract["operation_pairings"]
+                if len(set(item.get("participant_roles", ()) or ())) >= 2
+            ]
+            lowerings.append({
+                "code": "COMPOSITE_RECEIVING_CONTEXT_LOWERED_TO_ONE_ANCHOR",
+                "canonical_role": anchor,
+                "kept_raw_role": keeper,
+                "aspect_raw_role": aspect,
+                "aspect_role_function": str(aspect_role.get("function", "")),
+                "fm_statements_naming_both": together,
+                "statements_absorbed_by_the_lowering": absorbed,
+                "provenance": "FM_EXPLICIT_SEMANTIC",
+            })
+    return lowerings
+
+
 def convert_v3_to_canonical_document(
     v3_doc: Mapping[str, Any], *, domain: str, task_instruction: str = ""
 ) -> dict[str, Any]:
     canonical = _base_canonical_document(v3_doc)
     contract = v3_doc["task_contract"]
+    contract = json.loads(json.dumps(contract))
     roles_by_id: dict[str, Mapping[str, Any]] = {role["id"]: role for role in contract["functional_roles"]}
     hypotheses = build_role_type_hypotheses(domain, canonical)
+    composite_lowerings = _lower_composite_receiving_context(
+        domain, contract, canonical, roles_by_id, hypotheses)
+    if composite_lowerings:
+        hypotheses = build_role_type_hypotheses(domain, canonical)
 
     bundles: dict[tuple[str, str], str] = {}
 
@@ -1338,8 +1515,10 @@ def convert_v3_to_canonical_document(
     )
     normalized_operations = constraint_interpreter.interpret(normalized_operations)
     canonical["functional_constraint_interpretation"] = [
-        *relation_conjunction_trace, *constraint_interpreter.trace,
+        *composite_lowerings, *relation_conjunction_trace, *constraint_interpreter.trace,
     ]
+    if composite_lowerings:
+        canonical["composite_receiving_context_lowerings"] = composite_lowerings
     canonical["fm_semantic_accounting"] = list(constraint_interpreter.accounting)
     canonical["current_state_operation_context_roles"] = sorted({
         str(row["raw_role"])

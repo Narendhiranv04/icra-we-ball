@@ -17,7 +17,8 @@ def _classify(**overrides):
 
 def test_exact_frozen_taxonomy_has_no_generic_grounding_failure():
     assert PIPELINE_OUTCOMES == {
-        "SUCCESS", "TASK_SPECIFICATION_FAILURE", "GRAPH_COMPILATION_FAILURE",
+        "SUCCESS", "FM_RESPONSE_FAILURE",
+        "TASK_SPECIFICATION_FAILURE", "GRAPH_COMPILATION_FAILURE",
         "OBJECT_DISCOVERY_FAILURE", "FUNCTIONAL_ASSIGNMENT_FAILURE", "PLANNING_FAILURE",
     }
     assert "GROUNDING_FAILURE" not in PIPELINE_OUTCOMES

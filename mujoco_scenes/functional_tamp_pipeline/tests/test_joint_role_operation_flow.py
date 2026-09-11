@@ -30,6 +30,9 @@ from mujoco_scenes.functional_tamp_pipeline.semantic_typing import build_role_ty
 WORKSHOP = ("Identify the compatible components required to complete the fastening at the "
             "marked workbench location, complete the fastening, and leave any reusable "
             "equipment used for the task safely on the workbench.")
+LIVING = ("Prepare the living room for two people to enjoy refreshments while watching "
+          "television. Provide each person with their own refreshment setting nearby, and "
+          "place the entertainment control where it is accessible to both people.")
 KITCHEN = ("Prepare and serve one coffee and one soup for each of two people. Make each "
            "coffee using coffee and water and stir it before serving. Serve each soup bowl "
            "with its own suitable eating utensil.")
@@ -312,3 +315,78 @@ def test_an_end_state_no_operation_achieves_is_not_quietly_accepted():
         and row.get("corroborated_by_compiled_operation")
         for row in trace["relations"]
     ), trace["relations"]
+
+
+# ---------------------------------------------------------------------------
+# Two names for one fixed place, and three ways that must not fire
+# ---------------------------------------------------------------------------
+
+
+def _composite_workshop(extra_role, statement_names_both=True):
+    participants = (["fastener", "workpiece", "tool", extra_role["id"]]
+                    if statement_names_both else ["fastener", "tool"])
+    return document([
+        role("fastener", "component used to join the workpiece",
+             categories=["screw"], policy="DISTINCT"),
+        role("workpiece", "object to be fastened", categories=["block"], policy="DISTINCT"),
+        role("tool", "implement used to apply fastening force",
+             categories=["screwdriver"], policy="DISTINCT"),
+        extra_role,
+    ], operations=[operation("op_fasten", "fasten", participants)])
+
+
+def test_two_names_for_one_fastening_place_become_one_anchor():
+    raw = _composite_workshop(
+        role("marked_location", "the marked spot on the workbench where the fastening occurs",
+             kind="FIXED_TARGET", policy="SHARED", categories=["marked spot"]))
+    canonical, graph = compile_v3(raw, "workshop", WORKSHOP)
+    lowerings = canonical.get("composite_receiving_context_lowerings") or []
+    assert lowerings, canonical["functional_constraint_interpretation"]
+    assert lowerings[0]["canonical_role"] == "repair_target"
+    assert lowerings[0]["fm_statements_naming_both"], lowerings[0]
+    assert graph.operation_groups, trace_of(graph)["disabled_groups"]
+
+
+def test_a_role_the_model_called_another_one_is_a_second_participant():
+    """The adversarial half: "another" is the model enumerating, not describing."""
+    raw = _composite_workshop(
+        role("marked_location", "another marked spot on the workbench receiving a fastening",
+             kind="FIXED_TARGET", policy="SHARED", categories=["marked spot"]))
+    canonical, graph = compile_v3(raw, "workshop", WORKSHOP)
+    assert not canonical.get("composite_receiving_context_lowerings")
+    assert canonical["unresolved_operation_semantics"]
+    assert not graph.online_executable_contract_complete
+
+
+def test_two_roles_never_named_together_stay_a_collision():
+    """The other adversarial half: the model itself has to put them in one statement."""
+    raw = _composite_workshop(
+        role("marked_location", "the marked spot on the workbench where the fastening occurs",
+             kind="FIXED_TARGET", policy="SHARED", categories=["marked spot"]),
+        statement_names_both=False)
+    canonical, graph = compile_v3(raw, "workshop", WORKSHOP)
+    assert not canonical.get("composite_receiving_context_lowerings")
+    assert any(
+        row.get("code") == "AMBIGUOUS_ROLE_MAPPING"
+        for row in trace_of(graph)["unresolved_roles"]
+    ), trace_of(graph)["unresolved_roles"]
+
+
+def test_two_seats_the_model_enumerated_are_never_merged_into_one():
+    """The third adversarial half: the domain offers a set form of this anchor.
+
+    Living Room has SEATING_POSITION for one seat and SEATING_PAIR for both, so
+    two roles that each read as a seating position may be the two seats the
+    model enumerated.  Merging them would erase the enumeration.
+    """
+    raw = document([
+        role("shared", "shared support accessible to both seats", kind="REGION",
+             policy="SHARED", categories=["coffee table"]),
+        role("seat_left", "viewer seating position", kind="FIXED_TARGET", policy="SHARED",
+             categories=["armchair"]),
+        role("seat_right", "viewer seating position", kind="FIXED_TARGET", policy="SHARED",
+             categories=["armchair"]),
+    ], relations=[relation("between", "between", ["shared", "seat_left", "seat_right"])])
+    canonical, _ = compile_v3(raw, "living_room", LIVING)
+    assert not canonical.get("composite_receiving_context_lowerings")
+    assert canonical["functional_relations"][0]["relation"] == "situated between"
