@@ -31,12 +31,39 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 
 
-def _endpoint_model(base_url: str) -> str:
+def _require_model(base_url: str, required: str) -> str:
+    """The endpoint must serve exactly the model the experiment names.
+
+    There used to be a fallback to whatever the endpoint happened to serve
+    first.  That silently benchmarks a different model than the one the run
+    claims, which is the one bookkeeping error no amount of later analysis can
+    detect or undo.  Absent means abort.
+    """
     with urllib.request.urlopen(base_url.rstrip("/") + "/models", timeout=15) as response:
         ids = [row["id"] for row in json.load(response)["data"]]
     if not ids:
         raise SystemExit("Preflight blocked: endpoint exposes no models")
-    return "qwen35-9b" if "qwen35-9b" in ids else ids[0]
+    if required not in ids:
+        raise SystemExit(
+            f"Preflight blocked: required model {required!r} is not served. "
+            f"The endpoint offers {sorted(ids)}. Refusing to benchmark a different model.")
+    return required
+
+
+# Everything that changes what the model returns, set explicitly rather than
+# inherited.  A shell variable must not be able to alter an experiment quietly,
+# so each is passed and each is recorded, and the two come from one dict.
+SAMPLER = {
+    "TAMP_FM_MAX_TOKENS": "24000",
+    "TAMP_FM_SCHEMA_VERSION": "3",
+    "TAMP_FM_TEMPERATURE": "0.0",
+    "TAMP_FM_TOP_P": "1.0",
+    "TAMP_FM_TOP_K": "-1",
+    "TAMP_FM_PRESENCE_PENALTY": "0.0",
+    "TAMP_FM_REPETITION_PENALTY": "1.0",
+    "TAMP_FM_ENABLE_THINKING": "false",
+    "TAMP_FM_VIEWS": "3",
+}
 
 
 def _frozen_identity() -> dict[str, str]:
@@ -65,7 +92,6 @@ def _frozen_identity() -> dict[str, str]:
         "max_tokens": "24000",
         "temperature": "0.0",
         "enable_thinking": "false",
-        "views": "3",
     }
 
 
@@ -86,6 +112,8 @@ def main() -> int:
     parser.add_argument("--output-root", type=Path,
                         default=Path("benchmark_reports/live_repeat_experiment"))
     parser.add_argument("--base-url", default="http://127.0.0.1:8000/v1")
+    parser.add_argument("--model", required=True,
+                        help="exact model id the endpoint must serve; no fallback")
     parser.add_argument("--repeats", type=int, default=10)
     parser.add_argument("--variants", default=None,
                         help="comma-separated subset; omit for all 32")
@@ -99,7 +127,7 @@ def main() -> int:
     if subprocess.check_output(["git", "status", "--porcelain"], text=True).strip():
         raise SystemExit("Preflight blocked: working tree is not clean")
     try:
-        model = _endpoint_model(args.base_url)
+        model = _require_model(args.base_url, args.model)
     except SystemExit:
         raise
     except Exception as exc:
@@ -133,17 +161,26 @@ def main() -> int:
             skipped.append(index)
             print(f"[repeat {index:02d}] already finished; left untouched", flush=True)
             continue
-        if repeat_dir.exists() and any(repeat_dir.iterdir()) and not args.rerun_failed:
+        attempts = sorted(p for p in repeat_dir.glob("attempt_*") if p.is_dir())
+        if attempts and not args.rerun_failed:
             failed.append(index)
-            print(f"[repeat {index:02d}] present but unfinished; preserved. "
-                  f"Pass --rerun-failed to redo it deliberately.", flush=True)
+            print(f"[repeat {index:02d}] {len(attempts)} unfinished attempt(s); preserved. "
+                  f"Pass --rerun-failed to add another deliberately.", flush=True)
             continue
-        repeat_dir.mkdir(parents=True, exist_ok=True)
+        # Each attempt gets its own directory and nothing ever writes into one
+        # that exists.  A retry that reused the directory would both collide
+        # with the evaluator's refusal to overwrite a live run and destroy the
+        # earlier attempt's raw responses, which are evidence about the model
+        # whatever the attempt's outcome was.
+        attempt_dir = repeat_dir / f"attempt_{len(attempts) + 1:02d}"
+        if attempt_dir.exists():
+            raise SystemExit(f"Preflight blocked: {attempt_dir} already exists")
+        attempt_dir.mkdir(parents=True)
         env = dict(os.environ, TAMP_FM_BASE_URL=args.base_url, TAMP_FM_MODEL=model,
-                   TAMP_FM_MAX_TOKENS="24000", TAMP_FM_SCHEMA_VERSION="3", PYTHONPATH=".")
+                   PYTHONPATH=".", **SAMPLER)
         command = [sys.executable, "scripts/evaluate_vlm_functional_tamp.py",
                    "--mode", "vlm", "--spec-source", "live",
-                   "--output-root", str(repeat_dir)]
+                   "--output-root", str(attempt_dir)]
         if args.variants:
             command += ["--variants", args.variants]
         started = time.time()
@@ -151,7 +188,7 @@ def main() -> int:
         elapsed = round(time.time() - started, 1)
         after = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
         dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], text=True).strip())
-        invariants_path = repeat_dir / "invariants.json"
+        invariants_path = attempt_dir / "invariants.json"
         invariants = {}
         if invariants_path.is_file():
             try:
@@ -165,6 +202,7 @@ def main() -> int:
             errors.append("code or working tree changed during the repetition")
         (repeat_dir / "repeat_manifest.json").write_text(json.dumps({
             "repeat_index": index, "finished": not errors, "errors": errors,
+            "authoritative_attempt": attempt_dir.name, "attempts": len(attempts) + 1,
             "seconds": elapsed, **identity,
         }, indent=2) + "\n")
         (ran if not errors else failed).append(index)

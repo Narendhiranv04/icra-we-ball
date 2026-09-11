@@ -33,30 +33,64 @@ def wilson(successes: int, total: int, z: float = 1.96) -> tuple[float, float]:
     return (round(max(0.0, centre - spread), 4), round(min(1.0, centre + spread), 4))
 
 
+# The evaluator's canonical per-trial output, and the names it actually writes.
+# Reading anything else, or guessing field names, silently produced empty or
+# wrong aggregates -- the failure mode that makes an experiment look finished
+# when it is not.
+RECORDS_FILENAME = "evaluation_records.json"
+FIELD_FEASIBLE = "gt_feasible"
+FIELD_SUCCESS = "full_task_satisfied"
+FIELD_COVERAGE = "full_task_goal_coverage"
+FIELD_OUTCOME = "outcome_correct"
+FIELD_FALSE_COMPLETION = "false_completion"
+
+# The 32 benchmark variants, so a missing trial is a hole in the grid rather
+# than an absence nobody notices.  Read from the benchmark's own labels.
+def expected_variants() -> list[tuple[str, str]]:
+    import sys as _sys
+    _sys.path.insert(0, str(REPO))
+    from mujoco_scenes.final_paper_variant_labels import PREFIXES, VARIANT_LABELS
+    grid = []
+    for domain, labels in VARIANT_LABELS.items():
+        for index in range(1, len(labels) + 1):
+            grid.append((domain, f"{PREFIXES[domain]}{index}"))
+    return sorted(grid)
+
+
 def _trial_rows(repeat_dir: Path) -> list[dict]:
-    """Every per-trial record this repetition wrote, however it is stored."""
-    for name in ("trial_rows.json", "results.json", "summary.json"):
-        path = repeat_dir / name
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text())
-            except Exception:
-                continue
-            rows = data.get("rows") or data.get("trials") or data.get("results") or (
-                data if isinstance(data, list) else None)
-            if isinstance(rows, list) and rows:
-                return rows
-    rows = []
-    for path in sorted(repeat_dir.glob("*/*/*/result.json")) + sorted(
-            repeat_dir.glob("*/*/result.json")):
+    """Every per-trial record this repetition wrote.
+
+    Only the evaluator's canonical file.  An attempt directory is read in
+    preference to the repeat directory itself, so immutable retries aggregate
+    correctly.
+    """
+    attempts = sorted(p for p in repeat_dir.glob("attempt_*") if p.is_dir())
+    roots = attempts or [repeat_dir]
+    rows: list[dict] = []
+    for root in roots:
+        path = root / RECORDS_FILENAME
+        if not path.is_file():
+            continue
         try:
-            row = json.loads(path.read_text())
+            data = json.loads(path.read_text())
         except Exception:
             continue
-        row.setdefault("variant", path.parent.parent.name)
-        row.setdefault("domain", path.parent.parent.parent.name)
-        rows.append(row)
+        records = data.get("records") if isinstance(data, dict) else data
+        if isinstance(records, list):
+            for row in records:
+                rows.append({**row, "_attempt": root.name})
     return rows
+
+
+def _authoritative(rows: list[dict]) -> list[dict]:
+    """The latest attempt wins, per (domain, variant), and only that one."""
+    latest: dict[tuple[str, str], dict] = {}
+    for row in rows:
+        key = (str(row.get("domain")), str(row.get("variant")))
+        current = latest.get(key)
+        if current is None or str(row.get("_attempt", "")) >= str(current.get("_attempt", "")):
+            latest[key] = row
+    return list(latest.values())
 
 
 def main() -> int:
@@ -82,10 +116,32 @@ def main() -> int:
                 finished = False
         if not finished:
             unfinished.append(repeat_dir.name)
-        for row in _trial_rows(repeat_dir):
+        for row in _authoritative(_trial_rows(repeat_dir)):
             key = (str(row.get("domain")), str(row.get("variant")))
             per_variant[key].append({**row, "repeat": repeat_dir.name})
 
+    # The whole intended grid, so a trial that never ran is a hole rather than a
+    # silent absence from the denominator.  Experiment completeness and
+    # conditional performance on completed calls are reported separately: a
+    # missing call is not a semantic failure and must not be counted as one.
+    grid = expected_variants()
+    intended = len(grid) * len(repeats)
+    produced = sum(len(v) for v in per_variant.values())
+    holes = []
+    for domain, variant in grid:
+        got = len(per_variant.get((domain, variant), []))
+        if got < len(repeats):
+            holes.append((domain, variant, len(repeats) - got))
+    print("EXPERIMENT COMPLETENESS")
+    print(f"  repetitions present   : {len(repeats)}")
+    print(f"  intended trial slots  : {intended}  ({len(grid)} variants x {len(repeats)} repeats)")
+    print(f"  completed trials      : {produced}")
+    print(f"  missing trials        : {intended - produced}")
+    if holes:
+        print("  holes (domain, variant, missing):")
+        for row in holes:
+            print(f"    {row[0]:12s} {row[1]:5s} {row[2]}")
+    print()
     print(f"repetitions present: {len(repeats)}  unfinished: {unfinished or 'none'}")
     print("Unfinished repetitions still contribute every trial they produced; "
           "none is dropped for its outcome.\n")
@@ -99,10 +155,10 @@ def main() -> int:
     print(f"{'domain':12s} {'variant':8s} {'feasible':9s} {'success':>10s} "
           f"{'outcome ok':>11s} {'goal cov':>9s}")
     for (domain, variant), rows in sorted(per_variant.items()):
-        s_hits, s_total = rate(rows, "success")
-        o_hits, _ = rate(rows, "outcome_correct")
-        coverage = [float(row.get("gt_goal_coverage") or 0) for row in rows]
-        feasible = any(row.get("feasible") for row in rows)
+        s_hits, s_total = rate(rows, FIELD_SUCCESS)
+        o_hits, _ = rate(rows, FIELD_OUTCOME)
+        coverage = [float(row.get(FIELD_COVERAGE) or 0) for row in rows]
+        feasible = any(row.get(FIELD_FEASIBLE) for row in rows)
         low, high = wilson(s_hits, s_total)
         print(f"{domain:12s} {variant:8s} {'yes' if feasible else 'no':9s} "
               f"{s_hits:4d}/{s_total:<5d} {o_hits:4d}/{s_total:<6d} "
@@ -114,21 +170,21 @@ def main() -> int:
             "success_ci_low": low, "success_ci_high": high,
             "outcome_correct": o_hits,
             "mean_gt_goal_coverage": round(sum(coverage) / len(coverage), 4) if coverage else 0.0,
-            "false_completions": sum(1 for row in rows if row.get("false_completion")),
+            "false_completions": sum(1 for row in rows if row.get(FIELD_FALSE_COMPLETION)),
         })
 
     print()
     for scope in ("kitchen", "living_room", "workshop", "ALL"):
         rows = [row for (domain, _), group in per_variant.items() for row in group
                 if scope == "ALL" or domain == scope]
-        feasible_rows = [row for row in rows if row.get("feasible")]
-        s_hits, s_total = rate(feasible_rows, "success")
-        o_hits, o_total = rate(rows, "outcome_correct")
+        feasible_rows = [row for row in rows if row.get(FIELD_FEASIBLE)]
+        s_hits, s_total = rate(feasible_rows, FIELD_SUCCESS)
+        o_hits, o_total = rate(rows, FIELD_OUTCOME)
         low, high = wilson(s_hits, s_total)
         print(f"{scope:12s} feasible success {s_hits:4d}/{s_total:<5d} "
               f"= {(s_hits/s_total if s_total else 0):.3f} [{low}, {high}]   "
               f"outcome correct {o_hits}/{o_total}   "
-              f"false completions {sum(1 for r in rows if r.get('false_completion'))}")
+              f"false completions {sum(1 for r in rows if r.get(FIELD_FALSE_COMPLETION))}")
 
     categories = collections.Counter(
         str(row.get("outcome_category") or row.get("failure_category") or "UNRECORDED")
@@ -140,12 +196,16 @@ def main() -> int:
     destination = args.out or (args.root / "AGGREGATE")
     Path(str(destination) + ".json").write_text(json.dumps({
         "repetitions_present": len(repeats), "unfinished_repetitions": unfinished,
+        "completeness": {"intended_trial_slots": intended, "completed_trials": produced,
+                         "missing_trials": intended - produced,
+                         "holes": [{"domain": d, "variant": v, "missing": n} for d, v, n in holes]},
         "per_variant": out_rows, "categories": dict(categories),
     }, indent=2) + "\n")
-    with open(str(destination) + ".csv", "w", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(out_rows[0]))
-        writer.writeheader()
-        writer.writerows(out_rows)
+    if out_rows:
+        with open(str(destination) + ".csv", "w", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(out_rows[0]))
+            writer.writeheader()
+            writer.writerows(out_rows)
     print(f"\nwrote {destination}.json and .csv")
     return 0
 
