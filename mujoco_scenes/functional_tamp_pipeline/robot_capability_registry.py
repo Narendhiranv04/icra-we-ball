@@ -84,7 +84,9 @@ _COORDINATED_PHYSICAL_ACTION = re.compile(
 
 
 def is_non_physical_operation_phrase(
-    raw_phrase: str, participant_roles: Sequence[str] = ()
+    raw_phrase: str,
+    participant_roles: Sequence[str] = (),
+    declared_role_ids: Sequence[str] = (),
 ) -> bool:
     """Return whether the phrase leads with an explicitly non-physical action.
 
@@ -101,7 +103,8 @@ def is_non_physical_operation_phrase(
     # the fastening_component" contains the word "fastening" only because that
     # is what the model called the part, and reading it as a fastening turned a
     # search directive into a requirement the runtime could not represent.
-    action_only = operation_action_phrase(raw_phrase, participant_roles)
+    action_only = operation_action_phrase(
+        raw_phrase, participant_roles, declared_role_ids)
     # Leading with a perception verb does not make the whole phrase perception.
     # "Locate the parts and perform the fastening", "find the screw then drive
     # it into the joint": the model has named an acquisition step and a physical
@@ -427,16 +430,29 @@ def get_robot_capability_registry_hash() -> str:
     return hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 
 
-def operation_action_phrase(raw_phrase: str, participant_roles: Sequence[str] = ()) -> str:
-    """The operation phrase with the participant names it repeats taken out.
+def operation_action_phrase(
+    raw_phrase: str,
+    participant_roles: Sequence[str] = (),
+    declared_role_ids: Sequence[str] = (),
+) -> str:
+    """The operation phrase with the role names it repeats taken out.
 
     A capability is identified by the action; the participants are given
     separately.  Leaving their names in the text let "place the fastening_tool
     on the workbench" read as a fastening, because a cue matched inside the
     tool's own name -- and the runtime then induced a second fastening for it.
+
+    ``declared_role_ids`` extends that to every participant the contract
+    declares, not only the ones this operation lists.  A phrase may name another
+    role descriptively -- "open the containers to find the compatible fastening
+    component" -- and that component's name is no more an action here than a
+    participant's own name is.  Because it is not a participant of this
+    operation it was never stripped, so "fastening" survived, matched as a
+    coordinated physical act, and a search directive was compiled as a fastening.
     """
     normalized = _phrase(raw_phrase)
-    for role in sorted(participant_roles or (), key=len, reverse=True):
+    names = set(participant_roles or ()) | set(declared_role_ids or ())
+    for role in sorted(names, key=len, reverse=True):
         role_words = _phrase(role)
         if not role_words:
             continue

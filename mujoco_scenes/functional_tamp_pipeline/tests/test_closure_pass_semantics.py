@@ -323,3 +323,62 @@ def test_a_permissive_policy_over_a_reusable_role_is_left_alone():
                 "operation_pairings": []}
     resolved, trace = resolve_binding_policy("kitchen", "jar", role, document)
     assert resolved == "REUSABLE" and trace is None
+
+
+# --------------------------------------------- a role name is not an action
+
+@pytest.mark.parametrize("phrase,participants,declared,expected", [
+    # The case this was written for: the component's name is not a fastening.
+    ("The robot arm opens and inspects storage containers to find the "
+     "compatible fastening component.", ["robot_arm", "storage_container"],
+     ["robot_arm", "storage_container", "fastening_component", "workbench"], True),
+    ("search for fastening tool", ["fastening_tool"], ["fastening_tool"], True),
+    ("Inspect the storage to locate the mounting bracket", ["storage"],
+     ["storage", "mounting_bracket"], True),
+    # ... and the adversarial half: a real act coordinated with a search stays.
+    ("Search the drawers and then fasten the screw into the joint",
+     ["drawer", "screw"], ["drawer", "screw", "joint"], False),
+    ("Open the cabinet and place the tool on the bench", ["cabinet", "tool"],
+     ["cabinet", "tool", "bench"], False),
+    ("Locate the parts and perform the fastening", ["part"], ["part"], False),
+    ("find the screw and then drive it into the hole", ["screw", "hole"],
+     ["screw", "hole"], False),
+])
+def test_a_declared_role_name_is_never_read_as_an_action(
+        phrase, participants, declared, expected):
+    """Every declared role's name is stripped, not only this operation's own.
+
+    A phrase may name another participant descriptively.  Because that one is
+    not listed in this operation it was never stripped, so "fastening" inside
+    "the compatible fastening component" matched as an act coordinated with the
+    search, and an acquisition directive the runtime already performs was
+    compiled as a physical operation it could not seat.
+    """
+    from mujoco_scenes.functional_tamp_pipeline.robot_capability_registry import (
+        is_non_physical_operation_phrase,
+    )
+    assert is_non_physical_operation_phrase(phrase, participants, declared) is expected
+
+
+def test_an_operation_that_only_moves_the_robot_is_not_a_task_requirement():
+    """"The robot arm moves to a safe resting position on the workbench."
+
+    The executor and a place are the only participants, so no task object ends
+    up anywhere.  Read as a task operation it had one participant left once the
+    executor was removed, could state no relation, and blocked a contract whose
+    goals were otherwise complete.
+    """
+    raw = json.loads((ARCHIVE / "workshop/W7/trial_02/raw_v3.json").read_text())
+    document = json.loads(raw["content"]) if isinstance(raw.get("content"), str) else raw
+    workshop = ("Identify the compatible components required to complete the fastening at "
+                "the marked workbench location, complete the fastening, and leave any "
+                "reusable equipment used for the task safely on the workbench.")
+    normalized, trace = normalize_v3_live_document(
+        document, domain="workshop", task_instruction=workshop)
+    notes = trace if isinstance(trace, list) else (trace or {}).get("repairs", []) or []
+    assert any(row.get("code") == "OPERATION_STATES_WHERE_THE_ROBOT_ITSELF_ENDS_UP"
+               for row in notes)
+    canonical = convert_v3_to_canonical_document(
+        normalized, domain="workshop", task_instruction=workshop)
+    graph = compile_candidate_graph("workshop", workshop, canonical)
+    assert graph.metadata["online_executable_contract_complete"] is True

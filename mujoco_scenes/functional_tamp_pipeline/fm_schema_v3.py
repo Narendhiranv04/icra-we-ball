@@ -517,10 +517,49 @@ def normalize_v3_live_document(
             from .robot_capability_registry import is_non_physical_operation_phrase
             for operation in contract.get("operation_pairings", []):
                 participants = [p for p in operation.get("participant_roles", []) if p not in executor_ids]
+                remaining_roles = {
+                    str(r.get("id")): r for r in contract.get("functional_roles", []) or []
+                }
+                phrase_text = str(operation.get("operation", ""))
                 if len(participants) < 2 and is_non_physical_operation_phrase(
-                    str(operation.get("operation", "")), participants):
+                    phrase_text, participants, list(remaining_roles)):
                     trace.append({"code": "IMPLICIT_ROBOT_EXECUTOR_REMOVED", "removed_role_ids": sorted(executor_ids), "removed_operation": operation.get("id")})
                     continue
+                # The robot putting *itself* somewhere.  "The robot arm moves to
+                # a safe resting position on the workbench" names the executor
+                # and a place, and nothing else: the only thing that ends up
+                # anywhere is the arm, whose pose is the planner's business and
+                # not a task participant at all.  Read as a task operation it
+                # had one participant left once the executor was removed, could
+                # state no relation, and blocked a contract whose goals were
+                # otherwise complete.
+                #
+                # Confined to exactly that shape.  The one remaining participant
+                # must be a place the model itself declared a region or fixed
+                # reference, and the phrase must name no other declared role --
+                # so "moves the component to the workbench" keeps its operation
+                # and fails closed for under-specifying it, rather than being
+                # mistaken for the arm parking itself.
+                if len(participants) == 1 and str(operation.get("id")) and any(
+                    p in executor_ids for p in operation.get("participant_roles", []) or []
+                ):
+                    only = remaining_roles.get(participants[0]) or {}
+                    names_another = any(
+                        rid != participants[0]
+                        and re.search(rf"\b{re.escape(re.sub(r'[_-]+', ' ', rid).lower())}\b",
+                                      re.sub(r"[_-]+", " ", phrase_text).lower())
+                        for rid in remaining_roles
+                    )
+                    if str(only.get("entity_kind")) in {"REGION", "FIXED_TARGET"} and not names_another:
+                        trace.append({
+                            "code": "OPERATION_STATES_WHERE_THE_ROBOT_ITSELF_ENDS_UP",
+                            "removed_operation": operation.get("id"),
+                            "operation": phrase_text,
+                            "place": participants[0],
+                            "reason": "the executor and a place are the only participants, so no "
+                                      "task object changes; where the arm rests is the planner's",
+                        })
+                        continue
                 item = deepcopy(operation)
                 item["participant_roles"] = participants
                 operations.append(item)
@@ -1420,15 +1459,17 @@ def resolve_v3_operation_slots(
     # exactly one of them can seat these participants.  A phrase that is not a
     # physical operation at all is left alone, and an ambiguous fit is refused
     # rather than guessed.
+    declared_ids = tuple(roles_by_id)
     inferred_from_participants = False
-    if not capabilities and not is_non_physical_operation_phrase(phrase, participants_named):
+    if not capabilities and not is_non_physical_operation_phrase(
+        phrase, participants_named, declared_ids):
         capabilities = tuple(get_robot_capabilities(domain))
         inferred_from_participants = True
     participants = tuple(operation["participant_roles"])
     resolved = _slot_options_for_capabilities(
         domain, operation, roles_by_id, hypotheses, capabilities, participants)
     if not resolved and not inferred_from_participants and not is_non_physical_operation_phrase(
-        phrase, participants_named
+        phrase, participants_named, declared_ids
     ):
         # A reading the participants cannot support is not a reading.  The model
         # coordinates two acts in one phrase -- "place soup and add utensil" --
@@ -2015,7 +2056,8 @@ def convert_v3_to_canonical_document(
             operation = {**dict(operation), "operation_count": reconciled_count}
         operation_norm = re.sub(r"[_-]+", " ", str(operation["operation"])).lower().strip()
         if is_non_physical_operation_phrase(
-            str(operation["operation"]), operation.get("participant_roles", ())
+            str(operation["operation"]), operation.get("participant_roles", ()),
+            tuple(roles_by_id),
         ) or operation_norm.split(maxsplit=1)[0] in {
             "associate", "associates", "associating", "associated",
         }:
