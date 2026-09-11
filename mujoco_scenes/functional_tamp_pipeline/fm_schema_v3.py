@@ -12,7 +12,7 @@ import hashlib
 import json
 import re
 from itertools import combinations, permutations, product
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 import jsonschema
 
@@ -40,6 +40,7 @@ from .operation_slot_completion import (
     probe_named_participant_slots,
 )
 from .semantic_typing import (
+    RUNTIME_AUTHORED_ROLE_PROVENANCE,
     build_role_type_hypotheses,
     canonical_role_family,
     relation_canonical_role_pairs,
@@ -1185,6 +1186,85 @@ def _decompose_nary_relation(
     return decomposed
 
 
+def _reconciled_operation_count(
+    domain: str,
+    operation: Mapping[str, Any],
+    roles_by_id: Mapping[str, Mapping[str, Any]],
+    hypotheses: Mapping[str, Any],
+    all_operations: Sequence[Mapping[str, Any]],
+) -> int:
+    """How many times the operation runs, given what its participant declares.
+
+    ``operation_count`` says how many times the change happens and
+    ``required_count`` says how many times the task needs a participant, so the
+    two are about the same number whenever one application consumes one instance
+    of that participant.  Where the model's two answers disagree, the larger is
+    the one that keeps every requirement it stated: lowering the participant's
+    count would discard part of what it asked for.
+
+    Deliberately narrow.  A participant raises the count only when all of the
+    following hold, and otherwise the model's own number stands:
+
+      * it is a role the model itself declared, not a slot the runtime
+        synthesized -- a synthesized slot takes its own count from this
+        operation, so reading it back would be circular;
+      * its binding policy is DISTINCT, which is the model saying each occasion
+        needs its own instance, so occasions and instances are the same number;
+      * no other operation names it, so its instances cannot be accounted for by
+        the applications of a different operation.  This is what keeps a seating
+        reference shared by two placements from multiplying either of them.
+
+      * every capability the phrase names can only seat it as the thing acted
+        on, never as an implement, a support or a reference.  This is the
+        condition that makes occasions and instances the same number: one
+        application consumes one of what it acts on, while a tool or a fixed
+        reference serves any number of them.  Without it, a contract declaring
+        two workpieces "being joined" -- the thing a single fastener is driven
+        through -- asked for two fastenings, and one declaring two seats asked
+        for the remote control to be placed twice.
+    """
+    try:
+        declared = int(operation.get("operation_count", 1) or 1)
+    except (TypeError, ValueError):
+        declared = 1
+    participants = list(dict.fromkeys(operation.get("participant_roles", ()) or ()))
+    capabilities = extract_operation_semantic_candidates(
+        domain, str(operation.get("operation", "")), participants)
+    if not capabilities:
+        return declared
+    acted_on: set[str] = set()
+    other_slots: set[str] = set()
+    for capability in capabilities:
+        acted_on |= set(capability.allowed_target_roles)
+        other_slots |= set(capability.allowed_source_roles)
+        other_slots |= set(capability.allowed_anchor_roles)
+    needed = declared
+    for participant in participants:
+        role = roles_by_id.get(participant)
+        if not role or role.get("provenance") in RUNTIME_AUTHORED_ROLE_PROVENANCE:
+            continue
+        if str(role.get("binding_policy")) != "DISTINCT":
+            continue
+        candidates = set(
+            getattr(hypotheses.get(participant), "canonical_role_candidates", ()) or ())
+        if not candidates or not candidates <= acted_on or candidates & other_slots:
+            continue
+        try:
+            count = int(role.get("required_count", 1) or 1)
+        except (TypeError, ValueError):
+            continue
+        if count <= needed:
+            continue
+        if any(
+            other.get("id") != operation.get("id")
+            and participant in (other.get("participant_roles") or ())
+            for other in all_operations
+        ):
+            continue
+        needed = count
+    return needed
+
+
 def resolve_v3_operation_slots(
     domain: str,
     operation: Mapping[str, Any],
@@ -1784,6 +1864,23 @@ def convert_v3_to_canonical_document(
     from .system_context_registry import get_domain_selectable_roles
     selectable_roles = set(get_domain_selectable_roles(domain))
     for operation in normalized_operations:
+        # Settle how many times this operation runs before anything is seated,
+        # so slot completion sizes the slots it supplies to the same number the
+        # compiled group will use.  Doing it only at group emission left a
+        # synthesized support counted once while its group ran twice, and the
+        # second placement had nowhere to go.
+        reconciled_count = _reconciled_operation_count(
+            domain, operation, roles_by_id, hypotheses, normalized_operations)
+        if reconciled_count != int(operation.get("operation_count", 1) or 1):
+            canonical["functional_constraint_interpretation"].append({
+                "code": "OPERATION_COUNT_RAISED_TO_A_DISTINCT_PARTICIPANTS_DECLARED_COUNT",
+                "operation_id": operation["id"],
+                "operation": operation["operation"],
+                "declared_operation_count": operation.get("operation_count"),
+                "reconciled_operation_count": reconciled_count,
+                "participant_roles": list(operation.get("participant_roles", ()) or ()),
+            })
+            operation = {**dict(operation), "operation_count": reconciled_count}
         operation_norm = re.sub(r"[_-]+", " ", str(operation["operation"])).lower().strip()
         if is_non_physical_operation_phrase(
             str(operation["operation"]), operation.get("participant_roles", ())
