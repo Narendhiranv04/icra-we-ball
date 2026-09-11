@@ -31,6 +31,7 @@ records; none is hand-entered.
 | Mean GT goal coverage (feasible) | 0.6625 |
 | Longest plan | 26 actions |
 | GT-leakage audit findings | **0** |
+| Test suite | **1178 passed, 0 failed, 2 skipped** |
 
 [1] One trial (`workshop/W5/trial_03`) is bistable across identical replays, so
 this figure is 34/60 or 35/60 depending on the run. See §6.2 — it is intrinsic
@@ -709,4 +710,10 @@ trustworthy enough to produce them.
 | `f83aa662` | an earlier stage may rank hypotheses, not delete them (W2 recovery) |
 | `2cbae631` | one attempt is the result, and the whole run is on the record |
 | `9937b82f` | sample live the way the offline numbers were actually drawn |
-| (this pass) | one outcome rule for both scorers; the infeasible case was a tautology |
+| `8f2b43ac` | the infeasible-variant outcome rule was a tautology |
+| `a7e9fb2d` | a third outcome rule, broken the other way |
+| `e76ac099` | the scoring rule does not belong inside the pipeline |
+| `df794604`…`a1d4ae69` | the frozen replay is not bit-deterministic; per-trial failure attribution |
+
+Final state: **1178 passed / 0 failed / 2 skipped**, leakage audit **FINDINGS: 0**,
+clean tree.
