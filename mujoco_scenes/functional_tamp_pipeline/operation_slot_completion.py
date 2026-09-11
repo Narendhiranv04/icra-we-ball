@@ -229,9 +229,17 @@ class ExpressedSemantics:
 
     def _in_scope(self, origin: str, about: frozenset[str], semantics: FixedAnchorSemantics,
                   operation_id: str, participants: frozenset[str]) -> bool:
+        if origin.startswith("OPERATION:"):
+            # An operation's phrase describes that operation and no other.  It
+            # used to reach any operation sharing one of its participants, and
+            # two placements naturally share the seating they are arranged
+            # around: "place the control where it is accessible to both people"
+            # then licensed a two-seat anchor for the *drinkware* placement, a
+            # second capability completed for it on that strength, and the tie
+            # made slot completion refuse an operation it could otherwise seat.
+            # The origin already says which operation the phrase belongs to.
+            return origin == f"OPERATION:{operation_id}"
         if about & participants:
-            return True
-        if origin == f"OPERATION:{operation_id}":
             return True
         if origin == "TASK_SUMMARY":
             admitting = self.anchor_admitting_operations.get(semantics.canonical_role, frozenset())
@@ -549,7 +557,7 @@ def _participant_slot_fit(
         return None
     families = {canonical_role_family(domain, candidate) for candidate in candidates}
     named_its_own_role = len(_own_wording_preference(hypotheses, participant)) == 1
-    if slot != "anchor":
+    if slot == "source":
         # The model named a participant of the right kind for this slot but not
         # the specific form the capability needs -- one "surface" role standing
         # for both the personal support and the shared one, which the prompt
@@ -557,6 +565,15 @@ def _participant_slot_fit(
         # the slot is held by that role and the raw participant is recorded as
         # the witness.  Only admissible if the kind picks out exactly one form:
         # a kitchen transfer admits two sources and stays ambiguous.
+        #
+        # The target slot is deliberately excluded.  This substitutes a sibling
+        # of the same family for what the model named, which is a reasonable way
+        # to settle which of several receiving places an operation meant, and not
+        # a reasonable way to decide what the operation acts on.  Allowing it
+        # there read a drinkware set as the remote control, on the strength of
+        # both being things one carries: two capabilities could then seat the
+        # placement, slot completion refused the tie, and the operation the task
+        # is mostly about was dropped as unrepresentable.
         bindable = set(get_domain_selectable_roles(domain)) | set(get_domain_system_fixed_anchors(domain))
         same_kind = [
             role for role in allowed
