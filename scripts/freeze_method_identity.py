@@ -11,6 +11,7 @@ that can silently stop describing the tree it names.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import subprocess
 import sys
@@ -48,9 +49,8 @@ def build_identity() -> dict:
     from mujoco_scenes.final_paper_variant_labels import PREFIXES, VARIANT_LABELS
 
     runner = REPO / "scripts" / "run_live_repeat_experiment.py"
-    spec = __import__("importlib.util", fromlist=["util"]).util.spec_from_file_location(
-        "_freeze_runner", runner)
-    module = __import__("importlib.util", fromlist=["util"]).util.module_from_spec(spec)
+    spec = importlib.util.spec_from_file_location("_freeze_runner", runner)
+    module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
     grid = sorted(f"{PREFIXES[d]}{i + 1}"

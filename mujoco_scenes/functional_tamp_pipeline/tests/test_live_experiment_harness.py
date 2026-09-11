@@ -261,7 +261,11 @@ def test_the_live_sampler_is_the_one_the_offline_numbers_were_measured_on():
     assert sampler["TAMP_FM_TOP_P"] == str(frozen["top_p"])
     assert sampler["TAMP_FM_TOP_K"] == str(frozen["top_k"])
     assert sampler["TAMP_FM_PRESENCE_PENALTY"] == str(frozen["presence_penalty"])
-    assert sampler["TAMP_FM_MAX_TOKENS"] == str(frozen["max_tokens"])
+    # max_tokens is deliberately raised above the archive's value; every other
+    # sampler field must still match it.  See the note in the runner's SAMPLER.
+    assert int(sampler["TAMP_FM_MAX_TOKENS"]) >= int(frozen["max_tokens"])
+    assert int(sampler["TAMP_FM_MAX_TOKENS"]) <= 28247, (
+        "max_tokens exceeds the context window minus the worst observed prompt")
     assert sampler["TAMP_FM_SCHEMA_VERSION"] == str(frozen["schema_version"])
     assert (sampler["TAMP_FM_ENABLE_THINKING"] == "true") is bool(frozen["thinking"])
 

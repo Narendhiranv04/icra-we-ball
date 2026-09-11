@@ -85,7 +85,19 @@ def _model_revision(record: dict) -> str:
 FROZEN_DISTRIBUTION = (
     "benchmark_reports/v3_qwen_distribution_3x32_20260910T053937/collection_manifest.json")
 SAMPLER = {
-    "TAMP_FM_MAX_TOKENS": "24000",
+    # 28000, not the archive's 24000.  The hard limit is 28247: the model's
+    # context is 32768 and the worst observed prompt is 4521 tokens.
+    #
+    # This does NOT fix truncation.  All five unparseable archived calls spent
+    # their entire 24000 budget on reasoning and emitted no content, and
+    # re-issuing those same five inputs recovers 5/5 at 28000 *and* 5/5 at
+    # 24000, consuming at most 14699 tokens -- so the ceiling was never the
+    # binding constraint and truncation is a stochastic runaway that would hit
+    # any ceiling.  The increase is justified only because the observed
+    # convergent tail (14699) already exceeds the archive's maximum (12222), so
+    # a draw that would finish has room to; it buys headroom, not a lower
+    # failure rate.
+    "TAMP_FM_MAX_TOKENS": "28000",
     "TAMP_FM_SCHEMA_VERSION": "3",
     "TAMP_FM_TEMPERATURE": "0.6",
     "TAMP_FM_TOP_P": "0.95",

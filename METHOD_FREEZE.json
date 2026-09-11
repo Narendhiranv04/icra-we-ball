@@ -1,0 +1,98 @@
+{
+  "benchmark_grid": {
+    "domains": {
+      "kitchen": 12,
+      "living_room": 10,
+      "workshop": 10
+    },
+    "variant_count": 32,
+    "variants": [
+      "K1",
+      "K10",
+      "K11",
+      "K12",
+      "K2",
+      "K3",
+      "K4",
+      "K5",
+      "K6",
+      "K7",
+      "K8",
+      "K9",
+      "L1",
+      "L10",
+      "L2",
+      "L3",
+      "L4",
+      "L5",
+      "L6",
+      "L7",
+      "L8",
+      "L9",
+      "W1",
+      "W10",
+      "W2",
+      "W3",
+      "W4",
+      "W5",
+      "W6",
+      "W7",
+      "W8",
+      "W9"
+    ]
+  },
+  "determinism": {
+    "note": "PYTHONHASHSEED and the thread counts are read at process start, so they are passed to every spawned trial rather than set in process.",
+    "reproducible_child_env": {
+      "MKL_NUM_THREADS": "2",
+      "MUJOCO_GL": "egl",
+      "OMP_NUM_THREADS": "2",
+      "PYTHONHASHSEED": "0",
+      "TOKENIZERS_PARALLELISM": "false"
+    },
+    "strict_deterministic_algorithms": true
+  },
+  "evaluator": {
+    "completion_claimed_statuses": [
+      "ACTION_SEQUENCE_READY"
+    ],
+    "infeasibility_concluded_statuses": [
+      "EXHAUSTED_NO_VALID_GROUNDING",
+      "INFEASIBLE",
+      "NO_VALID_COMPLETE_ASSIGNMENT",
+      "PLANNING_PROVEN_INFEASIBLE"
+    ],
+    "module_sha256": "e0b7178ee42d3b817751d8b03f7ee1b34341afe8e859b4596ddd2088805f5ba3"
+  },
+  "git": {
+    "branch": "vlm-testing-pipeline",
+    "clean": false,
+    "committed_at": "2026-09-12T03:48:15+05:30",
+    "sha": "dac73e9fa2bd4f4a8401cfb9646efce7c93ce94b"
+  },
+  "identity_sha256": "1d7655a3cf2c9624d3518194bebc6eef70100a31b95379f3fd60863b59ac1550",
+  "perception": {
+    "determinism_module_sha256": "a8667ce9e27097799859e1d104ef27369de92e4102b96fe09b68f9820578545a",
+    "semantic_grounding_config_sha256": "7e5a57e631b21374f1ad8f6fd00cac9e6ec6987302801b7a7a5e466bd69dc957",
+    "workshop_config": "mujoco_scenes/configs/workshop_phase1_yoloworld_l_five_view_close.yaml",
+    "workshop_config_sha256": "9b847075051a2d147dfcd628034eb59c16a1311564eed08ef77058b76d12a889",
+    "workshop_geometry_config_sha256": "3e41034f4765325856d85a05e0d0f161dfad4e89100c03868e03c992662524e9"
+  },
+  "sampler": {
+    "TAMP_FM_ENABLE_THINKING": "true",
+    "TAMP_FM_MAX_TOKENS": "28000",
+    "TAMP_FM_PRESENCE_PENALTY": "1.0",
+    "TAMP_FM_REPETITION_PENALTY": "1.0",
+    "TAMP_FM_SCHEMA_VERSION": "3",
+    "TAMP_FM_TEMPERATURE": "0.6",
+    "TAMP_FM_TOP_K": "20",
+    "TAMP_FM_TOP_P": "0.95",
+    "TAMP_FM_VIEWS": "3"
+  },
+  "semantic_contract": {
+    "capability_registry_sha256": "98055ba6579345151cd1b7a9ccea32fc2ad47dd0f51f51cf40e3eb9cdb01aef7",
+    "prompt_and_schema_sha256": "bfd7433e19a1dd81d89e7ec50446b7cf5599304579663ba1bd9b0803ca25a521",
+    "runtime_ontology_sha256": "4fee971c3f494023adadc94fa350d3d9e27d81dbe41c001c2b8fc1d20bf49d41",
+    "schema_version": "3"
+  }
+}
