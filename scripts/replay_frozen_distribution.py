@@ -44,9 +44,10 @@ def run(job, timeout):
     # of the same archived responses disagreed on kitchen/K7/trial_01 for exactly
     # this reason: seed 1 leaves coffee_container unseated with an 8-action plan,
     # seeds 2 and 3 leave coffee_source unseated with a 20-action plan.
+    sys.path.insert(0, str(REPO))
+    from mujoco_scenes.determinism import REPRODUCIBLE_CHILD_ENV
     env = dict(os.environ, PYTHONPATH=str(REPO), TAMP_FM_SCHEMA_VERSION="3",
-               TAMP_REPO=str(REPO), MUJOCO_GL="egl", TOKENIZERS_PARALLELISM="false",
-               OMP_NUM_THREADS="2", MKL_NUM_THREADS="2", PYTHONHASHSEED="0")
+               TAMP_REPO=str(REPO), **REPRODUCIBLE_CHILD_ENV)
     cmd = [sys.executable, str(HERE / "replay_frozen_trial.py"), "--domain", dom, "--variant", var,
            "--trial", trial, "--raw", str(raw), "--output-root", str(outroot),
            "--row-out", str(rowout)]

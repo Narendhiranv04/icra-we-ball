@@ -29,6 +29,22 @@ from __future__ import annotations
 import os
 
 DEFAULT_SEED = 0
+
+# Everything a spawned trial needs in its environment for the run to be
+# reproducible.  These cannot be set from inside the process that needs them --
+# PYTHONHASHSEED is read at interpreter startup, and the threading variables are
+# read when the numeric libraries first load -- so the parent has to pass them
+# down.  They live here, in one dict, because the replay driver and the live
+# runner pinned different sets: the driver pinned threads and GL, the runner
+# pinned neither, so the live experiment would have run under a configuration no
+# offline measurement was ever made under.
+REPRODUCIBLE_CHILD_ENV = {
+    "PYTHONHASHSEED": "0",
+    "OMP_NUM_THREADS": "2",
+    "MKL_NUM_THREADS": "2",
+    "TOKENIZERS_PARALLELISM": "false",
+    "MUJOCO_GL": "egl",
+}
 _STATE: dict[str, object] | None = None
 
 

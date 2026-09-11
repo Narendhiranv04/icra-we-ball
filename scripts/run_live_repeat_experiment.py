@@ -134,7 +134,8 @@ def _frozen_identity(*, base_url: str, variant_set: str, run_type: str) -> dict[
     # The sampler is frozen from the single dict that is also passed to the
     # evaluator, so what is recorded cannot drift from what was sent.
     identity.update({key.lower(): value for key, value in sorted(SAMPLER.items())})
-    identity["pythonhashseed"] = "0"
+    from mujoco_scenes.determinism import REPRODUCIBLE_CHILD_ENV
+    identity.update({k.lower(): v for k, v in sorted(REPRODUCIBLE_CHILD_ENV.items())})
     return identity
 
 
@@ -251,8 +252,9 @@ def main() -> int:
         # process and a choice among equally ranked grounding candidates goes a
         # different way between runs, which would put uncontrolled variance into
         # an experiment whose whole purpose is to measure FM variance.
+        from mujoco_scenes.determinism import REPRODUCIBLE_CHILD_ENV
         env = dict(os.environ, TAMP_FM_BASE_URL=args.base_url, TAMP_FM_MODEL=model,
-                   PYTHONPATH=".", PYTHONHASHSEED="0", **SAMPLER)
+                   PYTHONPATH=".", **REPRODUCIBLE_CHILD_ENV, **SAMPLER)
         command = [sys.executable, "scripts/evaluate_vlm_functional_tamp.py",
                    "--mode", "vlm", "--spec-source", "live",
                    "--output-root", str(attempt_dir)]

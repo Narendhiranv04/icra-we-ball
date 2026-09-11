@@ -96,11 +96,17 @@ def test_hash_seed_is_pinned_for_every_spawned_trial():
     It cannot be fixed in-process: the interpreter reads PYTHONHASHSEED at
     startup, so it has to be in the environment of every spawned trial.
     """
+    from mujoco_scenes.determinism import REPRODUCIBLE_CHILD_ENV
+    assert REPRODUCIBLE_CHILD_ENV["PYTHONHASHSEED"] == "0"
+    # Both runners must take the whole environment from the one dict.  They
+    # previously pinned different sets -- the replay driver pinned thread counts
+    # and the GL backend, the live runner pinned neither -- so the experiment
+    # would have run under a configuration no offline measurement was made under.
     for script in ("scripts/replay_frozen_distribution.py",
                    "scripts/run_live_repeat_experiment.py"):
         source = (REPO / script).read_text()
-        assert 'PYTHONHASHSEED="0"' in source, (
-            f"{script} spawns trials without pinning PYTHONHASHSEED")
+        assert "REPRODUCIBLE_CHILD_ENV" in source, (
+            f"{script} spawns trials without the shared reproducible environment")
 
 
 def test_the_determinism_report_says_when_the_hash_seed_is_unpinned():

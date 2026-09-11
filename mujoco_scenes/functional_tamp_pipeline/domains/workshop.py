@@ -284,6 +284,24 @@ class WorkshopPlanningCompiler:
             compat_ok = (("driver", "COMPATIBLE_WITH", "fastener") in triples or has_group) and verified("driver", "COMPATIBLE_WITH", "fastener")
             reaches_ok = verified("driver", "REACHES_TARGET", "repair_target") and (("driver", "REACHES_TARGET", "repair_target") in triples or has_group or (insertion_ok and compat_ok))
             operation_ok = not disabled_operations and insertion_ok and compat_ok and reaches_ok
+            # Why the fastening operation was or was not instantiated.  When it
+            # is not, the SCREW operator is dropped while the goal it would have
+            # established stays in the goal set, so A* correctly returns a
+            # partial plan against a goal nothing can reach -- and the trial
+            # previously recorded no reason at all for that.  The goal is
+            # deliberately NOT dropped to match: the remaining goals are
+            # satisfiable without it, so removing it would turn an honest
+            # partial plan into a reported completion of an unrepaired joint.
+            operation_instantiation = {
+                "operation_instantiated": bool(operation_ok),
+                "insertion_ok": bool(insertion_ok),
+                "compat_ok": bool(compat_ok),
+                "reaches_ok": bool(reaches_ok),
+                "disabled_operations": [
+                    str(e.get("capability_id") or e.get("raw_group", {}).get("function"))
+                    for e in disabled_operations],
+                "has_group": bool(has_group),
+            }
             operation_bindings = context.get("operation_bindings")
             if operation_bindings is None and "ground_result" in context:
                 operation_bindings = getattr(context["ground_result"], "operation_bindings", {})
@@ -292,6 +310,17 @@ class WorkshopPlanningCompiler:
                     for b in b_list:
                         if isinstance(b, dict) and b.get("status") not in (None, "TRUE", True):
                             operation_ok = False
+            if operation_bindings:
+                blocking = [f"{gid}:{b.get('status')}" for gid, bl in operation_bindings.items()
+                            for b in bl if isinstance(b, dict)
+                            and b.get("status") not in (None, "TRUE", True)]
+                if blocking:
+                    operation_instantiation["blocking_operation_bindings"] = blocking
+            operation_instantiation["operation_instantiated"] = bool(operation_ok)
+            if not operation_ok:
+                operation_instantiation["unreachable_goal_predicates"] = (
+                    ["repaired"] if has_fasten_op else [])
+            context["operation_instantiation"] = operation_instantiation
             actions = [a for a in actions if not (a.name == "SCREW" and not operation_ok)
                        and not (a.name == "PLACE" and a.arguments == (fastener, target) and not insertion_ok)]
             if driver and not operation_ok:

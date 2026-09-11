@@ -140,6 +140,23 @@ def _check_unary_predicate(node: ObservedNode, predicate_name: str) -> str:
     return "UNKNOWN"
 
 
+def _first_declared(key: str, *sources: dict[str, Any] | None) -> Any:
+    """Take `key` from the first source that actually declares it.
+
+    For a container-valued field, empty is a finding, not an absence: an
+    observation that was validated with `reason_codes == []` is saying it found
+    no problems.  Reading these with `a.get(k) or b.get(k)` treats that empty
+    list as missing and silently falls through to a weaker, later observation's
+    complaints -- so a belief that was checked and confirmed gets overridden by
+    one that was not.  Precedence has to be about which source is authoritative,
+    not about whether its answer happened to be non-empty.
+    """
+    for source in sources:
+        if isinstance(source, dict) and key in source:
+            return source[key]
+    return None
+
+
 def extract_plausible_labels(belief: dict[str, Any] | None) -> list[str]:
     """Extract credible semantic candidate hypotheses H(o) from semantic belief."""
     if not belief:
@@ -148,12 +165,7 @@ def extract_plausible_labels(belief: dict[str, Any] | None) -> list[str]:
     validated_dict = belief.get("validated") if isinstance(belief.get("validated"), dict) else {}
     latest = belief.get("latest_observation") if isinstance(belief.get("latest_observation"), dict) else {}
 
-    reasons = (
-        belief.get("reason_codes")
-        or validated_dict.get("reason_codes")
-        or latest.get("reason_codes")
-        or []
-    )
+    reasons = _first_declared("reason_codes", belief, validated_dict, latest) or []
     lack_of_evidence_codes = {
         "NO_ASSOCIATED_DETECTION",
         "INSUFFICIENT_SEMANTIC_CAMERA_SUPPORT",
@@ -192,7 +204,7 @@ def extract_plausible_labels(belief: dict[str, Any] | None) -> list[str]:
             return [str(canonical)]
 
     if status == "UNKNOWN" and "CONFLICTING_MULTI_VIEW_LABELS" in reasons:
-        alts = belief.get("alternatives") or validated_dict.get("alternatives") or latest.get("alternatives")
+        alts = _first_declared("alternatives", belief, validated_dict, latest)
         if isinstance(alts, list) and alts:
             winner = alts[0].get("label") if isinstance(alts[0], dict) else None
             candidates = [str(winner)] if winner else []
@@ -315,12 +327,7 @@ def check_semantic_role_compatibility(
             or validated_dict.get("status")
             or latest.get("status")
         )
-        reasons = (
-            belief.get("reason_codes")
-            or validated_dict.get("reason_codes")
-            or latest.get("reason_codes")
-            or []
-        )
+        reasons = _first_declared("reason_codes", belief, validated_dict, latest) or []
         lack_of_evidence_codes = {
             "NO_ASSOCIATED_DETECTION",
             "INSUFFICIENT_SEMANTIC_CAMERA_SUPPORT",

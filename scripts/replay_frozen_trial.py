@@ -10,6 +10,15 @@ from pathlib import Path
 
 sys.path.insert(0, os.environ.get("TAMP_REPO", str(Path(__file__).resolve().parents[1])))
 
+# Before anything else in the process.  Seeding lazily, when the detector is
+# constructed, leaves everything that runs earlier unseeded -- including the
+# inspection controller choosing where to look.  Two replays of the same
+# archived contract disagreed on how many views supported an object (three
+# against two), which is what a differently-posed capture looks like, not what a
+# differently-scored image looks like.
+from mujoco_scenes.determinism import enable_deterministic_inference  # noqa: E402
+_DETERMINISM = enable_deterministic_inference()
+
 CANONICAL_TASK_INSTRUCTIONS = {
     "kitchen": "Prepare and serve one coffee and one soup for each of two people. Make each coffee using coffee and water and stir it before serving. Serve each soup bowl with its own suitable eating utensil.",
     "living_room": "Prepare the living room for two people to enjoy refreshments while watching television. Provide each person with their own refreshment setting nearby, and place the entertainment control where it is accessible to both people.",
