@@ -143,7 +143,10 @@ def evaluate_heldout_variants(
                 domain, variant, candidate_plan, run_dir
             )
 
-            false_completion = bool(not is_feasible and full_task_sat)
+            from mujoco_scenes.evaluation_outcome import is_false_completion
+            false_completion = is_false_completion(
+                pipeline_status=pipeline_res.status,
+                gt_full_task_satisfied=bool(full_task_sat))
             cand_stats = pipeline_res.candidate_search_statistics or pipeline_res.search_statistics or {}
             cand_total = cand_stats.get("total_goals", 0)
             cand_sat = cand_stats.get("satisfied_goals", 0)
@@ -157,8 +160,8 @@ def evaluate_heldout_variants(
             # and main numbers were therefore not comparable.
             from mujoco_scenes.evaluation_outcome import outcome_is_correct
             outcome_correct = outcome_is_correct(
-                gt_feasible=bool(is_feasible), task_satisfied=bool(full_task_sat),
-                false_completion=bool(false_completion),
+                gt_feasible=bool(is_feasible),
+                gt_full_task_satisfied=bool(full_task_sat),
                 pipeline_status=pipeline_res.status)
 
             manifest: Dict[str, Any] = {}

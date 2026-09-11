@@ -35,6 +35,9 @@ EXEMPT_BASENAMES = frozenset({
     # these exists in order to hold or to score against the reference, and is
     # invoked after a trial has finished, never inside a decision.
     "gt_spec_provider.py", "reference_graphs.py", "evaluation_metrics.py",
+    # Scores the FM's raw output against the reference, after the fact.  Reached
+    # only from evaluation_metrics.py and offline scripts, never from a decision.
+    "raw_semantic_evaluation.py",
     "gf_reference_evaluation.py", "gf_reference_evaluator.py",
     "raw_eval.py", "audit.py",
     # Offline perception scoring: matches detector tracks against simulator
@@ -104,12 +107,62 @@ def privileged_line_span(path: Path, tree: ast.AST) -> range:
     return range(0)
 
 
+# Modules that exist only to score a finished trial against the reference.  The
+# online path must not import them: scoring knows the feasibility label and the
+# expected answer, so an online module that can reach it can reach those too,
+# whatever it does with them today.  Names are matched on the final component of
+# the import, so both `import mujoco_scenes.evaluation_outcome` and
+# `from mujoco_scenes.evaluation_outcome import ...` are caught.
+EVALUATION_ONLY_MODULES = frozenset({
+    "evaluation_outcome",
+    "evaluation_metrics",
+    "gf_reference_evaluation",
+    "gf_reference_evaluator",
+    "gt_spec_provider",
+    "reference_graphs",
+})
+
+
+# The one structural exception, stated rather than hidden.  The benchmark has a
+# ground-truth/oracle arm as a deliberate comparison baseline, and the mode
+# dispatcher has to be able to construct it.  The import is lazy and guarded by
+# an explicit `mode == "gt"` branch, so the VLM online path never executes it.
+# Nothing else may import an evaluation-only module, and this allowance names
+# the single module and the single target it covers.
+EVALUATION_IMPORT_ALLOWANCES = {
+    ("mujoco_scenes/functional_tamp_pipeline/spec_provider.py", "gt_spec_provider"),
+}
+
+
+def evaluation_imports(path: Path, tree: ast.AST) -> list[str]:
+    """Imports of evaluation-only modules from an online module."""
+    found: list[str] = []
+    relative = str(path.relative_to(REPO))
+    for node in ast.walk(tree):
+        targets: list[str] = []
+        if isinstance(node, ast.Import):
+            targets = [a.name for a in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            base = node.module or ""
+            targets = [base] + [f"{base}.{a.name}" for a in node.names]
+        hits = {part for target in targets for part in str(target).split(".")
+                if part in EVALUATION_ONLY_MODULES}
+        for part in sorted(hits):
+            if (relative, part) in EVALUATION_IMPORT_ALLOWANCES:
+                continue
+            found.append(
+                f"{relative}:{getattr(node, 'lineno', 0)}: "
+                f"online module imports evaluation-only {part!r}")
+    return found
+
+
 def audit(path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8")
     tree = ast.parse(text)
     lines = text.splitlines()
     findings: list[str] = []
     privileged = privileged_line_span(path, tree)
+    findings.extend(evaluation_imports(path, tree))
     if privileged and not PRIVILEGED_GUARD.search(re.sub(r"\s+", " ", text)):
         findings.append(
             f"{path.relative_to(REPO)}: declares a privileged variant table but the "

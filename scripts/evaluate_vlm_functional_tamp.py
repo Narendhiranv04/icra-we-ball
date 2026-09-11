@@ -183,7 +183,14 @@ def evaluate_all_variants(
 
             # ACTION_SEQUENCE_READY describes candidate planning, not a claim
             # that the full user task was accomplished.
-            false_completion = bool(not is_feasible and full_task_sat)
+            # A false completion is announcing a finished plan for a task that
+            # is not finished.  This used to be "infeasible and satisfied",
+            # which needs ground truth to certify an impossible task as done and
+            # so never fired -- it missed the adversarial case entirely.
+            from mujoco_scenes.evaluation_outcome import is_false_completion
+            false_completion = is_false_completion(
+                pipeline_status=pipeline_res.status,
+                gt_full_task_satisfied=bool(full_task_sat))
 
             # Candidate goal satisfaction
             cand_stats = pipeline_res.candidate_search_statistics or pipeline_res.search_statistics or {}
@@ -196,8 +203,8 @@ def evaluate_all_variants(
             # behaviour cannot score differently offline and live.
             from mujoco_scenes.evaluation_outcome import outcome_is_correct
             outcome_correct = outcome_is_correct(
-                gt_feasible=bool(is_feasible), task_satisfied=bool(full_task_sat),
-                false_completion=bool(false_completion),
+                gt_feasible=bool(is_feasible),
+                gt_full_task_satisfied=bool(full_task_sat),
                 pipeline_status=pipeline_res.status)
 
             # Telemetry extraction from run manifest

@@ -197,20 +197,16 @@ def main() -> int:
     except Exception as exc:
         row["gt_eval_error"] = f"{type(exc).__name__}: {exc}"
         row["gt_full_task_satisfied"] = False
-    feas = row["feasible"]
-    # A reported completion that offline evaluation does not confirm.  On an
-    # infeasible variant any reported completion is one by construction.
-    row["false_completion"] = bool(row.get("success")) and not bool(row.get("gt_full_task_satisfied"))
-    # One shared rule with the live evaluator.  This scorer used to ask only
-    # whether the task went unsatisfied, which on an infeasible variant is true
-    # by construction -- it scored a tautology and credited behaviour it had not
-    # measured.  Not claiming completion is reported separately, as
-    # false_completion; this asks whether an infeasibility conclusion was reached.
-    from mujoco_scenes.evaluation_outcome import outcome_is_correct
+    # One authoritative rule, shared with the live evaluator and the held-out
+    # matrix.  See mujoco_scenes/evaluation_outcome.py for the four disagreeing
+    # definitions this replaced and why each was wrong.
+    from mujoco_scenes.evaluation_outcome import is_false_completion, outcome_is_correct
+    row["false_completion"] = is_false_completion(
+        pipeline_status=row.get("pipeline_status"),
+        gt_full_task_satisfied=bool(row.get("gt_full_task_satisfied")))
     row["outcome_correct"] = outcome_is_correct(
-        gt_feasible=bool(feas),
-        task_satisfied=bool(row.get("gt_full_task_satisfied")),
-        false_completion=bool(row.get("false_completion")),
+        gt_feasible=bool(row["feasible"]),
+        gt_full_task_satisfied=bool(row.get("gt_full_task_satisfied")),
         pipeline_status=row.get("pipeline_status"))
     Path(args.row_out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.row_out).write_text(json.dumps(row, indent=2, default=str) + "\n")
