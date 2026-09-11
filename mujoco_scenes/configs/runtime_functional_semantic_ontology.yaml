@@ -21,12 +21,22 @@ domains:
         accepted_categories:
           - spoon
       coffee_source:
+        # The runtime's own word for what may serve as the coffee supply.  A
+        # canister and a caddy are the same kind of closed dry-goods vessel this
+        # already accepts as a tin or a jar, and they are ordinary names for it,
+        # so a detector that reports one is describing the supply rather than
+        # something else.  Vessels that hold a *serving* -- a cup, a mug, a bowl
+        # -- are deliberately absent.
         accepted_categories:
           - coffee_source
           - coffee_jar
           - coffee_container
           - coffee_tin
           - jar
+          - coffee canister
+          - coffee_canister
+          - canister
+          - coffee caddy
       water_source:
         accepted_categories:
           - kettle
