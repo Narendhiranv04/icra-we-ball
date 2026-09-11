@@ -106,8 +106,15 @@ class TestWorkshopYoloWorldLFiveViewConfig(unittest.TestCase):
             geometry["relations"]["maximum_fastener_cross_section_m"], 0.043
         )
         self.assertEqual(geometry["measurement"]["slot_anisotropy_ratio"], 4.5)
-        self.assertEqual(geometry["measurement"]["slot_min_transverse_length_m"], 0.006)
-        self.assertEqual(geometry["measurement"]["slot_max_transverse_length_m"], 0.015)
+        # The drive-slot window describes a groove, not a screw head.  This
+        # test asserted 6-15 mm, which is head-diameter range: every Phillips
+        # head whose cloud segmented slightly elongated was classified SLOT_LIKE
+        # and the compatibility verifier then correctly refused a cross-drive
+        # screw for a cross-drive driver.  All six mis-measured heads in the
+        # archive measure 9.05-13.8 mm.  Commit 5cc21285 restored the bound to
+        # the width of an actual groove; these are those values.
+        self.assertEqual(geometry["measurement"]["slot_min_transverse_length_m"], 0.0)
+        self.assertEqual(geometry["measurement"]["slot_max_transverse_length_m"], 0.0031)
         self.assertEqual(geometry["measurement"]["hex_radial_symmetry_ratio"], 1.25)
         self.assertEqual(geometry["measurement"]["minimum_interface_points"], 5)
         self.assertEqual(geometry["relations"]["minimum_fastener_camera_count"], 2)

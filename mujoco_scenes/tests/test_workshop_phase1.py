@@ -121,7 +121,10 @@ def test_fm_contract_to_yolo_semantic_flow():
     res_screw = grounder.ground_object_for_requirement(track_screw, fastener_req)
 
     assert res_driver.semantic_status == GroundingStatus.PASS
-    assert res_wrench.semantic_status == GroundingStatus.FAIL
+    # UNKNOWN, not FAIL: see the note on the same assertion in
+    # test_semantics_does_not_use_geometry.  An unaccepted label is an
+    # unresolved candidate, never a proven incompatibility.
+    assert res_wrench.semantic_status == GroundingStatus.UNKNOWN
     assert res_screw.semantic_status == GroundingStatus.PASS
 
 
@@ -243,7 +246,11 @@ def test_semantics_does_not_use_geometry():
     res_d = grounder.ground_object_for_requirement(track_driver, driver_req)
     res_w = grounder.ground_object_for_requirement(track_wrench, driver_req)
     assert res_d.semantic_status == GroundingStatus.PASS
-    assert res_w.semantic_status == GroundingStatus.FAIL
+    # A label the requirement does not accept is not the same as a label proven
+    # incompatible: grounding reports UNKNOWN and leaves the candidate open
+    # rather than rejecting it, so that an unresolvable hypothesis can never be
+    # turned into a rejection.  This asserted FAIL, which is the refuted policy.
+    assert res_w.semantic_status == GroundingStatus.UNKNOWN
 
     # Different clouds (short vs huge), same semantic label
     track_short = ObservedObjectTrack(
