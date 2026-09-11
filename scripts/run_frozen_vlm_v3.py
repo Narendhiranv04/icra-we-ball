@@ -34,7 +34,7 @@ def main():
     if not ids:
         raise SystemExit('Preflight blocked: endpoint exposes no models')
     model='qwen35-9b' if 'qwen35-9b' in ids else ids[0]
-    env=dict(os.environ,TAMP_FM_BASE_URL=args.base_url,TAMP_FM_MODEL=model,TAMP_FM_MAX_TOKENS='8192',PYTHONPATH='.')
+    env=dict(os.environ,TAMP_FM_BASE_URL=args.base_url,TAMP_FM_MODEL=model,TAMP_FM_MAX_TOKENS='24000',PYTHONPATH='.')
     command=[sys.executable,'scripts/evaluate_vlm_functional_tamp.py','--mode','vlm','--spec-source','live','--output-root',str(args.output_root)]
     print(f'Frozen commit: {sha}; model: {model}; output: {args.output_root}',flush=True)
     result=subprocess.run(command,env=env)

@@ -169,3 +169,39 @@ def test_all_five_failure_classes_are_reachable_and_distinct():
         "TASK_SPECIFICATION_FAILURE", "GRAPH_COMPILATION_FAILURE",
         "OBJECT_DISCOVERY_FAILURE", "FUNCTIONAL_ASSIGNMENT_FAILURE", "PLANNING_FAILURE",
     }
+
+
+# ---------------------------------------------------------------------------
+# A response that never arrived is not a statement about the task
+# ---------------------------------------------------------------------------
+
+
+def test_a_transport_failure_is_not_a_specification_failure():
+    from mujoco_scenes.functional_tamp_pipeline.outcome_classifier import (
+        FM_RESPONSE_FAILURE_CATEGORIES,
+        classify_pipeline_outcome,
+    )
+
+    assert "TRANSPORT_OR_STRUCTURED_OUTPUT_FAILURE" in FM_RESPONSE_FAILURE_CATEGORIES
+    outcome = classify_pipeline_outcome(
+        task_specification_valid=False,
+        graph_compiled=False,
+        fm_response_usable=False,
+        reason="connection reset before any content arrived",
+    )
+    assert outcome.category == "FM_RESPONSE_FAILURE"
+
+
+def test_a_contract_that_arrived_and_is_wrong_is_still_a_specification_failure():
+    """The adversarial half: the response was readable, the task was not."""
+    from mujoco_scenes.functional_tamp_pipeline.outcome_classifier import (
+        classify_pipeline_outcome,
+    )
+
+    outcome = classify_pipeline_outcome(
+        task_specification_valid=False,
+        graph_compiled=False,
+        fm_response_usable=True,
+        reason="contract declares a relation over a role it never declared",
+    )
+    assert outcome.category == "TASK_SPECIFICATION_FAILURE"

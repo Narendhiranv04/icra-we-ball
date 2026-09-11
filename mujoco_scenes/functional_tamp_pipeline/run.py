@@ -28,6 +28,7 @@ try:
     from .audit import compute_prompt_and_schema_hash
     from .robot_capability_registry import get_robot_capability_registry_hash
     from .outcome_classifier import (
+        FM_RESPONSE_FAILURE_CATEGORIES,
         classify_pipeline_outcome, complete_planning_contract, executable_graph_compiled,
     )
 except ImportError:
@@ -45,6 +46,7 @@ except ImportError:
     from mujoco_scenes.functional_tamp_pipeline.audit import compute_prompt_and_schema_hash
     from mujoco_scenes.functional_tamp_pipeline.robot_capability_registry import get_robot_capability_registry_hash
     from mujoco_scenes.functional_tamp_pipeline.outcome_classifier import (
+        FM_RESPONSE_FAILURE_CATEGORIES,
         classify_pipeline_outcome, complete_planning_contract, executable_graph_compiled,
     )
 
@@ -310,6 +312,7 @@ def _acquire_spec_or_fail(
                 task_specification_valid=task_specification_valid,
                 graph_compiled=False,
                 reason=str(error),
+                fm_response_usable=cat not in FM_RESPONSE_FAILURE_CATEGORIES,
             )
             res = PipelineResult(
                 domain=state.domain,

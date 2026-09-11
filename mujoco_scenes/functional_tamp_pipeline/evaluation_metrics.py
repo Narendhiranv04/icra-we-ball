@@ -377,8 +377,16 @@ def enrich_record(row, run_dir, task):
         first_cause = None
         category, stage = 'NONE', 'SUCCESS'
     elif not row.get('vlm_json_valid'):
-        first_cause = 'TASK_SPECIFICATION_FAILURE'
-        category, stage = 'FM_STRUCTURAL_ERROR', 'RAW_FM'
+        # A response that never arrived, or arrived unparseable because the
+        # connection dropped or the generation was cut off, says nothing about
+        # the model's understanding of the task.  Attributing it to the
+        # specification overstated specification error and hid a plumbing fault.
+        if str(row.get('failure_category') or '') == 'TRANSPORT_OR_STRUCTURED_OUTPUT_FAILURE':
+            first_cause = 'FM_RESPONSE_FAILURE'
+            category, stage = 'TRANSPORT_OR_STRUCTURED_OUTPUT_FAILURE', 'RAW_FM'
+        else:
+            first_cause = 'TASK_SPECIFICATION_FAILURE'
+            category, stage = 'FM_STRUCTURAL_ERROR', 'RAW_FM'
     elif not sanitizer['succeeded']:
         first_cause = 'GRAPH_COMPILATION_FAILURE'
         category, stage = 'SANITIZER_UNRECOVERABLE', 'SANITIZER'

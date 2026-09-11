@@ -40,8 +40,19 @@ def block(rows):
     out["gt_goals"] = sum(r.get("gt_goals_satisfied", 0) or 0 for r in rows)
     out["feasible_fully_done"] = sum(
         1 for r in rows if r.get("feasible") and r.get("gt_full_task_satisfied"))
-    out["false_completions"] = sum(
-        1 for r in rows if r.get("success") and not r.get("gt_full_task_satisfied"))
+    # Two very different things used to be added together here.  A completion on
+    # a variant the benchmark declares infeasible is unsound: the pipeline
+    # claimed to finish a task that cannot be finished, and one of those is a
+    # defect.  A completion on a *feasible* variant whose achieved goals differ
+    # from the reference set may be a defect or may be a difference of
+    # interpretation between the reference and the compiled goal, and reading it
+    # as a false completion made the soundness figure unusable -- it moved
+    # whenever the reference did.  They are counted apart.
+    out["online_false_completions"] = sum(
+        1 for r in rows if r.get("success") and not r.get("feasible"))
+    out["gt_goal_mismatch_completions"] = sum(
+        1 for r in rows
+        if r.get("success") and r.get("feasible") and not r.get("gt_full_task_satisfied"))
     out["outcome_correct"] = sum(1 for r in rows if r.get("outcome_correct"))
     out["harness_failures"] = sum(
         1 for r in rows if r.get("harness_failure") or r.get("pipeline_status") == "PIPELINE_EXCEPTION")
@@ -88,7 +99,8 @@ def main() -> int:
     a = {(r["variant"], r["trial"]): r for r in after}
 
     keys = ["trials"] + [n for n, _ in STAGES] + [
-        "gt_goals", "feasible_fully_done", "false_completions", "outcome_correct",
+        "gt_goals", "feasible_fully_done", "online_false_completions",
+        "gt_goal_mismatch_completions", "outcome_correct",
         "harness_failures", "fm_calls", "max_astar"]
     print("=" * 78)
     print("STAGES AND QUALITY, before -> after")
@@ -140,19 +152,23 @@ def main() -> int:
               f"   e.g. {', '.join(examples[cause])}")
 
     print("\n" + "=" * 78)
-    print("FALSE COMPLETIONS")
+    print("COMPLETIONS THAT SHOULD NOT HAVE HAPPENED")
     print("=" * 78)
-    for label, rows in (("before", before), ("after", after)):
-        fc = [r for r in rows if r.get("success") and not r.get("gt_full_task_satisfied")]
-        print(f"   {label}: {len(fc)}  " + ", ".join(
-            f"{r['variant']}/{r['trial'][-2:]} ({r.get('gt_goals_satisfied')}/{r.get('gt_goals_total')})"
-            for r in fc))
-    print("   completions on a variant the benchmark calls infeasible:")
+    print("   ONLINE_FALSE_COMPLETION -- success on a variant the benchmark calls")
+    print("   infeasible.  This is the soundness figure and it must be zero.")
     for label, rows in (("before", before), ("after", after)):
         inf = [r for r in rows if r.get("success") and not r.get("feasible")]
-        print(f"      {label}: " + (", ".join(
-            f"{r['variant']}/{r['trial'][-2:]} (offline GT {r.get('gt_goals_satisfied')}/{r.get('gt_goals_total')})"
-            for r in inf) or "none"))
+        print(f"      {label}: {len(inf)}  " + (", ".join(
+            f"{r['variant']}/{r['trial'][-2:]}" for r in inf) or "none"))
+    print("   GT_GOAL_MISMATCH_COMPLETION -- success on a feasible variant whose")
+    print("   achieved goals differ from the reference set.  Reported separately")
+    print("   because it can be a difference of interpretation rather than a defect.")
+    for label, rows in (("before", before), ("after", after)):
+        fc = [r for r in rows
+              if r.get("success") and r.get("feasible") and not r.get("gt_full_task_satisfied")]
+        print(f"      {label}: {len(fc)}  " + (", ".join(
+            f"{r['variant']}/{r['trial'][-2:]} ({r.get('gt_goals_satisfied')}/{r.get('gt_goals_total')})"
+            for r in fc) or "none"))
 
     print("\n" + "=" * 78)
     print("RUNTIME (seconds per trial)")

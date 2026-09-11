@@ -128,6 +128,17 @@ def summarize(rows, out: Path, label: str):
             report["per_variant"][var] = {"domain": dom, "trials": len(tr), **counts(tr),
                 "outcomes": [r.get("outcome_category") for r in tr],
                 "stops": sorted({str(r.get("failure_reason") or "")[:90] for r in tr})}
+    # Soundness, kept apart from agreement with the reference goal set: a
+    # completion on a variant the benchmark calls infeasible is a defect, while
+    # a completion whose achieved goals merely differ from the reference may be
+    # a difference of interpretation.  Adding them together made the soundness
+    # figure move whenever the reference did.
+    report["online_false_completions"] = [
+        f"{r['domain']}/{r['variant']}/{r['trial']}" for r in rows
+        if r.get("success") and not r.get("feasible")]
+    report["gt_goal_mismatch_completions"] = [
+        f"{r['domain']}/{r['variant']}/{r['trial']}" for r in rows
+        if r.get("success") and r.get("feasible") and not r.get("gt_full_task_satisfied")]
     report["stop_reasons"] = dict(collections.Counter(
         str(r.get("failure_reason") or "")[:120] for r in rows).most_common())
     report["compile_missing_reason_heads"] = dict(collections.Counter(

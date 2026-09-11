@@ -6,11 +6,23 @@ from typing import Any
 
 PIPELINE_OUTCOMES = frozenset({
     "SUCCESS",
+    # A response that never arrived, or arrived unparseable, is not a statement
+    # about the task.  Counting it as a specification failure attributed a
+    # dropped connection or a truncated generation to the model's understanding,
+    # which is the wrong finding twice over: it overstates specification error
+    # and hides a plumbing fault that a rerun would clear.
+    "FM_RESPONSE_FAILURE",
     "TASK_SPECIFICATION_FAILURE",
     "GRAPH_COMPILATION_FAILURE",
     "OBJECT_DISCOVERY_FAILURE",
     "FUNCTIONAL_ASSIGNMENT_FAILURE",
     "PLANNING_FAILURE",
+})
+
+# Failure categories that mean the response itself did not arrive in a usable
+# form, as opposed to arriving and being wrong about the task.
+FM_RESPONSE_FAILURE_CATEGORIES = frozenset({
+    "TRANSPORT_OR_STRUCTURED_OUTPUT_FAILURE",
 })
 
 
@@ -79,10 +91,12 @@ def classify_pipeline_outcome(
     plan_complete: bool = False,
     reason: str = "",
     evidence: dict[str, Any] | None = None,
+    fm_response_usable: bool = True,
 ) -> PipelineOutcome:
     """Map stage evidence to exactly one frozen terminal category."""
     facts = dict(evidence or {})
     facts.update({
+        "fm_response_usable": fm_response_usable,
         "task_specification_valid": task_specification_valid,
         "graph_compiled": graph_compiled,
         "search_exhausted": search_exhausted,
@@ -91,7 +105,12 @@ def classify_pipeline_outcome(
         "planning_invoked": planning_invoked,
         "plan_complete": plan_complete,
     })
-    if not task_specification_valid:
+    if not fm_response_usable:
+        category, default = (
+            "FM_RESPONSE_FAILURE",
+            "The FM response did not arrive in a form that could be read at all",
+        )
+    elif not task_specification_valid:
         category, default = "TASK_SPECIFICATION_FAILURE", "FM task contract is missing, malformed, or contradictory"
     elif not graph_compiled:
         category, default = "GRAPH_COMPILATION_FAILURE", "Coherent FM semantics are unsupported by the runtime representation"

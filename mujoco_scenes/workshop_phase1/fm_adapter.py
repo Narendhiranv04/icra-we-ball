@@ -1451,8 +1451,23 @@ class FMAdapter:
         self.timeout_seconds = timeout_seconds or float(
             _env_first("TAMP_FM_TIMEOUT_SECONDS", "FM_TIMEOUT_SECONDS", default="600")
         )
+        # Measured, not guessed.  Across the 96 archived semantic responses the
+        # median completion is 7.7k tokens and 39 of the 91 that finished are
+        # longer than 8192 -- so the old default would have truncated 43% of
+        # them, and the distribution that produced those archives only worked
+        # because an environment variable happened to be set.  The longest
+        # response that finished is 12222 tokens; the five that did not finish
+        # ran to 24000 and would not have been saved by any budget.  24000 is
+        # therefore the frozen default: it reproduces the archived runs, leaves
+        # roughly twice the headroom over the longest complete response, and
+        # does not depend on anyone remembering to export anything.
+        #
+        # Truncation stays a reported failure of the response rather than
+        # something to retry.  Exactly one semantic request per trial is the
+        # scientific rule, and a second request would change what is being
+        # measured.
         self.max_tokens = max_tokens or int(
-            _env_first("TAMP_FM_MAX_TOKENS", "FM_MAX_TOKENS", default="8192")
+            _env_first("TAMP_FM_MAX_TOKENS", "FM_MAX_TOKENS", default="24000")
         )
         self.metrics = FMCallMetrics()
         self._transport = transport

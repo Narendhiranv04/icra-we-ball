@@ -27,8 +27,19 @@ def block(rows):
     out["gt_goals_total"] = sum(r.get("gt_goals_total", 0) or 0 for r in rows)
     out["feasible_fully_done"] = sum(
         1 for r in rows if r.get("feasible") and r.get("gt_full_task_satisfied"))
-    out["false_completions"] = sum(
-        1 for r in rows if r.get("success") and not r.get("gt_full_task_satisfied"))
+    # Two very different things used to be added together here.  A completion on
+    # a variant the benchmark declares infeasible is unsound: the pipeline
+    # claimed to finish a task that cannot be finished, and one of those is a
+    # defect.  A completion on a *feasible* variant whose achieved goals differ
+    # from the reference set may be a defect or may be a difference of
+    # interpretation between the reference and the compiled goal, and reading it
+    # as a false completion made the soundness figure unusable -- it moved
+    # whenever the reference did.  They are counted apart.
+    out["online_false_completions"] = sum(
+        1 for r in rows if r.get("success") and not r.get("feasible"))
+    out["gt_goal_mismatch_completions"] = sum(
+        1 for r in rows
+        if r.get("success") and r.get("feasible") and not r.get("gt_full_task_satisfied"))
     out["outcome_correct"] = sum(1 for r in rows if r.get("outcome_correct"))
     out["harness_failures"] = sum(
         1 for r in rows if r.get("pipeline_status") == "PIPELINE_EXCEPTION" or r.get("derive_exception"))
@@ -55,7 +66,8 @@ def main() -> int:
         for dom in DOMAINS}
 
     keys = ["trials"] + [n for n, _ in STAGES] + [
-        "gt_goals", "feasible_fully_done", "false_completions", "outcome_correct",
+        "gt_goals", "feasible_fully_done", "online_false_completions",
+        "gt_goal_mismatch_completions", "outcome_correct",
         "harness_failures", "fm_calls", "max_astar"]
     width = max(len(k) for k in keys) + 1
     header = f"{'metric':<{width}}" + "".join(f"{d[:8]:>10}" for d in DOMAINS) + f"{'TOTAL':>10}"
