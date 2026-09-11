@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Mapping
 from collections import defaultdict
 
 import numpy as np
@@ -48,6 +48,7 @@ class PersistentInstanceTracker:
 
         self._tracks: dict[str, ObservedObjectTrack] = {}
         self._next_instance_idx: int = 1
+        self.misattributed_stage_objects: list[dict[str, Any]] = []
 
     @property
     def tracks(self) -> dict[str, ObservedObjectTrack]:
@@ -56,6 +57,7 @@ class PersistentInstanceTracker:
     def reset(self) -> None:
         self._tracks.clear()
         self._next_instance_idx = 1
+        self.misattributed_stage_objects.clear()
 
     def _allocate_instance_id(self) -> str:
         inst_id = f"object_{self._next_instance_idx:04d}"
@@ -270,6 +272,42 @@ class PersistentInstanceTracker:
             "label_confidence_sum": dict(label_confidence_sum),
         }
 
+    @staticmethod
+    def _inside(point: np.ndarray, minimum: np.ndarray, maximum: np.ndarray) -> bool:
+        return bool(np.all(point >= minimum) and np.all(point <= maximum))
+
+    def _misattributed_to_this_stage(
+        self,
+        centroid: np.ndarray,
+        stage_volume_min: np.ndarray,
+        stage_volume_max: np.ndarray,
+        other_region_volumes: Mapping[str, tuple[np.ndarray, np.ndarray]] | None,
+    ) -> str | None:
+        """The region this object is actually in, when the stage is looking elsewhere.
+
+        Points are gated to the stage's volume with a boundary margin, which is
+        there to tolerate calibration error at the edge of a drawer.  The
+        declared volumes are close enough together that the margin reaches into
+        the neighbouring region's interior, and an object sitting in the tool
+        cabinet was admitted as an observation of the right drawer -- which is
+        how a scene containing no screw at all came to contain one, and how a
+        task that cannot be completed was reported complete.
+
+        A margin at a boundary is not a licence to claim another region's
+        contents.  When a fused object's centre lies inside another declared
+        region's own volume and outside this stage's, it is that region's and
+        not evidence from this stage.  Nothing about the scene is assumed: the
+        volumes are the ones the runtime already drives its cameras to.
+        """
+        if not other_region_volumes:
+            return None
+        if self._inside(centroid, stage_volume_min, stage_volume_max):
+            return None
+        for region_id, (minimum, maximum) in sorted(other_region_volumes.items()):
+            if self._inside(centroid, np.asarray(minimum), np.asarray(maximum)):
+                return region_id
+        return None
+
     def update_with_stage_observations(
         self,
         stage_index: int,
@@ -277,6 +315,7 @@ class PersistentInstanceTracker:
         observations: list[ViewObservation],
         stage_volume_min: np.ndarray,
         stage_volume_max: np.ndarray,
+        other_region_volumes: Mapping[str, tuple[np.ndarray, np.ndarray]] | None = None,
     ) -> list[ObservedObjectTrack]:
         """Fuse current stage detections across 5 views and associate with persistent tracks."""
         # 1. Backproject each detection to 3D point cloud
@@ -440,6 +479,26 @@ class PersistentInstanceTracker:
                 target["semantic_observations"].extend(
                     candidate["semantic_observations"])
             stage_objects = merged_objects
+
+        # 3b. Drop stage objects that are physically in a different declared
+        # region from the one this stage is inspecting.  Recorded, not silent.
+        kept_objects = []
+        for st_obj in stage_objects:
+            elsewhere = self._misattributed_to_this_stage(
+                np.asarray(st_obj["centroid"]), stage_volume_min, stage_volume_max,
+                other_region_volumes)
+            if elsewhere is None:
+                kept_objects.append(st_obj)
+                continue
+            self.misattributed_stage_objects.append({
+                "stage_index": stage_index,
+                "stage_region_id": source_region_id,
+                "actually_inside_region_id": elsewhere,
+                "centroid_world_m": [float(v) for v in np.asarray(st_obj["centroid"])],
+                "point_count": int(len(st_obj["points"])),
+                "reason": "OUTSIDE_STAGE_VOLUME_AND_INSIDE_ANOTHER_DECLARED_REGION",
+            })
+        stage_objects = kept_objects
 
         # 4. Associate stage objects with existing persistent tracks using bipartite matching
         affected_tracks: list[ObservedObjectTrack] = []

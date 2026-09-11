@@ -683,6 +683,7 @@ class WorkshopPhase1InspectionController:
             observations=raw_obs,
             stage_volume_min=stage_min,
             stage_volume_max=stage_max,
+            other_region_volumes=self._other_declared_region_volumes(source_region_id),
         )
 
         # Region instances are stable; semantic observations accumulate across
@@ -740,7 +741,27 @@ class WorkshopPhase1InspectionController:
             canvas,
         )
 
-    def _get_stage_volume_bounds(self, source_region_id: str) -> tuple[np.ndarray, np.ndarray]:
+    # The regions this controller drives its cameras to, each with its own
+    # volume.  Used to tell an object in the next drawer along from one in the
+    # drawer being inspected: the boundary margin on the stage gate is there for
+    # calibration error at an edge, and the declared volumes are close enough
+    # that it otherwise reaches into a neighbour's interior.
+    DECLARED_INSPECTION_REGIONS: tuple[str, ...] = (
+        "LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET",
+    )
+
+    @classmethod
+    def _other_declared_region_volumes(
+        cls, source_region_id: str
+    ) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+        return {
+            region: cls._get_stage_volume_bounds(region)
+            for region in cls.DECLARED_INSPECTION_REGIONS
+            if region != source_region_id
+        }
+
+    @staticmethod
+    def _get_stage_volume_bounds(source_region_id: str) -> tuple[np.ndarray, np.ndarray]:
         if source_region_id == "LEFT_DRAWER":
             return np.array([-0.65, -0.20, 0.35]), np.array([-0.10, 0.45, 0.75])
         elif source_region_id == "RIGHT_DRAWER":
