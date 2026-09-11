@@ -172,3 +172,34 @@ def test_relation_is_read_against_the_form_its_own_operation_uses():
     assert graph.metadata["online_executable_contract_complete"] is True
     sources = {group.tool_role for group in graph.operation_groups}
     assert {"PERSONAL_CUP_SAUCER_REGION", "SHARED_REMOTE_REGION"} <= sources
+
+
+def test_binding_policy_resolution_cannot_see_the_scene():
+    """Structural guarantee, not a behavioural sample.
+
+    The whole point of resolving the policy while compiling is that the observed
+    scene is not available yet, so a scene short of objects can never be the
+    reason a stated requirement is re-read.  ``resolve_binding_policy`` takes the
+    domain, the role and the document and nothing else, and ``compile_candidate_graph``
+    -- which calls it -- takes no observed graph at all.
+    """
+    import inspect
+
+    accepted = set(inspect.signature(resolve_binding_policy).parameters)
+    assert accepted == {"domain", "role_id", "role", "document"}
+    compile_parameters = set(inspect.signature(compile_candidate_graph).parameters)
+    assert compile_parameters == {"domain", "task", "raw"}
+    for name in ("graph_o", "observed", "scene", "candidates", "inventory"):
+        assert name not in accepted and name not in compile_parameters
+
+
+def test_resolution_is_identical_whatever_the_scene_would_hold():
+    """The same contract resolves the same way twice, with nothing else supplied."""
+    role = _role("stirrer", "coffee_stirrer", function="tool to mix the coffee")
+    document = {"functional_roles": [role], "functional_relations": [],
+                "operation_pairings": [{"id": "stir", "operation": "stir the coffee",
+                                        "participant_roles": ["stirrer", "cup"],
+                                        "operation_count": 2}]}
+    first = resolve_binding_policy("kitchen", "stirrer", role, document)
+    second = resolve_binding_policy("kitchen", "stirrer", role, document)
+    assert first[0] == second[0] == "REUSABLE"
