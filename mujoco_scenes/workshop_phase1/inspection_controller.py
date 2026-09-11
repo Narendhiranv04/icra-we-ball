@@ -629,30 +629,29 @@ class WorkshopPhase1InspectionController:
                                             "inference_source": ym.inference_source,
                                         })
                         
-                        # Apply size heuristic to all gathered alternatives
-                        filtered_alts = []
-                        for alt in alternatives:
-                            alt_conf = alt["confidence"]
-                            alt_label = alt["canonical_label"]
-                            if om.cloud_bounds_world_m:
-                                min_b = om.cloud_bounds_world_m.get("minimum_world_m")
-                                max_b = om.cloud_bounds_world_m.get("maximum_world_m")
-                                if min_b and max_b:
-                                    prior_cfg = self.raw_config.get("semantic_physical_prior", {})
-                                    if prior_cfg.get("enabled", False):
-                                        max_dim = float(np.max(np.asarray(max_b, dtype=float) - np.asarray(min_b, dtype=float)))
-                                        small_thresh = prior_cfg.get("small_object_max_dimension_m", 0.08)
-                                        if max_dim < small_thresh:
-                                            multipliers = prior_cfg.get("small_object", {})
-                                        else:
-                                            multipliers = prior_cfg.get("large_object", {})
-                                        
-                                        if alt_label in multipliers:
-                                            alt_conf *= multipliers[alt_label]
-                            if alt_conf > 1e-5:
-                                alt["confidence"] = alt_conf
-                                filtered_alts.append(alt)
-                        om.semantic_alternatives = filtered_alts
+                        # Every label the detector proposed for this physical
+                        # object is kept as a hypothesis, with the confidence the
+                        # detector gave it.
+                        #
+                        # The size prior used to be applied here and anything it
+                        # zeroed was deleted.  It was reading the *raw* proposal
+                        # cloud, which takes in surrounding surface and reads a
+                        # 4 cm fastener at 13 cm, so the fastener hypotheses were
+                        # destroyed as physically impossible on a measurement
+                        # that was wrong by a factor of three.  Every "screw"
+                        # reading in the drawer was dropped this way, the track
+                        # kept only the driver labels the crops had offered, and
+                        # six archived trials failed for a fastener that had been
+                        # detected and accepted in all five views.
+                        #
+                        # The constraint itself is right and is still applied --
+                        # by the tracker, against the *fused* cloud, which is
+                        # where how big the thing is can actually be known and
+                        # where the same prior correctly computes a zero for the
+                        # driver labels at 4 cm.  An earlier stage may rank
+                        # hypotheses; it may not delete the evidence the later
+                        # stage needs to judge them.
+                        om.semantic_alternatives = list(alternatives)
                     else:
                         om.canonical_label = "unknown"
                         om.raw_label = "unknown"
