@@ -496,20 +496,30 @@ The authoritative number in §1 is therefore from a **single clean replay at
 `--workers 2` with nothing else running**, not from a composite and not from a
 loaded run.
 
-**The cause is identifiable and the fix is standard.** Searching the entire
-repository for determinism controls returns nothing:
+**What is established, and what is hypothesis.** Establishing this cleanly
+matters, so the two are kept apart.
+
+*Established.* The workshop domain — the domain the flip occurred in — runs
+YOLO-World on the **GPU** (`workshop_phase1_yoloworld_l_five_view_close.yaml`:
+`device: 0`, `inference_size: 1280`) with acceptance thresholds as low as `0.001`,
+so a large number of detections sit near their acceptance boundary. And the
+repository sets **no determinism controls anywhere**:
 
 ```
 manual_seed | cudnn.deterministic | use_deterministic_algorithms
 np.random.seed | CUBLAS_WORKSPACE_CONFIG        -> no matches
 ```
 
-The detector runs on GPU with no seed, `cudnn.benchmark` left at its default, and
-no deterministic-algorithm constraint. cuDNN selects kernels by autotuning
-against currently available GPU memory, so under contention it can pick different
-algorithms and produce slightly different confidences. For a detection sitting
-near its acceptance threshold — precisely the W4/W5 fastener cases in §3 — that
-is enough to flip the outcome.
+*Hypothesis, not isolated.* The most likely mechanism is cuDNN kernel
+autotuning: it selects algorithms against currently available GPU memory, so
+under contention it can choose differently and return slightly different
+confidences, which is enough to flip a detection sitting at a 0.001 threshold.
+This is consistent with every observation — the flip is in the GPU domain, on a
+marginal detection, and correlates with concurrency — but it was **not** isolated
+by controlled experiment. Two replays at identical concurrency were not compared,
+so intrinsic run-to-run nondeterminism and load-induced nondeterminism are not
+yet distinguished. Either way the remedy is the same, and either way the number
+is not reproducible as it stands.
 
 The remedy is the usual one (`torch.manual_seed`, `cudnn.deterministic = True`,
 `cudnn.benchmark = False`, `torch.use_deterministic_algorithms(True)`,
@@ -522,7 +532,9 @@ exists to catch.
 
 This is the highest-value next change in the repository. It does not read ground
 truth, does not condition on variants, and converts a benchmark whose headline
-moves by a trial with machine load into a reproducible one.
+moves by a trial between runs into a reproducible one. The cheap first experiment
+is two replays at identical concurrency: if they still differ, the
+nondeterminism is intrinsic rather than load-induced.
 
 ---
 
