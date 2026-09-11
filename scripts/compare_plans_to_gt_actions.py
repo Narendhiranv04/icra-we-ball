@@ -40,20 +40,104 @@ def load_expected(domain: str, variant: str):
     return data, [a for a in actions if str(a.get("operator")) not in EXPLORATORY]
 
 
+# Each domain writes its plan under a different name and depth.
+PLAN_PATHS = (
+    "action_plan.json",
+    "action_sequence/action_plan.json",
+    "action_sequence/plan.json",
+    "plan.json",
+)
+
+
 def load_produced(run_dir: Path):
-    path = run_dir / "action_plan.json"
-    if not path.exists():
-        return None
-    data = json.loads(path.read_text())
-    return [a for a in (data.get("actions") or [])
-            if str(a.get("operator")) not in EXPLORATORY]
+    for relative in PLAN_PATHS:
+        path = run_dir / relative
+        if path.exists():
+            data = json.loads(path.read_text())
+            actions = data.get("actions") if isinstance(data, dict) else data
+            return [a for a in (actions or [])
+                    if str(a.get("operator")) not in EXPLORATORY]
+    return None
+
+
+def _argument(value):
+    """One argument as a plain name.
+
+    Living Room writes arguments as {"object": "object_0002"}; the other two
+    write bare strings.  Both mean the same thing here.
+    """
+    if isinstance(value, dict):
+        for key in ("object", "instance", "instance_id", "id", "name", "region", "target"):
+            if key in value:
+                return str(value[key])
+        return json.dumps(value, sort_keys=True)
+    return str(value)
+
+
+# Living Room stores an action's arguments as a mapping rather than a list.
+# The catalogue lists them positionally, so the mapping is read in the order the
+# operators take: what is moved, then where it goes.
+_ARGUMENT_ORDER = ("object", "instance", "instance_id", "fastener", "tool",
+                   "region", "target", "support", "destination", "anchor")
 
 
 def arguments(action):
     value = action.get("arguments")
     if isinstance(value, list):
-        return [str(x) for x in value]
-    return [] if value is None else [str(value)]
+        return [_argument(x) for x in value]
+    if isinstance(value, dict):
+        ordered = [value[key] for key in _ARGUMENT_ORDER if key in value]
+        extra = [v for k, v in sorted(value.items()) if k not in _ARGUMENT_ORDER]
+        return [_argument(x) for x in ordered + extra]
+    return [] if value is None else [_argument(value)]
+
+
+def compare_unordered(expected, produced):
+    """The same steps in any order, under a consistent body correspondence.
+
+    Many orderings satisfy the same goal: the reference pours from each source
+    in turn, and the planner may serve every utensil first.  Neither is more
+    correct, so this asks whether the *set* of steps agrees, and the strict
+    ordered check above is reported alongside it rather than instead of it.
+    """
+    if len(expected) != len(produced):
+        return False, f"length {len(produced)} != expected {len(expected)}"
+    # Try to build a consistent correspondence greedily over matching operators.
+    def signature(action, mapping):
+        args = []
+        for value in arguments(action):
+            args.append(mapping.get(value, value))
+        return (str(action.get("operator")), tuple(args))
+
+    remaining = list(produced)
+    body_to_instance: dict[str, str] = {}
+    for want in expected:
+        matched = None
+        for candidate in remaining:
+            if str(candidate.get("operator")) != str(want.get("operator")):
+                continue
+            want_args, got_args = arguments(want), arguments(candidate)
+            if len(want_args) != len(got_args):
+                continue
+            trial = dict(body_to_instance)
+            ok = True
+            for w, g in zip(want_args, got_args):
+                if not OBSERVED_INSTANCE.match(g):
+                    if w != g:
+                        ok = False
+                        break
+                    continue
+                if trial.setdefault(w, g) != g:
+                    ok = False
+                    break
+            if ok:
+                matched = candidate
+                body_to_instance = trial
+                break
+        if matched is None:
+            return False, f"no produced step corresponds to {want.get('operator')}{arguments(want)}"
+        remaining.remove(matched)
+    return True, "same steps, different order"
 
 
 def compare(expected, produced):
@@ -70,12 +154,15 @@ def compare(expected, produced):
         if len(want_args) != len(got_args):
             return False, f"step {index}: arity {len(got_args)} != {len(want_args)}"
         for position, (w, g) in enumerate(zip(want_args, got_args)):
-            if SHARED_NAME.match(w):
+            # What kind of argument this is, is decided by what the produced
+            # plan put there.  An observed instance id stands for a scene body
+            # and has to correspond consistently; anything else is a name the
+            # runtime and the catalogue share -- a region, a support, a fixed
+            # anchor -- and has to be identical.
+            if not OBSERVED_INSTANCE.match(g):
                 if w != g:
                     return False, f"step {index} arg {position}: {g} != {w}"
                 continue
-            if not OBSERVED_INSTANCE.match(g):
-                return False, f"step {index} arg {position}: {g} is not an observed instance"
             if body_to_instance.setdefault(w, g) != g:
                 return False, (f"step {index} arg {position}: {w} was bound to "
                                f"{body_to_instance[w]} and is now {g}")
@@ -110,31 +197,55 @@ def main() -> int:
                          "status": "NO_PLAN_PRODUCED", "detail": ""})
             continue
         ok, detail = compare(expected, produced)
+        unordered_ok, unordered_detail = (True, detail) if ok else compare_unordered(
+            expected, produced)
         rows.append({"domain": domain, "variant": variant, "trial": trial,
                      "intended_outcome": meta.get("intended_outcome"),
                      "expected_steps": len(expected), "produced_steps": len(produced),
-                     "status": "EXACT_GT_ACTION_SEQUENCE" if ok else "DIFFERS",
-                     "detail": detail})
+                     "status": ("EXACT_GT_ACTION_SEQUENCE" if ok
+                                else "SAME_STEPS_DIFFERENT_ORDER" if unordered_ok
+                                else "DIFFERS"),
+                     "detail": detail if ok else (
+                         unordered_detail if unordered_ok else detail)})
     rows.sort(key=lambda r: (r["domain"], r["variant"], r["trial"]))
-    exact = sum(1 for r in rows if r["status"] == "EXACT_GT_ACTION_SEQUENCE")
-    planned = sum(1 for r in rows if r.get("produced_steps"))
-    print(f"trials with a produced plan: {planned}")
-    print(f"plans matching the GT action sequence exactly: {exact}")
-    print()
+    # Scored over the trials the pipeline reported complete.  A partial plan on a
+    # trial that failed was never meant to be the reference sequence, and
+    # counting it as a mismatch would say nothing.
+    successes = set()
+    replay_rows = root / "BASELINE_REPLAY.json"
+    if replay_rows.exists():
+        successes = {
+            (r["domain"], r["variant"], r["trial"])
+            for r in json.loads(replay_rows.read_text()) if r.get("success")
+        }
     for r in rows:
-        if not r.get("produced_steps"):
-            continue
-        mark = "OK " if r["status"] == "EXACT_GT_ACTION_SEQUENCE" else "   "
-        print(f"  {mark}{r['domain'][:4]:4s} {r['variant']:4s}/{r['trial'][-2:]} "
-              f"{r['produced_steps']}/{r['expected_steps']} steps  {r['detail'][:90]}")
+        r["pipeline_success"] = (r["domain"], r["variant"], r["trial"]) in successes
+    scored = [r for r in rows if r.get("produced_steps") and r["pipeline_success"]]
+    exact = [r for r in scored if r["status"] == "EXACT_GT_ACTION_SEQUENCE"]
+    same = [r for r in scored if r["status"] == "SAME_STEPS_DIFFERENT_ORDER"]
+    print(f"trials with a produced plan: {sum(1 for r in rows if r.get('produced_steps'))}")
+    print(f"of which the pipeline reported complete: {len(scored)}")
+    print(f"  exact GT action sequence:        {len(exact)}")
+    print(f"  same steps, different order:     {len(same)}")
+    print(f"  differs:                         {len(scored) - len(exact) - len(same)}")
+    print()
+    for r in scored:
+        mark = {"EXACT_GT_ACTION_SEQUENCE": "EXACT", "SAME_STEPS_DIFFERENT_ORDER": "ORDER"}.get(
+            r["status"], "     ")
+        print(f"  {mark:5s} {r['domain'][:4]:4s} {r['variant']:4s}/{r['trial'][-2:]} "
+              f"{r['produced_steps']}/{r['expected_steps']} steps  {r['detail'][:80]}")
     if args.out:
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.with_suffix(".json").write_text(json.dumps({
-            "trials_with_plan": planned, "exact_gt_action_sequence": exact, "rows": rows,
+            "trials_with_plan": sum(1 for r in rows if r.get("produced_steps")),
+            "scored_successes": len(scored),
+            "exact_gt_action_sequence": len(exact),
+            "same_steps_different_order": len(same),
+            "rows": rows,
         }, indent=2) + "\n")
-        keys = ["domain", "variant", "trial", "intended_outcome", "expected_steps",
-                "produced_steps", "status", "detail"]
+        keys = ["domain", "variant", "trial", "intended_outcome", "pipeline_success",
+                "expected_steps", "produced_steps", "status", "detail"]
         with out.with_suffix(".csv").open("w", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=keys, extrasaction="ignore")
             writer.writeheader()
