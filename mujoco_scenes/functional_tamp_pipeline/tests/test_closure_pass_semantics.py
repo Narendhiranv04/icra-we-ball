@@ -186,7 +186,7 @@ def test_binding_policy_resolution_cannot_see_the_scene():
     import inspect
 
     accepted = set(inspect.signature(resolve_binding_policy).parameters)
-    assert accepted == {"domain", "role_id", "role", "document"}
+    assert accepted == {"domain", "role_id", "role", "document", "canonical_by_raw_id"}
     compile_parameters = set(inspect.signature(compile_candidate_graph).parameters)
     assert compile_parameters == {"domain", "task", "raw"}
     for name in ("graph_o", "observed", "scene", "candidates", "inventory"):
@@ -203,3 +203,123 @@ def test_resolution_is_identical_whatever_the_scene_would_hold():
     first = resolve_binding_policy("kitchen", "stirrer", role, document)
     second = resolve_binding_policy("kitchen", "stirrer", role, document)
     assert first[0] == second[0] == "REUSABLE"
+
+
+# ------------------------------------------- resolved policy reaches operations
+
+def test_operation_reuse_follows_the_resolved_role_policy():
+    """The Kitchen failure this was written for.
+
+    The stirrer resolves to reusable, so one spoon serves both stirrings.  The
+    stirring operation was created before that resolution and kept asking for
+    one spoon per application; the grounder believed the operation, took two of
+    the scene's three spoons, and the two soup utensils the task does want
+    severally were reported undiscovered.
+    """
+    raw = json.loads((ARCHIVE / "kitchen/K1/trial_01/raw_v3.json").read_text())
+    document = json.loads(raw["content"]) if isinstance(raw.get("content"), str) else raw
+    normalized, _ = normalize_v3_live_document(document, domain="kitchen", task_instruction=KITCHEN)
+    canonical = convert_v3_to_canonical_document(normalized, domain="kitchen", task_instruction=KITCHEN)
+    graph = compile_candidate_graph("kitchen", KITCHEN, canonical)
+
+    by_tool = {group.tool_role: group for group in graph.operation_groups}
+    stirring = by_tool["coffee_stirrer"]
+    assert graph.nodes["coffee_stirrer"].binding_policy == "REUSABLE"
+    assert graph.nodes["coffee_stirrer"].minimum_count == 1
+    assert stirring.usage_policy == "SEQUENTIAL_REUSE_ALLOWED"
+    assert stirring.distinct_within_group is False
+
+    # ... and the utensil the instruction says each bowl gets its own of is
+    # untouched, so this cannot be mistaken for a blanket relaxation.
+    serving = by_tool["soup_eating_utensil"]
+    assert graph.nodes["soup_eating_utensil"].binding_policy == "DISTINCT"
+    assert serving.usage_policy == "DEDICATED_PER_TARGET"
+    assert serving.distinct_within_group is True
+
+    codes = {row["code"] for row
+             in graph.metadata["canonicalization_trace"]["role_operation_reconciliations"]}
+    assert "OPERATION_REUSE_FOLLOWS_RESOLVED_ROLE_POLICY" in codes
+
+
+def test_a_distinct_source_keeps_its_operation_dedicated():
+    """The adversarial direction: nothing relaxes an operation over a role the
+    runtime says cannot be reused."""
+    raw = json.loads((ARCHIVE / "kitchen/K1/trial_01/raw_v3.json").read_text())
+    document = json.loads(raw["content"]) if isinstance(raw.get("content"), str) else raw
+    normalized, _ = normalize_v3_live_document(document, domain="kitchen", task_instruction=KITCHEN)
+    canonical = convert_v3_to_canonical_document(normalized, domain="kitchen", task_instruction=KITCHEN)
+    graph = compile_candidate_graph("kitchen", KITCHEN, canonical)
+    for group in graph.operation_groups:
+        if graph.nodes[group.tool_role].binding_policy == "DISTINCT":
+            assert group.usage_policy == "DEDICATED_PER_TARGET"
+
+
+# --------------------------------------- aggregate counts partition by function
+
+def test_aggregate_participant_count_is_partitioned_across_forms():
+    """One "spoon" role counted four times, for two stirrings and two servings.
+
+    Each projected form takes the count of the operations that induced it.  The
+    form left on the raw role used to keep the aggregate four and was then
+    reported short of objects for a demand the contract never made.
+    """
+    raw = json.loads((ARCHIVE / "kitchen/K7/trial_01/raw_v3.json").read_text())
+    document = json.loads(raw["content"]) if isinstance(raw.get("content"), str) else raw
+    normalized, _ = normalize_v3_live_document(document, domain="kitchen", task_instruction=KITCHEN)
+    canonical = convert_v3_to_canonical_document(normalized, domain="kitchen", task_instruction=KITCHEN)
+    partitions = [row for row in canonical.get("functional_constraint_interpretation", ())
+                  if row.get("code") == "AGGREGATE_PARTICIPANT_COUNT_PARTITIONED_BY_FUNCTIONAL_FORM"]
+    assert partitions, "the four-times spoon should have been partitioned"
+    row = partitions[0]
+    assert row["declared_required_count"] == 4
+    assert row["resolved_required_count"] < 4
+    graph = compile_candidate_graph("kitchen", KITCHEN, canonical)
+    for name in ("coffee_stirrer", "soup_eating_utensil"):
+        if name in graph.nodes:
+            assert graph.nodes[name].minimum_count <= 2
+
+
+# ----------------------------------------------- symmetric binding resolution
+
+def test_two_declarations_of_one_canonical_role_are_seen_through_the_mapping():
+    """Raw roles carry no canonical name, so the evidence needs the mapping.
+
+    Without it the check compared a missing field with itself, found nothing,
+    and two declarations of one role looked like one.
+    """
+    left = _role("cup_one", None, count=1, function="cup for the first person")
+    right = _role("cup_two", None, count=1, function="cup for the second person")
+    document = {"functional_roles": [left, right], "functional_relations": [],
+                "operation_pairings": []}
+    mapping = {"cup_one": "coffee_container", "cup_two": "coffee_container"}
+    evidence = separate_identity_evidence(
+        "kitchen", "cup_one", {**left, "canonical_role": "coffee_container"},
+        document, mapping)
+    assert any(row["source"] == "TWO_DECLARATIONS_OF_ONE_CANONICAL_ROLE" for row in evidence)
+
+
+def test_a_permissive_policy_is_tightened_when_the_contract_asks_severally():
+    """The other correction direction, which costs score and buys soundness.
+
+    The model calls the eating utensil SHARED while saying each bowl gets its
+    own; the runtime says one utensil cannot serve two servings.  Honouring
+    SHARED would satisfy a two-utensil requirement with one object.
+    """
+    role = _role("utensil", "soup_eating_utensil", count=2, policy="SHARED",
+                 function="each bowl gets its own eating utensil")
+    document = {"functional_roles": [role], "functional_relations": [],
+                "operation_pairings": []}
+    resolved, trace = resolve_binding_policy("kitchen", "utensil", role, document)
+    assert resolved == "DISTINCT"
+    assert trace["direction"] == "TIGHTENED"
+    assert trace["separate_identity_evidence"]
+
+
+def test_a_permissive_policy_over_a_reusable_role_is_left_alone():
+    """Tightening applies only where the runtime says reuse is impossible."""
+    role = _role("jar", "coffee_source", count=2, policy="REUSABLE",
+                 function="its own supply of coffee for each cup")
+    document = {"functional_roles": [role], "functional_relations": [],
+                "operation_pairings": []}
+    resolved, trace = resolve_binding_policy("kitchen", "jar", role, document)
+    assert resolved == "REUSABLE" and trace is None

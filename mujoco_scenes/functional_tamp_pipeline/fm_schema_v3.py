@@ -43,6 +43,7 @@ from .semantic_typing import (
     RUNTIME_AUTHORED_ROLE_PROVENANCE,
     build_role_type_hypotheses,
     canonical_role_family,
+    detect_role_families,
     relation_canonical_role_pairs,
 )
 
@@ -1078,14 +1079,77 @@ def _split_generic_participant_per_operation_form(
             continue
         hypothesis = hypotheses.get(rid)
         candidates = set(getattr(hypothesis, "canonical_role_candidates", ()) or ())
-        # Only a participant whose own wording left the form open.  A role the
-        # model described specifically enough to pick one is not reinterpreted.
-        if len(candidates) < 2 or not wanted <= candidates:
+        role_families, _ = detect_role_families(
+            domain, dict(roles_by_id.get(rid) or {}))
+        # Every form demanded has to be a form this participant could actually
+        # take: either its resolved type admits it, or its own functional
+        # families do.  The families matter because a participant may be settled
+        # globally and still be demanded in another form by an operation that
+        # seated it there -- one "workbench" role is the site fastened into for
+        # the fastening and the surface for the tool return, and its families
+        # say both.  Those demands come from capability signatures the
+        # operations themselves resolved, which is evidence about this
+        # participant and not a guess.
+        admissible = {
+            want for want in wanted
+            if want in candidates
+            or (canonical_role_family(domain, want) in role_families
+                and canonical_role_family(domain, want) != "OTHER")
+        }
+        if admissible != wanted:
             continue
+        # Two forms of one kind, or two operations that each seated it
+        # differently.  A single operation demanding two forms of one
+        # participant is a contradiction rather than a projection.
         families = {canonical_role_family(domain, want) for want in wanted}
-        if len(families) != 1 or families == {"OTHER"}:
+        distinct_operations = {str(group.get("id")) for group, _f, _k, _w in rows}
+        if (len(families) != 1 or families == {"OTHER"}) and len(distinct_operations) < 2:
             continue
-        keep = sorted(wanted)[0]
+        # Which form stays on the raw role matters, because everything else the
+        # model wrote about that participant -- every relation naming it -- is
+        # still read against it.  Keep the form the participant already resolved
+        # to globally, so those statements go on meaning what they meant; the
+        # other forms are the ones that move.  Choosing alphabetically moved a
+        # workbench off the site it is fastened into, and the relation saying the
+        # component must fit that site lost its endpoint.
+        resolved_globally = sorted(candidates & wanted)
+        keep = resolved_globally[0] if resolved_globally else sorted(wanted)[0]
+        # The raw role's count was the aggregate over every functional use the
+        # model bundled into it -- one "spoon" role counted four times, for two
+        # stirrings and two servings.  Each projected form gets the count of the
+        # operations that induced it, and the form left on the raw role has to be
+        # partitioned the same way.  It used to keep the aggregate, so the form
+        # that stayed behind demanded four of itself and was reported short of
+        # objects while the other form asked for two.
+        keep_rows = [row for row in rows if row[3] == keep]
+        if keep_rows:
+            keep_slot = _SLOT_FIELD_TO_SLOT[keep_rows[0][1]]
+            keep_applications = 0
+            for group, _field, _key, _want in keep_rows:
+                try:
+                    keep_applications += int(group.get("required_target_count", 1) or 1)
+                except (TypeError, ValueError):
+                    keep_applications += 1
+            keep_count, keep_policy = _slot_cardinality(
+                domain, keep_slot, keep, max(1, keep_applications))
+            raw_role = roles_by_id.get(rid)
+            if raw_role is not None and (
+                raw_role.get("required_count") != keep_count
+                or raw_role.get("binding_policy") != keep_policy
+            ):
+                canonical.setdefault("functional_constraint_interpretation", []).append({
+                    "code": "AGGREGATE_PARTICIPANT_COUNT_PARTITIONED_BY_FUNCTIONAL_FORM",
+                    "fm_role": rid,
+                    "forms_demanded": sorted(wanted),
+                    "form_kept_on_the_fm_role": keep,
+                    "declared_required_count": raw_role.get("required_count"),
+                    "declared_binding_policy": raw_role.get("binding_policy"),
+                    "applications_of_the_kept_form": keep_applications,
+                    "resolved_required_count": keep_count,
+                    "resolved_binding_policy": keep_policy,
+                })
+                raw_role["required_count"] = keep_count
+                raw_role["binding_policy"] = keep_policy
         for group, field, option_key, want in rows:
             if want == keep:
                 continue

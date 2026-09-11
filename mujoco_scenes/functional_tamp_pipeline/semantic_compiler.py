@@ -20,6 +20,7 @@ from .models import (
     TaskEffectRelation,
 )
 from .role_semantic_ontology import role_may_be_reused_across_applications
+from .system_context_registry import get_domain_planner_context_constants
 from .structural_sanitizer import sanitize_functional_graph
 from . import role_semantic_ontology as ontology
 from .predicate_registry import validate_predicate_signature
@@ -565,7 +566,8 @@ def _role_attributable_text(role_id: str, role: dict, document: dict) -> list[st
 
 
 def separate_identity_evidence(
-    domain: str, role_id: str, role: dict, document: dict
+    domain: str, role_id: str, role: dict, document: dict,
+    canonical_by_raw_id: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Everything in the contract that positively asks for separate instances.
 
@@ -583,12 +585,16 @@ def separate_identity_evidence(
                           "text": text[:160], "marker": match.group(0)})
     # The model declaring two participants that both canonicalize here is the
     # model naming two of them, whatever either one's policy field says.
+    # Raw roles as the model wrote them carry no canonical name -- that is the
+    # compiler's own word for them -- so comparing the field against itself
+    # found nothing and this evidence never fired.  The mapping from raw id to
+    # canonical role is passed in from the role hypotheses instead.
+    mapping = dict(canonical_by_raw_id or {})
+    own_canonical = role.get("canonical_role") or mapping.get(role_id)
     same_canonical = [
-        other_id for other_id, other in (
-            (str(other["id"]), other) for other in document.get("functional_roles", ()) or ()
-        )
-        if other_id != role_id and other.get("canonical_role") == role.get("canonical_role")
-        and role.get("canonical_role")
+        str(other["id"]) for other in document.get("functional_roles", ()) or ()
+        if str(other["id"]) != role_id and own_canonical
+        and (other.get("canonical_role") or mapping.get(str(other["id"]))) == own_canonical
     ]
     if same_canonical:
         found.append({"source": "TWO_DECLARATIONS_OF_ONE_CANONICAL_ROLE",
@@ -620,7 +626,8 @@ def separate_identity_evidence(
 
 
 def resolve_binding_policy(
-    domain: str, role_id: str, role: dict, document: dict
+    domain: str, role_id: str, role: dict, document: dict,
+    canonical_by_raw_id: dict[str, str] | None = None,
 ) -> tuple[str, dict[str, Any] | None]:
     """The binding policy the whole contract supports, not one field of it.
 
@@ -654,18 +661,46 @@ def resolve_binding_policy(
     be re-read.  Where both readings stay open, DISTINCT stands.
     """
     declared = str(role.get("binding_policy", ""))
-    if declared != "DISTINCT":
-        return declared, None
     try:
         count = int(role.get("required_count", 1) or 1)
     except (TypeError, ValueError):
         count = 1
-    if count <= 1:
+    canonical_role = role.get("canonical_role") or (canonical_by_raw_id or {}).get(role_id)
+    if count <= 1 or not canonical_role:
         return declared, None
-    canonical_role = role.get("canonical_role")
-    if not canonical_role or not role_may_be_reused_across_applications(domain, canonical_role):
+    evidence = separate_identity_evidence(
+        domain, role_id, role, document, canonical_by_raw_id)
+    reusable_runtime = role_may_be_reused_across_applications(domain, canonical_role)
+
+    # The other direction, and the one that costs soundness rather than score.
+    # The model writes REUSABLE or SHARED for something the task plainly needs
+    # severally -- "each soup bowl with its own eating utensil" declared as one
+    # utensil shared between them.  Where the contract does ask for separate
+    # instances and the runtime says one instance cannot serve several
+    # applications, the model's permissive word is what is wrong, and honouring
+    # it would quietly satisfy a requirement with one object.
+    if declared in {"REUSABLE", "SHARED"} and evidence and not reusable_runtime:
+        return "DISTINCT", {
+            "code": "GLOBAL_GRAPH_BINDING_POLICY_CONSISTENCY_OVERRIDE",
+            "raw_role_id": role_id,
+            "canonical_role": canonical_role,
+            "raw_binding_policy": declared,
+            "resolved_binding_policy": "DISTINCT",
+            "required_count": count,
+            "direction": "TIGHTENED",
+            "reason": (
+                "the contract asks for separate instances of this participant and "
+                "the runtime declares that one instance cannot serve several "
+                "applications, so a shared or reusable reading would satisfy the "
+                "requirement with one object"
+            ),
+            "separate_identity_evidence": evidence,
+        }
+
+    if declared != "DISTINCT":
         return declared, None
-    evidence = separate_identity_evidence(domain, role_id, role, document)
+    if not reusable_runtime:
+        return declared, None
     if evidence:
         return declared, None
     return "REUSABLE", {
@@ -675,6 +710,7 @@ def resolve_binding_policy(
         "raw_binding_policy": declared,
         "resolved_binding_policy": "REUSABLE",
         "required_count": count,
+        "direction": "RELAXED",
         "reason": (
             "the contract declared separate instances in the binding policy field "
             "alone: the runtime declares this role reusable across applications, "
@@ -940,6 +976,14 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     allowed = set(get_domain_selectable_roles(domain)) | system_fixed_anchors
     planner_constants = set(get_domain_planner_context_constants(domain))
     role_hypotheses = resolve_role_type_hypotheses(domain, doc)
+    # Raw id -> the canonical role it resolves to, where that is settled.  Read
+    # from the hypotheses rather than from the raw roles, which carry no
+    # canonical name of their own.
+    canonical_by_raw_id = {
+        rid: hypothesis.canonical_role_candidates[0]
+        for rid, hypothesis in role_hypotheses.items()
+        if len(getattr(hypothesis, 'canonical_role_candidates', ()) or ()) == 1
+    }
     for role in doc['functional_roles']:
         rid = role['id']
         if rid in set(doc.get('current_state_operation_context_roles', [])):
@@ -1153,7 +1197,8 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             # sufficiency check.  Nothing below re-derives it, and nothing that
             # has seen the observed scene may revise it.
             resolved_policy, policy_trace = resolve_binding_policy(
-                domain, rid, {**role, 'canonical_role': name}, doc)
+                domain, rid, {**role, 'canonical_role': name}, doc,
+                canonical_by_raw_id=canonical_by_raw_id)
             if policy_trace is not None:
                 trace['roles'].append({
                     'raw_id': rid, 'canonical_role': name,
@@ -1603,6 +1648,39 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
 
 
         if not tool_raw or not target_raw or tool_raw not in id_map or target_raw not in id_map:
+            # Putting something back on a fixed place the planner already owns --
+            # a work surface, a serving area -- is a domain transition rather
+            # than a selectable functional operation: there is no object for
+            # search to find and no choice for grounding to make, and the
+            # planner returns tools there anyway.  Such a target is a planner
+            # context constant and so never becomes a functional role, which is
+            # why the operation looked uninstantiable.  "Leave the tool on the
+            # workbench" was then reported as an operation the runtime cannot
+            # represent, and a contract that was otherwise complete failed.
+            #
+            # Audited, not compiled, and only when the operation's own resolved
+            # slot assignment names that constant -- never on the strength of
+            # the raw wording alone.
+            resolved_target_types = {
+                str(row.get('target_type')) for row in (group.get('v3_slot_assignments') or ())
+                if row.get('target_type')
+            }
+            planner_constants = set(get_domain_planner_context_constants(domain))
+            if (
+                len(resolved_target_types) == 1
+                and next(iter(resolved_target_types)) in planner_constants
+                and tool_raw in id_map
+            ):
+                absorbed = {
+                    'code': 'OPERATION_RETURNS_SOMETHING_TO_A_PLACE_THE_PLANNER_OWNS',
+                    'operation_id': group.get('id'),
+                    'operation': group.get('function'),
+                    'source_role': id_map[tool_raw],
+                    'planner_context_constant': next(iter(resolved_target_types)),
+                    'provenance': 'PLANNER_CONTEXT_TRANSITION',
+                }
+                trace.setdefault('planner_context_transitions', []).append(absorbed)
+                continue
             if v3_participants:
                 trace['unresolved_required_operations'].append({
                     'raw_group': group, 'status': 'UNSUPPORTED_RUNTIME_OPERATION_SEMANTIC',
@@ -1928,6 +2006,41 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             if runtime_function == 'SUPPORT_DRINKWARE' or (op_interp.capability and op_interp.capability.capability_id == 'SUPPORT_DRINKWARE'):
                 usage_policy = 'DEDICATED_PER_TARGET'
         source_node = nodes[tool_role_id]
+        # The operation's reuse policy was decided from the raw contract, before
+        # the role's binding policy was resolved against the whole graph.  When
+        # the resolution relaxed the source to reusable, the operation is left
+        # asserting the opposite -- a stirrer the graph says one of will do,
+        # inside a stirring operation still demanding one per application.  The
+        # grounder believes the operation and takes two spoons, and the two soup
+        # utensils the task really does want severally are then reported
+        # undiscovered.  A stale pre-resolution policy must not contradict the
+        # resolved role semantics.
+        #
+        # Only where the runtime itself declares this role reusable across
+        # applications, so the correction rests on the same physical fact the
+        # resolution used, and only where nothing asked for the sources to
+        # differ within the group.
+        if (
+            usage_policy == 'DEDICATED_PER_TARGET'
+            and count > 1
+            and source_node.binding_policy in {'REUSABLE', 'SHARED'}
+            and source_node.minimum_count <= 1
+            and role_may_be_reused_across_applications(domain, tool_role_id)
+            and not group.get('distinct_within_group')
+        ):
+            trace['role_operation_reconciliations'].append({
+                'code': 'OPERATION_REUSE_FOLLOWS_RESOLVED_ROLE_POLICY',
+                'raw_role_id': tool_raw,
+                'canonical_role': tool_role_id,
+                'role_binding_policy': source_node.binding_policy,
+                'role_minimum_count': source_node.minimum_count,
+                'operation_id': group.get('id', runtime_function),
+                'operation_target_count': count,
+                'operation_usage_policy_before': usage_policy,
+                'operation_usage_policy_after': 'SEQUENTIAL_REUSE_ALLOWED',
+                'resolution': 'OPERATION_FOLLOWS_THE_RESOLVED_ROLE',
+            })
+            usage_policy = 'SEQUENTIAL_REUSE_ALLOWED'
         if (
             usage_policy == 'SEQUENTIAL_REUSE_ALLOWED'
             and source_node.binding_policy == 'DISTINCT'

@@ -706,6 +706,72 @@ def probe_named_participant_slots(
     return options
 
 
+def _seat_named_participants_without_inventing(
+    domain: str,
+    operation: Mapping[str, Any],
+    roles_by_id: Mapping[str, Mapping[str, Any]],
+    hypotheses: Mapping[str, Any],
+    capability: Any,
+) -> dict[str, tuple[str, str, str]] | None:
+    """Seat every named participant in this capability, inventing nothing.
+
+    An operation the model stated over participants it already named should be
+    read as being about those participants.  Where one capability can seat all
+    of them and another can only do so by synthesizing a participant nobody
+    named, the first is what the model said.
+
+    "The fastening tool is placed on the workbench" names exactly two things and
+    the tool return takes exactly two.  It was read as a *fastening* instead: a
+    fastener was synthesized for the target slot, the workbench became the site
+    driven into, and the invented participant then had no runtime role, so a
+    contract that was complete failed on an operation the model expressed plainly.
+
+    A participant whose resolved type does not fit the slot may still be seated
+    when its own functional family picks out exactly one of the slot's roles --
+    the model writes one "workbench" role for the site fastened into and the
+    surface tools are left on, and its families say both.  That is the same
+    reading the operation-scoped projection performs later; doing it here keeps
+    the wrong capability from being chosen first and hiding the need for it.
+    """
+    participants = list(dict.fromkeys(operation.get("participant_roles", ()) or ()))
+    slots = capability_slots(domain, capability)
+    if not participants or len(participants) != len(slots):
+        return None
+    assignment: dict[str, tuple[str, str, str]] = {}
+    used: set[str] = set()
+    for slot in SLOT_ORDER:
+        if slot not in slots:
+            continue
+        allowed = set(slots[slot])
+        seated = None
+        for participant in participants:
+            if participant in used:
+                continue
+            candidates = set(getattr(
+                hypotheses.get(participant), "canonical_role_candidates", ()) or ())
+            direct = candidates & allowed
+            if len(direct) == 1:
+                seated = (participant, sorted(direct)[0], "FM_PARTICIPANT_TYPE")
+                break
+        if seated is None:
+            # Only a participant whose own resolved type fits the slot.  Reading
+            # one in a *different* form here was tried and reverted: it decides
+            # the participant's canonical meaning earlier than the projection
+            # does, and everything else the model wrote about it then follows the
+            # new reading.  One workshop contract's "workbench" was re-read as
+            # the surface tools are left on, and the required relation saying the
+            # component must fit the fastening *site* lost its endpoint, costing
+            # a variant that had been succeeding on all three trials.  Choosing a
+            # form per operation is the projection's job, after the operations
+            # are seated.
+            return None
+        used.add(seated[0])
+        assignment[slot] = seated
+    if len(used) != len(participants):
+        return None
+    return assignment
+
+
 def complete_operation_slots(
     domain: str,
     operation: Mapping[str, Any],
@@ -733,6 +799,53 @@ def complete_operation_slots(
         operation_count = int(operation.get("operation_count", 1) or 1)
     except (TypeError, ValueError):
         operation_count = 1
+
+    # Prefer a reading that invents nothing.  See the helper above: where
+    # exactly one nominated capability seats every participant the model named,
+    # that is the operation it described, and no placeholder is created.
+    uninvented = {}
+    for capability in capabilities:
+        seated = _seat_named_participants_without_inventing(
+            domain, operation, roles_by_id, hypotheses, capability)
+        if seated is not None:
+            uninvented[capability.capability_id] = (capability, seated)
+    if len(uninvented) == 1:
+        capability, assignment = next(iter(uninvented.values()))
+        source_role = roles_by_id.get(assignment["source"][0], {})
+        binding = str(source_role.get("binding_policy", "REUSABLE"))
+        option = {
+            "capability_id": capability.capability_id,
+            "planner_operation": capability.planner_operation,
+            "source_role": assignment["source"][0],
+            "target_role": assignment["target"][0],
+            "anchor_role": assignment.get("anchor", (None,))[0],
+            "source_type": assignment["source"][1],
+            "target_type": assignment["target"][1],
+            "anchor_type": assignment.get("anchor", (None, None))[1],
+            "usage_policy": ("SEQUENTIAL_REUSE_ALLOWED"
+                             if binding in {"REUSABLE", "SHARED"} else "DEDICATED_PER_TARGET"),
+            "capability_provenance": "NAMED_PARTICIPANTS_SEATED_WITHOUT_INDUCTION",
+        }
+        return CompletedOperation(
+            capability_id=capability.capability_id,
+            options=(option,),
+            synthesized_roles=(),
+            trace={
+                "code": "OPERATION_SEATED_ON_ITS_NAMED_PARTICIPANTS",
+                "operation_id": operation.get("id"),
+                "capability_id": capability.capability_id,
+                "named_participants": participants,
+                "slot_resolution": {
+                    slot: {"role": value[0], "canonical_role": value[1], "how": value[2]}
+                    for slot, value in sorted(assignment.items())
+                },
+                "induced_roles": [],
+                "rejected_readings_that_would_have_invented_a_participant": sorted(
+                    capability.capability_id for capability in capabilities
+                    if capability.capability_id not in uninvented),
+                "provenance": "FM_EXPLICIT_OPERATION",
+            },
+        )
 
     completions: list[CompletedOperation] = []
     for capability in capabilities:
