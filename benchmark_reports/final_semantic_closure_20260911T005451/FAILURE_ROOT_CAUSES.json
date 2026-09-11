@@ -1,0 +1,928 @@
+{
+  "tally": {
+    "unclassified": 37,
+    "role could not be typed": 36,
+    "required relation has no canonical reading": 18,
+    "required operation has no runtime capability": 17,
+    "expressed operation disabled during compilation": 7,
+    "relation participants collapse to one": 4,
+    "operation participant has no runtime role": 3,
+    "no expressed physical operation survived compilation": 2
+  },
+  "per_trial": {
+    "kitchen/K10/trial_01": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "required relation has no canonical reading",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required relations the runtime cannot represent: [{'raw_subject': 'coffee_cup', 'raw_phrase': 'contains', 'raw_object': 'coffee_ingredient', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'contains' provides no semantic evidence for valid predicates [] or task causal semanti",
+        "Uninterpretable required relations: [{'raw_subject': 'coffee_cup', 'raw_phrase': 'contains', 'raw_object': 'coffee_ingredient', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'contains' provides no semantic evidence for valid predicates [] or task causal semantics\", 'require"
+      ]
+    },
+    "kitchen/K10/trial_02": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "role could not be typed",
+        "relation participants collapse to one"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'op_02', 'participant_roles': ['coffee_cup'], 'reason': 'TOO_FEW_DISTINCT_PARTICIPANTS_TO_STATE_A_RELATION', 'requirement_provenance': 'DERIVED_FROM_EXPLICIT_OPERATION', 'operation': 'stir_coffee', 'semantic_capability_candidates': [], 'statu"
+      ]
+    },
+    "kitchen/K10/trial_03": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K11/trial_01": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "required operation has no runtime capability",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'op_stir_coffee', 'operation': 'Stir coffee beverage.', 'participant_roles': ['coffee_beverage', 'stirring_utensil'], 'semantic_capability_candidates': ['STIR_COFFEE'], 'reason': 'NO_CAPABILITY_SIGNATURE_ACCEPTS_THESE_PARTICIPANTS', 'requirem"
+      ]
+    },
+    "kitchen/K11/trial_02": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K11/trial_03": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "required operation has no runtime capability",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'serve_meal', 'operation': 'Place finished items for serving', 'participant_roles': ['coffee_cup', 'soup_bowl'], 'semantic_capability_candidates': [], 'reason': 'NO_RUNTIME_CAPABILITY_MATCHES_THIS_OPERATION_PHRASE', 'requirement_provenance': "
+      ]
+    },
+    "kitchen/K12/trial_01": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K12/trial_02": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K12/trial_03": {
+      "outcome_category": "TASK_SPECIFICATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K1/trial_01": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K1/trial_02": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K1/trial_03": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K2/trial_01": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K2/trial_02": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K2/trial_03": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K3/trial_01": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "required operation has no runtime capability",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'Operation_3', 'operation': 'Pour SoupSupply into SoupContainer', 'participant_roles': ['soupcontainer', 'soupsupply'], 'semantic_capability_candidates': ['TRANSFER_CONTENT_TO_CONTAINER'], 'reason': 'NO_CAPABILITY_SIGNATURE_ACCEPTS_THESE_PART"
+      ]
+    },
+    "kitchen/K3/trial_02": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K3/trial_03": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "required operation has no runtime capability",
+        "required relation has no canonical reading",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'heat_soup', 'operation': 'Apply heat to soup bowl', 'participant_roles': ['stove', 'soup_bowl'], 'semantic_capability_candidates': [], 'reason': 'NO_RUNTIME_CAPABILITY_MATCHES_THIS_OPERATION_PHRASE', 'requirement_provenance': 'INSTRUCTION_CL",
+        "Required relations the runtime cannot represent: [{'raw_subject': 'stove', 'raw_phrase': 'Stove heats soup bowl', 'raw_object': 'soup_bowl', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]",
+        "Uninterpretable required relations: [{'raw_subject': 'stove', 'raw_phrase': 'Stove heats soup bowl', 'raw_object': 'soup_bowl', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint', 'requirement_provenance': 'INSTRUCTION_CLAUSE_SUPPORT'}]"
+      ]
+    },
+    "kitchen/K4/trial_01": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K4/trial_02": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "required relation has no canonical reading",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required relations the runtime cannot represent: [{'id': 'r1', 'relation': 'contained_in', 'participant_roles': ['coffee_ingredient', 'storage_container'], 'reason': 'NO_LEGAL_ORIENTATION_FOR_PARTICIPANTS', 'requirement_provenance': 'DERIVED_FROM_EXPLICIT_OPERATION', 'status': 'UNRESOLVED_REQUIRED_S"
+      ]
+    },
+    "kitchen/K4/trial_03": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K5/trial_01": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "required operation has no runtime capability",
+        "expressed operation disabled during compilation",
+        "required relation has no canonical reading",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'serve_coffee', 'operation': 'pour', 'participant_roles': ['cooking_vessel', 'coffee_cup'], 'semantic_capability_candidates': ['TRANSFER_CONTENT_TO_CONTAINER'], 'reason': 'NO_CAPABILITY_SIGNATURE_ACCEPTS_THESE_PARTICIPANTS', 'requirement_prov",
+        "Required relations the runtime cannot represent: [{'raw_subject': 'coffee_ingredient', 'raw_phrase': 'mixed_in', 'raw_object': 'cooking_vessel', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'water', 'raw_phrase': 'mixed_in', 'raw_ob",
+        "Operations disabled during compilation: [{'raw_group': {'id': 'prep_coffee__primitive_1', 'function': 'transfer material into receiving container', 'tool_role': 'coffee_ingredient', 'target_role': 'cooking_vessel', 'context_role': None, 'required_target_count': 2, 'usage_policy': 'SEQUENTIAL_REUSE_A",
+        "Uninterpretable required relations: [{'raw_subject': 'coffee_ingredient', 'raw_phrase': 'mixed_in', 'raw_object': 'cooking_vessel', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint', 'requirement_provenance': 'DERIVED_FROM_EXPLICIT_OPERATION'}, {'raw_subj"
+      ]
+    },
+    "kitchen/K6/trial_02": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K6/trial_03": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K7/trial_01": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K7/trial_02": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K7/trial_03": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K8/trial_01": {
+      "outcome_category": "TASK_SPECIFICATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K8/trial_02": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "required operation has no runtime capability",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'serve_soup', 'operation': 'serve_soup', 'participant_roles': ['soup_bowl', 'table'], 'semantic_capability_candidates': ['PROVIDE_SOUP_EATING_UTENSIL'], 'reason': 'NO_CAPABILITY_SIGNATURE_ACCEPTS_THESE_PARTICIPANTS', 'requirement_provenance':"
+      ]
+    },
+    "kitchen/K8/trial_03": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "required operation has no runtime capability",
+        "required relation has no canonical reading",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'serve_soup', 'operation': 'place_with_utensil', 'participant_roles': ['soup_bowl', 'soup', 'eating_utensil'], 'semantic_capability_candidates': [], 'reason': 'NO_RUNTIME_CAPABILITY_MATCHES_THIS_OPERATION_PHRASE', 'requirement_provenance': 'I",
+        "Required relations the runtime cannot represent: [{'raw_subject': 'eating_utensil', 'raw_phrase': 'paired_with', 'raw_object': 'soup_bowl', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}]",
+        "Uninterpretable required relations: [{'raw_subject': 'eating_utensil', 'raw_phrase': 'paired_with', 'raw_object': 'soup_bowl', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint', 'requirement_provenance': 'DERIVED_FROM_EXPLICIT_OPERATION'}]"
+      ]
+    },
+    "kitchen/K9/trial_01": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K9/trial_02": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "kitchen/K9/trial_03": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "required operation has no runtime capability",
+        "required relation has no canonical reading",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'make_coffee', 'operation': 'combine', 'participant_roles': ['coffee_ingredient', 'water'], 'semantic_capability_candidates': ['TRANSFER_CONTENT_TO_CONTAINER'], 'reason': 'NO_CAPABILITY_SIGNATURE_ACCEPTS_THESE_PARTICIPANTS', 'requirement_prov",
+        "Required relations the runtime cannot represent: [{'raw_subject': 'coffee_beverage', 'raw_phrase': 'poured_into', 'raw_object': 'coffee_cup', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'coffee_cup', 'raw_phrase': 'placed_on', 'raw",
+        "Uninterpretable required relations: [{'raw_subject': 'coffee_beverage', 'raw_phrase': 'poured_into', 'raw_object': 'coffee_cup', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint', 'requirement_provenance': 'DERIVED_FROM_EXPLICIT_OPERATION'}, {'raw_subject"
+      ]
+    },
+    "living_room/L10/trial_01": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "required operation has no runtime capability",
+        "required relation has no canonical reading"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'set_refreshments', 'operation': 'Place refreshment settings on the surface.', 'participant_roles': ['refreshment_setting', 'surface', 'person'], 'semantic_capability_candidates': ['SUPPORT_DRINKWARE'], 'reason': 'NO_CAPABILITY_SIGNATURE_ACCE",
+        "Required relations the runtime cannot represent: [{'id': 'setting_assignment', 'relation': 'Each refreshment setting is provided to a person.', 'participant_roles': ['refreshment_setting', 'person'], 'reason': 'NO_LEGAL_ORIENTATION_FOR_PARTICIPANTS', 'requirement_provenance': 'INSTRUCTION_CLAUSE_SUP"
+      ]
+    },
+    "living_room/L10/trial_02": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "living_room/L10/trial_03": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "required operation has no runtime capability",
+        "required relation has no canonical reading",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'set_refreshments', 'operation': 'place_refreshment_setting', 'participant_roles': ['refreshment_setting', 'surface'], 'semantic_capability_candidates': ['SUPPORT_DRINKWARE', 'SUPPORT_ENTERTAINMENT_CONTROL'], 'reason': 'NO_CAPABILITY_SIGNATUR",
+        "Required relations the runtime cannot represent: [{'raw_subject': 'entertainment_control', 'raw_phrase': 'positioned_on', 'raw_object': 'surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'raw_subject': 'refreshment_setting', 'raw_phrase': 'po",
+        "Uninterpretable required relations: [{'raw_subject': 'entertainment_control', 'raw_phrase': 'positioned_on', 'raw_object': 'surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint', 'requirement_provenance': 'DERIVED_FROM_EXPLICIT_OPERATION'}, {'raw_su"
+      ]
+    },
+    "living_room/L1/trial_01": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "required operation has no runtime capability"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'prepare_refreshment_settings', 'operation': 'arrange_refreshment_setting', 'participant_roles': ['refreshment_setting', 'seating_area'], 'semantic_capability_candidates': [], 'reason': 'NO_RUNTIME_CAPABILITY_MATCHES_THIS_OPERATION_PHRASE', '"
+      ]
+    },
+    "living_room/L1/trial_02": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "living_room/L2/trial_01": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "living_room/L2/trial_02": {
+      "outcome_category": "TASK_SPECIFICATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "living_room/L3/trial_01": {
+      "outcome_category": "TASK_SPECIFICATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "living_room/L3/trial_02": {
+      "outcome_category": "TASK_SPECIFICATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "living_room/L3/trial_03": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "required operation has no runtime capability",
+        "required relation has no canonical reading"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'position_remote', 'operation': 'place', 'participant_roles': ['entertainment_control', 'surface'], 'semantic_capability_candidates': ['SUPPORT_DRINKWARE', 'SUPPORT_ENTERTAINMENT_CONTROL'], 'reason': 'NO_CAPABILITY_SIGNATURE_ACCEPTS_THESE_PAR",
+        "Required relations the runtime cannot represent: [{'id': 'control_accessible', 'relation': 'accessible_to', 'participant_roles': ['entertainment_control', 'chair'], 'reason': 'NO_LEGAL_ORIENTATION_FOR_PARTICIPANTS', 'requirement_provenance': 'INSTRUCTION_CLAUSE_SUPPORT', 'status': 'UNRESOLVED_REQUIR"
+      ]
+    },
+    "living_room/L4/trial_02": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": true,
+      "causes": [
+        "required relation has no canonical reading"
+      ],
+      "missing_reasons": [
+        "Required relations the runtime cannot represent: [{'raw_subject': 'entertainment_control', 'raw_phrase': 'is_supported_by', 'raw_object': 'surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Semantic candidates ['FITS_ON', 'FITS_SET_ON'] incompatible with endpoints (REMOTE, PERSONAL_",
+        "Uninterpretable required relations: [{'raw_subject': 'entertainment_control', 'raw_phrase': 'is_supported_by', 'raw_object': 'surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Semantic candidates ['FITS_ON', 'FITS_SET_ON'] incompatible with endpoints (REMOTE, PERSONAL_CUP_SAUCER_RE"
+      ]
+    },
+    "living_room/L5/trial_03": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "required relation has no canonical reading",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'create_refreshment_setting', 'operation': 'place_items_on_surface', 'participant_roles': ['drink_vessel', 'food_vessel', 'placement_surface'], 'semantic_capability_candidates': ['SUPPORT_DRINKWARE', 'SUPPORT_ENTERTAINMENT_CONTROL'], 'reason'",
+        "Required relations the runtime cannot represent: [{'raw_subject': 'placement_surface', 'raw_phrase': 'spatial_support', 'raw_object': 'food_vessel', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint'}, {'id': 'refreshment_setting_pair', 'relation': 'comple",
+        "Uninterpretable required relations: [{'raw_subject': 'placement_surface', 'raw_phrase': 'spatial_support', 'raw_object': 'food_vessel', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': 'Unresolved or context-only endpoint', 'requirement_provenance': 'DERIVED_FROM_EXPLICIT_OPERATION'}]"
+      ]
+    },
+    "living_room/L6/trial_01": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "required operation has no runtime capability"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'provide_refreshment_settings', 'operation': 'place', 'participant_roles': ['refreshment_setting', 'surface'], 'semantic_capability_candidates': ['SUPPORT_DRINKWARE', 'SUPPORT_ENTERTAINMENT_CONTROL'], 'reason': 'NO_CAPABILITY_SIGNATURE_ACCEPT"
+      ]
+    },
+    "living_room/L6/trial_03": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "required operation has no runtime capability",
+        "no expressed physical operation survived compilation",
+        "expressed operation disabled during compilation",
+        "required relation has no canonical reading",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "The FM expressed 1 physical operation(s) and none survived compilation, so the graph states no change to bring about",
+        "Required operations the runtime cannot represent: [{'id': 'place_control', 'operation': 'move_control_device', 'participant_roles': ['entertainment_control', 'accessible_surface'], 'semantic_capability_candidates': ['SUPPORT_ENTERTAINMENT_CONTROL'], 'reason': 'NO_CAPABILITY_SIGNATURE_ACCEPTS_THESE_P",
+        "Required relations the runtime cannot represent: [{'raw_subject': 'entertainment_control', 'raw_phrase': 'placed_on', 'raw_object': 'accessible_surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Semantic candidates ['FITS_ON', 'FITS_SET_ON'] incompatible with endpoints (REMOTE, PERS",
+        "Operations disabled during compilation: [{'raw_group': {'id': 'provide_refreshment', 'function': 'set_up_refreshment_setting', 'tool_role': 'op_slot__provide_refreshment__source', 'target_role': 'refreshment_setting', 'context_role': 'person', 'required_target_count': 2, 'usage_policy': 'DEDICATED_P",
+        "Uninterpretable required relations: [{'raw_subject': 'entertainment_control', 'raw_phrase': 'placed_on', 'raw_object': 'accessible_surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Semantic candidates ['FITS_ON', 'FITS_SET_ON'] incompatible with endpoints (REMOTE, PERSONAL_CUP_SAUC"
+      ]
+    },
+    "living_room/L7/trial_01": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "living_room/L7/trial_02": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "living_room/L7/trial_03": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "required relation has no canonical reading"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'place_controller', 'operation': 'Move the entertainment_control to a surface accessible to both people', 'participant_roles': ['entertainment_control', 'surface', 'person'], 'semantic_capability_candidates': ['SUPPORT_DRINKWARE', 'SUPPORT_EN",
+        "Required relations the runtime cannot represent: [{'raw_subject': 'entertainment_control', 'raw_phrase': 'Refreshment_settings and the entertainment_control must rest on a surface', 'raw_object': 'surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Semantic candidates ['FITS_ON', 'FI",
+        "Uninterpretable required relations: [{'raw_subject': 'entertainment_control', 'raw_phrase': 'Refreshment_settings and the entertainment_control must rest on a surface', 'raw_object': 'surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Semantic candidates ['FITS_ON', 'FITS_SET_ON'] i"
+      ]
+    },
+    "living_room/L8/trial_01": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "required relation has no canonical reading"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'place_control', 'operation': 'Place entertainment_control on surface', 'participant_roles': ['entertainment_control', 'surface'], 'semantic_capability_candidates': ['SUPPORT_DRINKWARE', 'SUPPORT_ENTERTAINMENT_CONTROL'], 'reason': 'NO_CAPABIL",
+        "Required relations the runtime cannot represent: [{'raw_subject': 'entertainment_control', 'raw_phrase': 'rests on', 'raw_object': 'surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Semantic candidates ['FITS_ON', 'FITS_SET_ON'] incompatible with endpoints (REMOTE, PERSONAL_CUP_SAU",
+        "Uninterpretable required relations: [{'raw_subject': 'entertainment_control', 'raw_phrase': 'rests on', 'raw_object': 'surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Semantic candidates ['FITS_ON', 'FITS_SET_ON'] incompatible with endpoints (REMOTE, PERSONAL_CUP_SAUCER_REGION)\","
+      ]
+    },
+    "living_room/L8/trial_02": {
+      "outcome_category": "OBJECT_DISCOVERY_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "living_room/L8/trial_03": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "required operation has no runtime capability",
+        "required relation has no canonical reading"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'distribute_refreshments', 'operation': 'place', 'participant_roles': ['refreshment_setting', 'surface', 'person'], 'semantic_capability_candidates': ['SUPPORT_DRINKWARE', 'SUPPORT_ENTERTAINMENT_CONTROL'], 'reason': 'NO_CAPABILITY_SIGNATURE_A",
+        "Required relations the runtime cannot represent: [{'id': 'refreshment_proximity', 'relation': 'near', 'participant_roles': ['refreshment_setting', 'person'], 'reason': 'NO_LEGAL_ORIENTATION_FOR_PARTICIPANTS', 'requirement_provenance': 'DERIVED_FROM_EXPLICIT_OPERATION', 'status': 'UNRESOLVED_REQUIRED"
+      ]
+    },
+    "living_room/L9/trial_01": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "required relation has no canonical reading"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'place_control', 'operation': 'Place entertainment control on surface', 'participant_roles': ['entertainment_control', 'surface'], 'semantic_capability_candidates': ['SUPPORT_DRINKWARE', 'SUPPORT_ENTERTAINMENT_CONTROL'], 'reason': 'NO_CAPABIL",
+        "Required relations the runtime cannot represent: [{'raw_subject': 'entertainment_control', 'raw_phrase': 'on', 'raw_object': 'surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'on' provides no semantic evidence for valid predicates [] or task causal semantics\"}]",
+        "Uninterpretable required relations: [{'raw_subject': 'entertainment_control', 'raw_phrase': 'on', 'raw_object': 'surface', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'on' provides no semantic evidence for valid predicates [] or task causal semantics\", 'requirement_proven"
+      ]
+    },
+    "living_room/L9/trial_02": {
+      "outcome_category": "TASK_SPECIFICATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "living_room/L9/trial_03": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "required operation has no runtime capability",
+        "required relation has no canonical reading"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'operation_2', 'operation': 'place', 'participant_roles': ['entertainment_control', 'surface'], 'semantic_capability_candidates': ['SUPPORT_DRINKWARE', 'SUPPORT_ENTERTAINMENT_CONTROL'], 'reason': 'NO_CAPABILITY_SIGNATURE_ACCEPTS_THESE_PARTICI",
+        "Required relations the runtime cannot represent: [{'id': 'relation_2', 'relation': 'accessible_from', 'participant_roles': ['entertainment_control', 'seating_area'], 'reason': 'NO_LEGAL_ORIENTATION_FOR_PARTICIPANTS', 'requirement_provenance': 'INSTRUCTION_CLAUSE_SUPPORT', 'status': 'UNRESOLVED_REQUI"
+      ]
+    },
+    "workshop/W10/trial_01": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W10/trial_02": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "relation participants collapse to one"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'search_storage', 'participant_roles': ['storage_unit'], 'reason': 'TOO_FEW_DISTINCT_PARTICIPANTS_TO_STATE_A_RELATION', 'requirement_provenance': 'DERIVED_FROM_EXPLICIT_OPERATION', 'operation': 'Open and inspect the storage unit to find compo",
+        "Required relations the runtime cannot represent: [{'id': 'fastened_to', 'relation': 'The workpieces must be joined together.', 'participant_roles': ['workpiece'], 'reason': 'TOO_FEW_DISTINCT_PARTICIPANTS_TO_STATE_A_RELATION', 'requirement_provenance': 'DERIVED_FROM_EXPLICIT_OPERATION', 'status': 'UN"
+      ]
+    },
+    "workshop/W10/trial_03": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W1/trial_01": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W1/trial_02": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "operation participant has no runtime role",
+        "expressed operation disabled during compilation",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'cleanup_action', 'operation': 'fastening_tool is placed on workbench', 'participant_roles': ['fastening_tool', 'workbench', 'op_slot__cleanup_action__target'], 'reason': 'SLOT_PARTICIPANT_HAS_NO_RUNTIME_ROLE', 'unrepresented_participants': [",
+        "Operations disabled during compilation: [{'raw_group': {'id': 'cleanup_action', 'function': 'fastening_tool is placed on workbench', 'tool_role': 'fastening_tool', 'target_role': 'op_slot__cleanup_action__target', 'context_role': 'workbench', 'required_target_count': 1, 'usage_policy': 'SEQUENTIAL_R"
+      ]
+    },
+    "workshop/W1/trial_03": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W2/trial_01": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W2/trial_02": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W2/trial_03": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "role could not be typed"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W3/trial_01": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "operation participant has no runtime role",
+        "expressed operation disabled during compilation",
+        "required relation has no canonical reading",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'place_equipment', 'operation': 'placement', 'participant_roles': ['fastening_tool', 'assembly_base', 'op_slot__place_equipment__target'], 'reason': 'SLOT_PARTICIPANT_HAS_NO_RUNTIME_ROLE', 'unrepresented_participants': ['op_slot__place_equipm",
+        "Required relations the runtime cannot represent: [{'raw_subject': 'fastener', 'raw_phrase': 'functional', 'raw_object': 'assembly_base', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'functional' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH_TARGET'] ",
+        "Operations disabled during compilation: [{'raw_group': {'id': 'place_equipment', 'function': 'placement', 'tool_role': 'fastening_tool', 'target_role': 'op_slot__place_equipment__target', 'context_role': 'assembly_base', 'required_target_count': 1, 'usage_policy': 'DEDICATED_PER_TARGET', 'required_r",
+        "Uninterpretable required relations: [{'raw_subject': 'fastener', 'raw_phrase': 'functional', 'raw_object': 'assembly_base', 'status': 'UNINTERPRETABLE_REQUIRED_RELATION', 'reason': \"Relation text 'functional' provides no semantic evidence for valid predicates ['COMPATIBLE_WITH_TARGET'] or task causa"
+      ]
+    },
+    "workshop/W3/trial_02": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "expressed operation disabled during compilation",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'raw_group': {'id': 'operation_3', 'function': 'placed_on', 'tool_role': 'fastening_tool', 'target_role': 'workbench', 'context_role': None, 'required_target_count': 1, 'usage_policy': 'SEQUENTIAL_REUSE_ALLOWED', 'required_relations': [], 'context_",
+        "Operations disabled during compilation: [{'raw_group': {'id': 'operation_1', 'function': 'inserted_into', 'tool_role': 'op_slot__operation_1__source', 'target_role': 'fastener', 'context_role': 'target_object', 'required_target_count': 1, 'usage_policy': 'SEQUENTIAL_REUSE_ALLOWED', 'required_relatio"
+      ]
+    },
+    "workshop/W3/trial_03": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "required operation has no runtime capability"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'place_part', 'operation': 'place_on_surface', 'participant_roles': ['fastening_part', 'workbench'], 'semantic_capability_candidates': ['FASTEN_JOINT', 'RETURN_REUSABLE_ITEM_TO_SUPPORT'], 'reason': 'NO_CAPABILITY_SIGNATURE_ACCEPTS_THESE_PARTI"
+      ]
+    },
+    "workshop/W4/trial_01": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W4/trial_02": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W4/trial_03": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W5/trial_01": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "no expressed physical operation survived compilation",
+        "expressed operation disabled during compilation",
+        "role could not be typed",
+        "relation participants collapse to one"
+      ],
+      "missing_reasons": [
+        "The FM expressed 2 physical operation(s) and none survived compilation, so the graph states no change to bring about",
+        "Required operations the runtime cannot represent: [{'id': 'retrieve_fastener', 'participant_roles': ['fastener'], 'reason': 'TOO_FEW_DISTINCT_PARTICIPANTS_TO_STATE_A_RELATION', 'requirement_provenance': 'DERIVED_FROM_EXPLICIT_OPERATION', 'operation': 'Pick up the identified compatible fastener.', 's",
+        "Operations disabled during compilation: [{'raw_group': {'id': 'fasten_workpiece', 'function': 'Apply the fastener to the workpiece.', 'tool_role': 'op_slot__fasten_workpiece__source', 'target_role': 'fastener', 'context_role': 'workpiece', 'required_target_count': 1, 'usage_policy': 'SEQUENTIAL_REUS"
+      ]
+    },
+    "workshop/W5/trial_02": {
+      "outcome_category": "TASK_SPECIFICATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W5/trial_03": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W6/trial_01": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W6/trial_02": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W6/trial_03": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W7/trial_01": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W7/trial_02": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "relation participants collapse to one"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'search_components', 'participant_roles': ['storage_container'], 'reason': 'TOO_FEW_DISTINCT_PARTICIPANTS_TO_STATE_A_RELATION', 'requirement_provenance': 'DERIVED_FROM_EXPLICIT_OPERATION', 'operation': 'The robot arm opens and inspects storag"
+      ]
+    },
+    "workshop/W7/trial_03": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W8/trial_01": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W8/trial_02": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W8/trial_03": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": true,
+      "outcome_correct": false,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W9/trial_01": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    },
+    "workshop/W9/trial_02": {
+      "outcome_category": "GRAPH_COMPILATION_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "operation participant has no runtime role",
+        "expressed operation disabled during compilation",
+        "role could not be typed"
+      ],
+      "missing_reasons": [
+        "Required operations the runtime cannot represent: [{'id': 'place_equipment', 'operation': 'Place the used tool onto the desk surface.', 'participant_roles': ['reusable_equipment', 'desk_surface'], 'reason': 'SLOT_PARTICIPANT_HAS_NO_RUNTIME_ROLE', 'unrepresented_participants': ['reusable_equipment'],",
+        "Operations disabled during compilation: [{'raw_group': {'id': 'place_equipment', 'function': 'Place the used tool onto the desk surface.', 'tool_role': 'reusable_equipment', 'target_role': 'desk_surface', 'context_role': None, 'required_target_count': 1, 'usage_policy': 'SEQUENTIAL_REUSE_ALLOWED', '"
+      ]
+    },
+    "workshop/W9/trial_03": {
+      "outcome_category": "FUNCTIONAL_ASSIGNMENT_FAILURE",
+      "feasible": false,
+      "outcome_correct": true,
+      "causes": [
+        "unclassified"
+      ],
+      "missing_reasons": []
+    }
+  }
+}

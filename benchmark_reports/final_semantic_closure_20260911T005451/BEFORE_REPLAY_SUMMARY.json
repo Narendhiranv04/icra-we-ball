@@ -1,0 +1,890 @@
+{
+  "label": "AFTER_FINAL",
+  "total_trials": 96,
+  "overall": {
+    "strict_v3_valid": 89,
+    "task_valid": 89,
+    "canonical_graph_emitted": 88,
+    "executable_contract_complete": 37,
+    "grounding_reached": 88,
+    "complete_grounding": 13,
+    "astar_reached": 47,
+    "success": 13,
+    "outcome_correct": 46
+  },
+  "outcome_categories": {
+    "GRAPH_COMPILATION_FAILURE": 52,
+    "OBJECT_DISCOVERY_FAILURE": 10,
+    "TASK_SPECIFICATION_FAILURE": 7,
+    "SUCCESS": 13,
+    "FUNCTIONAL_ASSIGNMENT_FAILURE": 14
+  },
+  "per_domain": {
+    "kitchen": {
+      "strict_v3_valid": 34,
+      "task_valid": 34,
+      "canonical_graph_emitted": 34,
+      "executable_contract_complete": 12,
+      "grounding_reached": 34,
+      "complete_grounding": 3,
+      "astar_reached": 14,
+      "success": 3,
+      "outcome_correct": 21,
+      "trials": 36,
+      "outcome_categories": {
+        "GRAPH_COMPILATION_FAILURE": 22,
+        "OBJECT_DISCOVERY_FAILURE": 9,
+        "TASK_SPECIFICATION_FAILURE": 2,
+        "SUCCESS": 3
+      }
+    },
+    "living_room": {
+      "strict_v3_valid": 26,
+      "task_valid": 26,
+      "canonical_graph_emitted": 26,
+      "executable_contract_complete": 13,
+      "grounding_reached": 26,
+      "complete_grounding": 7,
+      "astar_reached": 15,
+      "success": 7,
+      "outcome_correct": 20,
+      "trials": 30,
+      "outcome_categories": {
+        "GRAPH_COMPILATION_FAILURE": 13,
+        "FUNCTIONAL_ASSIGNMENT_FAILURE": 5,
+        "SUCCESS": 7,
+        "TASK_SPECIFICATION_FAILURE": 4,
+        "OBJECT_DISCOVERY_FAILURE": 1
+      }
+    },
+    "workshop": {
+      "strict_v3_valid": 29,
+      "task_valid": 29,
+      "canonical_graph_emitted": 28,
+      "executable_contract_complete": 12,
+      "grounding_reached": 28,
+      "complete_grounding": 3,
+      "astar_reached": 18,
+      "success": 3,
+      "outcome_correct": 5,
+      "trials": 30,
+      "outcome_categories": {
+        "SUCCESS": 3,
+        "GRAPH_COMPILATION_FAILURE": 17,
+        "FUNCTIONAL_ASSIGNMENT_FAILURE": 9,
+        "TASK_SPECIFICATION_FAILURE": 1
+      }
+    }
+  },
+  "per_variant": {
+    "K1": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 2,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 2,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "OBJECT_DISCOVERY_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "",
+        "('coffee_source', 'soup_eating_utensil')"
+      ]
+    },
+    "K2": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 2,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 2,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE"
+      ],
+      "stops": [
+        "",
+        "('coffee_source',)"
+      ]
+    },
+    "K3": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 1,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 1,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "",
+        "('coffee_source',)",
+        "NO_COMPLETE_FUNCTIONAL_WITNESS"
+      ]
+    },
+    "K4": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 1,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 2,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE"
+      ],
+      "stops": [
+        "",
+        "NO_COMPLETE_FUNCTIONAL_WITNESS"
+      ]
+    },
+    "K5": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 2,
+      "grounding_reached": 3,
+      "complete_grounding": 2,
+      "astar_reached": 2,
+      "success": 2,
+      "outcome_correct": 2,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "SUCCESS",
+        "SUCCESS"
+      ],
+      "stops": [
+        "",
+        "('coffee_source',)"
+      ]
+    },
+    "K6": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 1,
+      "grounding_reached": 3,
+      "complete_grounding": 1,
+      "astar_reached": 1,
+      "success": 1,
+      "outcome_correct": 1,
+      "outcomes": [
+        "SUCCESS",
+        "GRAPH_COMPILATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "",
+        "('coffee_source', 'coffee_container')",
+        "NO_COMPLETE_FUNCTIONAL_WITNESS"
+      ]
+    },
+    "K7": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 1,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 1,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE"
+      ],
+      "stops": [
+        "",
+        "('coffee_source', 'water_source')",
+        "('coffee_source',)"
+      ]
+    },
+    "K8": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 2,
+      "canonical_graph_emitted": 2,
+      "executable_contract_complete": 0,
+      "grounding_reached": 2,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "('coffee_source', 'water_source', 'soup_container')",
+        "UNDECLARED_PARTICIPANT: operation_pairings[4] references ['Person']"
+      ]
+    },
+    "K9": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 1,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 1,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "",
+        "NO_COMPLETE_FUNCTIONAL_WITNESS"
+      ]
+    },
+    "K10": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 0,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 1,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "",
+        "('coffee_source',)",
+        "NO_COMPLETE_FUNCTIONAL_WITNESS"
+      ]
+    },
+    "K11": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 0,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "('water_source', 'coffee_container', 'soup_container', 'soup_eating_utensil')",
+        "('water_source',)"
+      ]
+    },
+    "K12": {
+      "domain": "kitchen",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 2,
+      "canonical_graph_emitted": 2,
+      "executable_contract_complete": 1,
+      "grounding_reached": 2,
+      "complete_grounding": 0,
+      "astar_reached": 1,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE",
+        "TASK_SPECIFICATION_FAILURE"
+      ],
+      "stops": [
+        "",
+        "('coffee_source',)",
+        "No meaningful functional roles recovered"
+      ]
+    },
+    "L1": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 2,
+      "grounding_reached": 3,
+      "complete_grounding": 1,
+      "astar_reached": 2,
+      "success": 1,
+      "outcome_correct": 1,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "SUCCESS"
+      ],
+      "stops": [
+        "",
+        "('SEATING_POSITION',)"
+      ]
+    },
+    "L2": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 2,
+      "canonical_graph_emitted": 2,
+      "executable_contract_complete": 2,
+      "grounding_reached": 2,
+      "complete_grounding": 1,
+      "astar_reached": 2,
+      "success": 1,
+      "outcome_correct": 1,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "SUCCESS"
+      ],
+      "stops": [
+        "",
+        "No meaningful functional roles recovered"
+      ]
+    },
+    "L3": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 1,
+      "task_valid": 1,
+      "canonical_graph_emitted": 1,
+      "executable_contract_complete": 0,
+      "grounding_reached": 1,
+      "complete_grounding": 0,
+      "astar_reached": 1,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "TASK_SPECIFICATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "",
+        "No meaningful functional roles recovered"
+      ]
+    },
+    "L4": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 2,
+      "grounding_reached": 3,
+      "complete_grounding": 2,
+      "astar_reached": 3,
+      "success": 2,
+      "outcome_correct": 3,
+      "outcomes": [
+        "SUCCESS",
+        "GRAPH_COMPILATION_FAILURE",
+        "SUCCESS"
+      ],
+      "stops": [
+        ""
+      ]
+    },
+    "L5": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 2,
+      "grounding_reached": 3,
+      "complete_grounding": 2,
+      "astar_reached": 2,
+      "success": 2,
+      "outcome_correct": 2,
+      "outcomes": [
+        "SUCCESS",
+        "SUCCESS",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "",
+        "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement"
+      ]
+    },
+    "L6": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 1,
+      "grounding_reached": 3,
+      "complete_grounding": 1,
+      "astar_reached": 1,
+      "success": 1,
+      "outcome_correct": 1,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "SUCCESS",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "",
+        "('SEATING_POSITION', 'CUP_SAUCER_SET')",
+        "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement"
+      ]
+    },
+    "L7": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 2,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 3,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        ""
+      ]
+    },
+    "L8": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 1,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 1,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "OBJECT_DISCOVERY_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "",
+        "NO_GLOBAL_REGION_ASSIGNMENT",
+        "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement"
+      ]
+    },
+    "L9": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 2,
+      "canonical_graph_emitted": 2,
+      "executable_contract_complete": 0,
+      "grounding_reached": 2,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "NO_GLOBAL_REGION_ASSIGNMENT",
+        "No meaningful functional roles recovered"
+      ]
+    },
+    "L10": {
+      "domain": "living_room",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 1,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "('CUP_SAUCER_SET', 'SHARED_REMOTE_REGION', 'SEATING_POSITION')",
+        "('REMOTE', 'PERSONAL_CUP_SAUCER_REGION', 'SEATING_POSITION')",
+        "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement"
+      ]
+    },
+    "W1": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 0,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 1,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "",
+        "fastener, fastener"
+      ]
+    },
+    "W2": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 1,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 2,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "GRAPH_COMPILATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "",
+        "fastener, fastener"
+      ]
+    },
+    "W3": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 0,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 0,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "NO_GLOBAL_ASSIGNMENT",
+        "fastener, fastener"
+      ]
+    },
+    "W4": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 2,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 3,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        ""
+      ]
+    },
+    "W5": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 2,
+      "task_valid": 2,
+      "canonical_graph_emitted": 2,
+      "executable_contract_complete": 1,
+      "grounding_reached": 2,
+      "complete_grounding": 0,
+      "astar_reached": 1,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "TASK_SPECIFICATION_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "",
+        "UNDECLARED_PARTICIPANT: functional_relations[0] references ['target_assembly']",
+        "fastener, fastener"
+      ]
+    },
+    "W6": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 2,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 2,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "",
+        "fastener, fastener"
+      ]
+    },
+    "W7": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 2,
+      "executable_contract_complete": 1,
+      "grounding_reached": 2,
+      "complete_grounding": 1,
+      "astar_reached": 2,
+      "success": 1,
+      "outcome_correct": 1,
+      "outcomes": [
+        "SUCCESS",
+        "GRAPH_COMPILATION_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        "",
+        "No executable role could be typed"
+      ]
+    },
+    "W8": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 1,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 3,
+      "success": 0,
+      "outcome_correct": 0,
+      "outcomes": [
+        "GRAPH_COMPILATION_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "GRAPH_COMPILATION_FAILURE"
+      ],
+      "stops": [
+        ""
+      ]
+    },
+    "W9": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 2,
+      "grounding_reached": 3,
+      "complete_grounding": 0,
+      "astar_reached": 2,
+      "success": 0,
+      "outcome_correct": 3,
+      "outcomes": [
+        "FUNCTIONAL_ASSIGNMENT_FAILURE",
+        "GRAPH_COMPILATION_FAILURE",
+        "FUNCTIONAL_ASSIGNMENT_FAILURE"
+      ],
+      "stops": [
+        "",
+        "NO_GLOBAL_ASSIGNMENT"
+      ]
+    },
+    "W10": {
+      "domain": "workshop",
+      "trials": 3,
+      "strict_v3_valid": 3,
+      "task_valid": 3,
+      "canonical_graph_emitted": 3,
+      "executable_contract_complete": 2,
+      "grounding_reached": 3,
+      "complete_grounding": 2,
+      "astar_reached": 2,
+      "success": 2,
+      "outcome_correct": 1,
+      "outcomes": [
+        "SUCCESS",
+        "GRAPH_COMPILATION_FAILURE",
+        "SUCCESS"
+      ],
+      "stops": [
+        "",
+        "repair_target, repair_target"
+      ]
+    }
+  },
+  "stop_reasons": {
+    "": 47,
+    "fastener, fastener": 7,
+    "NO_COMPLETE_FUNCTIONAL_WITNESS": 6,
+    "('coffee_source',)": 6,
+    "No meaningful functional roles recovered": 5,
+    "UNINSTANTIABLE_MISSING_RELATION: no expressed verified placement requirement": 4,
+    "NO_GLOBAL_REGION_ASSIGNMENT": 3,
+    "('water_source',)": 2,
+    "('coffee_source', 'water_source', 'soup_container')": 2,
+    "NO_GLOBAL_ASSIGNMENT": 2,
+    "('water_source', 'coffee_container', 'soup_container', 'soup_eating_utensil')": 1,
+    "('coffee_source', 'soup_eating_utensil')": 1,
+    "('coffee_source', 'coffee_container')": 1,
+    "('coffee_source', 'water_source')": 1,
+    "UNDECLARED_PARTICIPANT: operation_pairings[4] references ['Person']": 1,
+    "('CUP_SAUCER_SET', 'SHARED_REMOTE_REGION', 'SEATING_POSITION')": 1,
+    "('REMOTE', 'PERSONAL_CUP_SAUCER_REGION', 'SEATING_POSITION')": 1,
+    "('SEATING_POSITION',)": 1,
+    "('SEATING_POSITION', 'CUP_SAUCER_SET')": 1,
+    "repair_target, repair_target": 1,
+    "UNDECLARED_PARTICIPANT: functional_relations[0] references ['target_assembly']": 1,
+    "No executable role could be typed": 1
+  },
+  "compile_missing_reason_heads": {
+    "Unresolved required relations: [{'raw_subject': 'fastening_tool', 'raw_phrase': 'The fastening tool is used to": 2,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'storage_container', 'entity_kind': '": 2,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_ingredient', 'entity_kind': 'OBJECT', 'function': 'Food for soup'": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_portion', 'entity_kind': 'OBJECT', 'function': 'Hot food item ser": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_source', 'entity_kind': 'OBJECT', 'function': 'The soup ingredien": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_ingredient', 'entity_kind': 'OBJECT', 'function': 'Provide food f": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup', 'entity_kind': 'OBJECT', 'function': 'Food to be served', 'requ": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_content', 'entity_kind': 'OBJECT', 'function': 'Food for soup', '": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_source', 'entity_kind': 'OBJECT', 'function': 'Source of soup', '": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_liquid', 'entity_kind': 'OBJECT', 'function': 'Food substance to ": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_ingredient', 'entity_kind': 'OBJECT', 'function': 'Soup food sour": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_food', 'entity_kind': 'OBJECT', 'function': 'Main dish item', 're": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup', 'entity_kind': 'OBJECT', 'function': 'Food ingredient for soup'": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup', 'entity_kind': 'OBJECT', 'function': 'Food ingredient to be ser": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'soupsupply', 'entity_kind': 'OBJECT'": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_food', 'entity_kind': 'OBJECT', 'function': 'Provide the soup sub": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'stove', 'entity_kind': 'FIXED_TARGET": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_liquid', 'entity_kind': 'OBJECT', 'function': 'Food item to be se": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_content', 'entity_kind': 'OBJECT', 'function': 'Provide edible so": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_ingredient', 'entity_kind': 'OBJECT', 'function': 'Food item for ": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'cooking_vessel', 'entity_kind': 'OBJ": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_ingredient', 'entity_kind': 'OBJECT', 'function': 'Substance to b": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_content', 'entity_kind': 'OBJECT', 'function': 'The food substanc": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_liquid', 'entity_kind': 'OBJECT', 'function': 'Liquid food compon": 1,
+    "Unresolved required relations: [{'raw_subject': 'soup_bowl', 'raw_phrase': 'The soup_bowl must contain soup an": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_ingredient', 'entity_kind': 'OBJECT', 'function': 'Supplies soup ": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup', 'entity_kind': 'OBJECT', 'function': 'Food item to be served.',": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_ingredient', 'entity_kind': 'OBJECT', 'function': 'Food substance": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_source', 'entity_kind': 'OBJECT', 'function': 'Provides the soup ": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_ingredient', 'entity_kind': 'OBJECT', 'function': 'Liquid food se": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'soup_bowl', 'entity_kind': 'OBJECT',": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_source', 'entity_kind': 'OBJECT', 'function': 'Provides soup ingr": 1,
+    "Unresolved required relations: [{'raw_subject': 'coffee_cup', 'raw_phrase': 'acted_upon_by', 'raw_object': 'st": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'soup_food', 'entity_kind': 'OBJECT', 'function': 'The food portion to ": 1,
+    "Unresolved required operations: [{'id': 'set_refreshments', 'operation': 'Place refreshment settings on the su": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'entertainment_control', 'entity_kind": 1,
+    "Unresolved required operations: [{'id': 'prepare_refreshment_settings', 'operation': 'arrange_refreshment_sett": 1,
+    "Unresolved required operations: [{'id': 'position_remote', 'operation': 'place', 'participant_roles': ['entert": 1,
+    "Unresolved required relations: [{'raw_subject': 'entertainment_control', 'raw_phrase': 'is_supported_by', 'raw": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'food_vessel', 'entity_kind': 'OBJECT": 1,
+    "Unresolved required operations: [{'id': 'provide_refreshment_settings', 'operation': 'place', 'participant_rol": 1,
+    "Unresolved required operations: [{'id': 'provide_refreshment', 'operation': 'set_up_refreshment_setting', 'par": 1,
+    "Unresolved required operations: [{'id': 'place_controller', 'operation': 'Move the entertainment_control to a ": 1,
+    "Unresolved required operations: [{'id': 'place_control', 'operation': 'Place entertainment_control on surface'": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'person', 'entity_kind': 'OBJECT', 'function': 'The individual consumin": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'person', 'entity_kind': 'OBJECT', 'function': 'Receiver of refreshment": 1,
+    "Unresolved required operations: [{'id': 'place_control', 'operation': 'Place entertainment control on surface'": 1,
+    "Unresolved required operations: [{'id': 'operation_2', 'operation': 'place', 'participant_roles': ['entertainm": 1,
+    "Unresolved required operations: [{'id': 'search_storage', 'participant_roles': ['storage_unit'], 'reason': 'TO": 1,
+    "Unresolved required relations: [{'raw_subject': 'fastening_component', 'raw_phrase': 'The fastening_component ": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'marked_location', 'entity_kind': 'FI": 1,
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'fastening_action', 'function': 'fastening_tool fastens": 1,
+    "Unresolved required relations: [{'raw_subject': 'fastening_component', 'raw_phrase': 'fastening_component fits": 1,
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'fasten_op', 'function': 'apply_fastening', 'tool_role'": 1,
+    "Unresolved required operations: [{'id': 'execute_fastening', 'operation': 'Apply the fastening_tool to the fas": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'storage_structure', 'entity_kind': 'OBJECT', 'function': 'Container ho": 1,
+    "Disabled/unsupported operations: [{'raw_group': {'id': 'operation_3', 'function': 'placed_on', 'tool_role': 'f": 1,
+    "Unresolved required operations: [{'id': 'place_part', 'operation': 'place_on_surface', 'participant_roles': ['": 1,
+    "Unresolved required relations: [{'raw_subject': 'compatible_component', 'raw_phrase': 'The compatible_componen": 1,
+    "Unresolved required relations: [{'raw_subject': 'compatible_component', 'raw_phrase': 'compatible_component fi": 1,
+    "Unresolved required operations: [{'id': 'fasten_workpiece', 'operation': 'Apply the fastener to the workpiece.": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'storage_drawer_left', 'entity_kind': 'OBJECT', 'function': 'A closed s": 1,
+    "Unresolved roles: [{'raw_role': {'id': 'storage_container', 'entity_kind': 'OBJECT', 'function': 'Closed struc": 1,
+    "Unresolved required relations: [{'raw_subject': 'fastening_part', 'raw_phrase': 'The component must fit into t": 1,
+    "Unresolved required operations: [{'id': 'search_and_identify', 'operation': 'Open storage containers and inspe": 1,
+    "Unresolved required relations: [{'raw_subject': 'fastener', 'raw_phrase': 'The fastener must physically suit t": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'compatible_component', 'entity_kind'": 1,
+    "Unresolved required relations: [{'raw_subject': 'fastening_component', 'raw_phrase': 'fits_into', 'raw_object'": 1,
+    "Unresolved roles: [{'code': 'AMBIGUOUS_ROLE_MAPPING', 'raw_role': {'id': 'reusable_equipment', 'entity_kind': ": 1,
+    "Unresolved required relations: [{'raw_subject': 'compatible_components', 'raw_phrase': 'compatible_components ": 1
+  },
+  "disabled_operation_codes": {
+    "UNINSTANTIABLE_MISSING_ROLE": 3,
+    "UNSUPPORTED_OPERATOR": 2
+  }
+}
