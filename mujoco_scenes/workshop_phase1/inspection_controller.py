@@ -339,8 +339,16 @@ class WorkshopPhase1InspectionController:
             if hasattr(self.scene, "open_container"):
                 try:
                     self.scene.open_container(region_name)
-                except Exception:
-                    pass
+                except Exception as error:
+                    # A storage region that failed to open is a region whose
+                    # contents are never observed.  Discarding this silently made
+                    # that indistinguishable from an empty region.
+                    self.trace.diagnostics.setdefault(
+                        "regions_not_opened", []).append({
+                            "region": region_name,
+                            "error_type": type(error).__name__,
+                            "error": str(error)[:300],
+                        })
 
             # For NO_PERSISTENCE ablation: reset tracker and caches
             if self.ablation == AblationType.NO_PERSISTENCE:

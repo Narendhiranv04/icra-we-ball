@@ -20,7 +20,63 @@ stop describing the tree it names.
 
 ## B. Metrics from the archived replay
 
-<!--METRICS-->
+Single clean replay, `--workers 2`, 96/96 rows, **zero** `HARNESS_FAILURE`.
+
+| Metric | Value |
+| :--- | :--- |
+| Trials | 96 (60 feasible, 36 infeasible) |
+| **Feasible success** | **34 / 60 (56.7%)** |
+| — Kitchen | 11 / 18 |
+| — Living Room | 10 / 18 |
+| — Workshop | 13 / 24 |
+| feasible_outcome_correct | 34 / 60 |
+| infeasible_outcome_correct | 7 / 36 |
+| **overall_outcome_correct** | **41 / 96 (42.7%)** |
+| **False completions** | **0 / 96** |
+| GT-goal mismatch successes | **0** |
+| Complete grounding | 34 |
+| Planner failures after complete grounding | **0** |
+| A\* invocations per trial | ≤ 1 (observed {0, 1}) |
+| Semantic FM calls during replay | **0** |
+| Strict V3-valid raw contracts | 90 / 96 |
+| Mean GT goal coverage (feasible) | 0.6625 |
+| GT-leakage audit | **FINDINGS: 0** |
+
+| Domain | Variant | GT feasible | Success /3 | Mean GT coverage | Complete grounding /3 | Outcome correct /3 | False completions |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| kitchen | K1 | yes | 2/3 | 0.833 | 2/3 | 2/3 | 0 |
+| kitchen | K2 | yes | 2/3 | 0.917 | 2/3 | 2/3 | 0 |
+| kitchen | K3 | yes | 1/3 | 0.667 | 1/3 | 1/3 | 0 |
+| kitchen | K4 | yes | 1/3 | 0.500 | 1/3 | 1/3 | 0 |
+| kitchen | K5 | yes | 2/3 | 0.667 | 2/3 | 2/3 | 0 |
+| kitchen | K6 | yes | 3/3 | 1.000 | 3/3 | 3/3 | 0 |
+| kitchen | K7 | no | 0/3 | 0.500 | 0/3 | 0/3 | 0 |
+| kitchen | K8 | no | 0/3 | 0.000 | 0/3 | 0/3 | 0 |
+| kitchen | K9 | no | 0/3 | 0.000 | 0/3 | 0/3 | 0 |
+| kitchen | K10 | no | 0/3 | 0.167 | 0/3 | 0/3 | 0 |
+| kitchen | K11 | no | 0/3 | 0.167 | 0/3 | 0/3 | 0 |
+| kitchen | K12 | no | 0/3 | 0.333 | 0/3 | 0/3 | 0 |
+| living_room | L1 | yes | 2/3 | 0.778 | 2/3 | 2/3 | 0 |
+| living_room | L2 | yes | 2/3 | 0.667 | 2/3 | 2/3 | 0 |
+| living_room | L3 | yes | 0/3 | 0.222 | 0/3 | 0/3 | 0 |
+| living_room | L4 | yes | 3/3 | 1.000 | 3/3 | 3/3 | 0 |
+| living_room | L5 | yes | 2/3 | 0.667 | 2/3 | 2/3 | 0 |
+| living_room | L6 | yes | 1/3 | 0.333 | 1/3 | 1/3 | 0 |
+| living_room | L7 | no | 0/3 | 0.444 | 0/3 | 0/3 | 0 |
+| living_room | L8 | no | 0/3 | 0.111 | 0/3 | 1/3 | 0 |
+| living_room | L9 | no | 0/3 | 0.000 | 0/3 | 2/3 | 0 |
+| living_room | L10 | no | 0/3 | 0.000 | 0/3 | 2/3 | 0 |
+| workshop | W1 | yes | 2/3 | 0.778 | 2/3 | 2/3 | 0 |
+| workshop | W2 | yes | 2/3 | 0.778 | 2/3 | 2/3 | 0 |
+| workshop | W3 | yes | 0/3 | 0.000 | 0/3 | 0/3 | 0 |
+| workshop | W4 | yes | 0/3 | 0.333 | 0/3 | 0/3 | 0 |
+| workshop | W5 | yes | 0/3 | 0.111 | 0/3 | 0/3 | 0 |
+| workshop | W6 | yes | 3/3 | 1.000 | 3/3 | 3/3 | 0 |
+| workshop | W7 | yes | 3/3 | 1.000 | 3/3 | 3/3 | 0 |
+| workshop | W8 | yes | 3/3 | 1.000 | 3/3 | 3/3 | 0 |
+| workshop | W9 | no | 0/3 | 0.222 | 0/3 | 1/3 | 0 |
+| workshop | W10 | no | 0/3 | 0.222 | 0/3 | 1/3 | 0 |
+
 
 ### Arithmetic
 
@@ -133,7 +189,23 @@ propagates into a different outcome, because the retained belief survives it.
 
 ### C.4 Measured outcome-level stability
 
-<!--STABILITY-->
+Two independent full replays of the same 96 archived contracts, launched
+concurrently from identical code:
+
+```
+rows compared          96
+row-level differences   0
+```
+
+Compared on `pipeline_status`, `success`, `complete_grounding`,
+`gt_goal_coverage`, `outcome_correct`, `false_completion`, `grounding_status`,
+`grounding_missing`, `plan_length`, `astar_invocations`, `symbolic_goal_status`
+and `strict_v3_valid`.
+
+`kitchen/K7/trial_01` -- which diverged in every earlier attempt, including after
+the GPU, hash-seed and detector-path fixes -- now agrees. **Outcome-level
+reproducibility is achieved.** Pixel-level reproducibility is not, and cannot be
+in this environment; it no longer reaches the outcome.
 
 ### C.5 Consequence for the experiment
 
@@ -157,7 +229,35 @@ paper should say so.
 Every remaining feasible failure, grouped by **earliest** causal stage. No
 garbage-bin category.
 
-<!--FAILURES-->
+All 26 failing feasible trials, by earliest causal stage. Every category-(A)
+attribution was read directly from the archived raw contract, not inferred from
+a downstream symptom.
+
+| Stage | n | Trials | Detail |
+| :--- | ---: | :--- | :--- |
+| **FM generation** — truncated at the token limit | 3 | L2/02, L3/01, L3/02 | `finish_reason=length`, whole budget spent on reasoning, zero content emitted (§D.4) |
+| **FM generation** — undeclared participant | 1 | W5/02 | `functional_relations[0]` references `target_assembly`, never declared in roles |
+| **FM semantics** — no seating requirement expressed | 3 | L5/03, L6/01, L6/03 | placement expressed; no seat, chair, sofa or person anywhere in the contract |
+| **FM semantics** — over-demanded instance counts | 2 | W2/03, K1/03 | two fasteners where the scene holds one; one DISTINCT spoon role of four merging a reusable stirrer with distinct utensils |
+| **FM semantics** — wrong binding policy | 1 | K2/01 | `eating_utensil` declared SHARED, i.e. one utensil common to both diners |
+| **FM semantics** — per-seat requirement collapsed | 1 | L1/02 | `seating_area` and `surface` both count 1 SHARED for two seats |
+| **FM semantics** — seat declared as a carried object | 1 | L3/03 | `chair` declared `entity_kind: OBJECT`, the carried class (§D.2) |
+| **Robot capability** — not owned | 1 | K3/03 | stove `FIXED_TARGET` with a heating relation, and handing a bowl to a person |
+| **Symbolic goal compilation** | 1 | W1/02 | `repaired` goal retained after its `SCREW` operator was filtered (§D.1) |
+| **Grounding** | 1 | W4/01 | `repair_target` unseated, `FUNCTIONAL_ASSIGNMENT_FAILURE` |
+| **Geometry** — fastener measured from a 32-point cloud | 3 | W3/01–03 | 5.66 cm against a 3.98 cm measurement of the identical asset (§D.3) |
+| **Perception** — no qualifying candidate | 1 | W5/01 | `fastener` plausibility `true=0, plausible=0, unknown=0` |
+| **Perception** — label conflicted or absent | 6 | K4/02, K5/01, K4/03, W4/02, W4/03, W5/03 | two-way label conflict or no label at all |
+| **Conservative non-declaration** | 1 | K3/01 | GT coverage 1.0, run reports `PARTIAL_ACTION_SEQUENCE_READY` and does not claim completion |
+| **Total** | **26** | | |
+
+By domain: Kitchen 7, Living Room 8, Workshop 11. Every trial is attributed; no
+garbage-bin category.
+
+Note on K3/01: independent evaluation confirms all four goals, but the run
+declined to announce completion, so it is scored a failure. That is the
+conservative direction, and it is the trial that exposed the feasible-correctness
+defect in §E.1.
 
 ### D.1 The three previously unclassified Workshop trials
 
@@ -296,7 +396,10 @@ module in that package may reference ground truth. It now lives outside.
 imports the scorer and asserts the audit reports it, so `FINDINGS: 0` means
 something.
 
-<!--AUDIT-->
+```
+$ python scripts/audit_no_gt_leakage.py
+FINDINGS: 0
+```
 
 ### E.3 Prohibitions
 

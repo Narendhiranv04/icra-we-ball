@@ -120,6 +120,7 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         self._alias_to_canonical: dict[str, str] = {}
         self.last_diagnostics: list[dict[str, Any]] = []
         self._full_text_features = None
+        self.vocabulary_error = None
         self._initialize_model()
 
     def _initialize_model(self) -> None:
@@ -148,8 +149,20 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
                 try:
                     self._model.set_classes(self._prompts)
                     self._full_text_features = self._model.model.txt_feats.detach().clone()
-                except Exception:
-                    pass
+                    self.vocabulary_error = None
+                except Exception as error:
+                    # Swallowing this left the detector on whatever vocabulary it
+                    # already had, so every later detection ran against the wrong
+                    # class list and the objects this one asked for were simply
+                    # never found -- with nothing on the record to say why.
+                    self.vocabulary_error = {
+                        "stage": "set_classes",
+                        "error_type": type(error).__name__,
+                        "error": str(error)[:300],
+                        "requested_prompts": list(self._prompts),
+                    }
+                    self.last_diagnostics.append(
+                        {"status": "VOCABULARY_NOT_APPLIED", **self.vocabulary_error})
 
     def _activate_prompt_pass(self, prompt: str | None) -> None:
         """Select the full vocabulary or one cached prompt without rerunning CLIP."""
