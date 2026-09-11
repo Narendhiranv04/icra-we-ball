@@ -192,20 +192,15 @@ def evaluate_all_variants(
             cand_cov = (cand_sat / cand_total) if cand_total > 0 else 0.0
 
             # Correctness determination (Section U)
-            if is_feasible:
-                outcome_correct = bool(full_task_sat)
-            else:
-                # Legitimate infeasibility conclusion reached after runtime reasoning/search
-                outcome_correct = bool(
-                    not full_task_sat
-                    and not false_completion
-                    and pipeline_res.status in {
-                        "INFEASIBLE",
-                        "EXHAUSTED_NO_VALID_GROUNDING",
-                        "NO_VALID_COMPLETE_ASSIGNMENT",
-                        "PLANNING_PROVEN_INFEASIBLE",
-                    }
-                )
+            # One shared rule with the frozen-replay scorer, so the same
+            # behaviour cannot score differently offline and live.
+            from mujoco_scenes.functional_tamp_pipeline.outcome_classifier import (
+                outcome_is_correct,
+            )
+            outcome_correct = outcome_is_correct(
+                gt_feasible=bool(is_feasible), task_satisfied=bool(full_task_sat),
+                false_completion=bool(false_completion),
+                pipeline_status=pipeline_res.status)
 
             # Telemetry extraction from run manifest
             manifest = {}
