@@ -118,6 +118,8 @@ def _yolo_world_worker(
 ) -> None:
     """Run YOLO-World in a clean process, isolated from MuJoCo's GL stack."""
     try:
+        from mujoco_scenes.determinism import enable_deterministic_inference
+        enable_deterministic_inference()
         from ultralytics import YOLOWorld
 
         model = YOLOWorld(checkpoint)

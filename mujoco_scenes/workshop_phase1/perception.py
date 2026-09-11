@@ -125,6 +125,9 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
     def _initialize_model(self) -> None:
         if not self.weights_path.is_file():
             return
+        # Before the model is built, so cuDNN cannot autotune this process.
+        from mujoco_scenes.determinism import enable_deterministic_inference
+        self.determinism = enable_deterministic_inference()
         try:
             from ultralytics import YOLOWorld
             self._model = YOLOWorld(str(self.weights_path))
