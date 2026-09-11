@@ -216,7 +216,8 @@ def main() -> int:
     row["outcome_correct"] = outcome_is_correct(
         gt_feasible=bool(row["feasible"]),
         gt_full_task_satisfied=bool(row.get("gt_full_task_satisfied")),
-        pipeline_status=row.get("pipeline_status"))
+        pipeline_status=row.get("pipeline_status"),
+        runtime_contract_complete=row.get("executable_contract_complete"))
     Path(args.row_out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.row_out).write_text(json.dumps(row, indent=2, default=str) + "\n")
     _prune_bulk_artifacts(run_dir)

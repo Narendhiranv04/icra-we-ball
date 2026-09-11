@@ -155,3 +155,36 @@ def test_every_scorer_uses_this_one_rule():
             f"{script} still carries its own copy of the status list")
         assert "not is_feasible and full_task_sat" not in source, (
             f"{script} still carries the false-completion definition that never fires")
+
+
+def test_an_incomplete_contract_cannot_prove_infeasibility():
+    """A run whose semantics never compiled has not proven anything.
+
+    This condition lived only in enrich_record, which the live evaluator calls
+    and the frozen-replay scorer does not, so the same behaviour scored
+    differently offline and live -- 7 infeasible trials counted correct offline
+    and would have counted incorrect live.  It is part of the shared rule now.
+    """
+    assert outcome_is_correct(gt_feasible=False, gt_full_task_satisfied=False,
+                              pipeline_status="INFEASIBLE",
+                              runtime_contract_complete=True)
+    assert not outcome_is_correct(gt_feasible=False, gt_full_task_satisfied=False,
+                                  pipeline_status="INFEASIBLE",
+                                  runtime_contract_complete=False)
+
+
+def test_the_contract_condition_does_not_touch_feasible_variants():
+    """Completing a feasible task is a demonstrated result either way."""
+    assert outcome_is_correct(gt_feasible=True, gt_full_task_satisfied=True,
+                              pipeline_status="ACTION_SEQUENCE_READY",
+                              runtime_contract_complete=False)
+
+
+def test_both_scorers_pass_the_contract_flag():
+    for script in ("scripts/replay_frozen_trial.py",
+                   "scripts/evaluate_vlm_functional_tamp.py"):
+        source = (REPO / script).read_text()
+        assert "outcome_is_correct" in source
+    replay = (REPO / "scripts" / "replay_frozen_trial.py").read_text()
+    assert "runtime_contract_complete=" in replay, (
+        "the replay scorer does not apply the contract-completeness condition")

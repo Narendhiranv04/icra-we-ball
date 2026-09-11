@@ -76,7 +76,8 @@ def is_false_completion(*, pipeline_status: str | None,
 
 
 def outcome_is_correct(*, gt_feasible: bool, gt_full_task_satisfied: bool,
-                       pipeline_status: str | None) -> bool:
+                       pipeline_status: str | None,
+                       runtime_contract_complete: bool | None = None) -> bool:
     """Whether the reported outcome matches the variant's truth.
 
     Feasible: the run had to announce completion *and* independent evaluation
@@ -84,12 +85,22 @@ def outcome_is_correct(*, gt_feasible: bool, gt_full_task_satisfied: bool,
     finish that did not happen is a false completion, and finishing without
     saying so is not a delivered result.
 
-    Infeasible: the run had to avoid claiming completion *and* reach an
-    infeasibility conclusion.
+    Infeasible: the run had to avoid claiming completion, reach an
+    infeasibility conclusion, *and* have had a complete contract to conclude it
+    from.  A run whose semantics never compiled has not proven the scene cannot
+    satisfy the task; it has only failed to state the task.  Crediting that
+    would score a parsing failure as a correct scientific conclusion.
+
+    `runtime_contract_complete=None` means the caller does not track it and the
+    condition is skipped.  That default exists only for unit tests; both
+    production scorers pass it, because applying it in one and not the other is
+    exactly how the live and offline numbers came to disagree.
     """
     claimed = completion_claimed(pipeline_status)
     if gt_feasible:
         return claimed and bool(gt_full_task_satisfied)
+    if runtime_contract_complete is False:
+        return False
     return (not claimed
             and not is_false_completion(pipeline_status=pipeline_status,
                                         gt_full_task_satisfied=gt_full_task_satisfied)
@@ -115,7 +126,8 @@ def summarize(rows: Iterable[Mapping[str, Any]], *, feasible_key: str = "feasibl
         return sum(1 for r in group if outcome_is_correct(
             gt_feasible=bool(r.get(feasible_key)),
             gt_full_task_satisfied=bool(r.get(satisfied_key)),
-            pipeline_status=r.get(status_key)))
+            pipeline_status=r.get(status_key),
+            runtime_contract_complete=r.get("executable_contract_complete")))
 
     feasible_correct = correct(feasible)
     infeasible_correct = correct(infeasible)
