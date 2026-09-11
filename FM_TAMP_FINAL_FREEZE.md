@@ -1,3 +1,11 @@
+> **Superseded by `FM_TAMP_CLOSURE_FINAL.md`.** Every `outcome correct`
+> figure in this file was produced by a scoring rule that, on an infeasible
+> variant, asked only whether the task went unsatisfied -- true by
+> construction, so it credited all 36 infeasible trials automatically. The
+> rule was replaced; the honest figure is 42/96, not 69-71/96. Feasible-trial
+> success, goal coverage and the false-completion count in this file are
+> unaffected.
+
 # FM-guided TAMP — final deterministic freeze
 
 ## A. Repository
