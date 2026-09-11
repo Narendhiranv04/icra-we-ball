@@ -4,16 +4,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 from .models import RoleTypeHypothesis
 from .predicate_registry import get_predicate_signature
 from .relation_interpreter import extract_relation_semantic_candidates
 from .robot_capability_registry import extract_operation_semantic_candidates
 from .system_context_registry import (
+    AREA_ENTITY_KINDS,
+    CARRIED_ENTITY_KINDS,
     get_domain_planner_context_constants,
     get_domain_selectable_roles,
     get_domain_system_fixed_anchors,
+    get_runtime_role_entity_kind,
 )
 
 
@@ -457,8 +460,86 @@ def detect_role_families(domain: str, role: dict[str, Any]) -> tuple[set[str], d
     return families, provenance
 
 
+# A role whose canonical type was settled by the shape of the contract -- the
+# relations and operations it participates in, the entity kind the model
+# declared for it, the fact that another participant is already pinned to the
+# alternative -- rather than by matching its function wording alone.  A
+# conclusion drawn from the whole graph outranks the isolated function-alias
+# mapper, which cannot see that a role is an operation participant and therefore
+# sometimes calls a manipulable target a fixed piece of planner context.
+STRUCTURALLY_EVIDENCED_ROLE_TYPE_STATUSES = frozenset({
+    "STRUCTURAL_OVERRIDE_OF_WEAK_FUNCTION_ALIAS",
+    "GLOBAL_GRAPH_CONSISTENCY_OVERRIDE",
+    "RELATION_ASSISTED",
+    "OPERATION_ASSISTED",
+    "JOINT_SEMANTIC_RESOLUTION",
+})
+
+
 def canonical_role_family(domain: str, role: str) -> str:
     return _FAMILY_FOR_DOMAIN_ROLE.get(domain, {}).get(role, "OTHER")
+
+
+def family_entity_kinds(domain: str, family: str) -> frozenset[str]:
+    """The entity kinds the runtime's own roles of this family are.
+
+    Derived from the family table and the runtime entity kinds rather than
+    listed again, so a family cannot drift out of step with the roles in it.
+    """
+    return frozenset(
+        kind
+        for role, fam in _FAMILY_FOR_DOMAIN_ROLE.get(domain, {}).items()
+        if fam == family
+        and (kind := get_runtime_role_entity_kind(domain, role)) is not None
+    )
+
+
+def families_the_declared_kind_rules_out(
+    domain: str, declared_kind: str, families: Iterable[str]
+) -> set[str]:
+    """Co-nominated families the model's own entity kind contradicts.
+
+    The contract asks, for every participant, whether the thing is carried or is
+    an area, and it answers separately from the function text.  A family the
+    runtime realizes only with roles of the other class contradicts that answer.
+
+    Returned only when striking those leaves a family that positively *is* of
+    the declared class, which is what keeps the rule from deciding questions the
+    declaration cannot settle:
+
+      * a side table the model called an OBJECT nominates SUPPORT and SEATING.
+        SUPPORT is an area, so it is contradicted -- but SEATING is a fixed
+        reference, not something carried, so nothing the declaration names
+        survives and the empty set is returned.  Reading "not an area, therefore
+        the seat" turned a table into a chair.
+      * the assembly a screw is driven into is declared an OBJECT and is a fixed
+        reference to the runtime.  Nothing about it is an area, so again nothing
+        is struck, and it stays the repair target rather than becoming the screw.
+
+    What it does settle is the case it was added for: "holds refreshments for a
+    person", declared an OBJECT, nominating PAYLOAD and SUPPORT.  SUPPORT is an
+    area and PAYLOAD is carried, so the declaration picks the payload -- and the
+    refreshments stop being read as the table they go on.
+    """
+    kind = str(declared_kind or "").strip().upper()
+    if kind in CARRIED_ENTITY_KINDS:
+        opposite = AREA_ENTITY_KINDS
+    elif kind in AREA_ENTITY_KINDS:
+        opposite = CARRIED_ENTITY_KINDS
+    else:
+        return set()
+    families = set(families)
+    ruled_out = {
+        family for family in families
+        if (kinds := family_entity_kinds(domain, family)) and kinds <= opposite
+    }
+    if not ruled_out:
+        return set()
+    survives_as_declared = any(
+        kind in family_entity_kinds(domain, family)
+        for family in families - ruled_out
+    )
+    return ruled_out if survives_as_declared else set()
 
 
 def _in_any_scope(pattern, scopes: dict[str, str]) -> bool:
@@ -478,6 +559,7 @@ def _resolve_family_precedence(
     families: set[str],
     scopes: dict[str, str],
     provenance: dict[str, set[str]],
+    declared_entity_kind: str = "",
 ) -> tuple[set[str], list[str]]:
     """Reduce co-nominated families using what each scope actually claimed.
 
@@ -506,6 +588,30 @@ def _resolve_family_precedence(
         for family in sorted(authoritative - by_vocabulary):
             drop(family, "RUNTIME_ACCEPTANCE_VOCABULARY_OVER_INCIDENTAL_CUE")
         authoritative |= by_vocabulary
+
+    # The contract asks the model, for every participant, whether the thing is
+    # carried or is a place, and it answers separately from the function text.
+    # So a family whose runtime roles are all of the opposite class contradicts
+    # the model's own declaration and is not what the participant is.
+    #
+    # This is the reading the function text gets wrong most often, because a
+    # thing is naturally described by where it goes.  "Holds refreshments for a
+    # person", offered with categories "table, surface, tray" and declared an
+    # OBJECT, was read as the side table: the categories claimed a surface, the
+    # surface claim outranked the job description by the rule further down, and
+    # the participant the task is actually about -- the refreshments -- was left
+    # out of the graph altogether, along with every operation over it.
+    #
+    # Only movable against stationary is judged; REGION and FIXED_TARGET are one
+    # class, because the model interchanges them freely and harmlessly.  The rule
+    # narrows only when a family the declaration allows survives, so a
+    # participant whose declared kind the domain realizes with no role at all is
+    # left exactly as it was.
+    if declared_entity_kind:
+        for family in sorted(families_the_declared_kind_rules_out(
+            domain, declared_entity_kind, authoritative
+        )):
+            drop(family, "DECLARED_ENTITY_KIND_RULES_OUT_A_FAMILY_OF_THE_OTHER_CLASS")
 
     # A structure the model describes as holding or enclosing the things the
     # task needs is somewhere to search, not one of those things.  But being
@@ -582,6 +688,25 @@ def _resolve_family_precedence(
         if family in _declared_families(domain)
         and purpose and re.search(_STATED_FUNCTION_OVER_KIND[family], purpose, re.I)
     }
+    # ... and except where every kind the categories claim is of the other class
+    # from the one the model declared this participant to be.  The categories
+    # are then describing where the thing belongs rather than what it is, which
+    # is the ordinary way to name a thing: "holds refreshments for a person",
+    # declared an OBJECT, offered as "table, surface, tray".  Letting the
+    # categories win there read the refreshments as the side table they go on.
+    #
+    # Only when the declaration picks out one of the families already nominated,
+    # so a category list is set aside for a positive reading and never merely
+    # because it disagrees.
+    if (
+        declared_entity_kind
+        and identity_kinds
+        and families_the_declared_kind_rules_out(
+            domain, declared_entity_kind, identity_kinds | authoritative
+        ) >= identity_kinds
+    ):
+        identity_kinds = set()
+        applied.append("DECLARED_ENTITY_KIND_OVER_A_CATEGORY_LIST_OF_THE_OTHER_CLASS")
     if identity_kinds:
         for family in sorted(_KIND_FAMILIES - identity_kinds - stated_function_families):
             drop(family, "CANDIDATE_CATEGORY_KIND_OVER_JOB_DESCRIPTION")
@@ -806,7 +931,10 @@ def function_semantic_evidence(
     """Extract positive preferences and explicit family exclusions without scores."""
     scopes = role_text_scopes(role)
     families, provenance = detect_role_families(domain, role)
-    authoritative, precedence_rules = _resolve_family_precedence(domain, families, scopes, provenance)
+    authoritative, precedence_rules = _resolve_family_precedence(
+        domain, families, scopes, provenance,
+        declared_entity_kind=str(role.get("entity_kind", "")),
+    )
     preferred = _preferred_roles(domain, role, authoritative, scopes)
     accepted = acceptance_vocabulary_match(domain, role)
     if len(accepted) == 1 and accepted[0] in runtime_roles and ACCEPTANCE_VOCABULARY in (
@@ -947,6 +1075,7 @@ def build_role_type_hypotheses(
     weak_mapped: dict[str, str | None] = {}
     constrained: dict[str, set[str]] = {rid: set() for rid in roles}
     structural_conflicts: set[str] = set()
+    declared_kind_narrowed: set[str] = set()
 
     # Roles the runtime itself introduced -- an operation-induced abstract slot,
     # an enumerated context set -- already name the canonical role they stand
@@ -991,6 +1120,20 @@ def build_role_type_hypotheses(
             "strength": evidence.evidence_strength, "legacy_mapper_rule": rule,
             "family_precedence_rules": list(evidence.family_precedence_rules),
         })
+        # Family precedence may have used the declared entity kind to choose
+        # between co-nominated families; see the rule in _resolve_family_precedence.
+        # Record that here so the status below reflects a reading the contract's
+        # own shape settled rather than a function-alias guess.
+        if "DECLARED_ENTITY_KIND_RULES_OUT_A_FAMILY_OF_THE_OTHER_CLASS" in (
+            evidence.family_precedence_rules
+        ):
+            declared_kind_narrowed.add(rid)
+            evidences[rid].append({
+                "source": "FM_DECLARED_ENTITY_KIND",
+                "status": "FAMILY_OF_THE_DECLARED_ENTITY_KIND_SELECTED",
+                "declared_entity_kind": str(role.get("entity_kind", "")),
+                "explicit_families": list(evidence.explicit_families),
+            })
 
     binary_constraints: list[tuple[str, str, set[tuple[str, str]], dict[str, Any]]] = []
     for relation in document.get("functional_relations", ()):
@@ -1085,12 +1228,78 @@ def build_role_type_hypotheses(
             if detail not in evidences[ro]: evidences[ro].append(detail)
             changed |= before_s != domains[rs] or before_o != domains[ro]
 
+    # The contract declares its participants separately, so two of them are two
+    # things.  A runtime role that some other participant is already pinned to,
+    # and pinned to alone, is therefore not what an undecided participant is --
+    # reading it that way would collapse two declared participants into one.
+    #
+    # Only undecided participants are narrowed, and only by roles another
+    # participant has no alternative to.  Two participants the contract really
+    # does mean as the same role stay as they are, because neither is undecided.
+    # Without this, a participant whose own words name no category -- "holds
+    # refreshments for a person" -- stayed ambiguous between the payloads of the
+    # domain, the operation over it had two equally good readings, and slot
+    # completion refused it on the tie.
+    # Read against what each participant actually resolves to, which is the
+    # arc-consistent domain after the single-preferred-role reduction below --
+    # not the raw domain.  A participant the function text names outright still
+    # carries the whole domain here, and comparing raw domains found nothing
+    # pinned anywhere.
+    def _resolved(rid: str) -> set[str]:
+        values = set(domains[rid])
+        preferred_here = set(functions[rid].preferred_roles) & values
+        if len(preferred_here) == 1 and (
+            functions[rid].evidence_strength == "EXPLICIT_FAMILY" or not constrained[rid]
+        ):
+            return preferred_here
+        return values
+
+    pinned_elsewhere = {
+        next(iter(resolved))
+        for other in roles
+        if len(resolved := _resolved(other)) == 1
+    }
+    for rid in roles:
+        # Same restriction as the entity-kind reading above, for the same
+        # reason: a participant the contract characterizes in no way is
+        # ambiguous over the whole domain because nothing is known about it, and
+        # striking the roles other participants claimed would leave a smaller
+        # set that looks like knowledge.  Only a participant whose family the
+        # contract settled is narrowed here.
+        if not functions[rid].explicit_families:
+            continue
+        resolved_here = _resolved(rid)
+        if len(resolved_here) <= 1:
+            continue
+        taken = resolved_here & pinned_elsewhere
+        narrowed = resolved_here - pinned_elsewhere
+        if not taken or not narrowed:
+            continue
+        domains[rid] = narrowed
+        constrained[rid].add("DECLARED_PARTICIPANT_DISTINCTNESS")
+        evidences[rid].append({
+            "source": "DECLARED_PARTICIPANT_DISTINCTNESS",
+            "status": "ROLES_ANOTHER_DECLARED_PARTICIPANT_IS_PINNED_TO_EXCLUDED",
+            "excluded_roles": sorted(taken),
+            "remaining_roles": sorted(narrowed),
+        })
+
     result = {}
     for rid, role in roles.items():
         domain_values = set(domains[rid])
+        # ``domains`` already had the contradictory kinds taken out; intersecting
+        # here keeps a preferred role of the wrong kind from being restored as
+        # the single answer below.
         preferred = set(functions[rid].preferred_roles) & domain_values
         structural = constrained[rid]
-        override = bool(structural and weak_mapped[rid] is not None
+        # The declared entity kind is structural evidence in the same sense the
+        # relation and operation text are: it comes from the contract's own
+        # shape rather than from reading a function phrase.  So when it is what
+        # ruled the weak alias out, that counts as the alias being overridden,
+        # and the resulting type is bindable where a merely-guessed one is not.
+        structurally_evidenced = structural or (
+            {"FM_DECLARED_ENTITY_KIND"} if rid in declared_kind_narrowed else set())
+        override = bool(structurally_evidenced and weak_mapped[rid] is not None
                         and weak_mapped[rid] not in domain_values and domain_values)
         if override:
             evidences[rid].append({"source": "JOINT_TYPING", "status": "STRUCTURAL_OVERRIDE_OF_WEAK_FUNCTION_ALIAS"})

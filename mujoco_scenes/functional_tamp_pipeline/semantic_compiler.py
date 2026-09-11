@@ -47,13 +47,12 @@ DEMOTABLE_REQUIREMENT_PROVENANCE = frozenset({
 # isolated function-alias mapper, which cannot see that a role is an operation
 # participant and therefore sometimes calls a manipulable target a fixed piece
 # of planner context.
-STRUCTURALLY_EVIDENCED_ROLE_TYPE_STATUSES = frozenset({
-    "STRUCTURAL_OVERRIDE_OF_WEAK_FUNCTION_ALIAS",
-    "GLOBAL_GRAPH_CONSISTENCY_OVERRIDE",
-    "RELATION_ASSISTED",
-    "OPERATION_ASSISTED",
-    "JOINT_SEMANTIC_RESOLUTION",
-})
+# Defined with the statuses themselves, in semantic_typing, and re-exported
+# here because both the compiler and slot completion have to agree about which
+# readings are structural.
+from .semantic_typing import (  # noqa: E402
+    STRUCTURALLY_EVIDENCED_ROLE_TYPE_STATUSES,
+)
 
 
 def causal_position(role: dict, document: dict) -> set[str]:

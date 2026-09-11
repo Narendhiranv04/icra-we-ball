@@ -46,6 +46,62 @@ _PLANNER_CONTEXT_CONSTANTS_RAW: dict[str, frozenset[str]] = {
     "workshop": frozenset({"MAIN_WORKBENCH_ZONE", "workshop_frame_joint"}),
 }
 
+# The entity kind each runtime role is, in the runtime's own representation:
+# OBJECT for something the robot can pick up and carry, REGION for an area or
+# surface that receives things, FIXED_TARGET for a calibrated reference point.
+#
+# This says what the runtime is, not what any task requires.  It exists because
+# the wire contract asks the model for the same distinction about every
+# participant it declares, and without it the two statements could not be read
+# against each other.  A participant the model declared movable was canonicalized
+# onto a region of the room whenever the categories it listed happened to read
+# like a surface -- "refreshment setting", declared OBJECT, came back as the side
+# table it belongs on -- and the payload then disappeared from the task.
+_ROLE_ENTITY_KINDS_RAW: dict[str, dict[str, str]] = {
+    "kitchen": {
+        "coffee_container": "OBJECT",
+        "soup_container": "OBJECT",
+        "coffee_stirrer": "OBJECT",
+        "soup_eating_utensil": "OBJECT",
+        "water_source": "OBJECT",
+        "coffee_source": "OBJECT",
+        "countertop": "REGION",
+        "serving_area": "REGION",
+        "dining_table": "REGION",
+    },
+    "living_room": {
+        "PERSONAL_CUP_SAUCER_REGION": "REGION",
+        "SHARED_REMOTE_REGION": "REGION",
+        "CUP_SAUCER_SET": "OBJECT",
+        "REMOTE": "OBJECT",
+        "SEATING_POSITION": "FIXED_TARGET",
+        "SEATING_PAIR": "FIXED_TARGET",
+        "staging_tray": "REGION",
+    },
+    "workshop": {
+        "driver": "OBJECT",
+        "fastener": "OBJECT",
+        "repair_target": "FIXED_TARGET",
+        "MAIN_WORKBENCH_ZONE": "REGION",
+        "workshop_frame_joint": "FIXED_TARGET",
+    },
+}
+
+# The one contradiction the wire prompt states sharply enough to read against
+# the runtime: something the robot carries is not an area of the room.  Those two
+# answers exclude each other, and each rules the other's roles out.
+#
+# FIXED_TARGET is deliberately in neither class, so it excludes nothing and is
+# excluded by nothing.  The prompt calls it "a fixed reference or interaction
+# point", and the model applies that to the same things it calls objects and
+# areas: the assembly a screw is driven through is a part one could pick up, and
+# the runtime fixes it as a site on the bench, so both answers are honest.
+# Treating it as stationary made a workpiece declared OBJECT unable to be the
+# repair target, which is the only role in that domain it could be.
+CARRIED_ENTITY_KINDS: frozenset[str] = frozenset({"OBJECT"})
+AREA_ENTITY_KINDS: frozenset[str] = frozenset({"REGION"})
+
+
 _SEARCH_REGIONS_RAW: dict[str, frozenset[str]] = {
     "kitchen": frozenset({"D1", "D2", "C1", "C2", "B1"}),
     "living_room": frozenset(),
@@ -72,6 +128,30 @@ def get_domain_system_fixed_anchors(domain: str) -> frozenset[str]:
 def get_domain_planner_context_constants(domain: str) -> frozenset[str]:
     """Return immutable set of registered symbolic planner constants for domain."""
     return PLANNER_CONTEXT_CONSTANTS.get(domain.strip().lower(), frozenset())
+
+
+def get_runtime_role_entity_kind(domain: str, role: str) -> str | None:
+    """The entity kind the runtime represents ``role`` as, or None if unregistered."""
+    return _ROLE_ENTITY_KINDS_RAW.get(domain.strip().lower(), {}).get(str(role))
+
+
+def runtime_roles_compatible_with_entity_kind(domain: str, entity_kind: str) -> frozenset[str]:
+    """Runtime roles whose own entity kind does not contradict ``entity_kind``.
+
+    The only contradiction is carried against area; see the classes above for
+    why FIXED_TARGET is in neither.  A role whose kind the runtime never
+    declared is compatible with everything, so an unregistered role is never
+    excluded by this.
+    """
+    declared = _ROLE_ENTITY_KINDS_RAW.get(domain.strip().lower(), {})
+    kind = str(entity_kind or "").strip().upper()
+    if kind in CARRIED_ENTITY_KINDS:
+        opposite = AREA_ENTITY_KINDS
+    elif kind in AREA_ENTITY_KINDS:
+        opposite = CARRIED_ENTITY_KINDS
+    else:
+        return frozenset(declared)
+    return frozenset(name for name, own in declared.items() if own not in opposite)
 
 
 def get_domain_search_regions(domain: str) -> frozenset[str]:
