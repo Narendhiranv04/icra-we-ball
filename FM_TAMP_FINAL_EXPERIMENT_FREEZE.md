@@ -1,0 +1,346 @@
+# FM-TAMP — Final Experiment Freeze
+
+Closure pass on `vlm-testing-pipeline`. This report supersedes
+`FM_TAMP_CLOSURE_FINAL.md` for every metric definition and every determinism
+claim. Numbers are computed from artifacts by
+`mujoco_scenes/evaluation_outcome.py::summarize`, which raises rather than
+returns if the decomposition is inconsistent.
+
+---
+
+## A. Final git / config identity
+
+Emitted by `scripts/freeze_method_identity.py` into `METHOD_FREEZE.json`; every
+field is computed from the artifact it describes, so the freeze cannot silently
+stop describing the tree it names.
+
+<!--IDENTITY-->
+
+---
+
+## B. Metrics from the archived replay
+
+<!--METRICS-->
+
+### Arithmetic
+
+The decomposition is asserted mechanically, not derived by hand:
+
+```
+overall_outcome_correct == feasible_outcome_correct + infeasible_outcome_correct
+feasible_success        == feasible_outcome_correct
+```
+
+`summarize()` raises `AssertionError` if either fails. A previous report stated
+34 feasible successes, 7 infeasibility conclusions and 42 overall, which does not
+add up; §E.1 explains the defect that produced it.
+
+---
+
+## C. Determinism
+
+<!--DETERMINISM-->
+
+### C.1 What was wrong, and what each fix bought
+
+Three independent sources were found. Each was necessary; none was sufficient
+alone, and the first two were both reported as "fixed" before the next was
+discovered.
+
+**1. GPU kernel autotuning.** No seed, `cudnn.benchmark` left on, no
+deterministic-algorithm constraint, at detection thresholds as low as `0.001`.
+Fixed in `mujoco_scenes/determinism.py`, requested **strictly** --
+`torch.use_deterministic_algorithms(True)` without `warn_only`, because that mode
+downgrades an unsupported operation to a warning and continues, which would mean
+reporting determinism that was not achieved. On this build (torch 2.9.1+cu128)
+strict mode is accepted and a full workshop trial runs through it with no
+operation lacking a deterministic implementation.
+
+**2. `PYTHONHASHSEED` unset.** Set-iteration order varied per process, so a choice
+among equally ranked grounding candidates went different ways. Proved causal by
+*varying* the seed rather than waiting for chance:
+
+| `PYTHONHASHSEED` | `kitchen/K7/trial_01` |
+| :--- | :--- |
+| 1 | `coffee_container` unseated, 8-action plan |
+| 2, 3 | `coffee_source` unseated, 20-action plan |
+
+Those are exactly the two outcomes two concurrent replays had produced. It cannot
+be set in process -- the interpreter reads it at startup -- so it is passed to
+every spawned trial and recorded in the frozen identity.
+
+**3. The seeded detector path was not the path taken.** `semantic_grounding.py`
+constructs YOLO-World twice, and `MUJOCO_SEMANTIC_PROCESS_ISOLATION` defaults to
+`"0"`, so the in-process constructor is what nearly every run uses. Only the
+isolated worker had been seeded.
+
+### C.2 The residual, and why it is not closed
+
+After all three fixes `kitchen/K7/trial_01` still flips. The cause was isolated
+by elimination, with positive evidence at each step:
+
+| stage | across runs |
+| :--- | :--- |
+| FM contract, requirement graph | identical (read from disk) |
+| Geometry / tracking (`maximum_cross_section_m`) | identical to 17 significant digits |
+| Detector on a **fixed** image, 3 runs | identical box / confidence / class signatures |
+| Detections from the **rendered** scene | **differ** |
+
+Concretely, `object_0007` resolves as `coffee canister` (SUPPORTED, 3 supporting
+views) in one run and `UNKNOWN` (`CONFLICTING_MULTI_VIEW_LABELS`, 2 supporting
+views, hypotheses `[coffee canister, cup]`) in another.
+
+The detector is bitwise deterministic given fixed pixels. The scene state is
+identical, since geometry matches exactly. Therefore the rendered frames differ:
+**MuJoCo EGL GPU rendering is the residual source**, and a marginal detection
+flips with it. `osmesa` CPU rendering is unavailable in this environment
+(`AttributeError: 'NoneType' object has no attribute 'glGetError'`), so it cannot
+be eliminated here.
+
+### C.3 Consequence for the experiment
+
+The 10x32 therefore measures **end-to-end stochastic robustness** -- FM sampling
+*and* residual perception variance -- not FM-only sampling robustness. That is a
+property of the system, now characterised rather than unknown, and it must be
+stated as such in the paper.
+
+---
+
+## D. Failure attribution
+
+Every remaining feasible failure, grouped by **earliest** causal stage. No
+garbage-bin category.
+
+<!--FAILURES-->
+
+### D.1 The three previously unclassified Workshop trials
+
+**W1/02 — symbolic goal compilation.** Not FM, not perception, not planner
+search. `domains/workshop.py:189-194` emits the `SCREW` operator and the goal
+`("repaired", target)` together; `:295` then filters the operator out when
+`operation_ok` is false and **leaves the goal in place**, so the goal set contains
+an atom no instantiated action can establish. A\* correctly returns a partial
+plan. Evidence:
+
+| trial | fastener binding | actions emitted | `repaired` achievable |
+| :--- | :--- | :--- | :--- |
+| W1/01 | DISTINCT | PICK, PLACE, PICK, **SCREW**, PLACE | yes → success |
+| W1/03 | DISTINCT | PICK, PLACE, PICK, **SCREW**, PLACE | yes → success |
+| W1/02 | SHARED | PICK, PLACE, PICK, PLACE, PLACE | **no** → partial |
+
+The duplicate `PLACE` in W1/02 is the `if driver and not operation_ok` fallback,
+which confirms the gate fired.
+
+**The goal is deliberately not dropped to match.** Without `("repaired", target)`
+the remaining goals are satisfiable, so removing it would convert an honest
+partial plan into a reported completion of an unrepaired joint -- a false
+completion. The current behaviour is safe; only its *reporting* was poor, and
+that is what the diagnostic added in this pass fixes.
+
+**W4/01 — grounding.** `repair_target` (FIXED_TARGET, raw `marked_fastening_site`)
+is not seated: `PARTIAL_VERIFIED_GROUNDING`, `FUNCTIONAL_ASSIGNMENT_FAILURE`,
+`missing_requirements = ['repair_target']`.
+
+**W5/01 — perception.** `fastener` role plausibility is `true=0, plausible=0,
+unknown=0`: no detected object qualifies as a fastener at all, so grounding is
+`INFEASIBLE` before any assignment is attempted.
+
+### D.2 L3/03 — closed as unresolved, deliberately
+
+§9 permits one principled attempt or an explicit close. The rule, stated without
+reference to the benchmark: *a role declared `entity_kind: OBJECT` whose candidate
+categories name only non-carryable furniture may satisfy a place-like role
+requirement.* The asymmetry is real -- a succeeding draw declares its tables as
+`OBJECT` and is tolerated, while a failing one declares a seat as `OBJECT` and is
+not.
+
+It was **not** attempted. Three earlier entity-kind iterations in this project
+each regressed working trials and were reverted, and validating a fourth needs a
+targeted replay plus a full 96 replay plus the Living Room sentinels -- a whole
+measurement cycle. Two reproducibility defects found in this pass matter more to
+the result than one additional trial, and §22 asks for a defensible frozen system
+rather than the largest success count.
+
+### D.3 W3 — closed, no change
+
+§10 marks this optional and says not to delay the freeze for it. The fastener is
+measured from a 32-point cloud where the identical asset measures 106 points
+elsewhere, inflating its principal extent from 3.98 cm to 5.66 cm past the joint
+depth plus allowance. The obvious gate -- require the cloud to support the
+percentile it claims, i.e. `n >= 100/lower_percentile = 100` -- puts five
+currently-passing variants 6 points from being reclassified, and any looser
+threshold is chosen to catch this variant and nothing else. That is the
+benchmark tuning §2 forbids.
+
+### D.4 Token truncation — measured, and not what it looked like
+
+All five unparseable archived calls have `finish_reason = length`,
+`completion_tokens = 24000`, `reasoning_tokens = 24000`, `content chars = 0`:
+the thinking phase consumed the entire budget before emitting any JSON.
+
+Re-issuing the same five inputs fresh recovers **5/5 at 28000 and 5/5 at 24000**,
+consuming 14699/6132/12041/7868/6596 and 12211/8574/9732/8990/5632 tokens
+respectively -- every one below the original ceiling.
+
+**The ceiling was never the binding constraint.** Truncation is a stochastic
+runaway, not a per-variant token requirement, and raising the ceiling does not
+reduce its rate. The ceiling is nevertheless raised to the maximum the context
+allows, because the observed convergent tail (14699) already exceeds the archived
+maximum (12222), so headroom is justified -- but it is insurance, not a fix.
+
+---
+
+## E. Scientific-integrity audit
+
+### E.1 Four disagreeing metric definitions, now one
+
+`mujoco_scenes/evaluation_outcome.py` is the single authority. Each refuted
+definition is pinned as a test so it cannot return.
+
+| # | where | what it did | why it was wrong |
+| :--- | :--- | :--- | :--- |
+| 1 | frozen-replay scorer | infeasible correct `= not gt_full_task_satisfied` | true by construction -- an impossible task cannot be satisfied, so it credited all 36 infeasible trials and measured nothing |
+| 2 | held-out matrix evaluator | credited `NO_MEANINGFUL_CANDIDATE_PLAN`, omitted `INFEASIBLE` | a partial plan scored right and a real conclusion scored wrong; held-out and main numbers were never comparable |
+| 3 | live + held-out evaluators | false completion `= not feasible and full_task_satisfied` | requires ground truth to certify an impossible task as done, so it could never fire and missed the adversarial case entirely |
+| 4 | feasible correctness | scored from GT satisfaction alone | a run stopping at `PARTIAL_ACTION_SEQUENCE_READY` whose artifacts happened to satisfy every goal scored correct without delivering a plan; this is the 34 + 7 = 42 mismatch |
+
+The definitions now in force:
+
+```
+completion_claimed(status)     := status == "ACTION_SEQUENCE_READY"
+false_completion               := completion_claimed and not gt_full_task_satisfied
+outcome_correct  (feasible)    := completion_claimed and gt_full_task_satisfied
+outcome_correct  (infeasible)  := not completion_claimed
+                                  and not false_completion
+                                  and status in INFEASIBILITY_CONCLUDED_STATUSES
+```
+
+`false_completion` is deliberately **not** conditioned on feasibility: announcing
+a finished plan for an unfinished task is the same defect either way, and on an
+infeasible variant it is the adversarial case by construction.
+
+Five status names carried by the old whitelists (`NO_VALID_GROUNDING`,
+`TASK_REJECTED_UNSUPPORTED`, `NO_SEARCH_REGIONS_DECLARED`, and others) are emitted
+by no code path. Those that are genuine conclusions are retained for future paths;
+`NO_MEANINGFUL_CANDIDATE_PLAN`, which describes a partial result, is not.
+
+### E.2 Runtime / evaluation separation
+
+Enforced statically by `scripts/audit_no_gt_leakage.py`, which now also fails on
+an online module importing an evaluation-only module
+(`evaluation_outcome`, `evaluation_metrics`, `gf_reference_evaluation`,
+`gf_reference_evaluator`, `gt_spec_provider`, `reference_graphs`).
+
+One allowance exists, named rather than hidden: `spec_provider.py` may import
+`gt_spec_provider`, because the benchmark has a ground-truth/oracle arm as a
+deliberate baseline and the dispatcher must be able to construct it. The import
+is lazy and guarded by `if mode == "gt"`, so the VLM path never executes it. Tests
+assert the allowance set contains exactly that one entry and that the import stays
+lazy.
+
+`raw_semantic_evaluation.py` is exempt by name: it scores the FM's raw output
+after the fact and is reached only from `evaluation_metrics.py` and offline
+scripts.
+
+The scorer itself was initially placed inside `functional_tamp_pipeline`, where
+the audit caught it immediately and correctly -- it takes `gt_feasible`, and no
+module in that package may reference ground truth. It now lives outside.
+
+**A rule that cannot fail is not a rule.** A test plants an online module that
+imports the scorer and asserts the audit reports it, so `FINDINGS: 0` means
+something.
+
+<!--AUDIT-->
+
+### E.3 Prohibitions
+
+| prohibition | status |
+| :--- | :--- |
+| variant-conditioned runtime branches | none; audit enforces |
+| expected-answer maps | none |
+| scene-inventory count relaxation | none -- W2/03 fails rather than relaxing a required count of 2 to the 1 the scene holds |
+| UNKNOWN treated as TRUE | none -- K4/02 and K5/01 fail rather than selecting the task-convenient reading of a conflicted label |
+| false completions | see §B |
+| silent deletion of required constraints | none -- W1/02's unreachable goal is deliberately retained rather than dropped (§D.1) |
+
+---
+
+## F. Tests
+
+The **complete** relevant surface, not a subdirectory. An earlier report called
+`functional_tamp_pipeline/tests` alone the full suite; it is not.
+
+```bash
+python -m pytest mujoco_scenes/functional_tamp_pipeline/tests mujoco_scenes/tests -q
+python scripts/audit_no_gt_leakage.py      # must print FINDINGS: 0
+```
+
+<!--TESTS-->
+
+### F.1 Pre-existing failures, triaged
+
+These fail at the pushed baseline `f83aa662` as well. `git diff --name-only
+f83aa662..HEAD` showed **no production module changed** by the earlier closure
+work -- only reports, the evaluation-only scorer, tests and scripts -- so none was
+introduced by it.
+
+| group | n | cause |
+| :--- | ---: | :--- |
+| `test_kitchen_phase_c_execution` | 12 err | missing historical run artifact `runs/integrated_no_pot_clearance_seed19_20260807/` -- fixture, not code |
+| `test_phase3_6a7*_contract` | 10 | validation rejects earlier (unauthorized role) than the assertion expects |
+| `test_phase3_6b0_reference_evaluator` | 7 | reference-evaluator expectations predate the count/binding work |
+| `test_s1_integrated_kitchen` | 3 | asserts the superseded canonical kitchen instruction string |
+| `test_workshop.py` | 2 | asserts exactly 10 variants; the tree has 15 (10 benchmark + 5 held-out). Held-out only, outside the 32-variant experiment |
+
+Three Workshop perception assertions **were** fixed in this pass, because they
+guard invariants this experiment depends on:
+
+- the drive-slot window asserted 6-15 mm, which is screw-head diameter, not groove
+  width. Commit `5cc21285` had deliberately corrected the config to 0-3.1 mm after
+  finding that every Phillips head whose cloud segmented slightly elongated was
+  classified `SLOT_LIKE`, at which point the verifier correctly refused a
+  cross-drive screw for a cross-drive driver. The test encoded the refuted
+  calibration.
+- two semantic-grounding assertions expected `FAIL` where the policy now returns
+  `UNKNOWN`. A label a requirement does not accept is an unresolved candidate, not
+  a proven incompatibility.
+
+---
+
+## G. Final FM sampler
+
+Frozen. Every field is recorded in the identity, and the runner aborts if any of
+it differs from what an existing output root was started with.
+
+<!--SAMPLER-->
+
+Thinking is **on** and temperature is **0.6**: the repetitions exist to measure
+sampling variance, and a greedy sampler would make ten repetitions ten copies of
+one draw. These are the values the archived distribution was drawn under, so the
+offline numbers remain the right predictor.
+
+---
+
+## H. Final experiment command
+
+```bash
+# tunnel to the vLLM endpoint
+ssh -i ~/keyfile -N -L 8000:127.0.0.1:8000 long-horizon@gvlab2.iiit.ac.in &
+
+PYTHONPATH=. python scripts/run_live_repeat_experiment.py \
+  --output-root benchmark_reports/live_experiment_10x32 \
+  --base-url http://127.0.0.1:8000/v1 \
+  --model qwen35-9b \
+  --run-type full \
+  --repeats 10
+
+PYTHONPATH=. python scripts/aggregate_live_repeats.py \
+  --root benchmark_reports/live_experiment_10x32
+```
+
+Preflight refuses to start on a dirty tree, on a model the endpoint does not
+serve, or into a root whose recorded identity differs in any field. Each
+repetition writes an immutable `attempt_NN/`; a failed one is preserved and
+reported, never silently retried. The aggregator scores only the attempt the
+repetition's manifest names as authoritative, and prints the missing cells of the
+32-variant grid separately from semantic failures.

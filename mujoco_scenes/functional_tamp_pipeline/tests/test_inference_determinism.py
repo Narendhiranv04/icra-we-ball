@@ -128,3 +128,38 @@ def test_the_live_identity_records_the_hash_seed():
     spec.loader.exec_module(module)
     identity = module._frozen_identity(base_url="u", variant_set="ALL", run_type="full")
     assert identity.get("pythonhashseed") == "0"
+
+
+def test_every_detector_construction_site_is_seeded():
+    """A seeded path that nobody takes is not determinism.
+
+    The first version of this work seeded only the isolated worker in
+    semantic_grounding.py.  MUJOCO_SEMANTIC_PROCESS_ISOLATION defaults to "0",
+    so the in-process constructor is the path almost every run actually takes,
+    and it was left unseeded while determinism was reported as applied.  This
+    walks every function that builds a detector and requires the seeding call to
+    come first in that same function.
+    """
+    sources = [
+        REPO / "mujoco_scenes" / "semantic_grounding.py",
+        REPO / "mujoco_scenes" / "workshop_phase1" / "perception.py",
+    ]
+    constructors = {"YOLOWorld", "YOLO"}
+    found_any = False
+    for path in sources:
+        tree = ast.parse(path.read_text())
+        for func in ast.walk(tree):
+            if not isinstance(func, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            body = ast.unparse(func)
+            builds = any(f"{name}(" in body for name in constructors)
+            if not builds:
+                continue
+            found_any = True
+            assert "enable_deterministic_inference" in body, (
+                f"{path.name}:{func.name} constructs a detector without seeding it")
+            assert body.index("enable_deterministic_inference") < min(
+                body.index(f"{n}(") for n in constructors if f"{n}(" in body), (
+                f"{path.name}:{func.name} seeds after constructing the detector; "
+                "by then autotuning has already been free to run")
+    assert found_any, "no detector construction site found -- the guard is vacuous"
