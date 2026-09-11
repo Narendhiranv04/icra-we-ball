@@ -31,23 +31,41 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 
 
-def _require_model(base_url: str, required: str) -> str:
+def _require_model(base_url: str, required: str) -> dict:
     """The endpoint must serve exactly the model the experiment names.
 
     There used to be a fallback to whatever the endpoint happened to serve
     first.  That silently benchmarks a different model than the one the run
     claims, which is the one bookkeeping error no amount of later analysis can
     detect or undo.  Absent means abort.
+
+    Returns the endpoint's own record for that model, so the run freezes the
+    served revision and not only the name a caller typed.
     """
     with urllib.request.urlopen(base_url.rstrip("/") + "/models", timeout=15) as response:
-        ids = [row["id"] for row in json.load(response)["data"]]
-    if not ids:
+        rows = json.load(response)["data"]
+    served = {str(row.get("id")): row for row in rows}
+    if not served:
         raise SystemExit("Preflight blocked: endpoint exposes no models")
-    if required not in ids:
+    if required not in served:
         raise SystemExit(
             f"Preflight blocked: required model {required!r} is not served. "
-            f"The endpoint offers {sorted(ids)}. Refusing to benchmark a different model.")
-    return required
+            f"The endpoint offers {sorted(served)}. Refusing to benchmark a different model.")
+    return served[required]
+
+
+def _model_revision(record: dict) -> str:
+    """A stable fingerprint of the served model as the endpoint describes it.
+
+    Two endpoints can serve the same model *name* over different weights or
+    configurations.  The name alone therefore does not identify what was
+    benchmarked; this hashes the endpoint's own record of it so a later run
+    against different weights is refused rather than pooled.
+    """
+    import hashlib
+    stable = {key: record[key] for key in sorted(record)
+              if key not in {"created"} and isinstance(record[key], (str, int, float, bool))}
+    return hashlib.sha256(json.dumps(stable, sort_keys=True).encode()).hexdigest()
 
 
 # Everything that changes what the model returns, set explicitly rather than
@@ -66,8 +84,16 @@ SAMPLER = {
 }
 
 
-def _frozen_identity() -> dict[str, str]:
-    """Everything that has to be identical across every repetition."""
+def _frozen_identity(*, base_url: str, variant_set: str, run_type: str) -> dict[str, str]:
+    """Everything that has to be identical across every repetition.
+
+    Whatever is not recorded here cannot be checked later, so this carries the
+    whole decision surface of the experiment: the code, the semantic contract
+    (prompt, schema, capabilities, ontology), the endpoint, every sampler value
+    that reaches the model, which variants the matrix covers, and what kind of
+    run this is.  A second run that differs in any of it is a different
+    experiment and is refused rather than pooled.
+    """
     sys.path.insert(0, str(REPO))
     from mujoco_scenes.functional_tamp_pipeline.fm_schema_v3 import (  # noqa: E402
         SYSTEM_PROMPT_V3, compute_v3_prompt_and_schema_hash,
@@ -83,16 +109,19 @@ def _frozen_identity() -> dict[str, str]:
     except Exception:
         import hashlib
         prompt_hash = hashlib.sha256(SYSTEM_PROMPT_V3.encode()).hexdigest()
-    return {
+    identity = {
         "git_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
         "prompt_and_schema_hash": prompt_hash,
         "capability_registry_hash": get_robot_capability_registry_hash(),
         "runtime_ontology_hash": get_runtime_semantic_ontology_hash(),
-        "schema_version": "3",
-        "max_tokens": "24000",
-        "temperature": "0.0",
-        "enable_thinking": "false",
+        "base_url": base_url,
+        "variant_set": variant_set,
+        "run_type": run_type,
     }
+    # The sampler is frozen from the single dict that is also passed to the
+    # evaluator, so what is recorded cannot drift from what was sent.
+    identity.update({key.lower(): value for key, value in sorted(SAMPLER.items())})
+    return identity
 
 
 def _complete(repeat_dir: Path) -> bool:
@@ -117,6 +146,10 @@ def main() -> int:
     parser.add_argument("--repeats", type=int, default=10)
     parser.add_argument("--variants", default=None,
                         help="comma-separated subset; omit for all 32")
+    parser.add_argument("--run-type", required=True, choices=("smoke", "full"),
+                        help="what this run is for. Recorded and frozen, so a smoke "
+                             "run's trials can never be pooled into the reported "
+                             "experiment by sharing an output root.")
     parser.add_argument("--rerun-failed", action="store_true",
                         help="redo repetitions that did not finish. Off by default: a "
                              "failure that is quietly retried until it passes is "
@@ -127,14 +160,19 @@ def main() -> int:
     if subprocess.check_output(["git", "status", "--porcelain"], text=True).strip():
         raise SystemExit("Preflight blocked: working tree is not clean")
     try:
-        model = _require_model(args.base_url, args.model)
+        record = _require_model(args.base_url, args.model)
     except SystemExit:
         raise
     except Exception as exc:
         raise SystemExit(f"Preflight blocked: vLLM endpoint unavailable: {exc}")
 
-    identity = _frozen_identity()
+    model = record["id"]
+    variant_set = ",".join(sorted(v.strip() for v in args.variants.split(","))) \
+        if args.variants else "ALL"
+    identity = _frozen_identity(base_url=args.base_url, variant_set=variant_set,
+                                run_type=args.run_type)
     identity["model"] = model
+    identity["model_revision"] = _model_revision(record)
     args.output_root.mkdir(parents=True, exist_ok=True)
     identity_path = args.output_root / "frozen_identity.json"
     if identity_path.is_file():
@@ -148,8 +186,26 @@ def main() -> int:
     else:
         identity_path.write_text(json.dumps(identity, indent=2) + "\n")
 
-    print(f"model {model}  git {identity['git_sha'][:12]}  "
-          f"prompt {identity['prompt_and_schema_hash'][:12]}  repeats {args.repeats}",
+    # The repeat count is the run's stopping rule, not part of what a single
+    # repetition means, so it is recorded as the history of what was asked for
+    # rather than drift-checked -- but it is recorded, because an experiment
+    # extended after seeing its numbers is a different claim from one planned.
+    history_path = args.output_root / "repeat_count_history.json"
+    history = []
+    if history_path.is_file():
+        try:
+            history = json.loads(history_path.read_text())
+        except Exception:
+            history = []
+    history.append({"requested_repeats": args.repeats,
+                    "at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                    "git_sha": identity["git_sha"]})
+    history_path.write_text(json.dumps(history, indent=2) + "\n")
+
+    print(f"model {model}  revision {identity['model_revision'][:12]}  "
+          f"git {identity['git_sha'][:12]}  "
+          f"prompt {identity['prompt_and_schema_hash'][:12]}  "
+          f"run_type {args.run_type}  variants {variant_set}  repeats {args.repeats}",
           flush=True)
 
     skipped: list[int] = []

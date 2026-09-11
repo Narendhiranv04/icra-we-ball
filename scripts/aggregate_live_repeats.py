@@ -57,40 +57,59 @@ def expected_variants() -> list[tuple[str, str]]:
     return sorted(grid)
 
 
-def _trial_rows(repeat_dir: Path) -> list[dict]:
-    """Every per-trial record this repetition wrote.
+def _authoritative_attempt_dir(repeat_dir: Path) -> Path | None:
+    """The one attempt directory this repetition declares as its result.
 
-    Only the evaluator's canonical file.  An attempt directory is read in
-    preference to the repeat directory itself, so immutable retries aggregate
-    correctly.
+    The runner names it in the repetition's own manifest.  Only that attempt is
+    scored.  Reading several attempts and letting the newest win per variant
+    looked equivalent but was not: a variant absent from the newest attempt
+    silently inherited an older attempt's outcome, so a repetition could be
+    scored from a mixture of runs that never existed as one run.  Without a
+    manifest, the newest attempt directory alone is used -- still one attempt,
+    never a mixture.
     """
-    attempts = sorted(p for p in repeat_dir.glob("attempt_*") if p.is_dir())
-    roots = attempts or [repeat_dir]
-    rows: list[dict] = []
-    for root in roots:
-        path = root / RECORDS_FILENAME
-        if not path.is_file():
-            continue
+    manifest = repeat_dir / "repeat_manifest.json"
+    if manifest.is_file():
         try:
-            data = json.loads(path.read_text())
+            named = json.loads(manifest.read_text()).get("authoritative_attempt")
         except Exception:
+            named = None
+        if isinstance(named, str) and named:
+            candidate = repeat_dir / named
+            if candidate.is_dir():
+                return candidate
+            return None
+    attempts = sorted(p for p in repeat_dir.glob("attempt_*") if p.is_dir())
+    return attempts[-1] if attempts else None
+
+
+def _trial_rows(repeat_dir: Path) -> list[dict]:
+    """Every per-trial record the authoritative attempt of this repetition wrote.
+
+    Only the evaluator's canonical file, and only from one attempt.
+    """
+    root = _authoritative_attempt_dir(repeat_dir) or repeat_dir
+    path = root / RECORDS_FILENAME
+    if not path.is_file():
+        return []
+    try:
+        data = json.loads(path.read_text())
+    except Exception:
+        return []
+    records = data.get("records") if isinstance(data, dict) else data
+    if not isinstance(records, list):
+        return []
+    rows: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    for row in records:
+        if not isinstance(row, dict):
             continue
-        records = data.get("records") if isinstance(data, dict) else data
-        if isinstance(records, list):
-            for row in records:
-                rows.append({**row, "_attempt": root.name})
-    return rows
-
-
-def _authoritative(rows: list[dict]) -> list[dict]:
-    """The latest attempt wins, per (domain, variant), and only that one."""
-    latest: dict[tuple[str, str], dict] = {}
-    for row in rows:
         key = (str(row.get("domain")), str(row.get("variant")))
-        current = latest.get(key)
-        if current is None or str(row.get("_attempt", "")) >= str(current.get("_attempt", "")):
-            latest[key] = row
-    return list(latest.values())
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append({**row, "_attempt": root.name})
+    return rows
 
 
 def main() -> int:
@@ -116,7 +135,7 @@ def main() -> int:
                 finished = False
         if not finished:
             unfinished.append(repeat_dir.name)
-        for row in _authoritative(_trial_rows(repeat_dir)):
+        for row in _trial_rows(repeat_dir):
             key = (str(row.get("domain")), str(row.get("variant")))
             per_variant[key].append({**row, "repeat": repeat_dir.name})
 
