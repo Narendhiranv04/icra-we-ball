@@ -445,6 +445,85 @@ PYTHONPATH=. python scripts/aggregate_live_repeats.py \
 Preflight refuses to start on a dirty tree, on a model the endpoint does not
 serve, or into a root whose `frozen_identity.json` differs in any recorded field.
 
+### 6.1 A reproducibility hazard worth knowing about
+
+Replaying with `--workers 6` while a test suite and a live run competed for the
+GPU produced **SIGSEGV (rc=-11) in 11 of 96 trials**, all workshop — MuJoCo
+rendering contention, not a pipeline defect. The harness handled it correctly:
+each crashed trial is written as `pipeline_status: HARNESS_FAILURE` with
+`feasible: null`, so it is never scored as a semantic failure. But an aggregate
+read without checking for those rows would silently report a 50/46
+feasible/infeasible split instead of 60/36 and a depressed success count.
+
+**Always check for `HARNESS_FAILURE` rows before reading a replay aggregate.**
+Re-running the affected trials at `--workers 2` reproduces them cleanly; the
+driver caches completed rows, so deleting only the stub rows and re-running
+redoes only those. The live runner executes trials sequentially and is not
+exposed to this.
+
+### 6.2 The "frozen" replay is not bit-deterministic
+
+A more serious finding, and it qualifies every number in this report.
+
+Replaying the *same* archived FM response through the *same* code twice does not
+always give the same result. Diffing two full replays, exactly one trial flips:
+
+| | run A (6 workers, under load) | run B (2 workers) |
+| :--- | :--- | :--- |
+| `workshop/W5/trial_03` status | `PARTIAL_ACTION_SEQUENCE_READY` | `ACTION_SEQUENCE_READY` |
+| grounding failure | `OBJECT_DISCOVERY_FAILURE` | none |
+| GT goal coverage | 0.333 | **1.000** |
+| success | no | **yes** |
+
+Nothing semantic differs — the contract is byte-identical, since it is read from
+disk. What differs is **perception**: under contention the trial under-detects
+and loses an object; with the machine quiet it detects everything and the trial
+succeeds. W5/03 was one of the 11 trials that had segfaulted and been re-run at
+lower concurrency, which is how the flip was noticed at all.
+
+This has three consequences, and they are stated plainly because they cut against
+the headline:
+
+1. **Feasible success is 34/60 or 35/60 depending on machine load.** The
+   difference is one marginal-detection trial, not a code change.
+2. The composite directory that mixed the two load conditions is **not** a valid
+   measurement, for exactly the reason given in §4.1 about mixed attempts. It was
+   discarded rather than reported.
+3. The trials most exposed are the ones already identified as detection-limited
+   (§3.1, §3.2) — marginal detections are marginal in both directions.
+
+The authoritative number in §1 is therefore from a **single clean replay at
+`--workers 2` with nothing else running**, not from a composite and not from a
+loaded run.
+
+**The cause is identifiable and the fix is standard.** Searching the entire
+repository for determinism controls returns nothing:
+
+```
+manual_seed | cudnn.deterministic | use_deterministic_algorithms
+np.random.seed | CUBLAS_WORKSPACE_CONFIG        -> no matches
+```
+
+The detector runs on GPU with no seed, `cudnn.benchmark` left at its default, and
+no deterministic-algorithm constraint. cuDNN selects kernels by autotuning
+against currently available GPU memory, so under contention it can pick different
+algorithms and produce slightly different confidences. For a detection sitting
+near its acceptance threshold — precisely the W4/W5 fastener cases in §3 — that
+is enough to flip the outcome.
+
+The remedy is the usual one (`torch.manual_seed`, `cudnn.deterministic = True`,
+`cudnn.benchmark = False`, `torch.use_deterministic_algorithms(True)`,
+`CUBLAS_WORKSPACE_CONFIG=:4096:8`). It was **not** applied in this pass for one
+concrete reason: it changes kernel selection for *every* detection, so it would
+require re-measuring the whole matrix from scratch, and editing perception code
+while the authoritative replay was running would have corrupted that replay --
+the same hazard the live runner's "code changed during the repetition" guard
+exists to catch.
+
+This is the highest-value next change in the repository. It does not read ground
+truth, does not condition on variants, and converts a benchmark whose headline
+moves by a trial with machine load into a reproducible one.
+
 ---
 
 ## 7. Status of the full experiment
