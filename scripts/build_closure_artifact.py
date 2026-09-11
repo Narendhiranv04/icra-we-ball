@@ -152,7 +152,7 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     before = json.loads(Path(args.before).read_text())
     after = json.loads(Path(args.after).read_text())
-    archive = Path(args.archive)
+    archive = Path(args.archive).resolve()
 
     write_rows(out / "FROZEN_REPLAY_BEFORE", before)
     write_rows(out / "FROZEN_REPLAY_AFTER", after)
@@ -188,7 +188,7 @@ def main() -> int:
 
     audit = fm_call_audit(archive)
     (out / "MODEL_CONFIG.json").write_text(json.dumps({
-        "archive": str(archive.relative_to(REPO)),
+        "archive": str(archive.relative_to(REPO)) if archive.is_relative_to(REPO) else str(archive),
         "fm_call_audit": {k: v for k, v in audit.items() if k != "records"},
         "per_call": audit["records"],
         "frozen_generation_budget_default": 24000,
@@ -245,7 +245,7 @@ def main() -> int:
             ["git", "rev-parse", "HEAD"]).stdout.strip(),
         "branch": run(["git", "rev-parse", "--abbrev-ref", "HEAD"]).stdout.strip(),
         "built_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "frozen_archive": str(archive.relative_to(REPO)),
+        "frozen_archive": str(archive.relative_to(REPO)) if archive.is_relative_to(REPO) else str(archive),
         "before_rows": str(Path(args.before)),
         "after_rows": str(Path(args.after)),
         "git_status_not_clean": bool(run(["git", "status", "--porcelain",
