@@ -1070,9 +1070,18 @@ def ground_graph(
         # considered, or a reusable source declared with a count of two demands
         # two distinct objects and a scene holding one is judged short.  Larger
         # counts stay available, since more instances may still be needed.
-        if role.binding_policy == "REUSABLE":
+        reusable = role.binding_policy == "REUSABLE"
+        if reusable:
             min_c = 1
-        if role.preference == "minimize_distinct":
+        if role.preference == "minimize_distinct" or reusable:
+            # Fewest instances first.  REUSABLE is the contract saying one
+            # instance may serve every application, so taking more separate
+            # objects than that is not something the task asked for -- and the
+            # objects taken are gone: a stirrer allowed two spoons consumed two
+            # of the three in the scene, and the two soup utensils the task
+            # really does want severally were then reported undiscovered.
+            # Larger counts stay in the list, just after the smaller ones, so
+            # nothing that might still be needed is lost.
             role_count_options[r_name] = list(range(min_c, max_c + 1))
         else:
             role_count_options[r_name] = list(range(max_c, min_c - 1, -1)) if max_c != min_c else [min_c]

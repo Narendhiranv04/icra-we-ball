@@ -519,6 +519,210 @@ def classify_non_scene_resolvable_blockers(
     return sorted(dict.fromkeys(blockers))
 
 
+# Words by which English marks that separate instances are meant.  A possessive
+# or a separateness adjective, not merely a distributive quantifier: "each" on
+# its own says the action happens repeatedly, and "stir each coffee" is one
+# stirrer used twice.  "its own", "a separate", "individual" say the instances
+# differ.
+_SEPARATE_IDENTITY_MARKER = re.compile(
+    r"\b(?:its|their|his|her)\s+own\b"
+    r"|\bown\s+(?:\w+\s+){0,2}(?:one|set|copy|instance)\b"
+    r"|\b(?:a|one)\s+(?:separate|distinct|different|dedicated|individual)\b"
+    r"|\b(?:separate|distinct|different|dedicated|individual|respective|personal)\b"
+    r"|\bone\s+(?:for|per)\s+each\b"
+    r"|\bper\s+(?:person|guest|diner|user|bowl|cup|serving|seat|setting)\b"
+    r"|\bnot\s+shared\b",
+    re.I,
+)
+
+# Predicates that pair two participants off one-for-one.  A pairing is positive
+# evidence that both sides are meant severally: a utensil that accompanies a
+# bowl belongs to that bowl.
+_PER_INSTANCE_PAIRING_PREDICATES = frozenset({"PAIRED_WITH", "ACCOMPANIES"})
+
+
+def _role_attributable_text(role_id: str, role: dict, document: dict) -> list[str]:
+    """Text the model wrote about this participant, and nothing else's.
+
+    Its own fields, plus the phrase of every relation and operation that names
+    it.  An unrelated operation's wording is not evidence about this role -- the
+    same scoping rule the operation reader follows.
+    """
+    texts = [
+        str(role.get("function", "")), str(role.get("description", "")),
+        re.sub(r"[_-]+", " ", str(role_id)),
+    ]
+    for relation in document.get("functional_relations", ()) or ():
+        participants = set(relation.get("participant_roles", ()) or ())
+        if not participants:
+            participants = {relation.get("subject_role"), relation.get("object_role")}
+        if role_id in participants:
+            texts.append(str(relation.get("relation", relation.get("predicate", ""))))
+    for operation in document.get("operation_pairings", ()) or ():
+        if role_id in set(operation.get("participant_roles", ()) or ()):
+            texts.append(str(operation.get("operation", "")))
+    return [text for text in texts if text]
+
+
+def separate_identity_evidence(
+    domain: str, role_id: str, role: dict, document: dict
+) -> list[dict[str, Any]]:
+    """Everything in the contract that positively asks for separate instances.
+
+    Read from the model's own words and its own graph, never from the scene.
+    Returning empty means the contract says nothing beyond the isolated
+    ``binding_policy`` field.
+    """
+    from .relation_interpreter import extract_relation_semantic_candidates
+
+    found: list[dict[str, Any]] = []
+    for text in _role_attributable_text(role_id, role, document):
+        match = _SEPARATE_IDENTITY_MARKER.search(text)
+        if match:
+            found.append({"source": "SEPARATE_IDENTITY_WORDING",
+                          "text": text[:160], "marker": match.group(0)})
+    # The model declaring two participants that both canonicalize here is the
+    # model naming two of them, whatever either one's policy field says.
+    same_canonical = [
+        other_id for other_id, other in (
+            (str(other["id"]), other) for other in document.get("functional_roles", ()) or ()
+        )
+        if other_id != role_id and other.get("canonical_role") == role.get("canonical_role")
+        and role.get("canonical_role")
+    ]
+    if same_canonical:
+        found.append({"source": "TWO_DECLARATIONS_OF_ONE_CANONICAL_ROLE",
+                      "other_roles": same_canonical})
+    # A one-for-one pairing with a participant that is itself several.
+    counts = {str(other["id"]): other for other in document.get("functional_roles", ()) or ()}
+    for relation in document.get("functional_relations", ()) or ():
+        participants = [p for p in (relation.get("participant_roles", ()) or ()) if p in counts]
+        if role_id not in participants or len(participants) < 2:
+            continue
+        predicate_names = {
+            getattr(candidate, "predicate_name", str(candidate))
+            for candidate in extract_relation_semantic_candidates(
+                domain, str(relation.get("relation", "")))
+        }
+        if not (predicate_names & _PER_INSTANCE_PAIRING_PREDICATES):
+            continue
+        for other in participants:
+            if other == role_id:
+                continue
+            try:
+                other_count = int(counts[other].get("required_count", 1) or 1)
+            except (TypeError, ValueError):
+                other_count = 1
+            if other_count > 1 and str(counts[other].get("binding_policy")) == "DISTINCT":
+                found.append({"source": "PER_INSTANCE_PAIRING_WITH_A_SEVERAL_PARTICIPANT",
+                              "relation": relation.get("id"), "paired_with": other})
+    return found
+
+
+def resolve_binding_policy(
+    domain: str, role_id: str, role: dict, document: dict
+) -> tuple[str, dict[str, Any] | None]:
+    """The binding policy the whole contract supports, not one field of it.
+
+    ``required_count`` is how many times the task needs a participant and
+    ``binding_policy`` says how those occasions come down to physical things.
+    The model fills the second in far less reliably than the first, and writes
+    DISTINCT for anything the task uses more than once -- which is what repeated
+    use looks like, not what separate identity means.
+
+    A correction is made only when all of these hold, so that it is a reading of
+    the contract and never a convenience:
+
+      * the model wrote DISTINCT for more than one occasion;
+      * the runtime positively declares this role reusable across applications.
+        That is a physical fact about the runtime's own role -- pouring from a
+        jar does not consume the jar, a stirrer is used and set down again -- and
+        it is declared once, per role, independently of any scene;
+      * nothing in the contract asks for separate instances: not the model's
+        words about this participant, not the phrase of any relation or
+        operation naming it, not a second declaration of the same canonical
+        role, not a one-for-one pairing with a participant that is itself
+        several.
+
+    So "each soup bowl with its own eating utensil" keeps DISTINCT twice over --
+    the runtime calls that utensil one-per-application, and the wording says
+    "its own" -- while a stirrer the model called DISTINCT purely because two
+    coffees are stirred resolves to REUSABLE.
+
+    Nothing here consults the observed scene, and this runs before any candidate
+    is looked at, so a scene short of objects can never cause a requirement to
+    be re-read.  Where both readings stay open, DISTINCT stands.
+    """
+    declared = str(role.get("binding_policy", ""))
+    if declared != "DISTINCT":
+        return declared, None
+    try:
+        count = int(role.get("required_count", 1) or 1)
+    except (TypeError, ValueError):
+        count = 1
+    if count <= 1:
+        return declared, None
+    canonical_role = role.get("canonical_role")
+    if not canonical_role or not role_may_be_reused_across_applications(domain, canonical_role):
+        return declared, None
+    evidence = separate_identity_evidence(domain, role_id, role, document)
+    if evidence:
+        return declared, None
+    return "REUSABLE", {
+        "code": "GLOBAL_GRAPH_BINDING_POLICY_CONSISTENCY_OVERRIDE",
+        "raw_role_id": role_id,
+        "canonical_role": canonical_role,
+        "raw_binding_policy": declared,
+        "resolved_binding_policy": "REUSABLE",
+        "required_count": count,
+        "reason": (
+            "the contract declared separate instances in the binding policy field "
+            "alone: the runtime declares this role reusable across applications, "
+            "and nothing the model wrote about this participant, nor any relation "
+            "or operation naming it, asks for separate identities"
+        ),
+        "separate_identity_evidence": [],
+        "searched_text": _role_attributable_text(role_id, role, document),
+    }
+
+
+_PROPERTY_STOPWORDS = frozenset({
+    "a", "an", "and", "be", "being", "by", "for", "in", "is", "it", "its", "must",
+    "of", "on", "or", "should", "that", "the", "to", "with",
+})
+
+
+def instruction_expresses_property(task: str, prop: str) -> bool:
+    """Whether the instruction asks for the quality the model attached to a role.
+
+    The model volunteers qualities the instruction never mentions -- a bowl that
+    is "heat resistant", a utensil that is "edible safe" -- and the runtime has
+    no predicate for them.  Such a quality is the model proposing a mechanism,
+    not the task demanding one, so it is recorded as surplus rather than left to
+    block a binding the runtime can otherwise verify.
+
+    A quality the instruction *does* name is a task requirement, and one the
+    runtime cannot verify then keeps the binding unproven, which is the
+    fail-closed reading.  Matching is on the content words of the phrase, so
+    "use a heat-resistant bowl" would hold "heat resistant" against the bowl.
+    """
+    words = {
+        word for word in re.findall(r"[a-z]+", str(prop).lower())
+        if word not in _PROPERTY_STOPWORDS and len(word) > 2
+    }
+    if not words:
+        return False
+    instruction = str(task).lower()
+    stems = set(re.findall(r"[a-z]+", instruction))
+    for word in words:
+        if word in stems:
+            return True
+        # tolerate ordinary inflection in either direction
+        if any(stem.startswith(word[:max(4, len(word) - 2)]) for stem in stems if len(stem) > 3):
+            return True
+    return False
+
+
 def _minimum_distinct_objects(domain: str, canonical_role: str, role: dict) -> int | None:
     """How many separate physical things a role needs at minimum.
 
@@ -726,6 +930,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
     soft = []
     unresolved = []
     unverified_required = []
+    model_proposed_properties = []
     from .system_context_registry import (
         get_domain_planner_context_constants,
         get_domain_selectable_roles,
@@ -943,8 +1148,21 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 category for candidate in role_candidates
                 for category in ontology.get_role_semantic_categories_or_empty(domain, candidate)
             ))
+            # One reading of the cardinality, settled here and used by everything
+            # downstream: the compiled graph, the operation groups, grounding's
+            # sufficiency check.  Nothing below re-derives it, and nothing that
+            # has seen the observed scene may revise it.
+            resolved_policy, policy_trace = resolve_binding_policy(
+                domain, rid, {**role, 'canonical_role': name}, doc)
+            if policy_trace is not None:
+                trace['roles'].append({
+                    'raw_id': rid, 'canonical_role': name,
+                    'status': 'GLOBAL_GRAPH_BINDING_POLICY_CONSISTENCY_OVERRIDE',
+                    **{k: v for k, v in policy_trace.items() if k != 'code'},
+                })
+            role = {**role, 'binding_policy': resolved_policy}
             nodes[name] = FunctionalRole(name=name, entity_kind=canonical_kind, count=role['required_count'],
-                binding_policy=role['binding_policy'], semantic_categories=semantic_categories,
+                binding_policy=resolved_policy, semantic_categories=semantic_categories,
                 description=role.get('description', ''), semantic_hints=tuple(role['required_properties']),
                 min_count=_minimum_distinct_objects(domain, name, role),
                 max_count=role.get('binding_cardinality', {}).get('maximum_distinct_physical_objects', role.get('max_count')),
@@ -993,8 +1211,26 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
                 nodes[name] = replace(nodes[name], unary_predicates=tuple(dict.fromkeys(nodes[name].unary_predicates + (mapped,))))
             else:
                 if re.search(r'\b(must|safety|safe|sterile|insulated|rated|load bearing|heat resistant)\b', prop.lower()):
-                    evidence['status'] = 'UNRESOLVED_SEMANTIC'
-                    unverified_required.append({'role': name, 'property': prop, 'status': 'UNVERIFIABLE_REQUIRED_PROPERTY'})
+                    # A quality the runtime has no predicate for holds a binding
+                    # unproven only when the instruction asked for it.  The model
+                    # volunteers qualities of its own -- a "heat resistant" bowl
+                    # for a task that never mentions heat -- and treating those as
+                    # task requirements left every candidate unproven for good, so
+                    # bowls sitting in plain view were reported undiscovered and no
+                    # amount of physical evidence could settle them.
+                    if instruction_expresses_property(task, prop):
+                        evidence['status'] = 'UNRESOLVED_SEMANTIC'
+                        unverified_required.append({'role': name, 'property': prop,
+                                                    'status': 'UNVERIFIABLE_REQUIRED_PROPERTY',
+                                                    'instruction_expressed': True})
+                    else:
+                        evidence['status'] = 'MODEL_PROPOSED_UNVERIFIABLE_PROPERTY'
+                        model_proposed_properties.append({
+                            'role': name, 'property': prop,
+                            'status': 'MODEL_PROPOSED_UNVERIFIABLE_PROPERTY',
+                            'reason': 'the runtime has no predicate for this quality and '
+                                      'the instruction does not ask for it',
+                        })
                 else:
                     soft.append(evidence)
     if not nodes:
@@ -2275,7 +2511,7 @@ def compile_candidate_graph(domain: str, task: str, raw: dict) -> FunctionalRequ
             'task_effect_relations': [r.to_dict() for r in task_effect_relations],
             'role_type_hypotheses': {rid: hypothesis.to_dict() for rid, hypothesis in role_hypotheses.items()},
             'provisional_relation_constraints': trace['provisional_relation_constraints'],
-            'soft_semantic_evidence': soft, 'unresolved_semantics': unresolved, 'unverified_required_properties': unverified_required, 'raw_role_to_canonical': id_map})
+            'soft_semantic_evidence': soft, 'unresolved_semantics': unresolved, 'unverified_required_properties': unverified_required, 'model_proposed_unverifiable_properties': model_proposed_properties, 'raw_role_to_canonical': id_map})
     from pathlib import Path
     if domain == 'living_room':
         graph.metadata['semantic_vocabulary_path'] = str(Path(__file__).resolve().parents[1] / 'configs/l2_integrated_region_function_semantic_vocabulary.yaml')

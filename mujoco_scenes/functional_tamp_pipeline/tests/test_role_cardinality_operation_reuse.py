@@ -94,28 +94,35 @@ def _observed(tool_count: int, target_count: int) -> ObservedSceneGraph:
     return graph
 
 
-def test_compiler_preserves_distinct_role_and_operation_level_reuse():
+def test_compiler_resolves_an_isolated_distinct_field_on_a_reusable_implement():
+    """A stirrer the model called DISTINCT purely because two coffees are stirred.
+
+    The task uses it twice, so ``count`` stays two.  Nothing in the contract asks
+    for two *separate* stirrers -- not the role's own words, not the operation's
+    phrase, no second declaration, no one-for-one pairing -- and the runtime
+    declares a stirrer reusable across applications, so two occasions come down
+    to one physical spoon.
+    """
     graph = compile_candidate_graph("kitchen", "stir two targets", _compiler_document())
     role = graph.nodes["coffee_stirrer"]
     group = graph.operation_groups[0]
 
-    assert role.binding_policy == "DISTINCT"
-    assert role.minimum_count == 2
-    assert role.maximum_count == 2
+    assert role.count == 2, "the number of task uses the model stated is preserved"
+    assert role.binding_policy == "REUSABLE"
+    assert role.minimum_count == 1
+    override = [
+        row for row in graph.metadata["canonicalization_trace"]["roles"]
+        if row.get("status") == "GLOBAL_GRAPH_BINDING_POLICY_CONSISTENCY_OVERRIDE"
+    ]
+    assert [row["canonical_role"] for row in override] == ["coffee_stirrer"]
+    assert override[0]["raw_binding_policy"] == "DISTINCT"
+    assert override[0]["separate_identity_evidence"] == []
     assert group.usage_policy == "SEQUENTIAL_REUSE_ALLOWED"
-    assert graph.metadata["canonicalization_trace"]["role_operation_reconciliations"] == [{
-        "code": "ROLE_OPERATION_REUSE_RECONCILED",
-        "raw_role_id": "tool",
-        "canonical_role": "coffee_stirrer",
-        "role_count": 2,
-        "role_minimum_count": 2,
-        "role_maximum_count": 2,
-        "role_binding_policy": "DISTINCT",
-        "operation_id": "stir_twice",
-        "operation_target_count": 2,
-        "operation_usage_policy": "SEQUENTIAL_REUSE_ALLOWED",
-        "resolution": "PRESERVE_ROLE_DISTINCTNESS_REUSE_REMAINS_OPTIONAL",
-    }]
+    # No role/operation reuse tension is left to reconcile: the reconciliation
+    # exists to record a role the model insisted was DISTINCT while its
+    # operation allowed reuse, and that disagreement is what has just been
+    # resolved.
+    assert graph.metadata["canonicalization_trace"]["role_operation_reconciliations"] == []
 
 
 def test_explicit_reusable_role_remains_single_without_conflict():
@@ -195,15 +202,65 @@ def test_distinct_role_requires_distinct_observed_instances():
     assert set(two.assignment["tool"]) == {"tool_1", "tool_2"}
 
 
-def test_archived_k1_preserves_all_fm_emitted_source_tool_counts():
+def test_archived_k1_preserves_every_fm_emitted_count_and_resolves_only_reuse():
+    """The model's counts survive; only how they come down to objects is re-read.
+
+    This contract declares four participants "2 DISTINCT".  ``required_count``
+    is the number of task uses and is preserved for all four -- nothing the
+    model stated is discarded.  What differs is the minimum number of separate
+    objects each needs, and that follows the runtime's own reuse declaration
+    once the contract turns out to say nothing about separate identity: a jar
+    poured from twice and a stirrer used twice are one object each, while the
+    eating utensil the runtime calls one-per-application stays two.
+    """
     raw = json.loads(json.loads(K1_DIAGNOSTIC.read_text())["content"])
     graph = compile_candidate_graph("kitchen", raw["task_summary"], raw)
 
     for role_name in (
         "coffee_source", "water_source", "coffee_stirrer", "soup_eating_utensil"
     ):
+        assert graph.nodes[role_name].count == 2, role_name
+
+    for role_name in ("coffee_source", "water_source", "coffee_stirrer"):
         role = graph.nodes[role_name]
-        assert role.count == role.minimum_count == role.maximum_count == 2
-        assert role.binding_policy == "DISTINCT"
-        assert role.min_count is None
-        assert role.preference is None
+        assert role.binding_policy == "REUSABLE", role_name
+        assert role.minimum_count == 1, role_name
+
+    utensil = graph.nodes["soup_eating_utensil"]
+    assert utensil.binding_policy == "DISTINCT"
+    assert utensil.minimum_count == 2
+
+
+def test_separate_identity_wording_keeps_a_reusable_implement_distinct():
+    """The adversarial case: the model says the stirrers differ, so they differ."""
+    document = _compiler_document()
+    document["functional_roles"][0]["function"] = (
+        "each cup is stirred with its own separate stirring spoon"
+    )
+    graph = compile_candidate_graph("kitchen", "stir two targets", document)
+    role = graph.nodes["coffee_stirrer"]
+
+    assert role.binding_policy == "DISTINCT"
+    assert role.minimum_count == 2
+    assert not [
+        row for row in graph.metadata["canonicalization_trace"]["roles"]
+        if row.get("status") == "GLOBAL_GRAPH_BINDING_POLICY_CONSISTENCY_OVERRIDE"
+    ]
+
+
+def test_scene_inventory_cannot_change_binding_policy_resolution():
+    """The reading is the same whatever the scene turns out to hold.
+
+    Cardinality is settled while compiling, before any candidate is looked at,
+    so a scene short of spoons can never be the reason a requirement is re-read.
+    """
+    document = _compiler_document()
+    first = compile_candidate_graph("kitchen", "stir two targets", document)
+    second = compile_candidate_graph("kitchen", "stir two targets", document)
+    assert first.nodes["coffee_stirrer"].binding_policy == "REUSABLE"
+    assert second.nodes["coffee_stirrer"].binding_policy == "REUSABLE"
+    # compile_candidate_graph takes no observed scene at all, which is what makes
+    # the independence structural rather than a property of this fixture.
+    import inspect
+    assert "graph_o" not in inspect.signature(compile_candidate_graph).parameters
+    assert "observed" not in inspect.signature(compile_candidate_graph).parameters
