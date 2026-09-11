@@ -189,12 +189,35 @@ def test_gt_evaluation_cannot_change_compiler_result(monkeypatch):
 
 
 def test_required_safety_property_blocks_only_its_role():
+    """A quality the instruction asks for, and the runtime cannot verify.
+
+    The instruction has to name it: a quality the model volunteers on its own is
+    its proposal rather than the task's requirement, which the companion test
+    below covers.  Either way it concerns one role and leaves the others alone.
+    """
     from mujoco_scenes.functional_tamp_pipeline.executability import analyze_executability
     r=role();r['required_properties']=['must be electrically insulated']
     other=role('other');other['function']='source of water'
-    graph=compile_candidate_graph('kitchen','task',doc(r,other))
+    graph=compile_candidate_graph(
+        'kitchen','use an electrically insulated container',doc(r,other))
     assert graph.metadata['canonicalization_status']=='PARTIAL'
     assert analyze_executability(graph)[0]['status']=='UNVERIFIABLE_REQUIRED_PROPERTY'
+    assert 'water_source' in graph.nodes
+
+
+def test_safety_property_the_instruction_never_asked_for_is_recorded_not_enforced():
+    """The same property, with an instruction that says nothing about it.
+
+    It is kept in the accounting as the model's own proposal and does not hold
+    the role's candidates unproven, so a container the runtime can otherwise
+    verify is not reported as undiscovered for a quality nobody asked for.
+    """
+    r=role();r['required_properties']=['must be electrically insulated']
+    other=role('other');other['function']='source of water'
+    graph=compile_candidate_graph('kitchen','pour water into the cup',doc(r,other))
+    assert graph.metadata['unverified_required_properties']==[]
+    proposed=graph.metadata['model_proposed_unverifiable_properties']
+    assert [row['property'] for row in proposed]==['must be electrically insulated']
     assert 'water_source' in graph.nodes
 
 
