@@ -170,11 +170,28 @@ def main() -> int:
         hits = sum(1 for row in rows if row.get(field))
         return hits, total
 
+    def succeeded(row) -> bool:
+        """A feasible task the run announced finished and evaluation confirmed.
+
+        Not `full_task_satisfied` alone: a run that stopped at a partial action
+        sequence, whose leftover artifacts happened to satisfy every goal, would
+        be counted a success without ever delivering a plan.  Not
+        `outcome_correct` alone either: on an infeasible variant that field means
+        the run correctly refused, which is not a success.  The evaluator stores
+        both, and success is their conjunction on a feasible row --
+        mujoco_scenes/evaluation_outcome.py asserts feasible success and
+        feasible outcome-correct are one measurement.
+        """
+        return bool(row.get(FIELD_FEASIBLE)) and bool(row.get(FIELD_OUTCOME))
+
+    def success_rate(rows):
+        return sum(1 for row in rows if succeeded(row)), len(rows)
+
     out_rows = []
     print(f"{'domain':12s} {'variant':8s} {'feasible':9s} {'success':>10s} "
           f"{'outcome ok':>11s} {'goal cov':>9s}")
     for (domain, variant), rows in sorted(per_variant.items()):
-        s_hits, s_total = rate(rows, FIELD_SUCCESS)
+        s_hits, s_total = success_rate(rows)
         o_hits, _ = rate(rows, FIELD_OUTCOME)
         coverage = [float(row.get(FIELD_COVERAGE) or 0) for row in rows]
         feasible = any(row.get(FIELD_FEASIBLE) for row in rows)
@@ -197,7 +214,7 @@ def main() -> int:
         rows = [row for (domain, _), group in per_variant.items() for row in group
                 if scope == "ALL" or domain == scope]
         feasible_rows = [row for row in rows if row.get(FIELD_FEASIBLE)]
-        s_hits, s_total = rate(feasible_rows, FIELD_SUCCESS)
+        s_hits, s_total = success_rate(feasible_rows)
         o_hits, o_total = rate(rows, FIELD_OUTCOME)
         low, high = wilson(s_hits, s_total)
         print(f"{scope:12s} feasible success {s_hits:4d}/{s_total:<5d} "

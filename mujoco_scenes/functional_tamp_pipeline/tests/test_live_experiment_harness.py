@@ -126,6 +126,34 @@ def test_unfinished_repetitions_still_contribute_their_trials(tmp_path):
     assert data["completeness"]["completed_trials"] == 1
 
 
+def test_the_aggregator_scores_success_the_way_the_evaluator_defines_it(tmp_path):
+    """Counting full_task_satisfied alone over-counts.
+
+    Feasible success requires the run to have announced completion as well as
+    ground truth confirming it.  A row that stopped short but whose leftover
+    artifacts satisfied every goal has full_task_satisfied true and
+    outcome_correct false, and must not be counted.
+    """
+    rows = [
+        {"domain": "kitchen", "variant": "K1", "gt_feasible": True,
+         "full_task_satisfied": True, "outcome_correct": True,
+         "full_task_goal_coverage": 1.0, "false_completion": False},
+        {"domain": "kitchen", "variant": "K2", "gt_feasible": True,
+         "full_task_satisfied": True, "outcome_correct": False,
+         "full_task_goal_coverage": 1.0, "false_completion": False},
+        # Infeasible and correctly refused: outcome_correct, but not a success.
+        {"domain": "workshop", "variant": "W10", "gt_feasible": False,
+         "full_task_satisfied": False, "outcome_correct": True,
+         "full_task_goal_coverage": 0.0, "false_completion": False},
+    ]
+    _repeat(tmp_path, "repeat_01", rows)
+    data, _ = _aggregate(tmp_path)
+    by = {r["variant"]: r for r in data["per_variant"]}
+    assert by["K1"]["successes"] == 1
+    assert by["K2"]["successes"] == 0, "a partial run was counted as a success"
+    assert by["W10"]["successes"] == 0, "a correct refusal was counted as a success"
+
+
 def test_runner_requires_an_exact_model_and_never_falls_back():
     """No silently benchmarking whatever the endpoint happens to serve."""
     source = RUNNER.read_text()
