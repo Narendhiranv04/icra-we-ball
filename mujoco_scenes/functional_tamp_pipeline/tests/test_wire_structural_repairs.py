@@ -160,3 +160,96 @@ def test_a_repeated_region_id_keeps_the_first_declaration_and_records_the_other(
     kept = normalized["observation_guidance"]["inspectable_regions"]
     assert [r["id"] for r in kept] == ["Cabinet"]
     assert kept[0]["label"] == "wall cabinet left"
+
+
+# ---------------------------------------------------------------------------
+# An undeclared reference to a place the runtime already owns
+# ---------------------------------------------------------------------------
+
+
+LIVING = ("Prepare the living room for two people to enjoy refreshments while watching "
+          "television. Provide each person with their own refreshment setting nearby, and "
+          "place the entertainment control where it is accessible to both people.")
+
+
+def _living_document(undeclared):
+    roles = [
+        role("refreshment_setting", "personal drinkware set for one person",
+             count=2, policy="DISTINCT", categories=["cup", "saucer"]),
+        role("side_table", "personal side table beside the seat", kind="REGION",
+             count=2, policy="DISTINCT", categories=["side table"]),
+    ]
+    return {"schema_version": 3, "status": "SUPPORTED", "task_summary": "task",
+            "task_contract": {
+                "functional_roles": roles,
+                "functional_relations": [
+                    {"id": "near", "relation": "the side table is near the seat",
+                     "participant_roles": ["side_table", undeclared], "required": True}],
+                "operation_pairings": [
+                    {"id": "serve", "operation": "place the drinkware set on the side table",
+                     "participant_roles": ["refreshment_setting", "side_table"],
+                     "operation_count": 2}]},
+            "observation_guidance": {"visible_candidates_per_role": {},
+                                     "inspectable_regions": [], "inspection_order": []},
+            "unsupported_reason": ""}
+
+
+@pytest.mark.parametrize("undeclared", ["seat", "seats", "seating_area", "chair"])
+def test_an_undeclared_reference_to_the_seating_anchor_is_declared(undeclared):
+    """Its kind and its fixedness come from the registry, not from a guess."""
+    normalized, trace = normalize_and_validate_v3_contract(
+        _living_document(undeclared), domain="living_room", task_instruction=LIVING)
+    notes = trace if isinstance(trace, list) else (trace or {}).get("repairs", []) or []
+    recovered = [n for n in notes
+                 if n.get("code") == "UNDECLARED_FIXED_ANCHOR_REFERENCE_DECLARED"]
+    assert recovered, notes
+    assert recovered[0]["anchor_family"] == "SEATING"
+    declared = {r["id"] for r in normalized["task_contract"]["functional_roles"]}
+    assert undeclared in declared
+
+
+@pytest.mark.parametrize("undeclared", ["cup", "plate", "drink", "surface",
+                                        "side_board", "television"])
+def test_an_undeclared_reference_to_something_findable_is_not_declared(undeclared):
+    """The adversarial half, and the reason the line is where it is.
+
+    A seat is a calibrated reference the runtime owns; a cup is something the
+    robot would have had to go and find, so its cardinality, its binding policy
+    and what would count as an instance of it would all have to be chosen here.
+    """
+    with pytest.raises(MalformedVLMSpecificationError, match="UNDECLARED_PARTICIPANT"):
+        normalize_and_validate_v3_contract(
+            _living_document(undeclared), domain="living_room", task_instruction=LIVING)
+
+
+def test_a_domain_whose_families_all_have_selectable_roles_recovers_nothing():
+    """Kitchen realizes every family it recognizes with a role grounding chooses."""
+    from mujoco_scenes.functional_tamp_pipeline.fm_schema_v3 import _anchor_only_families
+
+    assert _anchor_only_families("kitchen") == set()
+    assert _anchor_only_families("living_room") == {"SEATING"}
+    assert _anchor_only_families("workshop") == {"FIXED_TARGET"}
+
+
+def test_two_elements_sharing_an_id_are_both_kept():
+    """An id is a label the contract uses to refer to itself, not a semantic."""
+    raw = document(_kitchen_roles(), relations=[
+        {"id": "same", "relation": "the stirrer reaches the bottom of the mug",
+         "participant_roles": ["stirrer", "mug"], "required": True},
+        {"id": "same", "relation": "the coffee is poured into the mug",
+         "participant_roles": ["coffee", "mug"], "required": True},
+    ], operations=[
+        {"id": "pour", "operation": "pour the coffee into the mug",
+         "participant_roles": ["coffee", "mug"], "operation_count": 2},
+    ])
+    normalized, trace = _normalize(raw)
+    notes = trace if isinstance(trace, list) else (trace or {}).get("repairs", []) or []
+    renamed = [n for n in notes if n.get("code") == "DUPLICATE_ELEMENT_ID_RENAMED"]
+    assert renamed, notes
+    assert renamed[0]["raw_id"] == "same" and renamed[0]["normalized_id"] == "same_2"
+    ids = [r["id"] for r in normalized["task_contract"]["functional_relations"]]
+    assert ids == ["same", "same_2"], ids
+    # Both relations survive with their own wording.
+    texts = {r["id"]: r["relation"] for r in normalized["task_contract"]["functional_relations"]}
+    assert "reaches the bottom" in texts["same"]
+    assert "poured into" in texts["same_2"]

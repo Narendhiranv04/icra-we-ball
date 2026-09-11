@@ -218,8 +218,68 @@ def _names_only_wire_schema_fields(participant: str) -> bool:
     )
 
 
+def _anchor_only_families(domain: str) -> set[str]:
+    """Role families this domain realizes with fixed anchors and nothing else.
+
+    Read off the registry rather than listed here, so it cannot drift from what
+    the runtime actually owns: Living Room realizes SEATING only as
+    SEATING_POSITION and SEATING_PAIR, and the workshop realizes FIXED_TARGET
+    only as repair_target, while every kitchen family has a selectable role.
+    """
+    from .semantic_typing import canonical_role_family
+    from .system_context_registry import (
+        get_domain_selectable_roles, get_domain_system_fixed_anchors)
+
+    selectable = {canonical_role_family(domain, role)
+                  for role in get_domain_selectable_roles(domain)}
+    fixed = {canonical_role_family(domain, role)
+             for role in get_domain_system_fixed_anchors(domain)}
+    return {family for family in fixed - selectable if family != "OTHER"}
+
+
+def _undeclared_reference_names_a_fixed_anchor(domain: str, name: str) -> str | None:
+    """The fixed-anchor family an undeclared participant reference names.
+
+    A reference to "the seat" or "the seating area" names a place the runtime
+    already owns as a calibrated reference.  Declaring it takes nothing from
+    guesswork: its kind, and the fact that it is one fixed place rather than
+    something to go and find, come from the registry, and which quantified form
+    of it the task needs is still decided later from the model's own words.
+
+    A reference to something the robot would have had to *find* -- a cup, a
+    plate, a part -- is refused here, because its acceptance vocabulary and its
+    cardinality would both have to be chosen rather than read.  The two cases
+    are separated by the registry itself: only a family this domain realizes
+    with no selectable role at all is recoverable.
+    """
+    from .semantic_typing import detect_role_families
+
+    families = _anchor_only_families(domain)
+    if not families:
+        return None
+    probe = {
+        "id": name,
+        "entity_kind": "FIXED_TARGET",
+        "function": re.sub(r"[_-]+", " ", str(name)),
+        "description": "",
+        "required_count": 1,
+        "binding_policy": "SHARED",
+        "candidate_categories": [],
+        "required_properties": [],
+    }
+    detected, _ = detect_role_families(domain, probe)
+    matched = detected & families
+    if len(matched) != 1:
+        return None
+    # The wording must name *only* an anchor family.  "personal side table" is
+    # a support described next to a seat, not a seat.
+    if detected - families:
+        return None
+    return next(iter(matched))
+
+
 def _repair_structural_wire_noise(
-    normalized: dict[str, Any], trace: list[dict[str, Any]]
+    normalized: dict[str, Any], trace: list[dict[str, Any]], domain: str | None = None
 ) -> None:
     """Repair the wire noise that carries no semantics, and nothing else.
 
@@ -259,6 +319,34 @@ def _repair_structural_wire_noise(
         str(role.get("id")) for role in contract.get("functional_roles", [])
         if isinstance(role, dict)
     }
+    # An element id is a label the contract uses to refer to itself, not a
+    # semantic.  Two relations that happen to share one are still two relations,
+    # and rejecting the contract over the collision discarded both of them along
+    # with everything else the model said.  The first keeps its id and the
+    # others are given a suffixed one, recorded, so every element stays
+    # addressable and nothing is merged.
+    for collection in ("functional_relations", "operation_pairings"):
+        seen_ids: set[str] = set()
+        for entry in contract.get(collection, []) or []:
+            if not isinstance(entry, dict):
+                continue
+            element_id = str(entry.get("id", ""))
+            if element_id not in seen_ids:
+                seen_ids.add(element_id)
+                continue
+            suffix = 2
+            while f"{element_id}_{suffix}" in seen_ids:
+                suffix += 1
+            renamed = f"{element_id}_{suffix}"
+            entry["id"] = renamed
+            seen_ids.add(renamed)
+            trace.append({
+                "code": "DUPLICATE_ELEMENT_ID_RENAMED",
+                "collection": collection,
+                "raw_id": element_id,
+                "normalized_id": renamed,
+            })
+
     unusable: list[dict[str, Any]] = []
     for collection, minimum in (("functional_relations", 2), ("operation_pairings", 2)):
         kept = []
@@ -284,6 +372,42 @@ def _repair_structural_wire_noise(
                     "collection": collection, "element_id": entry.get("id"),
                     "removed_participants": robots,
                 })
+            if domain:
+                for participant in list(deduplicated):
+                    if participant in declared:
+                        continue
+                    family = _undeclared_reference_names_a_fixed_anchor(domain, participant)
+                    if family is None:
+                        continue
+                    recovered = {
+                        "id": participant,
+                        "entity_kind": "FIXED_TARGET",
+                        "function": (
+                            f"{re.sub(r'[_-]+', ' ', str(participant))} referenced by the "
+                            f"model as a participant without being declared"
+                        ),
+                        "description": (
+                            "Declaration recovered from an explicit reference to a place "
+                            "the runtime holds as a calibrated fixed anchor; no kind, "
+                            "count or acceptance vocabulary was chosen here."
+                        ),
+                        "required_count": 1,
+                        "binding_policy": "SHARED",
+                        "candidate_categories": [],
+                        "required_properties": [],
+                    }
+                    # Only the fields the wire contract declares; where this
+                    # declaration came from is recorded in the trace below,
+                    # because the contract still has to validate as something
+                    # the model could have written.
+                    contract.setdefault("functional_roles", []).append(recovered)
+                    declared.add(participant)
+                    trace.append({
+                        "code": "UNDECLARED_FIXED_ANCHOR_REFERENCE_DECLARED",
+                        "collection": collection, "element_id": entry.get("id"),
+                        "participant": participant, "anchor_family": family,
+                        "provenance": "FM_EXPLICIT_REFERENCE",
+                    })
             people = [p for p in deduplicated
                        if p not in declared and _UNDECLARED_NON_PARTICIPANT.match(str(p).strip())]
             if people:
@@ -449,7 +573,7 @@ def normalize_v3_live_document(
             else:
                 kept.append(candidate)
         visible[role_id] = kept
-    _repair_structural_wire_noise(normalized, trace)
+    _repair_structural_wire_noise(normalized, trace, domain)
     guidance = normalized.get("observation_guidance", {})
     regions = guidance.get("inspectable_regions", [])
     kept_regions = []
