@@ -1651,6 +1651,16 @@ class FMAdapter:
         )
         self.last_raw_requirement_response = deepcopy(raw_document)
         live_wire_document = None
+        if getattr(self, "return_raw_graph", False):
+            # The caller asked for the document as it arrived because it knows
+            # which domain this is and normalizes it accordingly.  This adapter
+            # does not know the domain, and normalizing without one silently
+            # skips every domain-conditional repair -- the Living Room
+            # entity-kind normalization, and the recovery of a reference to a
+            # place the runtime owns -- and then rejects the contract at the
+            # very gate those repairs exist to get past.  Returning here leaves
+            # the caller's own domain-aware call to do the work.
+            return raw_document
         if schema_version == 3 and is_v3_document(raw_document):
             live_wire_document, self.last_normalization_trace = normalize_and_validate_v3_contract(
                 raw_document, task_instruction=task_instruction

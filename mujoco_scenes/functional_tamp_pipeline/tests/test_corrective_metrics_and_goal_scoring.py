@@ -2,6 +2,19 @@ from __future__ import annotations
 
 import json
 import shutil
+from pathlib import Path
+
+import pytest
+
+# These two tests replay a run directory from a generated benchmark artifact
+# that has never been committed, so they cannot run on a fresh checkout or
+# after the reports directory is cleaned.  Skipping when it is absent keeps the
+# suite honest: the assertions still run wherever the artifact exists.
+_REPLAY_RUN = Path("benchmark_reports/raw_replay_final_v1/living_room/L1/vlm")
+requires_replay_artifact = pytest.mark.skipif(
+    not _REPLAY_RUN.is_dir(),
+    reason=f"generated artifact {_REPLAY_RUN} is not present in this checkout",
+)
 
 from mujoco_scenes.functional_tamp_pipeline.evaluation_metrics import (
     compute_primary_metrics,
@@ -18,6 +31,7 @@ def test_goal_coverage_uses_feasible_denominator_only():
     assert compute_primary_metrics(records)["goal_coverage"] == 75.0
 
 
+@requires_replay_artifact
 def test_goal_scorer_invariant_to_operation_group_id(tmp_path):
     source = "benchmark_reports/raw_replay_final_v1/living_room/L1/vlm"
     original = tmp_path / "original"
@@ -34,6 +48,7 @@ def test_goal_scorer_invariant_to_operation_group_id(tmp_path):
     assert full_task_coverage("living_room", original) == full_task_coverage("living_room", renamed)
 
 
+@requires_replay_artifact
 def test_equivalent_v1_v2_plan_same_goal_coverage(tmp_path):
     # The scorer consumes independently replayed state and physical grounding,
     # never the raw schema version.
