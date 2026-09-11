@@ -60,7 +60,9 @@ def test_method_freeze_manifest_integrity():
     assert cfg["model"] == "qwen35-9b"
     assert cfg["enable_thinking"] is False
     assert cfg["temperature"] == 0.0
-    assert cfg["max_tokens"] == 8192
+    # Raised deliberately: 39 of the 91 archived responses that finished are
+    # longer than 8192, so the old budget would have truncated 43% of them.
+    assert cfg["max_tokens"] == 24000
     assert cfg["strict"] is True
 
 

@@ -28,6 +28,7 @@ def test_the_prompt_says_count_is_occurrences_not_instances():
     assert "how many physical instances the task needs" not in prompt
     # And it says which field carries the relation to physical things.
     assert "binding_policy is what says how those come down to physical things" in prompt
+    assert "not how many of them must exist" in prompt
 
 
 def test_operation_count_stays_separate_from_required_count():
