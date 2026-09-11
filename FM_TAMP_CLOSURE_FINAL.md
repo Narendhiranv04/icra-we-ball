@@ -117,16 +117,15 @@ By domain: Kitchen 7, Living Room 8, Workshop 11.
 
 The eight "open" trials are the honest residual. They split two ways:
 
-- **K1/03, K2/01, K3/03, L1/02, W1/02** fail on a draw whose sibling trials of the
-  *same variant* succeed. Same scene, same perception, same code — so the variance
-  is in the contract the FM produced. L1/02 is the clearest case: it fails to seat
-  `SEATING_POSITION` on the identical scene where L1/01 grounds COMPLETE.
-- **L3/03, W4/01, W5/01** belong to variants that score 0/3, so no sibling proves
-  the variant is reachable at all. These are the least understood trials in the
-  benchmark.
+Reading their raw contracts closed five of the eight (§3.3b, §3.6): K1/03,
+K2/01, K3/03, L1/02 and L3/03 are all contract-side declaration errors, named
+individually.
 
-None was reduced to a shared mechanism in this pass, and claiming otherwise would
-be guessing.
+**Three remain genuinely open: W1/02, W4/01, W5/01.** Each belongs to the
+workshop — the one domain with GPU-side nondeterminism (§6.2) — so before any
+further semantic investigation they need re-measuring under determinism controls.
+Attributing them to a semantic mechanism now would be guessing at something that
+may not be stable.
 
 ### 3.1 W3 ×3 — the fastener is measured wrong, and the verifier is right
 
@@ -224,6 +223,47 @@ holds for L6/01.
 **Three of the eight are pure token-limit truncations**, not semantic failures.
 They are the strongest argument for a larger `max_tokens` in a future collection —
 see §7 for why that budget was *not* changed here.
+
+### 3.3b The two draw-dependent Living Room trials
+
+Both were listed as unexplained. Their contracts explain them, and the
+comparison with the *succeeding* L4/01 draw is the informative part.
+
+**L1/02 — the personal/shared distinction collapsed to singletons.** The FM
+declared `seating_area` as `FIXED_TARGET, required_count: 1, SHARED` and
+`surface` as `REGION, required_count: 1, SHARED`. The task has two seats, each
+with its own personal table. One shared seat and one shared surface cannot
+satisfy a per-seat requirement, so `SEATING_POSITION` is never seated
+(`PARTIAL_VERIFIED_GROUNDING`). Its relations also pair the setting with
+`seating_area` while its operations place onto `surface` — the two halves do not
+meet. **Category (A):** a count-and-binding error in the contract.
+
+**L3/03 — the seat is declared as a movable object.** This draw gets the hard
+part right: `surface` is `REGION, count 2, DISTINCT` (two personal tables), and
+both halves of the gate are expressed — `refreshment_item ON surface` and
+`surface NEAR chair`. The defect is narrow: `chair` is declared
+`entity_kind: OBJECT` with categories `["armchair", "sofa", "chair"]`. OBJECT is
+the *carried* class (`CARRIED_ENTITY_KINDS = {OBJECT}`), so the chair is treated
+as something to pick up rather than a place to sit, and `SEATING_POSITION` cannot
+form.
+
+**A named compiler opportunity, not implemented.** The succeeding L4/01 draw
+makes the asymmetry visible: it declares its *tables* as `OBJECT` — "coffee
+table, side table, desk" — and still succeeds, because the surrounding path
+tolerates furniture-declared-as-OBJECT on the region side. L3/03 makes the mirror
+-image mistake on the seat side and is not tolerated. A symmetric rule — a
+declared OBJECT whose category list names only non-carryable furniture may seat a
+place role, in both directions — would be principled rather than
+variant-conditioned, and the machinery already exists
+(`DECLARED_ENTITY_KIND_OVER_A_CATEGORY_LIST_OF_THE_OTHER_CLASS`).
+
+It was **not** implemented here. Three earlier iterations on entity-kind rules in
+this session each broke something else — a workshop workpiece, a bowl compiled
+into a person, a side table becoming the seat — and each was reverted. A fourth
+attempt needs a measurement budget of two full replays (~80 min each) to clear
+the monotonicity bar, which this pass did not have after the nondeterminism
+finding consumed it. Recorded as the most promising Living Room lead with the
+exact rule to try and the exact trial to check.
 
 ### 3.4 The FM's semantic generation is not the bottleneck
 
