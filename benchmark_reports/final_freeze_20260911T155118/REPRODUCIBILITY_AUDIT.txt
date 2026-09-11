@@ -1,0 +1,17 @@
+REPRODUCIBILITY AUDIT
+==============================================================================
+
+1. Semantic front half, compiled from every archived contract, hashed once
+   per PYTHONHASHSEED.  Identical hashes mean no set-iteration order or
+   other process-local nondeterminism reaches the compiled graph.
+
+   PYTHONHASHSEED=0: 4c6cd9c4333a9864c3c491aef14adba587a987988393c413c3229ce1529c48a5
+   PYTHONHASHSEED=1: 4c6cd9c4333a9864c3c491aef14adba587a987988393c413c3229ce1529c48a5
+   PYTHONHASHSEED=7: 4c6cd9c4333a9864c3c491aef14adba587a987988393c413c3229ce1529c48a5
+   PYTHONHASHSEED=12345: 4c6cd9c4333a9864c3c491aef14adba587a987988393c413c3229ce1529c48a5
+
+2. Determinism test suite
+
+...                                                                      [100%]
+3 passed in 0.88s
+

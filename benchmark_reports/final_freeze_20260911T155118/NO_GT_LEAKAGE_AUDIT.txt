@@ -1,0 +1,71 @@
+NO-GT / NO-VARIANT LEAKAGE AUDIT
+==============================================================================
+modules in the online decision path: 53
+exempt by name (reference holders and offline evaluators): audit.py, benchmark_variants.py, evaluation.py, evaluation_metrics.py, gf_reference_evaluation.py, gf_reference_evaluator.py, gt_spec_provider.py, raw_eval.py, reference_graphs.py, variants.py
+exempt directories: __pycache__, tests
+
+rule 1: no benchmark variant identifier may appear as a value, except
+        inside a declared privileged diagnostic table that the module
+        itself refuses in vlm mode:
+          mujoco_scenes/functional_tamp_pipeline/search_contract.py: ORACLE_SEARCH_ORDERS
+rule 2: no reference graph, expected answer or feasibility label may be
+        read, written, called or imported.  Labels naming the
+        variant-independent GT-mode search order are not reference
+        content and are listed: GT_EXPLICIT_SEARCH_POLICY, GT_SYSTEM, GT_SYSTEM_SEARCH_POLICY, gt_system
+
+FINDINGS: 0
+
+modules checked:
+  mujoco_scenes/environment_vlm_requirements.py
+  mujoco_scenes/functional_tamp_pipeline/__init__.py
+  mujoco_scenes/functional_tamp_pipeline/domains/__init__.py
+  mujoco_scenes/functional_tamp_pipeline/domains/kitchen.py
+  mujoco_scenes/functional_tamp_pipeline/domains/living_room.py
+  mujoco_scenes/functional_tamp_pipeline/domains/workshop.py
+  mujoco_scenes/functional_tamp_pipeline/errors.py
+  mujoco_scenes/functional_tamp_pipeline/evaluation_contract_adapter.py
+  mujoco_scenes/functional_tamp_pipeline/executability.py
+  mujoco_scenes/functional_tamp_pipeline/fm_schema_v2.py
+  mujoco_scenes/functional_tamp_pipeline/fm_schema_v3.py
+  mujoco_scenes/functional_tamp_pipeline/functional_constraint_interpreter.py
+  mujoco_scenes/functional_tamp_pipeline/grounding.py
+  mujoco_scenes/functional_tamp_pipeline/live_visualizer.py
+  mujoco_scenes/functional_tamp_pipeline/models.py
+  mujoco_scenes/functional_tamp_pipeline/operation_slot_completion.py
+  mujoco_scenes/functional_tamp_pipeline/outcome_classifier.py
+  mujoco_scenes/functional_tamp_pipeline/planning.py
+  mujoco_scenes/functional_tamp_pipeline/predicate_registry.py
+  mujoco_scenes/functional_tamp_pipeline/raw_semantic_evaluation.py
+  mujoco_scenes/functional_tamp_pipeline/relation_interpreter.py
+  mujoco_scenes/functional_tamp_pipeline/robot_capability_registry.py
+  mujoco_scenes/functional_tamp_pipeline/role_semantic_ontology.py
+  mujoco_scenes/functional_tamp_pipeline/run.py
+  mujoco_scenes/functional_tamp_pipeline/scene_graph.py
+  mujoco_scenes/functional_tamp_pipeline/search.py
+  mujoco_scenes/functional_tamp_pipeline/search_contract.py
+  mujoco_scenes/functional_tamp_pipeline/search_order.py
+  mujoco_scenes/functional_tamp_pipeline/semantic_compiler.py
+  mujoco_scenes/functional_tamp_pipeline/semantic_typing.py
+  mujoco_scenes/functional_tamp_pipeline/spec_provider.py
+  mujoco_scenes/functional_tamp_pipeline/structural_sanitizer.py
+  mujoco_scenes/functional_tamp_pipeline/system_context_registry.py
+  mujoco_scenes/functional_tamp_pipeline/task_interface_validator.py
+  mujoco_scenes/functional_tamp_pipeline/telemetry.py
+  mujoco_scenes/functional_tamp_pipeline/vlm_spec_provider.py
+  mujoco_scenes/kitchen_vlm_functional_graph.py
+  mujoco_scenes/semantic_grounding.py
+  mujoco_scenes/workshop_phase1/__init__.py
+  mujoco_scenes/workshop_phase1/capture.py
+  mujoco_scenes/workshop_phase1/evidence_graph.py
+  mujoco_scenes/workshop_phase1/fm_adapter.py
+  mujoco_scenes/workshop_phase1/functional_search.py
+  mujoco_scenes/workshop_phase1/geometric_grounding.py
+  mujoco_scenes/workshop_phase1/inspection_controller.py
+  mujoco_scenes/workshop_phase1/perception.py
+  mujoco_scenes/workshop_phase1/region_grounding.py
+  mujoco_scenes/workshop_phase1/requirements.py
+  mujoco_scenes/workshop_phase1/semantic_grounding.py
+  mujoco_scenes/workshop_phase1/serialization.py
+  mujoco_scenes/workshop_phase1/tracking.py
+  mujoco_scenes/workshop_phase1/types.py
+  mujoco_scenes/workshop_phase1/visual_profile.py

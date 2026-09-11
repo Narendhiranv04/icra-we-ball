@@ -1,0 +1,97 @@
+domain,variant,trial,intended_outcome,pipeline_success,expected_steps,produced_steps,status,detail
+kitchen,K1,trial_01,FEASIBLE,False,24,22,DIFFERS,length 22 != expected 24
+kitchen,K1,trial_02,FEASIBLE,False,24,8,DIFFERS,length 8 != expected 24
+kitchen,K1,trial_03,FEASIBLE,False,24,16,DIFFERS,length 16 != expected 24
+kitchen,K10,trial_01,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+kitchen,K10,trial_02,INFEASIBLE,False,1,22,DIFFERS,length 22 != expected 1
+kitchen,K10,trial_03,INFEASIBLE,False,1,20,DIFFERS,length 20 != expected 1
+kitchen,K11,trial_01,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+kitchen,K11,trial_02,INFEASIBLE,False,1,22,DIFFERS,length 22 != expected 1
+kitchen,K11,trial_03,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+kitchen,K12,trial_01,INFEASIBLE,False,1,22,DIFFERS,length 22 != expected 1
+kitchen,K12,trial_02,INFEASIBLE,False,1,20,DIFFERS,length 20 != expected 1
+kitchen,K12,trial_03,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+kitchen,K2,trial_01,FEASIBLE,False,26,22,DIFFERS,length 22 != expected 26
+kitchen,K2,trial_02,FEASIBLE,False,26,24,DIFFERS,length 24 != expected 26
+kitchen,K2,trial_03,FEASIBLE,False,26,24,DIFFERS,length 24 != expected 26
+kitchen,K3,trial_01,FEASIBLE,False,24,,NO_PLAN_PRODUCED,
+kitchen,K3,trial_02,FEASIBLE,False,24,18,DIFFERS,length 18 != expected 24
+kitchen,K3,trial_03,FEASIBLE,False,24,,NO_PLAN_PRODUCED,
+kitchen,K4,trial_01,FEASIBLE,False,26,24,DIFFERS,length 24 != expected 26
+kitchen,K4,trial_02,FEASIBLE,False,26,22,DIFFERS,length 22 != expected 26
+kitchen,K4,trial_03,FEASIBLE,False,26,8,DIFFERS,length 8 != expected 26
+kitchen,K5,trial_01,FEASIBLE,False,24,,NO_PLAN_PRODUCED,
+kitchen,K5,trial_02,FEASIBLE,True,24,24,DIFFERS,step 2: operator PLACE != POUR
+kitchen,K5,trial_03,FEASIBLE,True,24,24,DIFFERS,step 2: operator PLACE != POUR
+kitchen,K6,trial_01,FEASIBLE,True,26,26,DIFFERS,step 4: operator PLACE != POUR
+kitchen,K6,trial_02,FEASIBLE,False,26,24,DIFFERS,length 24 != expected 26
+kitchen,K6,trial_03,FEASIBLE,False,26,22,DIFFERS,length 22 != expected 26
+kitchen,K7,trial_01,INFEASIBLE,False,1,20,DIFFERS,length 20 != expected 1
+kitchen,K7,trial_02,INFEASIBLE,False,1,8,DIFFERS,length 8 != expected 1
+kitchen,K7,trial_03,INFEASIBLE,False,1,8,DIFFERS,length 8 != expected 1
+kitchen,K8,trial_01,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+kitchen,K8,trial_02,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+kitchen,K8,trial_03,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+kitchen,K9,trial_01,INFEASIBLE,False,1,22,DIFFERS,length 22 != expected 1
+kitchen,K9,trial_02,INFEASIBLE,False,1,22,DIFFERS,length 22 != expected 1
+kitchen,K9,trial_03,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+living_room,L1,trial_01,FEASIBLE,True,10,10,EXACT_GT_ACTION_SEQUENCE,exact structural match
+living_room,L1,trial_02,FEASIBLE,False,10,6,DIFFERS,length 6 != expected 10
+living_room,L1,trial_03,FEASIBLE,True,10,10,EXACT_GT_ACTION_SEQUENCE,exact structural match
+living_room,L10,trial_01,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+living_room,L10,trial_02,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+living_room,L10,trial_03,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+living_room,L2,trial_01,FEASIBLE,True,8,8,EXACT_GT_ACTION_SEQUENCE,exact structural match
+living_room,L2,trial_02,FEASIBLE,False,8,,NO_PLAN_PRODUCED,
+living_room,L2,trial_03,FEASIBLE,True,8,8,EXACT_GT_ACTION_SEQUENCE,exact structural match
+living_room,L3,trial_01,FEASIBLE,False,10,,NO_PLAN_PRODUCED,
+living_room,L3,trial_02,FEASIBLE,False,10,,NO_PLAN_PRODUCED,
+living_room,L3,trial_03,FEASIBLE,False,10,8,DIFFERS,length 8 != expected 10
+living_room,L4,trial_01,FEASIBLE,True,10,10,EXACT_GT_ACTION_SEQUENCE,exact structural match
+living_room,L4,trial_02,FEASIBLE,True,10,10,EXACT_GT_ACTION_SEQUENCE,exact structural match
+living_room,L4,trial_03,FEASIBLE,True,10,10,EXACT_GT_ACTION_SEQUENCE,exact structural match
+living_room,L5,trial_01,FEASIBLE,True,8,8,EXACT_GT_ACTION_SEQUENCE,exact structural match
+living_room,L5,trial_02,FEASIBLE,True,8,8,EXACT_GT_ACTION_SEQUENCE,exact structural match
+living_room,L5,trial_03,FEASIBLE,False,8,,NO_PLAN_PRODUCED,
+living_room,L6,trial_01,FEASIBLE,False,10,,NO_PLAN_PRODUCED,
+living_room,L6,trial_02,FEASIBLE,True,10,10,EXACT_GT_ACTION_SEQUENCE,exact structural match
+living_room,L6,trial_03,FEASIBLE,False,10,,NO_PLAN_PRODUCED,
+living_room,L7,trial_01,INFEASIBLE,False,1,8,DIFFERS,length 8 != expected 1
+living_room,L7,trial_02,INFEASIBLE,False,1,4,DIFFERS,length 4 != expected 1
+living_room,L7,trial_03,INFEASIBLE,False,1,8,DIFFERS,length 8 != expected 1
+living_room,L8,trial_01,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+living_room,L8,trial_02,INFEASIBLE,False,1,2,DIFFERS,length 2 != expected 1
+living_room,L8,trial_03,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+living_room,L9,trial_01,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+living_room,L9,trial_02,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+living_room,L9,trial_03,INFEASIBLE,False,1,,NO_PLAN_PRODUCED,
+workshop,W1,trial_01,FEASIBLE,True,5,5,EXACT_GT_ACTION_SEQUENCE,exact structural match
+workshop,W1,trial_02,FEASIBLE,False,5,2,DIFFERS,length 2 != expected 5
+workshop,W1,trial_03,FEASIBLE,True,5,5,EXACT_GT_ACTION_SEQUENCE,exact structural match
+workshop,W10,trial_01,INFEASIBLE,False,0,2,DIFFERS,length 2 != expected 0
+workshop,W10,trial_02,INFEASIBLE,False,0,,NO_PLAN_PRODUCED,
+workshop,W10,trial_03,INFEASIBLE,False,0,2,DIFFERS,length 2 != expected 0
+workshop,W2,trial_01,FEASIBLE,False,5,2,DIFFERS,length 2 != expected 5
+workshop,W2,trial_02,FEASIBLE,False,5,2,DIFFERS,length 2 != expected 5
+workshop,W2,trial_03,FEASIBLE,False,5,,NO_PLAN_PRODUCED,
+workshop,W3,trial_01,FEASIBLE,False,5,,NO_PLAN_PRODUCED,
+workshop,W3,trial_02,FEASIBLE,False,5,,NO_PLAN_PRODUCED,
+workshop,W3,trial_03,FEASIBLE,False,5,,NO_PLAN_PRODUCED,
+workshop,W4,trial_01,FEASIBLE,False,5,2,DIFFERS,length 2 != expected 5
+workshop,W4,trial_02,FEASIBLE,False,5,2,DIFFERS,length 2 != expected 5
+workshop,W4,trial_03,FEASIBLE,False,5,2,DIFFERS,length 2 != expected 5
+workshop,W5,trial_01,FEASIBLE,False,5,,NO_PLAN_PRODUCED,
+workshop,W5,trial_02,FEASIBLE,False,5,,NO_PLAN_PRODUCED,
+workshop,W5,trial_03,FEASIBLE,False,5,2,DIFFERS,length 2 != expected 5
+workshop,W6,trial_01,FEASIBLE,True,5,5,DIFFERS,step 3 arg 1: TOOL_CABINET != LEFT_DRAWER
+workshop,W6,trial_02,FEASIBLE,True,5,5,DIFFERS,step 3 arg 1: TOOL_CABINET != LEFT_DRAWER
+workshop,W6,trial_03,FEASIBLE,True,5,5,EXACT_GT_ACTION_SEQUENCE,exact structural match
+workshop,W7,trial_01,FEASIBLE,True,5,5,EXACT_GT_ACTION_SEQUENCE,exact structural match
+workshop,W7,trial_02,FEASIBLE,False,5,5,EXACT_GT_ACTION_SEQUENCE,exact structural match
+workshop,W7,trial_03,FEASIBLE,True,5,5,EXACT_GT_ACTION_SEQUENCE,exact structural match
+workshop,W8,trial_01,FEASIBLE,True,5,5,EXACT_GT_ACTION_SEQUENCE,exact structural match
+workshop,W8,trial_02,FEASIBLE,True,5,5,EXACT_GT_ACTION_SEQUENCE,exact structural match
+workshop,W8,trial_03,FEASIBLE,True,5,5,EXACT_GT_ACTION_SEQUENCE,exact structural match
+workshop,W9,trial_01,INFEASIBLE,False,0,2,DIFFERS,length 2 != expected 0
+workshop,W9,trial_02,INFEASIBLE,False,0,,NO_PLAN_PRODUCED,
+workshop,W9,trial_03,INFEASIBLE,False,0,2,DIFFERS,length 2 != expected 0

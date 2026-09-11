@@ -1,0 +1,803 @@
+{
+  "archive": "benchmark_reports/v3_qwen_distribution_3x32_20260910T053937",
+  "fm_call_audit": {
+    "calls": 96,
+    "models": [
+      "qwen35-9b"
+    ],
+    "finish_reasons": {
+      "stop": 91,
+      "length": 5
+    },
+    "truncated_trials": [
+      "kitchen/K12/trial_03",
+      "living_room/L2/trial_02",
+      "living_room/L3/trial_01",
+      "living_room/L3/trial_02",
+      "living_room/L9/trial_02"
+    ],
+    "completion_tokens": {
+      "median_of_finished": 7698,
+      "max_of_finished": 12222,
+      "over_8192_of_finished": 39,
+      "finished": 91
+    }
+  },
+  "per_call": [
+    {
+      "trial": "kitchen/K1/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8750,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K1/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 10570,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K1/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 9692,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K10/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 7012,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K10/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 6930,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K10/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 6384,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K11/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 9642,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K11/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8936,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K11/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 9798,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K12/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5745,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K12/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 7823,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K12/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "length",
+      "completion_tokens": 24000,
+      "json_parse_success": false,
+      "parse_error": "Completion truncated due to token limit (finish_reason='length')"
+    },
+    {
+      "trial": "kitchen/K2/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5523,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K2/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 6064,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K2/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 7749,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K3/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5879,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K3/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 9029,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K3/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 6566,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K4/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8571,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K4/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8540,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K4/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 10825,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K5/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5688,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K5/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5564,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K5/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 6348,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K6/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 9786,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K6/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8934,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K6/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 7650,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K7/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 10089,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K7/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 10801,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K7/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 10477,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K8/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 9625,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K8/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 9488,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K8/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8815,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K9/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 9546,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K9/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 7827,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "kitchen/K9/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 11736,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L1/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5597,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L1/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8972,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L1/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 7698,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L10/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 10030,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L10/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8555,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L10/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 10676,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L2/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 9591,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L2/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "length",
+      "completion_tokens": 24000,
+      "json_parse_success": false,
+      "parse_error": "Completion truncated due to token limit (finish_reason='length')"
+    },
+    {
+      "trial": "living_room/L2/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 11746,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L3/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "length",
+      "completion_tokens": 24000,
+      "json_parse_success": false,
+      "parse_error": "Completion truncated due to token limit (finish_reason='length')"
+    },
+    {
+      "trial": "living_room/L3/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "length",
+      "completion_tokens": 24000,
+      "json_parse_success": false,
+      "parse_error": "Completion truncated due to token limit (finish_reason='length')"
+    },
+    {
+      "trial": "living_room/L3/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 10044,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L4/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 10069,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L4/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8689,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L4/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5367,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L5/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 7930,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L5/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 6012,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L5/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8297,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L6/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 7397,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L6/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8220,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L6/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5653,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L7/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 7624,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L7/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 6709,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L7/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5196,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L8/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8814,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L8/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 9025,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L8/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 3460,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L9/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 6787,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "living_room/L9/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "length",
+      "completion_tokens": 24000,
+      "json_parse_success": false,
+      "parse_error": "Completion truncated due to token limit (finish_reason='length')"
+    },
+    {
+      "trial": "living_room/L9/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 6569,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W1/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 9809,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W1/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 4147,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W1/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5131,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W10/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 6628,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W10/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8659,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W10/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5909,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W2/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5306,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W2/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 4118,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W2/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 3665,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W3/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8267,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W3/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5182,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W3/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 7579,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W4/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5527,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W4/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 7052,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W4/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 3551,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W5/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 7791,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W5/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 6891,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W5/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 7642,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W6/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8051,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W6/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 12222,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W6/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5964,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W7/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8986,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W7/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 3603,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W7/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 8964,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W8/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 6392,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W8/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 6374,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W8/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 5481,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W9/trial_01",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 2663,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W9/trial_02",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 6928,
+      "json_parse_success": true,
+      "parse_error": null
+    },
+    {
+      "trial": "workshop/W9/trial_03",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "completion_tokens": 6724,
+      "json_parse_success": true,
+      "parse_error": null
+    }
+  ],
+  "frozen_generation_budget_default": 24000,
+  "decoding": {
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "enable_thinking": false
+  },
+  "semantic_requests_per_trial_rule": 1
+}
