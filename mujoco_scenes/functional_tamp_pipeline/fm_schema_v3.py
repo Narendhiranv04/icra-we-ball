@@ -1134,6 +1134,7 @@ def _split_generic_participant_per_operation_form(
             canonical.setdefault("generic_participant_form_realizations", []).append({
                 "code": "FM_GENERIC_PARTICIPANT_REALIZED_PER_OPERATION_FORM",
                 "fm_role": rid,
+                "form_role_id": role["id"],
                 "operation_id": group.get("id"),
                 "slot": slot,
                 "canonical_role": want,
@@ -1145,6 +1146,73 @@ def _split_generic_participant_per_operation_form(
         canonical["functional_constraint_interpretation"].extend(
             canonical.get("generic_participant_form_realizations", ()))
     return synthesized
+
+
+def _route_relations_to_operation_specific_forms(
+    domain: str, canonical: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Point a relation at the form of the participant its own operation uses.
+
+    When one generically-worded participant is realized per operation -- one
+    "surface" role standing for the support belonging to a person and the
+    support deliberately shared -- the relations the model wrote about it still
+    name the raw role, and the raw role keeps only one of the forms.  So "the
+    control is supported by the surface" was checked against the *personal*
+    support and reported as a relation the runtime cannot represent, while the
+    control's own operation had already been compiled against the shared one.
+
+    A relation is re-pointed only when exactly one form's operation also
+    involves the relation's other participants, which is the relation and the
+    operation being about the same thing.  Where several forms would fit, or
+    none, the relation is left as the model wrote it and fails closed.
+    """
+    realizations = canonical.get("generic_participant_form_realizations") or ()
+    if not realizations:
+        return []
+    forms: dict[str, list[tuple[str, str]]] = {}
+    for row in realizations:
+        form_role = row.get("form_role_id")
+        if form_role:
+            forms.setdefault(str(row["fm_role"]), []).append(
+                (str(row.get("operation_id")), str(form_role)))
+    if not forms:
+        return []
+    operation_participants = {
+        str(group.get("id")): set(group.get("v3_participant_roles", ()) or ())
+        | set(group.get("v3_witness_roles", ()) or ())
+        for group in canonical.get("interaction_groups", ()) or ()
+    }
+    rerouted: list[dict[str, Any]] = []
+    for relation in canonical.get("functional_relations", ()) or ():
+        endpoints = [relation.get("subject_role"), relation.get("object_role")]
+        for index, endpoint in enumerate(endpoints):
+            if endpoint not in forms:
+                continue
+            others = {value for position, value in enumerate(endpoints) if position != index}
+            matching = {
+                form_role for operation_id, form_role in forms[endpoint]
+                if others and others <= operation_participants.get(operation_id, set())
+            }
+            if len(matching) != 1:
+                continue
+            form_role = matching.pop()
+            field = "subject_role" if index == 0 else "object_role"
+            relation[field] = form_role
+            for option in relation.get("v3_orientation_options", ()) or ():
+                for key in ("subject_role", "object_role"):
+                    if option.get(key) == endpoint:
+                        option[key] = form_role
+            rerouted.append({
+                "code": "RELATION_READ_AGAINST_THE_FORM_ITS_OWN_OPERATION_USES",
+                "relation_id": relation.get("id"),
+                "relation": relation.get("relation"),
+                "fm_role": endpoint,
+                "form_role": form_role,
+                "other_participants": sorted(others),
+            })
+    if rerouted:
+        canonical["functional_constraint_interpretation"].extend(rerouted)
+    return rerouted
 
 
 def _decompose_nary_relation(
@@ -2125,6 +2193,10 @@ def convert_v3_to_canonical_document(
     if form_roles:
         induced_roles.extend(form_roles)
         hypotheses = build_role_type_hypotheses(domain, canonical)
+        # The relations were read before the operations were seated, so they
+        # still name the raw role the forms came from.  Re-point the ones whose
+        # own operation is unambiguous; see the routing function.
+        _route_relations_to_operation_specific_forms(domain, canonical)
     # A relation the model wrote to state the very requirement a compiled
     # operation already carries is not a second constraint the runtime failed to
     # represent.  Once SUPPORT_DRINKWARE is identified the runtime owns
