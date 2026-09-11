@@ -503,8 +503,18 @@ def families_the_declared_kind_rules_out(
     an area, and it answers separately from the function text.  A family the
     runtime realizes only with roles of the other class contradicts that answer.
 
+    Consulted for one purpose only: deciding whether a *category list* naming
+    only families of the other class should outrank the job description.  The
+    declaration is not trusted to strike a family the job description or the
+    role's own name supports, because the model mislabels often enough that
+    doing so does real damage -- a workshop contract declared its workbench
+    surface an OBJECT, and striking SUPPORT left an incidental implement cue
+    standing, so the bench became the screwdriver and collided with the real
+    tool.  The surviving rule can only set aside a claim made by the categories
+    alone.
+
     Returned only when striking those leaves a family that positively *is* of
-    the declared class, which is what keeps the rule from deciding questions the
+    the declared class, which is what keeps it from deciding questions the
     declaration cannot settle:
 
       * a side table the model called an OBJECT nominates SUPPORT and SEATING.
@@ -589,29 +599,7 @@ def _resolve_family_precedence(
             drop(family, "RUNTIME_ACCEPTANCE_VOCABULARY_OVER_INCIDENTAL_CUE")
         authoritative |= by_vocabulary
 
-    # The contract asks the model, for every participant, whether the thing is
-    # carried or is a place, and it answers separately from the function text.
-    # So a family whose runtime roles are all of the opposite class contradicts
-    # the model's own declaration and is not what the participant is.
-    #
-    # This is the reading the function text gets wrong most often, because a
-    # thing is naturally described by where it goes.  "Holds refreshments for a
-    # person", offered with categories "table, surface, tray" and declared an
-    # OBJECT, was read as the side table: the categories claimed a surface, the
-    # surface claim outranked the job description by the rule further down, and
-    # the participant the task is actually about -- the refreshments -- was left
-    # out of the graph altogether, along with every operation over it.
-    #
-    # Only movable against stationary is judged; REGION and FIXED_TARGET are one
-    # class, because the model interchanges them freely and harmlessly.  The rule
-    # narrows only when a family the declaration allows survives, so a
-    # participant whose declared kind the domain realizes with no role at all is
-    # left exactly as it was.
-    if declared_entity_kind:
-        for family in sorted(families_the_declared_kind_rules_out(
-            domain, declared_entity_kind, authoritative
-        )):
-            drop(family, "DECLARED_ENTITY_KIND_RULES_OUT_A_FAMILY_OF_THE_OTHER_CLASS")
+
 
     # A structure the model describes as holding or enclosing the things the
     # task needs is somewhere to search, not one of those things.  But being
@@ -1124,7 +1112,7 @@ def build_role_type_hypotheses(
         # between co-nominated families; see the rule in _resolve_family_precedence.
         # Record that here so the status below reflects a reading the contract's
         # own shape settled rather than a function-alias guess.
-        if "DECLARED_ENTITY_KIND_RULES_OUT_A_FAMILY_OF_THE_OTHER_CLASS" in (
+        if "DECLARED_ENTITY_KIND_OVER_A_CATEGORY_LIST_OF_THE_OTHER_CLASS" in (
             evidence.family_precedence_rules
         ):
             declared_kind_narrowed.add(rid)
