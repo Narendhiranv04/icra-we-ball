@@ -484,7 +484,19 @@ def extract_operation_semantic_candidates(
 # one entry; ambiguous stems deliberately name more than one capability.
 _LEADING_ACTION_STEMS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
     "living_room": (
-        (r"transfer|mov|relocat|plac|position|transport|set|plce", ("__ALL__",)),
+        # Every capability in this domain is a placement, so any verb of putting
+        # a thing somewhere nominates both and the participants settle which.
+        #
+        # "arrang" is here because the model names the operation after the thing
+        # rather than the motion -- "arrange_refreshment_setting" -- and the
+        # participant's own name is taken out of the phrase before matching,
+        # which left the bare verb as the only signal and it named nothing.
+        # Arranging is also an abstract directive in the general vocabulary, and
+        # it stays one: a phrase whose participants no signature can seat is
+        # still classified as a directive rather than compiled, so this only
+        # decides the case where the named participants really do seat.
+        (r"transfer|mov|relocat|plac|position|transport|set|plce|arrang",
+         ("__ALL__",)),
     ),
     "workshop": (
         (r"secur|fasten|tighten|driv|instal|screw|bolt|insert|affix|rivet",
