@@ -225,7 +225,7 @@ holds for L6/01.
 They are the strongest argument for a larger `max_tokens` in a future collection —
 see §7 for why that budget was *not* changed here.
 
-### 3.3b The FM's semantic generation is not the bottleneck
+### 3.4 The FM's semantic generation is not the bottleneck
 
 Auditing all 96 archived raw responses directly:
 
@@ -253,12 +253,52 @@ spurious required role. Recorded as a boundary, not shipped.
 So the FM's semantic generation failure rate on this benchmark is **1%**, and its
 truncation rate is **5%**. The bottleneck is downstream of generation.
 
-### 3.4 W2/03 — FM over-demand
+### 3.5 W2/03 — FM over-demand
 
 The screw is now detected, tracked (1.28 cm) and accepted. The contract demands
 **two** fasteners where the scene contains one. Satisfying it would require
 relaxing an instruction-derived count against scene inventory — explicitly
 forbidden. **Category (A).**
+
+### 3.6 The three open Kitchen trials, read from their raw contracts
+
+These were listed as unexplained. Reading what the FM actually emitted resolves
+all three, and one of them lands in a category nothing else in the benchmark
+occupies.
+
+**K1/03 — an aggregate role merge over-demands physical instances.** The FM
+declared a *single* spoon role with `required_count: 4, binding_policy: DISTINCT`
+and `candidate_categories: ["eating spoon", "stirring spoon"]`. For two diners
+the task needs 2 stirring occasions and 2 eating utensils — but the stirrer is
+reusable, so three physical spoons suffice. By merging the reusable stirrer and
+the distinct eating utensils into one DISTINCT role of four, the contract demands
+a fourth physical spoon the scene does not hold, and `soup_eating_utensil` is
+left unseated (`OBJECT_DISCOVERY_FAILURE`, coverage 0.5). The compiler already
+partitions aggregate counts by functional form
+(`AGGREGATE_PARTICIPANT_COUNT_PARTITIONED_BY_FUNCTIONAL_FORM`, which is what took
+a spoon count of 4 down to 2 elsewhere); on this draw it did not reduce the
+demand enough. **Category (A)**, same class as W2/03.
+
+**K2/01 — the wrong binding policy on the eating utensil.** The FM declared
+`eating_utensil` with `binding_policy: SHARED`, i.e. one utensil deliberately
+common to both diners. It used SHARED correctly for the consumables (coffee,
+water, soup) and then applied it to the utensil too, where the task needs one
+each. The contract therefore asks for a single shared eating utensil, one gets
+placed, and GT coverage stops at 0.75. Correcting it would mean overriding an
+explicitly declared binding policy with the opposite one, which is not
+canonicalisation. **Category (A).**
+
+**K3/03 — physical processes the robot does not own.** This is the benchmark's
+only clear **category (B)**. The FM introduced a `stove / hotplate`
+`FIXED_TARGET`, a required relation *"Stove heats soup bowl"*, and an operation
+`heat_soup` — *"Apply heat to soup bowl"*. It also declared `person` as a
+`FIXED_TARGET` with count 2 and an operation `deliver_soup` — *"Hand soup bowl to
+person"*. The robot has neither a heating capability nor a hand-to-a-person
+capability, and the instruction asked for neither. Coverage is 0.0 because the
+contract's required operations cannot be mapped to anything the robot can do.
+Nothing downstream can or should repair this: dropping the operations would be
+silent deletion of instruction-required constraints as the contract states them,
+and inventing the capabilities is out of the question.
 
 ---
 
