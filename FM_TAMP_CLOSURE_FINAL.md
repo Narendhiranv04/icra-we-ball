@@ -530,6 +530,16 @@ while the authoritative replay was running would have corrupted that replay --
 the same hazard the live runner's "code changed during the repetition" guard
 exists to catch.
 
+**The exposure is scoped, and that limits the damage.** Only the workshop domain
+runs the detector on the GPU. Kitchen and Living Room go through
+`configs/semantic_grounding.yaml`, which sets `device: cpu`, and the replay
+driver pins `OMP_NUM_THREADS=2`. So the Kitchen 11/18 and Living Room 10/18
+figures rest on CPU inference at fixed thread count and are far less exposed;
+the variable figure is Workshop, 13/24 or 14/24. That is consistent with the one
+observed flip being a workshop trial. CPU inference is not automatically
+deterministic either, so this is a narrower claim than "reproducible", but the
+uncontrolled GPU autotuning path is confined to one of the three domains.
+
 This is the highest-value next change in the repository. It does not read ground
 truth, does not condition on variants, and converts a benchmark whose headline
 moves by a trial between runs into a reproducible one. The cheap first experiment
