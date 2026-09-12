@@ -33,6 +33,24 @@ LOCAL_YOLO_WORLD = (
 )
 
 
+# The domain's action vocabulary names placing a utensil beside its bowl
+# distinctly from putting an object down on a surface: the ground-truth
+# executor, the oracle world state and the expected-action catalogue all use
+# PLACE_SERVING_UTENSIL for it.  The compiled problem emitted a generic PLACE,
+# so every produced plan differed from the reference on those steps even when it
+# was otherwise identical -- the operator was right in effect and wrong in name.
+#
+# Preconditions and effects are unchanged; only the label differs.  Planning is
+# therefore identical and no goal, precondition or cost is affected.
+SERVING_UTENSIL_OPERATOR = "PLACE_SERVING_UTENSIL"
+
+
+def _placement_operator(obj, destination, utensil_pairs) -> str:
+    """PLACE, unless this is a utensil being set beside the bowl it serves."""
+    return (SERVING_UTENSIL_OPERATOR
+            if (obj, destination) in utensil_pairs else "PLACE")
+
+
 def _action(
     name: str,
     arguments: tuple[str, ...],
@@ -93,7 +111,9 @@ class KitchenPlanningCompiler:
                                     if assigned_target == obj:
                                         preconditions.add(("at", tool, obj))
                     actions.append(_action(
-                        "PLACE", (obj, destination), preconditions,
+                        _placement_operator(obj, destination,
+                                            set(legacy.soup_assignments)),
+                        (obj, destination), preconditions,
                         {("hand_empty",), ("at", obj, destination)},
                         {("holding", obj)},
                     ))
@@ -291,7 +311,8 @@ class KitchenPlanningCompiler:
                                 ))
                             continue
                 actions.append(_action(
-                    "PLACE", (obj, destination), preconditions,
+                    _placement_operator(obj, destination, set(soup_pairs)),
+                    (obj, destination), preconditions,
                     {("hand_empty",), ("at", obj, destination)},
                     {("holding", obj)},
                 ))
