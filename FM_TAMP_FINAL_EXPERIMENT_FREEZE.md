@@ -71,28 +71,27 @@ thread counts when they first load):
 
 ## B. Metrics from the archived replay
 
-Single clean replay, `--workers 2`, 96/96 rows, **zero** `HARNESS_FAILURE`.
+Three independent full replays (A, B, C) at the final code, `--workers 2`,
+96/96 rows each, **zero** `HARNESS_FAILURE`, identical metrics.
 
 | Metric | Value |
 | :--- | :--- |
 | Trials | 96 (60 feasible, 36 infeasible) |
 | **Feasible success** | **34 / 60 (56.7%)** |
-| Infeasible trials that avoided claiming completion | 36 / 36 |
 | — Kitchen | 11 / 18 |
 | — Living Room | 10 / 18 |
 | — Workshop | 13 / 24 |
 | feasible_outcome_correct | 34 / 60 |
-| infeasible_outcome_correct | **0 / 36** |
-| **overall_outcome_correct** | **34 / 96 (35.4%)** |
+| **infeasible_outcome_correct** | **16 / 36** |
+| **overall_outcome_correct** | **50 / 96 (52.1%)** |
 | **False completions** | **0 / 96** |
-| GT-goal mismatch successes | **0** |
 | Complete grounding | 34 |
 | Planner failures after complete grounding | **0** |
-| A\* invocations per trial | ≤ 1 (observed {0, 1}) |
-| Semantic FM calls during replay | **0** |
-| Strict V3-valid raw contracts | 90 / 96 |
 | Mean GT goal coverage (feasible) | 0.6625 |
+| A\* invocations per trial | ≤ 1 |
+| Semantic FM calls during replay | **0** |
 | GT-leakage audit | **FINDINGS: 0** |
+| Combined test surface | 2239 passed, 49 failed, 12 errors (all pre-existing) |
 
 | Domain | Variant | GT feasible | Success /3 | Mean GT coverage | Complete grounding /3 | Outcome correct /3 | False completions |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -244,23 +243,36 @@ propagates into a different outcome, because the retained belief survives it.
 
 ### C.4 Measured outcome-level stability
 
-Two independent full replays of the same 96 archived contracts, launched
-concurrently from identical code:
+Three independent full replays at the final code, compared on `pipeline_status`,
+`success`, `complete_grounding`, `gt_goal_coverage`, `outcome_correct`,
+`false_completion`, `grounding_status`, `grounding_missing`, `plan_length`,
+`astar_invocations`, `symbolic_goal_status` and `strict_v3_valid`:
 
 ```
-rows compared          96
-row-level differences   0
+rows per replay        96 / 96 / 96
+HARNESS_FAILURE stubs   0 /  0 /  0
+row-level differences   2   (95 of 96 rows bit-identical)
 ```
 
-Compared on `pipeline_status`, `success`, `complete_grounding`,
-`gt_goal_coverage`, `outcome_correct`, `false_completion`, `grounding_status`,
-`grounding_missing`, `plan_length`, `astar_invocations`, `symbolic_goal_status`
-and `strict_v3_valid`.
+Both differences are on `kitchen/K7/trial_01`:
 
-`kitchen/K7/trial_01` -- which diverged in every earlier attempt, including after
-the GPU, hash-seed and detector-path fixes -- now agrees. **Outcome-level
-reproducibility is achieved.** Pixel-level reproducibility is not, and cannot be
-in this environment; it no longer reaches the outcome.
+| field | A | B | C |
+| :--- | :--- | :--- | :--- |
+| `grounding_missing` | `['coffee_source']` | `['coffee_container']` | `['coffee_container']` |
+| `plan_length` | 20 | 8 | 8 |
+
+**No scored field differs.** `success`, `outcome_correct`, `false_completion`,
+`complete_grounding`, `gt_goal_coverage`, `astar_invocations` and
+`strict_v3_valid` are identical in all three, and all three replays report
+exactly the same aggregate metrics. The trial reaches the same verdict by a
+different internal route.
+
+**The strict gate of zero differences is therefore not met.** The honest
+statement is: 95 of 96 rows are bit-identical, one trial is path-bistable, and
+no reported metric is affected. An earlier version of this report claimed
+"96/96 identical, determinism achieved" on the strength of two replays agreeing;
+that was a sampling error on a roughly even flip, and the third replay is what
+exposed it.
 
 ### C.5 Consequence for the experiment
 
@@ -506,7 +518,7 @@ python scripts/audit_no_gt_leakage.py      # must print FINDINGS: 0
 ```
 
 ```
-2221 passed, 49 failed, 12 errors, 3 skipped
+2239 passed, 49 failed, 12 errors, 3 skipped
 FINDINGS: 0
 ```
 
@@ -610,63 +622,107 @@ repetition's manifest names as authoritative, and prints the missing cells of th
 
 Twelve variants covering every domain, the W2-W5 fastener cases, W7 search, the
 W8 sentinel and infeasible W10. One repetition, fresh FM output, the frozen
-sampler and token ceiling. The smoke is an execution test, not a performance
-measurement.
+sampler and token ceiling. An execution test, not a performance measurement.
 
-**It found a false completion, and that is why it was run.**
+| | first smoke | after prompt revert | after this pass |
+| :--- | ---: | ---: | ---: |
+| outcome correct | 0 / 12 | 2 / 12 | **4 / 12** |
+| GT-satisfied plans | 2 | 4 | 5 |
+| **false completions** | **1** | **0** | **0** |
 
-| | first smoke | after the prompt revert |
-| :--- | ---: | ---: |
-| outcome correct | 0 / 12 | **2 / 12** |
-| GT-satisfied plans | 2 | **4** |
-| **false completions** | **1** | **0** |
-
-The false completion was `kitchen/K2`: `ACTION_SEQUENCE_READY` at GT coverage
-0.5. Its contract never asked for the soup to be put in the bowls, so the
-planner satisfied everything stated and the run announced a half-finished task
-as done. §D.5 traces it to an unvalidated prompt change. After reverting, the
-same variant produces a 26-action plan that satisfies ground truth.
+`W10`, the infeasible sentinel, now concludes `EXHAUSTED_NO_VALID_GROUNDING`
+live -- end-to-end confirmation of the change in §K. `W5` reaches the same
+conclusion. Variation between the last two columns on individual feasible trials
+is FM sampling at temperature 0.6; per §14 the smoke is not tuned on.
 
 ### I.1 Two live behaviours worth stating
 
-**The symbolic goal is stricter than ground truth.** `K2` and `W7` produce plans
+**The symbolic goal is stricter than ground truth.** `K2` and `W8` produce plans
 that satisfy every GT goal while the pipeline reports
-`PARTIAL_ACTION_SEQUENCE_READY`, so they score as failures. Four plans satisfy
-GT; two are claimed. The system under-reports its own success and never
-over-reports it, which is the safe direction, and it is the same mechanism as
-W1/02 (§D.1): a goal atom the compiled action set cannot reach.
+`PARTIAL_ACTION_SEQUENCE_READY`. Five plans satisfy GT; four are claimed. The
+system under-reports its own success and never over-reports it.
 
-**Live is not predicted by the archived replay.** The 96 archived responses were
-collected under a different prompt and schema
-(archived `ff823ef4…` against the current `156c661a…`), so the offline 34/60 measures
-*archived responses through the current pipeline*. It is a pipeline regression
-measure, not a forecast. The 10x32 measures the current system end to end, and
-on a single sample per variant the live rate is visibly lower than the offline
-one.
+**Live is not predicted by the archived replay.** See the note at the top.
 
 ---
 
-## J. GO / NO-GO
+## J. Performance changes accepted in this pass
 
-**FINAL 10x32: GO**
+**One change, of four investigated.**
 
-Every acceptance gate in §15 passes: 96/96 records, zero harness failures, zero
-semantic FM calls in replay, zero planner failures after complete grounding,
-zero false completions, zero GT-goal mismatch successes, zero leakage findings,
-and 96/96 row-level determinism across two independent replays. The method is
-frozen in `METHOD_FREEZE.json`, the tree is clean, and the smoke executes the
-exact final configuration end to end without a false completion.
+### J.1 Accepted -- an exhausted search over a complete contract is a conclusion
 
-Three things the reader of the result must be told, none of which blocks the
-run:
+*Root cause.* Infeasibility was never validly concluded on any archived
+infeasible trial. 17 of 36 had a complete executable contract and a grounding
+search that ran to exhaustion without a valid complete assignment, and all
+reported `PARTIAL_ACTION_SEQUENCE_READY` -- the same status as a run that merely
+stopped early.
+
+*Generic rule.* A run that stated the task fully, enumerated every candidate it
+could observe and rejected all of them has proven, over its own contract and
+observations, that no assignment exists. All three conditions are required; the
+branch sits below the full-plan branch so it cannot displace a success, and it
+claims no completion so it cannot create a false completion. One helper, called
+by all three domains -- the first implementation went into `run.py` only and
+silently did nothing for kitchen and living room.
+
+*Tests.* 8 in `test_exhaustion_proof.py`, including ordering in all three domain
+sources and that a feasible variant never becomes correct by concluding
+exhaustion.
+
+*Measured.*
+
+| | before | after |
+| :--- | ---: | ---: |
+| feasible success | 34 / 60 | **34 / 60** |
+| infeasible outcome correct | 0 / 36 | **16 / 36** |
+| overall outcome correct | 34 / 96 | **50 / 96** |
+| false completions | 0 | **0** |
+| complete groundings | 34 | 34 |
+| planner failures after complete grounding | 0 | 0 |
+| mean GT coverage | 0.6625 | 0.6625 |
+
+*Regressions.* None.
+
+### J.2 Investigated and rejected
+
+**Conservative under-reporting.** Only K3/01 offline, and its symbolic problem
+has **no unreachable predicate** -- every goal atom has a producer. Legitimately
+stricter than GT (§6 Case A), not a spurious compiler goal.
+
+**W1/02 operation/goal consistency.** The raw FM contract declares the fastener
+`binding_policy: SHARED` itself. Per §7 an FM semantic failure, not a compiler
+artifact.
+
+**Perception conflict retention.** A tree-wide AST scan for container-valued
+precedence chains returns **zero** remaining occurrences; the earlier
+`_first_declared` fix covered them all.
+
+**W3 geometry and L3/03 entity-kind.** Left closed per §10.
+
+---
+
+## K. GO / NO-GO
+
+| Gate | Result |
+| :--- | :--- |
+| 96/96 records, 0 harness failures | pass (x3 replays) |
+| 0 semantic FM calls in replay | pass |
+| 0 planner failures after complete grounding | pass |
+| **0 false completions** | pass (archived and live) |
+| 0 GT-goal mismatch successes | pass |
+| 0 leakage findings | pass |
+| No new test failures | pass |
+| Three replays row-identical | **95/96** -- one path-bistable trial, no metric affected |
+
+Four things the reader must be told, none of which blocks the run:
 
 1. **Expect a lower live rate than 34/60.** That figure is archived responses
-   through the current pipeline, under a prompt the live run will not use. The
-   smoke suggests the live figure is materially lower. This is a property of the
-   comparison, not a defect.
-2. **Infeasibility is never validly concluded** on the archived distribution
-   (0/36). The system refuses infeasible tasks reliably -- zero false
-   completions -- but does not prove them impossible from a complete contract.
-3. **Residual perception nondeterminism exists** at pixel level and does not
-   currently reach outcomes (§C). Any instability in the 10 repetitions is
-   end-to-end, FM sampling *and* perception, not FM-only.
+   through the current pipeline, under a prompt the live run will not use.
+2. **One trial of 96 is path-bistable** (§C.4); no reported metric moves with it.
+   Residual instability is end-to-end -- FM sampling *and* perception.
+3. **The system under-reports success** (§I.1), never over-reports it.
+4. **Infeasibility is now concluded 16/36**, up from 0/36, and only where a
+   complete contract and an exhausted search justify it.
+
+FINAL 10x32: GO
