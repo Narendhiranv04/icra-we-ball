@@ -85,158 +85,28 @@ def _full_task_satisfied(run_dir: Path, domain: str, variant: str) -> bool:
         return False
 
 
-def _observed_graph_for(*, domain: str, variant: str, trial: str,
-                        raw_path: Path, output_root: Path):
-    """Phase 1: one unmodified pipeline run, reused by all seven conditions.
-
-    The observed scene graph is a property of the scene, not of the mask, so
-    building it once is both correct and what makes the seven conditions
-    genuinely comparable: they differ only in the evidence the grounder is
-    allowed to read from the *same* observation.
-    """
-    from mujoco_scenes.functional_tamp_pipeline.scene_graph import ObservedSceneGraph
-    from mujoco_scenes.functional_tamp_pipeline.run import run_pipeline
-
-    base_root = output_root / trial / "_phase1"
-    graph_path = base_root / domain / variant / "vlm" / "observed_scene_graph.json"
-    if not graph_path.is_file():
-        try:
-            run_pipeline(domain=domain, variant=variant, mode="vlm",
-                         specification_json=raw_path, output_root=base_root,
-                         dry_run=True)
-        except Exception:
-            pass  # a failed run can still have written the observation
-    if not graph_path.is_file():
-        return None
-    return ObservedSceneGraph.from_dict(json.loads(graph_path.read_text()))
-
-
-def _validate_roles(specification, result, graph) -> dict[str, Any]:
-    """Score chosen objects against FULL evidence, whatever the mask allowed.
-
-    This is the point of the ablation: a condition may ground happily on partial
-    evidence and still have chosen the wrong object.  Scoring against the mask
-    would make every condition trivially correct.
-    """
-    from mujoco_scenes.functional_tamp_pipeline.grounding import (
-        check_semantic_role_compatibility,
+def _full_task_satisfied(run_dir: Path, domain: str) -> tuple[bool, float]:
+    """Reuse the benchmark's own independent evaluation; never re-derive it."""
+    from mujoco_scenes.functional_tamp_pipeline.evaluation_metrics import (
+        full_task_coverage,
     )
-    total = selected = confirmed = refuted = unknown = 0
-    details = []
-    assignment = result.assignment or {}
-    for name, role in specification.nodes.items():
-        ids = assignment.get(name)
-        ids = [] if ids is None else ([ids] if isinstance(ids, str) else list(ids))
-        for index in range(role.minimum_count):
-            total += 1
-            object_id = ids[index] if index < len(ids) else None
-            node = graph.get_node(object_id) if object_id else None
-            if node is None:
-                sem = "FALSE"
-            else:
-                selected += 1
-                sem = (check_semantic_role_compatibility(node, role.semantic_categories)[0]
-                       if role.semantic_categories else "TRUE")
-            confirmed += sem == "TRUE"
-            refuted += sem == "FALSE"
-            unknown += sem == "UNKNOWN"
-            details.append({"role": name, "slot_index": index,
-                            "selected_object_id": object_id, "semantic_status": sem})
-    # Real perception returns UNKNOWN where an oracle returned TRUE, so the GT
-    # ablation's "every slot must be TRUE" would mark the unablated pipeline
-    # itself as failing.  UNKNOWN is therefore reported as its own quantity and
-    # the success test is "nothing was refuted", never "UNKNOWN counts as TRUE":
-    # a slot the evidence contradicts still fails.
-    return {"role_slots_total": total, "role_slots_selected": selected,
-            "role_slots_gt_confirmed": confirmed,
-            "role_slots_gt_refuted": refuted,
-            "role_slots_gt_unknown": unknown,
-            "role_slots_gt_valid": confirmed,
-            "role_slot_gt_valid_pct": round(100 * confirmed / total, 2) if total else None,
-            "exact_role_gt_success": bool(
-                result.complete and total and selected == total and refuted == 0),
-            "exact_role_gt_confirmed_success": bool(
-                result.complete and total and selected == total == confirmed),
-            "per_role_gt_validation": details}
-
-
-def _validate_bindings(specification, result, graph) -> dict[str, Any]:
-    """Score chosen pairings against the FULL binary evidence in the scene."""
-    total = selected = valid = 0
-    details = []
-    for group in specification.operation_groups:
-        bindings = list((result.operation_bindings or {}).get(group.id, []))
-        for index in range(group.required_target_count):
-            total += 1
-            binding = bindings[index] if index < len(bindings) else None
-            checks = []
-            if binding:
-                selected += 1
-                tool_id = binding.get("target_id") if False else binding.get("tool_id")
-                target_id = binding.get("target_id")
-                context_id = (binding.get("context") or {}).get(group.context_role)
-                # physical_preconditions overrides required_relations inside
-                # the grounder.  Checking only required_relations left every
-                # FM group that declares preconditions with an empty check
-                # list, which then scored as invalid for having nothing to
-                # verify -- the validator failing, not the binding.
-                if group.physical_preconditions:
-                    roles = {group.tool_role: tool_id, group.target_role: target_id}
-                    if group.context_role and context_id is not None:
-                        roles[group.context_role] = context_id
-                    triples = [(roles[s_role], predicate, roles[o_role])
-                               for s_role, predicate, o_role in group.physical_preconditions
-                               if s_role in roles and o_role in roles]
-                else:
-                    triples = [(tool_id, predicate, target_id)
-                               for predicate in group.required_relations]
-                    if group.context_role and context_id is not None:
-                        triples += [(tool_id, predicate, context_id)
-                                    for predicate in group.context_relations]
-                for subject, predicate, obj in triples:
-                    relation = graph.get_relation(predicate, subject, obj)
-                    checks.append({"predicate": predicate, "subject_id": subject,
-                                   "object_id": obj,
-                                   "status": relation.status if relation else "UNKNOWN"})
-            # A group that declares no binary evidence at all cannot be refuted
-            # by binary evidence; it is vacuously satisfied, exactly as the
-            # grounder treats it (no FALSE and no UNKNOWN means TRUE).
-            ok = bool(binding) and not any(c["status"] == "FALSE" for c in checks)
-            refuted_here = any(c["status"] == "FALSE" for c in checks)
-            valid += ok
-            details.append({"group": group.id, "binding_index": index,
-                            "binding": binding, "relation_checks": checks, "gt_valid": ok})
-    return {"operation_bindings_total": total, "operation_bindings_selected": selected,
-            "operation_bindings_gt_valid": valid,
-            "operation_binding_gt_valid_pct": round(100 * valid / total, 2) if total else None,
-            "exact_operation_binding_gt_success": bool(
-                result.complete and total and selected == total == valid),
-            "per_binding_gt_validation": details}
-
-
-def _norm_assignment(value) -> dict[str, list[str]]:
-    out = {}
-    for role, ids in sorted((value or {}).items()):
-        ids = [] if ids is None else ([ids] if isinstance(ids, str) else list(ids))
-        out[role] = sorted(str(x) for x in ids)
-    return out
-
-
-def _norm_bindings(value) -> dict[str, list[str]]:
-    out = {}
-    for group, bindings in sorted((value or {}).items()):
-        out[group] = sorted(json.dumps({
-            "tool_id": str(b.get("tool_id")), "target_id": str(b.get("target_id")),
-            "context": {str(k): str(v) for k, v in sorted((b.get("context") or {}).items())},
-        }, sort_keys=True) for b in bindings)
-    return out
+    try:
+        satisfied_count, goal_count, coverage, satisfied = full_task_coverage(
+            domain, run_dir)
+        return bool(satisfied), float(coverage)
+    except Exception:
+        return False, 0.0
 
 
 def evaluate_one(*, domain: str, variant: str, trial: str, condition: str,
-                 raw_path: Path, output_root: Path, graph) -> dict[str, Any]:
-    from mujoco_scenes.functional_tamp_pipeline.grounding import ground_graph
-    from mujoco_scenes.fm_evidence_ablation import write_masked_specification
+                 raw_path: Path, output_root: Path) -> dict[str, Any]:
+    """One full pipeline run with `condition`'s evidence mask in force."""
+    from mujoco_scenes.fm_ablation_shadow import evidence_masked
+    from mujoco_scenes.functional_tamp_pipeline.models import PipelineResult
+    from mujoco_scenes.functional_tamp_pipeline.run import run_pipeline
 
+    run_root = output_root / trial / condition
+    run_dir = run_root / domain / variant / "vlm"
     row: dict[str, Any] = {
         "domain": domain, "variant": variant, "trial": trial, "condition": condition,
         "enabled_evidence_components": list(COMPONENT_MASKS[condition]),
@@ -244,44 +114,41 @@ def evaluate_one(*, domain: str, variant: str, trial: str, condition: str,
         "archived_response": str(raw_path),
     }
     started = time.perf_counter()
-    try:
-        specification = specification_from_archived_response(raw_path, domain, TASKS[domain])
-    except Exception as exc:
-        # The FM response itself was unusable.  Identical across all seven
-        # masks, so it is recorded rather than dropped: dropping it would let
-        # different conditions be compared over different variant sets.
-        row.update(fm_spec_available=False, grounding_status="FM_SPEC_UNUSABLE",
-                   grounding_complete=False,
-                   failure_reason=f"{type(exc).__name__}: {exc}",
-                   runtime_seconds=round(time.perf_counter() - started, 3))
-        return row
-    row["fm_spec_available"] = True
-    row["fm_channels_present"] = evidence_channels_present(specification)
+    with evidence_masked(condition) as holder:
+        try:
+            result = run_pipeline(domain=domain, variant=variant, mode="vlm",
+                                  specification_json=raw_path,
+                                  output_root=run_root, dry_run=True)
+        except Exception as exc:
+            result = PipelineResult(domain=domain, variant=variant, mode="vlm",
+                                    status="PIPELINE_EXCEPTION",
+                                    failure_reason=f"{type(exc).__name__}: {exc}")
+        wrapper = holder.get("wrapper")
+    # A shadow that silently failed to patch would report the unablated pipeline
+    # seven times over and look like a clean result, so the mask having been
+    # applied is recorded per row rather than assumed.
+    row["mask_applied"] = bool(wrapper and wrapper.masked_calls)
+    row["masked_spec_calls"] = int(wrapper.masked_calls) if wrapper else 0
 
-    masked = mask_specification(specification, condition)
-    row["masked_channels_present"] = evidence_channels_present(masked)
-    write_masked_specification(
-        specification, condition,
-        output_root / trial / condition / "_masked_specs" / domain / f"{variant}.json")
-
-    try:
-        result = ground_graph(masked, graph, {"search_exhausted": True})
-    except Exception as exc:
-        row.update(grounding_status="GROUNDING_EXCEPTION", grounding_complete=False,
-                   failure_reason=f"{type(exc).__name__}: {exc}",
-                   runtime_seconds=round(time.perf_counter() - started, 3))
-        return row
-
-    row.update(grounding_status=result.status,
-               grounding_complete=bool(result.complete),
-               selected_assignment=result.assignment,
-               selected_operation_bindings={k: list(v) for k, v
-                                            in (result.operation_bindings or {}).items()},
-               **_validate_roles(masked, result, graph),
-               **_validate_bindings(specification, result, graph))
-    row["infeasible_rejected"] = (not row["gt_feasible"]) and not result.complete
-    row["false_grounding"] = (not row["gt_feasible"]) and bool(result.complete)
-    row["runtime_seconds"] = round(time.perf_counter() - started, 3)
+    satisfied, coverage = _full_task_satisfied(run_dir, domain)
+    row.update(
+        pipeline_status=result.status,
+        failure_reason=result.failure_reason,
+        failure_category=getattr(result, "failure_category", None),
+        canonicalization_succeeded=getattr(result, "canonicalization_succeeded", None),
+        runtime_contract_complete=getattr(result, "functional_spec_complete", None),
+        candidate_plan_length=len(result.candidate_plan or ()),
+        gt_full_task_satisfied=satisfied,
+        full_task_coverage=coverage,
+        completion_claimed=completion_claimed(result.status),
+        false_completion=is_false_completion(pipeline_status=result.status,
+                                             gt_full_task_satisfied=satisfied),
+        outcome_correct=outcome_is_correct(
+            gt_feasible=row["gt_feasible"], gt_full_task_satisfied=satisfied,
+            pipeline_status=result.status,
+            runtime_contract_complete=getattr(result, "functional_spec_complete", None)),
+        runtime_seconds=round(time.perf_counter() - started, 3),
+    )
     return row
 
 
@@ -291,20 +158,15 @@ def compare_to_full(rows: list[dict[str, Any]]) -> None:
                  for r in rows if r["condition"] == "full"}
     for row in rows:
         base = reference.get((row["trial"], row["domain"], row["variant"]))
-        if base is None or not row.get("fm_spec_available"):
+        if base is None:
             continue
-        row["exact_role_match_to_full"] = (
-            _norm_assignment(row.get("selected_assignment"))
-            == _norm_assignment(base.get("selected_assignment")))
-        row["exact_operation_binding_match_to_full"] = (
-            _norm_bindings(row.get("selected_operation_bindings"))
-            == _norm_bindings(base.get("selected_operation_bindings")))
-        row["outcome_matches_full"] = (
-            row.get("grounding_complete") == base.get("grounding_complete"))
+        row["full_reference_status"] = base.get("pipeline_status")
+        row["status_matches_full"] = row.get("pipeline_status") == base.get("pipeline_status")
+        row["outcome_matches_full"] = row.get("outcome_correct") == base.get("outcome_correct")
 
 
 def summarize(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Mirror the GT ablation's columns so the two tables read side by side."""
+    """End-to-end pipeline outcomes per condition, scored by the live scorer."""
     rows = list(rows)
     out = []
     for domain in (*DOMAINS, "all"):
@@ -313,36 +175,31 @@ def summarize(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
             group = [r for r in source if r["condition"] == condition]
             if not group:
                 continue
-            usable = [r for r in group if r.get("fm_spec_available")]
-            feasible = [r for r in usable if r["gt_feasible"]]
-            infeasible = [r for r in usable if not r["gt_feasible"]]
+            scorable = [r for r in group if trial_is_scorable(r.get("pipeline_status"))]
+            feasible = [r for r in scorable if r["gt_feasible"]]
+            infeasible = [r for r in scorable if not r["gt_feasible"]]
 
             def pct(subset, key):
                 subset = [r for r in subset if r.get(key) is not None]
                 return (round(100 * sum(bool(r[key]) for r in subset) / len(subset), 2)
                         if subset else None)
-
-            def ratio(subset, num, den):
-                total = sum(r.get(den) or 0 for r in subset)
-                return (round(100 * sum(r.get(num) or 0 for r in subset) / total, 2)
-                        if total else None)
             out.append({
                 "domain": domain, "condition": condition,
                 "enabled_evidence_components": "+".join(COMPONENT_MASKS[condition]),
                 "trials": len(group),
-                "fm_spec_usable": len(usable),
+                "mask_applied_all": all(r.get("mask_applied") for r in group),
                 "feasible_trials": len(feasible),
                 "infeasible_trials": len(infeasible),
-                "grounding_completion_pct": pct(feasible, "grounding_complete"),
-                "role_slot_gt_valid_pct": ratio(feasible, "role_slots_gt_valid", "role_slots_total"),
-                "role_gt_success_pct": pct(feasible, "exact_role_gt_success"),
-                "role_match_full_pct": pct(feasible, "exact_role_match_to_full"),
-                "operation_binding_gt_valid_pct": ratio(
-                    feasible, "operation_bindings_gt_valid", "operation_bindings_total"),
-                "pair_gt_success_pct": pct(feasible, "exact_operation_binding_gt_success"),
-                "pair_match_full_pct": pct(feasible, "exact_operation_binding_match_to_full"),
-                "infeasible_rejection_pct": pct(infeasible, "infeasible_rejected"),
-                "false_grounding_count": sum(bool(r.get("false_grounding")) for r in infeasible),
+                "contract_complete_pct": pct(group, "runtime_contract_complete"),
+                "feasible_success_pct": pct(feasible, "outcome_correct"),
+                "infeasible_rejection_pct": pct(infeasible, "outcome_correct"),
+                "overall_correct_pct": pct(scorable, "outcome_correct"),
+                "completion_claimed_pct": pct(feasible, "completion_claimed"),
+                "status_matches_full_pct": pct(group, "status_matches_full"),
+                "mean_full_task_coverage": (
+                    round(sum(r.get("full_task_coverage") or 0 for r in feasible)
+                          / len(feasible), 4) if feasible else None),
+                "false_completions": sum(bool(r.get("false_completion")) for r in group),
             })
     return out
 
@@ -380,22 +237,15 @@ def main() -> int:
                 if raw is None:
                     missing.append(f"{trial}/{domain}/{variant}")
                     continue
-                graph = _observed_graph_for(domain=domain, variant=variant, trial=trial,
-                                            raw_path=raw, output_root=args.output_root)
-                if graph is None:
-                    missing.append(f"{trial}/{domain}/{variant} (no observed graph)")
-                    continue
                 for condition in conditions:
                     row = evaluate_one(domain=domain, variant=variant, trial=trial,
                                        condition=condition, raw_path=raw,
-                                       output_root=args.output_root, graph=graph)
+                                       output_root=args.output_root)
                     rows.append(row)
                     print(f"[fm-ablation] {trial} {domain}/{variant} {condition:14s} "
-                          f"status={row.get('grounding_status')} "
-                          f"complete={row.get('grounding_complete')} "
-                          f"role_gt={row.get('exact_role_gt_success')} "
-                          f"pair_gt={row.get('exact_operation_binding_gt_success')}",
-                          flush=True)
+                          f"status={row.get('pipeline_status'):32s} "
+                          f"correct={str(row.get('outcome_correct')):5s} "
+                          f"masked={row.get('mask_applied')}", flush=True)
                 (args.output_root / "results.json").write_text(
                     json.dumps(rows, indent=2, default=str) + "\n", encoding="utf-8")
 
