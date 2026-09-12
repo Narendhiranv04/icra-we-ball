@@ -62,12 +62,13 @@ Single clean replay, `--workers 2`, 96/96 rows, **zero** `HARNESS_FAILURE`.
 | :--- | :--- |
 | Trials | 96 (60 feasible, 36 infeasible) |
 | **Feasible success** | **34 / 60 (56.7%)** |
+| Infeasible trials that avoided claiming completion | 36 / 36 |
 | — Kitchen | 11 / 18 |
 | — Living Room | 10 / 18 |
 | — Workshop | 13 / 24 |
 | feasible_outcome_correct | 34 / 60 |
-| infeasible_outcome_correct | 7 / 36 |
-| **overall_outcome_correct** | **41 / 96 (42.7%)** |
+| infeasible_outcome_correct | **0 / 36** |
+| **overall_outcome_correct** | **34 / 96 (35.4%)** |
 | **False completions** | **0 / 96** |
 | GT-goal mismatch successes | **0** |
 | Complete grounding | 34 |
@@ -357,6 +358,32 @@ currently-passing variants 6 points from being reclassified, and any looser
 threshold is chosen to catch this variant and nothing else. That is the
 benchmark tuning §2 forbids.
 
+### D.5 The prompt change nothing could have caught
+
+The live smoke produced a false completion on `kitchen/K2`:
+`ACTION_SEQUENCE_READY` at GT coverage 0.5. The run satisfied every requirement
+its contract stated; the contract never asked for the soup to be put in the
+bowls.
+
+Under the OPERATIONS wording the 96 archived responses were collected with, the
+model emits `Place soup_ingredient into soup_bowl`. Sentences added afterwards
+-- name each operation as a single concrete physical motion, split a
+move-then-work step into two -- change that to `Place soup bowl on table` with no
+filling step at all.
+
+Those sentences landed **after** the collection, as a secondary change in a
+commit about relations, and **no measurement since could have detected them**:
+every one has been the frozen replay, which feeds archived responses through the
+pipeline and never reads the prompt. The change shipped with no evidence, and
+the first live run after it is the evidence.
+
+Reverted, and the same variant then produces a 26-action plan that satisfies
+ground truth. Only the OPERATIONS sentences are reverted: the ROLES paragraph
+also differs from the collection, but deliberately -- `required_count` counts
+occasions rather than physical instances and the compiler's binding-policy
+handling is built on it. `test_prompt_drift.py` pins both halves, so neither a
+reintroduction nor a blanket revert can happen quietly.
+
 ### D.4 Token truncation — measured, and not what it looked like
 
 All five unparseable archived calls have `finish_reason = length`,
@@ -554,3 +581,71 @@ repetition writes an immutable `attempt_NN/`; a failed one is preserved and
 reported, never silently retried. The aggregator scores only the attempt the
 repetition's manifest names as authoritative, and prints the missing cells of the
 32-variant grid separately from semantic failures.
+
+
+---
+
+## I. Live smoke at the exact frozen configuration
+
+Twelve variants covering every domain, the W2-W5 fastener cases, W7 search, the
+W8 sentinel and infeasible W10. One repetition, fresh FM output, the frozen
+sampler and token ceiling. The smoke is an execution test, not a performance
+measurement.
+
+**It found a false completion, and that is why it was run.**
+
+| | first smoke | after the prompt revert |
+| :--- | ---: | ---: |
+| outcome correct | 0 / 12 | **2 / 12** |
+| GT-satisfied plans | 2 | **4** |
+| **false completions** | **1** | **0** |
+
+The false completion was `kitchen/K2`: `ACTION_SEQUENCE_READY` at GT coverage
+0.5. Its contract never asked for the soup to be put in the bowls, so the
+planner satisfied everything stated and the run announced a half-finished task
+as done. §D.5 traces it to an unvalidated prompt change. After reverting, the
+same variant produces a 26-action plan that satisfies ground truth.
+
+### I.1 Two live behaviours worth stating
+
+**The symbolic goal is stricter than ground truth.** `K2` and `W7` produce plans
+that satisfy every GT goal while the pipeline reports
+`PARTIAL_ACTION_SEQUENCE_READY`, so they score as failures. Four plans satisfy
+GT; two are claimed. The system under-reports its own success and never
+over-reports it, which is the safe direction, and it is the same mechanism as
+W1/02 (§D.1): a goal atom the compiled action set cannot reach.
+
+**Live is not predicted by the archived replay.** The 96 archived responses were
+collected under a different prompt and schema
+(`ff823ef4…` against the current `bfd7433e…`), so the offline 34/60 measures
+*archived responses through the current pipeline*. It is a pipeline regression
+measure, not a forecast. The 10x32 measures the current system end to end, and
+on a single sample per variant the live rate is visibly lower than the offline
+one.
+
+---
+
+## J. GO / NO-GO
+
+**FINAL 10x32: GO**
+
+Every acceptance gate in §15 passes: 96/96 records, zero harness failures, zero
+semantic FM calls in replay, zero planner failures after complete grounding,
+zero false completions, zero GT-goal mismatch successes, zero leakage findings,
+and 96/96 row-level determinism across two independent replays. The method is
+frozen in `METHOD_FREEZE.json`, the tree is clean, and the smoke executes the
+exact final configuration end to end without a false completion.
+
+Three things the reader of the result must be told, none of which blocks the
+run:
+
+1. **Expect a lower live rate than 34/60.** That figure is archived responses
+   through the current pipeline, under a prompt the live run will not use. The
+   smoke suggests the live figure is materially lower. This is a property of the
+   comparison, not a defect.
+2. **Infeasibility is never validly concluded** on the archived distribution
+   (0/36). The system refuses infeasible tasks reliably -- zero false
+   completions -- but does not prove them impossible from a complete contract.
+3. **Residual perception nondeterminism exists** at pixel level and does not
+   currently reach outcomes (§C). Any instability in the 10 repetitions is
+   end-to-end, FM sampling *and* perception, not FM-only.
