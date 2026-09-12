@@ -6,6 +6,13 @@ claim. Numbers are computed from artifacts by
 `mujoco_scenes/evaluation_outcome.py::summarize`, which raises rather than
 returns if the decomposition is inconsistent.
 
+> **Interpretation, stated once and applied throughout.** The archived replay
+> measures the current downstream pipeline on 96 FM responses collected under a
+> *different* prompt and schema. It is a regression and development
+> measurement. **It is not a forecast of final live performance.** The live
+> figure is whatever the 10x32 produces; the smoke (§I) is a single sample and
+> is reported separately.
+
 ---
 
 ## A. Final git / config identity
@@ -15,12 +22,12 @@ field is computed from the artifact it describes, so the freeze cannot silently
 stop describing the tree it names.
 
 ```
-git sha                     8805a56f32a8c31ec1404b55070e4f6fc6dd7759
+RELEASE TAG                 fm-tamp-final-experiment-v1   <- identifies the commit
+behavioural_identity_sha256 b4abf1a827a4adf669c1c44ce5ba33e703047859107e2dd11de8cf030c7afc89
+base_code_sha               7557d1069b7e02537e9ce565e299e860e4c4afff   (generated FROM this)
 branch                      vlm-testing-pipeline
-committed                   2026-09-12T04:44:58+05:30
-identity_sha256             875478341c4b5e8cda994e9959cfd519af9404c62f781fc04453d35558126d26
 
-prompt_and_schema_sha256    bfd7433e19a1dd81d89e7ec50446b7cf5599304579663ba1bd9b0803ca25a521
+prompt_and_schema_sha256    156c661a45a43646b51cdf72a2c68e023e8d4c79e4fcc35f6a0d69074b6fff0b
 capability_registry_sha256  98055ba6579345151cd1b7a9ccea32fc2ad47dd0f51f51cf40e3eb9cdb01aef7
 runtime_ontology_sha256     4fee971c3f494023adadc94fa350d3d9e27d81dbe41c001c2b8fc1d20bf49d41
 schema_version              3
@@ -30,12 +37,20 @@ workshop_geometry_sha256    3e41034f4765325856d85a05e0d0f161dfad4e89100c03868e03
 semantic_grounding_sha256   7e5a57e631b21374f1ad8f6fd00cac9e6ec6987302801b7a7a5e466bd69dc957
 determinism_module_sha256   a8667ce9e27097799859e1d104ef27369de92e4102b96fe09b68f9820578545a
 
-evaluator_module_sha256     e0b7178ee42d3b817751d8b03f7ee1b34341afe8e859b4596ddd2088805f5ba3
+evaluator_module_sha256     9668af76c7a9ee5b31afce919fc90f5fad34799e9d01181eaebcbb7cc28fd80e
 completion_claimed          ['ACTION_SEQUENCE_READY']
 infeasibility_concluded     ['EXHAUSTED_NO_VALID_GROUNDING', 'INFEASIBLE', 'NO_VALID_COMPLETE_ASSIGNMENT', 'PLANNING_PROVEN_INFEASIBLE']
 
 benchmark grid              32 variants {'kitchen': 12, 'living_room': 10, 'workshop': 10}
 ```
+
+**Repository identity is the annotated tag, not a field in the artifact.** A
+tracked file cannot contain the hash of the commit that contains it: writing it
+dirties the tree, committing produces a new SHA, and the recorded one is
+immediately stale. An earlier version of this report recorded a SHA that was two
+commits behind the branch with `clean: false`. `base_code_sha` names the commit
+the artifact was generated *from*; `fm-tamp-final-experiment-v1` names the commit
+that was released.
 
 Reproducible child environment, passed to every spawned trial by both the
 replay driver and the live runner (these cannot be set in process -- the
@@ -553,8 +568,14 @@ it differs from what an existing output root was started with.
 
 Thinking is **on** and temperature is **0.6**: the repetitions exist to measure
 sampling variance, and a greedy sampler would make ten repetitions ten copies of
-one draw. These are the values the archived distribution was drawn under, so the
-offline numbers remain the right predictor.
+one draw.
+
+The *sampler* matches the archived collection; `max_tokens` is deliberately
+higher (§D.4). **The semantic contract does not match**, and that is what
+governs comparability: the prompt and schema differ from the collection
+(§I.1), so the archived 34/60 measures the current downstream pipeline on
+archived FM responses. It is a regression and development metric, **not a
+forecast of final live performance.**
 
 ---
 
@@ -617,7 +638,7 @@ W1/02 (§D.1): a goal atom the compiled action set cannot reach.
 
 **Live is not predicted by the archived replay.** The 96 archived responses were
 collected under a different prompt and schema
-(`ff823ef4…` against the current `bfd7433e…`), so the offline 34/60 measures
+(archived `ff823ef4…` against the current `156c661a…`), so the offline 34/60 measures
 *archived responses through the current pipeline*. It is a pipeline regression
 measure, not a forecast. The 10x32 measures the current system end to end, and
 on a single sample per variant the live rate is visibly lower than the offline

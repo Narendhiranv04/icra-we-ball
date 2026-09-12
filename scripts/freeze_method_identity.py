@@ -1,12 +1,31 @@
 #!/usr/bin/env python3
-"""Emit the authoritative identity of the frozen method.
+"""Emit the behavioural identity of the frozen method.
 
 Everything that can change what the system does, in one file, so a later run can
 be checked against it rather than assumed to match.  Reads only; runs nothing.
+Each field is computed from the artifact it describes, because a freeze whose
+numbers were typed in is a freeze that can silently stop describing the tree it
+names.
 
-The identity is not a summary written by hand.  Each field is computed from the
-artifact it describes, because a freeze whose numbers were typed in is a freeze
-that can silently stop describing the tree it names.
+WHAT THIS FILE DELIBERATELY DOES NOT CONTAIN: the SHA of the commit that
+contains it.  A tracked artifact cannot hold that honestly.  Writing the file
+dirties the tree, committing it produces a new SHA, and the recorded one is
+immediately one commit stale -- regenerating just moves the problem along.  The
+previous version recorded `sha` and `clean` anyway and shipped saying
+`clean: false` against a SHA two commits behind the branch.
+
+So the two identities are separated:
+
+  * **Behavioural identity** -- prompt, schema, ontology, capabilities,
+    evaluator, determinism, perception configs, sampler, child environment,
+    benchmark grid.  These decide what the system does, they are content
+    hashes, and they are self-consistent inside this file.
+  * **Repository identity** -- which commit was released.  That is carried by an
+    annotated git tag, which names a commit from outside it and has no
+    self-reference problem.
+
+`base_code_sha` records the commit this artifact was generated *from*, named so
+it cannot be mistaken for the commit that contains it.
 """
 from __future__ import annotations
 
@@ -19,6 +38,11 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
+
+# The annotated tag that identifies the released commit.  Created after this
+# artifact is committed, which is exactly why the commit SHA is not recorded
+# inside the artifact.
+RELEASE_TAG = "fm-tamp-final-experiment-v1"
 
 
 def _sha256_file(path: Path) -> str | None:
@@ -58,11 +82,18 @@ def build_identity() -> dict:
                   for i in range(len(labels)))
 
     identity = {
-        "git": {
-            "sha": _git("rev-parse", "HEAD"),
+        "provenance": {
+            # The commit this artifact was generated FROM, not the commit that
+            # contains it -- writing this file necessarily comes after that
+            # commit exists.  The released commit is identified by the git tag
+            # named in release_tag, which can name a commit from outside it.
+            "base_code_sha": _git("rev-parse", "HEAD"),
             "branch": _git("rev-parse", "--abbrev-ref", "HEAD"),
-            "clean": _git("status", "--porcelain") == "",
-            "committed_at": _git("log", "-1", "--format=%cI"),
+            "generated_at": _git("log", "-1", "--format=%cI"),
+            "release_tag": RELEASE_TAG,
+            "note": "Repository identity is the annotated tag, not a field here. "
+                    "A tracked file cannot contain the hash of the commit that "
+                    "contains it.",
         },
         "semantic_contract": {
             "prompt_and_schema_sha256": compute_v3_prompt_and_schema_hash(),
@@ -99,8 +130,12 @@ def build_identity() -> dict:
             "domains": {d: len(v) for d, v in sorted(VARIANT_LABELS.items())},
         },
     }
-    payload = json.dumps(identity, sort_keys=True).encode()
-    identity["identity_sha256"] = hashlib.sha256(payload).hexdigest()
+    # The behavioural hash covers only what decides behaviour.  Provenance is
+    # excluded on purpose: regenerating from a different commit must not change
+    # the identity of a method that behaves identically.
+    behavioural = {k: v for k, v in identity.items() if k != "provenance"}
+    payload = json.dumps(behavioural, sort_keys=True).encode()
+    identity["behavioural_identity_sha256"] = hashlib.sha256(payload).hexdigest()
     return identity
 
 
@@ -110,10 +145,9 @@ def main() -> int:
     out.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n")
     print(json.dumps(identity, indent=2, sort_keys=True))
     print(f"\nwrote {out.relative_to(REPO)}")
-    if not identity["git"]["clean"]:
-        print("WARNING: working tree is not clean; this identity does not "
-              "describe a committed state", file=sys.stderr)
-        return 1
+    print(f"behavioural identity: {identity['behavioural_identity_sha256']}")
+    print(f"generated from       : {identity['provenance']['base_code_sha']}")
+    print(f"release identified by: tag {RELEASE_TAG} (created after this commit)")
     return 0
 
 
