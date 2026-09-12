@@ -760,11 +760,14 @@ precedence chains returns **zero** remaining occurrences; the earlier
 ## K. GO / NO-GO
 
 ```
-release tag              fm-tamp-final-experiment-v1
-final commit             32917941fa9cb4913e0c6478619e5f0ef624ae75
-branch                   vlm-testing-pipeline
-tree                     clean
+release tag   fm-tamp-final-experiment-v1
+branch        vlm-testing-pipeline
+resolve with  git rev-parse fm-tamp-final-experiment-v1
 ```
+
+The commit hash is deliberately not written here. A document inside the release
+cannot name the commit that contains it -- the same self-reference that made
+`METHOD_FREEZE.json` perpetually stale (§A). The tag resolves it from outside.
 
 
 | Gate | Result |
