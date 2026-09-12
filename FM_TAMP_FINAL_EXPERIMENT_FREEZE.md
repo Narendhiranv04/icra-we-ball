@@ -759,6 +759,14 @@ precedence chains returns **zero** remaining occurrences; the earlier
 
 ## K. GO / NO-GO
 
+```
+release tag              fm-tamp-final-experiment-v1
+final commit             32917941fa9cb4913e0c6478619e5f0ef624ae75
+branch                   vlm-testing-pipeline
+tree                     clean
+```
+
+
 | Gate | Result |
 | :--- | :--- |
 | 96/96 records, 0 harness failures | pass (x3 replays) |
