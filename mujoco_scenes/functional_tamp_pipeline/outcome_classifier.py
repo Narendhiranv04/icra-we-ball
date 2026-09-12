@@ -125,3 +125,29 @@ def classify_pipeline_outcome(
         category, default = "SUCCESS", "Complete grounded task plan independently validated"
     assert category in PIPELINE_OUTCOMES
     return PipelineOutcome(category, reason or default, facts)
+
+
+def exhaustion_proves_no_valid_grounding(specification, satisfaction) -> bool:
+    """Whether an exhausted search over a complete contract has proven a negative.
+
+    A run that stated the task fully, enumerated every candidate it could
+    observe and rejected all of them has shown -- over its own contract and its
+    own observations -- that no valid complete assignment exists.  Reporting
+    that as a partial plan makes it indistinguishable from a run that merely
+    stopped early, which is why infeasibility was never validly concluded.
+
+    All three conditions are required.  Without a complete contract the run
+    never stated the task; without exhaustion it has not finished looking; and
+    with a valid grounding nothing was shown to be impossible.
+
+    This lives here, and not inline at a status branch, because the three
+    domains decide their terminal status in three different places and an
+    implementation added to one of them silently does nothing for the other two.
+    """
+    contract_complete = bool(getattr(
+        specification, "online_executable_contract_complete",
+        getattr(specification, "required_contract_complete", False)))
+    search_exhausted = bool(
+        (getattr(satisfaction, "evidence", None) or {}).get("search_exhausted"))
+    grounded = bool(getattr(satisfaction, "complete", False))
+    return contract_complete and search_exhausted and not grounded

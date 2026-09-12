@@ -801,27 +801,11 @@ def _run_pipeline_impl(
         is_full_plan = complete_planning_contract(
             planning_specification, satisfaction, planned.search.statistics, planned.validation
         )
-        # A complete contract whose finite candidate space has been exhausted
-        # without yielding a valid complete assignment is a proof, not a partial
-        # result.  The run stated the task fully, enumerated every candidate it
-        # could observe, and rejected all of them; reporting that as "partial
-        # plan" discards a conclusion the evidence supports.  All three
-        # conditions are required: without a complete contract the run has not
-        # stated the task, and without exhaustion it has not finished looking.
-        #
-        # This is deliberately below the full-plan branch, so it can never
-        # displace a success, and it claims no completion, so it can never
-        # create a false completion.
-        contract_complete_for_proof = bool(getattr(
-            state.specification, "online_executable_contract_complete",
-            getattr(state.specification, "required_contract_complete", False)))
-        grounding_search_exhausted = bool(
-            (getattr(satisfaction, "evidence", None) or {}).get("search_exhausted"))
+        from .outcome_classifier import exhaustion_proves_no_valid_grounding
         if is_full_plan:
             status = "ACTION_SEQUENCE_READY"
             spec_complete = True
-        elif (contract_complete_for_proof and grounding_search_exhausted
-              and not satisfaction.complete):
+        elif exhaustion_proves_no_valid_grounding(state.specification, satisfaction):
             status = "EXHAUSTED_NO_VALID_GROUNDING"
             spec_complete = False
         elif planned.actions:

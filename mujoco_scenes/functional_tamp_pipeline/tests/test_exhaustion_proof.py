@@ -71,6 +71,42 @@ def test_a_feasible_variant_does_not_become_correct_by_concluding_exhaustion():
                                   runtime_contract_complete=True)
 
 
+def test_every_domain_applies_it():
+    """Three domains decide terminal status in three different places.
+
+    The first implementation went into run.py only, so workshop got the
+    conclusion and kitchen and living room silently did not -- four trials met
+    every condition and still reported a partial plan.
+    """
+    for rel in ("mujoco_scenes/functional_tamp_pipeline/run.py",
+                "mujoco_scenes/functional_tamp_pipeline/domains/kitchen.py",
+                "mujoco_scenes/functional_tamp_pipeline/domains/living_room.py"):
+        source = (REPO / rel).read_text()
+        assert "exhaustion_proves_no_valid_grounding" in source, (
+            f"{rel} decides a terminal status without the exhaustion conclusion")
+        full = source.index('status = "ACTION_SEQUENCE_READY"')
+        exhausted = source.index('status = "EXHAUSTED_NO_VALID_GROUNDING"')
+        partial = source.index('status = "PARTIAL_ACTION_SEQUENCE_READY"')
+        assert full < exhausted < partial, f"{rel}: branch order is wrong"
+
+
+def test_the_helper_requires_all_three_conditions():
+    from mujoco_scenes.functional_tamp_pipeline.outcome_classifier import (
+        exhaustion_proves_no_valid_grounding as proves,
+    )
+
+    class Spec:
+        def __init__(self, c): self.online_executable_contract_complete = c
+
+    class Sat:
+        def __init__(self, ex, comp): self.evidence = {"search_exhausted": ex}; self.complete = comp
+
+    assert proves(Spec(True), Sat(True, False))
+    assert not proves(Spec(False), Sat(True, False))
+    assert not proves(Spec(True), Sat(False, False))
+    assert not proves(Spec(True), Sat(True, True))
+
+
 def test_the_branch_is_ordered_below_the_full_plan_branch_in_source():
     source = RUN.read_text()
     full = source.index('status = "ACTION_SEQUENCE_READY"')

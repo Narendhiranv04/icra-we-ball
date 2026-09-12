@@ -942,9 +942,13 @@ def run_to_plan(
         is_full_plan = complete_planning_contract(
             planning_specification, ground_result, planned.search.statistics, planned.validation
         )
+        from ..outcome_classifier import exhaustion_proves_no_valid_grounding
         if is_full_plan:
             status = "ACTION_SEQUENCE_READY"
             spec_complete = True
+        elif exhaustion_proves_no_valid_grounding(specification, ground_result):
+            status = "EXHAUSTED_NO_VALID_GROUNDING"
+            spec_complete = False
         elif planned.actions:
             status = "PARTIAL_ACTION_SEQUENCE_READY"
             spec_complete = False
