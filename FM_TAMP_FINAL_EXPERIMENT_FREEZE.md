@@ -24,7 +24,6 @@ stop describing the tree it names.
 ```
 RELEASE TAG                 fm-tamp-final-experiment-v1   <- identifies the commit
 behavioural_identity_sha256 b4abf1a827a4adf669c1c44ce5ba33e703047859107e2dd11de8cf030c7afc89
-base_code_sha               7557d1069b7e02537e9ce565e299e860e4c4afff   (generated FROM this)
 branch                      vlm-testing-pipeline
 
 prompt_and_schema_sha256    156c661a45a43646b51cdf72a2c68e023e8d4c79e4fcc35f6a0d69074b6fff0b
@@ -48,9 +47,10 @@ benchmark grid              32 variants {'kitchen': 12, 'living_room': 10, 'work
 tracked file cannot contain the hash of the commit that contains it: writing it
 dirties the tree, committing produces a new SHA, and the recorded one is
 immediately stale. An earlier version of this report recorded a SHA that was two
-commits behind the branch with `clean: false`. `base_code_sha` names the commit
-the artifact was generated *from*; `fm-tamp-final-experiment-v1` names the commit
-that was released.
+commits behind the branch with `clean: false`. The artifact carries **no commit SHA at all** -- recording the preceding commit
+merely moves the staleness by one, so regenerating after the commit that
+contains the file yields a different value and the artifact never matches its
+own tree. `fm-tamp-final-experiment-v1` names the released commit.
 
 Reproducible child environment, passed to every spawned trial by both the
 replay driver and the live runner (these cannot be set in process -- the

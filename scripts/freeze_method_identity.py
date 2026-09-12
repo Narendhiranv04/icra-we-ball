@@ -83,17 +83,19 @@ def build_identity() -> dict:
 
     identity = {
         "provenance": {
-            # The commit this artifact was generated FROM, not the commit that
-            # contains it -- writing this file necessarily comes after that
-            # commit exists.  The released commit is identified by the git tag
-            # named in release_tag, which can name a commit from outside it.
-            "base_code_sha": _git("rev-parse", "HEAD"),
-            "branch": _git("rev-parse", "--abbrev-ref", "HEAD"),
-            "generated_at": _git("log", "-1", "--format=%cI"),
+            # Deliberately NOT a commit SHA.  Recording one makes the artifact
+            # perpetually dirty: regenerating after the commit that contains it
+            # yields a different value, so the file never matches its own tree
+            # and every integrity check on it fails.  An earlier version
+            # recorded `base_code_sha` for exactly that reason and hit exactly
+            # that problem.  Repository identity is the annotated tag, which
+            # names a commit from outside the file and has no self-reference.
             "release_tag": RELEASE_TAG,
-            "note": "Repository identity is the annotated tag, not a field here. "
-                    "A tracked file cannot contain the hash of the commit that "
-                    "contains it.",
+            "branch": _git("rev-parse", "--abbrev-ref", "HEAD"),
+            "note": "Repository identity is the annotated tag, not a field "
+                    "here. A tracked file cannot contain the hash of the "
+                    "commit that contains it, and recording the preceding "
+                    "commit instead just moves the staleness by one.",
         },
         "semantic_contract": {
             "prompt_and_schema_sha256": compute_v3_prompt_and_schema_hash(),

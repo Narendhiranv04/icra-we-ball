@@ -30,12 +30,19 @@ def test_it_does_not_claim_a_commit_sha_or_cleanliness():
     assert '"clean"' not in flat, (
         "a generated tracked artifact cannot honestly assert tree cleanliness: "
         "writing it is what makes the tree dirty")
-    assert '"sha"' not in flat or "base_code_sha" in flat
+    assert '"sha"' not in flat
 
 
-def test_provenance_is_named_so_it_cannot_be_misread():
+def test_provenance_carries_no_commit_sha_at_all():
+    """Recording the preceding commit just moves the staleness by one.
+
+    An earlier version recorded `base_code_sha`, so regenerating after the
+    commit containing the file produced a different value, the artifact never
+    matched its own tree, and the integrity check below failed on every commit.
+    """
     prov = _freeze()["provenance"]
-    assert "base_code_sha" in prov, "the generating commit must be named as such"
+    assert "base_code_sha" not in prov
+    assert not any("sha" in k.lower() for k in prov), prov
     assert prov["release_tag"] == "fm-tamp-final-experiment-v1"
     assert "cannot contain the hash of the commit that contains it" in prov["note"]
 
