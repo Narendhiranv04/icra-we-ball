@@ -79,6 +79,7 @@ Three independent full replays (A, B, C) at the final code, `--workers 2`,
 | Trials | 96 (60 feasible, 36 infeasible) |
 | **Feasible success** | **34 / 60 (56.7%)** |
 | — of which exact GT action sequence | **21 / 34** (§B.1) |
+| — of which same steps, any order | **32 / 34** (§B.1) |
 | — Kitchen | 11 / 18 |
 | — Living Room | 10 / 18 |
 | — Workshop | 13 / 24 |
@@ -92,7 +93,7 @@ Three independent full replays (A, B, C) at the final code, `--workers 2`,
 | A\* invocations per trial | ≤ 1 |
 | Semantic FM calls during replay | **0** |
 | GT-leakage audit | **FINDINGS: 0** |
-| Combined test surface | 2239 passed, 49 failed, 12 errors (all pre-existing) |
+| Combined test surface | 2245 passed, 49 failed, 12 errors (all pre-existing) |
 | Pipeline suite at final commit | **1225 passed, 0 failed** |
 
 | Domain | Variant | GT feasible | Success /3 | Mean GT coverage | Complete grounding /3 | Outcome correct /3 | False completions |
@@ -166,22 +167,46 @@ consistently):
 
 By domain: **Living Room 10/10, Workshop 9/11, Kitchen 2/13.**
 
-### B.1.1 Why the other 13 differ
+### B.1.1 The operator the compiled problem never emitted
 
-**Every one of the 13 has the same plan length as the reference** (24/24, 26/26,
-5/5) and first diverges at step 2 to 4. They are equal-cost alternative optimal
-plans, not worse ones.
+The domain's action vocabulary distinguishes setting a utensil beside its bowl
+from putting an object down on a surface: the ground-truth executor, the oracle
+world state and the expected-action catalogue all name it
+`PLACE_SERVING_UTENSIL`. The compiled symbolic problem emitted a generic
+`PLACE`, so every Kitchen plan differed from the reference on those steps --
+right in effect, wrong in name.
 
-The cause is structural, not a defect in grounding: a symbolic goal is a **set
-of final-state atoms**, not an ordering. Many action sequences reach the same
-set at the same cost, and A\* returns one of them. The reference sequence is one
-member of that optimal set and nothing distinguishes it to the planner.
+Running K5 through the **oracle** pipeline (`--mode gt`, no VLM) reproduced the
+divergence exactly, which is what established that this was not a grounding or
+FM-quality problem at all.
 
-| Signature | n | Cause |
-| :--- | ---: | :--- |
-| `PLACE != POUR` at step 2-4 | 6 | Ordering freedom: pour-while-held then place, against place then pour. `POUR` requires `at(target, countertop)`, so both orders are legal and cost the same. |
-| `object_0002 stands for both countertop and <kettle>` | 5 | **Comparison artifact.** One earlier ordering difference shifts every later index, and the positional consistency check then reports a conflation that did not occur. These are not five independent binding errors. |
-| `TOOL_CABINET != LEFT_DRAWER` | 2 | Binding freedom: a valid driver existed in both regions; grounding bound one, the reference the other. |
+Preconditions and effects are unchanged and only the label differs, so planning
+is identical: Kitchen task metrics are byte-identical before and after.
+
+| ordering-free fidelity | before | after |
+| :--- | ---: | ---: |
+| exact GT action sequence | 21 / 34 | 21 / 34 |
+| same steps, different order | 0 / 34 | **11 / 34** |
+| **differs** | **13** | **2** |
+
+Two of the three problems were in the comparison rather than the pipeline, and
+are recorded here because either alone would have hidden the real defect:
+
+* the serving destination is `serving_area` to the executor, oracle state and
+  catalogue, and `dining_table` to the pipeline and the goal evaluator, which
+  checks `at(cup, dining_table)`. One place, two names, disagreeing between the
+  benchmark's own artifacts.
+* the unordered check matched greedily, so a one-argument `PICK` could bind a
+  body to the wrong instance and dead-end on a later `POUR`.
+
+Neither flatters the pipeline: re-running the pre-fix replay through the
+corrected comparison still gives 0/11 on Kitchen.
+
+### B.1.1b The two that still differ
+
+`W6/01` and `W6/02`: a valid driver existed in both `TOOL_CABINET` and
+`LEFT_DRAWER`; grounding bound one and the reference the other. A legitimate
+binding choice, not a wrong action.
 
 ### B.1.2 What was deliberately not done
 
@@ -789,9 +814,10 @@ Four things the reader must be told, none of which blocks the run:
    Residual instability is end-to-end -- FM sampling *and* perception.
 3. **The system under-reports success** (§I.1), never over-reports it.
 5. **Task success is not plan identity.** 21 of the 34 successes reproduce the
-   reference action sequence exactly; the other 13 reach every goal by an
-   equal-cost alternative (§B.1). If execution fidelity is the objective, report
-   21/34 alongside 34/60.
+   reference action sequence exactly and 32 of 34 produce the same actions in
+   some order (§B.1); subgoals are independent, so ordering is free. Only 2
+   differ, both a legitimate binding choice. If execution fidelity is the
+   objective, report 32/34 alongside 34/60.
 4. **Infeasibility is now concluded 16/36**, up from 0/36, and only where a
    complete contract and an exhausted search justify it.
 
