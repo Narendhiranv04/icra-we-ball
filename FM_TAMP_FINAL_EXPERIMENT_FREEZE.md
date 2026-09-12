@@ -78,6 +78,7 @@ Three independent full replays (A, B, C) at the final code, `--workers 2`,
 | :--- | :--- |
 | Trials | 96 (60 feasible, 36 infeasible) |
 | **Feasible success** | **34 / 60 (56.7%)** |
+| — of which exact GT action sequence | **21 / 34** (§B.1) |
 | — Kitchen | 11 / 18 |
 | — Living Room | 10 / 18 |
 | — Workshop | 13 / 24 |
@@ -92,6 +93,7 @@ Three independent full replays (A, B, C) at the final code, `--workers 2`,
 | Semantic FM calls during replay | **0** |
 | GT-leakage audit | **FINDINGS: 0** |
 | Combined test surface | 2239 passed, 49 failed, 12 errors (all pre-existing) |
+| Pipeline suite at final commit | **1225 passed, 0 failed** |
 
 | Domain | Variant | GT feasible | Success /3 | Mean GT coverage | Complete grounding /3 | Outcome correct /3 | False completions |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -141,6 +143,59 @@ feasible_success        == feasible_outcome_correct
 `summarize()` raises `AssertionError` if either fails. A previous report stated
 34 feasible successes, 7 infeasibility conclusions and 42 overall, which does not
 add up; §E.1 explains the defect that produced it.
+
+---
+
+## B.1 Plan fidelity: task success is not plan identity
+
+`34/60` counts trials whose plan is complete, independently validated
+(`symbolic_validation: VALID`, `goal_status: GOAL_SATISFIED`) and confirmed by
+ground truth at coverage 1.0. **None is a partial plan.** But satisfying the
+goal is weaker than reproducing the reference action sequence, and the two are
+reported separately here because only the second speaks to execution fidelity.
+
+Structural comparison against `EXPECTED_GT_ACTIONS/` (operators must match in
+order; non-object arguments must agree; object arguments must be used
+consistently):
+
+| | count |
+| :--- | ---: |
+| Successes | 34 |
+| **Exact structural match to the GT action sequence** | **21** |
+| Reach every GT goal by a different sequence | 13 |
+
+By domain: **Living Room 10/10, Workshop 9/11, Kitchen 2/13.**
+
+### B.1.1 Why the other 13 differ
+
+**Every one of the 13 has the same plan length as the reference** (24/24, 26/26,
+5/5) and first diverges at step 2 to 4. They are equal-cost alternative optimal
+plans, not worse ones.
+
+The cause is structural, not a defect in grounding: a symbolic goal is a **set
+of final-state atoms**, not an ordering. Many action sequences reach the same
+set at the same cost, and A\* returns one of them. The reference sequence is one
+member of that optimal set and nothing distinguishes it to the planner.
+
+| Signature | n | Cause |
+| :--- | ---: | :--- |
+| `PLACE != POUR` at step 2-4 | 6 | Ordering freedom: pour-while-held then place, against place then pour. `POUR` requires `at(target, countertop)`, so both orders are legal and cost the same. |
+| `object_0002 stands for both countertop and <kettle>` | 5 | **Comparison artifact.** One earlier ordering difference shifts every later index, and the positional consistency check then reports a conflation that did not occur. These are not five independent binding errors. |
+| `TOOL_CABINET != LEFT_DRAWER` | 2 | Binding freedom: a valid driver existed in both regions; grounding bound one, the reference the other. |
+
+### B.1.2 What was deliberately not done
+
+A tie-break that reproduces the reference ordering would encode the expected
+answer, which is the benchmark tuning the scientific constraints forbid, and it
+would make the exact-match number meaningless.
+
+The legitimate route to a higher exact-match rate is the **cost model**, stated
+generically: penalise setting a held container down and picking it up again, so
+"pour everything while holding it, then place" wins on cost rather than on an
+arbitrary tie-break. That is a real domain preference expressible without
+reference to the benchmark. It is **not** part of this freeze -- it changes
+planning for every trial and needs the full regression gate -- and is recorded
+here as the next candidate change.
 
 ---
 
@@ -722,6 +777,10 @@ Four things the reader must be told, none of which blocks the run:
 2. **One trial of 96 is path-bistable** (§C.4); no reported metric moves with it.
    Residual instability is end-to-end -- FM sampling *and* perception.
 3. **The system under-reports success** (§I.1), never over-reports it.
+5. **Task success is not plan identity.** 21 of the 34 successes reproduce the
+   reference action sequence exactly; the other 13 reach every goal by an
+   equal-cost alternative (§B.1). If execution fidelity is the objective, report
+   21/34 alongside 34/60.
 4. **Infeasibility is now concluded 16/36**, up from 0/36, and only where a
    complete contract and an exhausted search justify it.
 
