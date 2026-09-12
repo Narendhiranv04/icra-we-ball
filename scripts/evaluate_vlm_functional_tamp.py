@@ -24,6 +24,19 @@ from typing import Any, Dict, List, Optional, Tuple
 from mujoco_scenes.functional_tamp_pipeline.models import FunctionalRequirementGraph, PipelineResult
 from mujoco_scenes.functional_tamp_pipeline.gf_reference_evaluator import evaluate_gf_against_reference
 from mujoco_scenes.functional_tamp_pipeline.run import run_pipeline
+
+
+class InfrastructureUnavailable(RuntimeError):
+    """The inference endpoint went away; the run stopped instead of continuing.
+
+    Signalled with a dedicated exit code so the repetition runner can tell an
+    outage apart from the benchmark genuinely failing, and stop the remaining
+    repetitions rather than burn them against a dead server.
+    """
+
+
+MAX_CONSECUTIVE_INFRASTRUCTURE_FAILURES = 3
+INFRASTRUCTURE_EXIT_CODE = 86
 from mujoco_scenes.functional_tamp_pipeline.evaluation_metrics import compute_primary_metrics
 from mujoco_scenes.symbolic_planning_core import independent_replay
 
@@ -102,6 +115,8 @@ def evaluate_all_variants(
         if any(r.get("terminal_status") == "PIPELINE_EXCEPTION" for r in records):
             raise ValueError("Remove/archive the trailing failed record before resuming")
     completed = {(r["domain"], r["variant"]) for r in records}
+    # List cell so the nested trial body can mutate it without a `nonlocal`.
+    consecutive_infra = [0]
 
     # Total variant counts
     total_variants = sum(len(v) for v in DOMAINS.values())
@@ -288,6 +303,24 @@ def evaluate_all_variants(
             if spec_source == "live" and (pipeline_res.status == "PIPELINE_EXCEPTION" or row["high_level_replans"] > 0):
                 (output_root / "invariants.json").write_text(json.dumps({"status": "INVALID", "errors": [f"{variant}: implementation failure; matrix stopped"]}, indent=2))
                 raise RuntimeError(f"INVALID MATRIX: {variant}: {pipeline_res.failure_reason}")
+            # Fail fast on an outage.  A dead endpoint answers in milliseconds,
+            # so without this the matrix races to the end manufacturing rows in
+            # which nothing was measured.  Consecutive is the right trigger: one
+            # blip is already absorbed by the transport retry, while a run of
+            # them means the server is gone and every further trial is waste.
+            if pipeline_res.status == "INFRASTRUCTURE_UNAVAILABLE":
+                consecutive_infra[0] += 1
+                if consecutive_infra[0] >= MAX_CONSECUTIVE_INFRASTRUCTURE_FAILURES:
+                    (output_root / "invariants.json").write_text(json.dumps({
+                        "status": "ABORTED_INFRASTRUCTURE",
+                        "errors": [f"{consecutive_infra[0]} consecutive unreachable-endpoint trials "
+                                   f"ending at {variant}; matrix stopped rather than "
+                                   f"recording unmeasured trials"]}, indent=2) + "\n")
+                    raise InfrastructureUnavailable(
+                        f"Endpoint unreachable for {consecutive_infra[0]} consecutive trials "
+                        f"(last: {domain}/{variant}): {pipeline_res.failure_reason}")
+            else:
+                consecutive_infra[0] = 0
             print(f"  [{variant}] outcome_correct={row['outcome_correct']} status={pipeline_res.status} full_task_sat={full_task_sat} cand_plan_len={len(candidate_plan)} runtime={runtime_sec:.2f}s")
 
     # Save Section 38 records
@@ -494,15 +527,19 @@ def main():
                         help="Comma-separated list of variant names to evaluate (e.g. 'K1,K3,L1,L6,W1,W3')")
     args = parser.parse_args()
 
-    evaluate_all_variants(
-        mode=args.mode,
-        spec_source=args.spec_source,
-        output_root=args.output_root,
-        specification_root=args.specification_root,
-        dry_run=args.dry_run,
-        resume=args.resume,
-        variants=args.variants,
-    )
+    try:
+        evaluate_all_variants(
+            mode=args.mode,
+            spec_source=args.spec_source,
+            output_root=args.output_root,
+            specification_root=args.specification_root,
+            dry_run=args.dry_run,
+            resume=args.resume,
+            variants=args.variants,
+        )
+    except InfrastructureUnavailable as error:
+        print(f"\nABORTED (infrastructure): {error}", file=sys.stderr, flush=True)
+        raise SystemExit(INFRASTRUCTURE_EXIT_CODE)
 
 
 if __name__ == "__main__":

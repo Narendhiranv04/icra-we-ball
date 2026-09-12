@@ -298,8 +298,14 @@ def _acquire_spec_or_fail(
             state.canonicalization_succeeded = True
             return None
         except VLMSpecificationError as error:
-            state.terminal_status = "VLM_SPEC_FAILED"
             cat = getattr(error, "category", None) or "MALFORMED_VLM_SPECIFICATION"
+            # An unreachable endpoint produced no response to judge, so it is
+            # not a specification failure and must not wear that status: the
+            # scorer keys off terminal_status, and collapsing the two made a
+            # dead server read as the model failing to specify the task.
+            state.terminal_status = ("INFRASTRUCTURE_UNAVAILABLE"
+                                     if cat == "INFRASTRUCTURE_UNAVAILABLE"
+                                     else "VLM_SPEC_FAILED")
             state.failure_category = cat
             state.failure_reason = str(error)
             state.canonicalization_succeeded = False
@@ -307,6 +313,7 @@ def _acquire_spec_or_fail(
             task_specification_valid = cat not in {
                 "MALFORMED_VLM_SPECIFICATION", "TRANSPORT_OR_STRUCTURED_OUTPUT_FAILURE",
                 "SANITIZER_UNRECOVERABLE", "TASK_SPECIFICATION_FAILURE",
+                "INFRASTRUCTURE_UNAVAILABLE",
             }
             outcome = classify_pipeline_outcome(
                 task_specification_valid=task_specification_valid,
@@ -318,7 +325,7 @@ def _acquire_spec_or_fail(
                 domain=state.domain,
                 variant=state.variant,
                 mode=state.mode,
-                status="VLM_SPEC_FAILED",
+                status=state.terminal_status,
                 failure_reason=str(error),
                 failure_category=cat,
                 canonicalization_succeeded=False,

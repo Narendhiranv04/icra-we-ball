@@ -25,8 +25,12 @@ import os
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
+
+# Must match scripts/evaluate_vlm_functional_tamp.py.
+INFRASTRUCTURE_EXIT_CODE = 86
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -272,9 +276,36 @@ def main() -> int:
                    "--output-root", str(attempt_dir)]
         if args.variants:
             command += ["--variants", args.variants]
+        # Re-preflight before every repetition, not once for the whole run.
+        # The single up-front check could not see a server that died in repeat 1
+        # and left repeats 2..N to race through the matrix against a refused
+        # socket, producing rows in which nothing was measured.
+        try:
+            _require_model(args.base_url, model)
+        except (urllib.error.URLError, OSError, SystemExit) as error:
+            print(f"[repeat {index:02d}] endpoint unavailable at preflight: {error}. "
+                  f"Stopping; {args.repeats - index + 1} repetition(s) not attempted.",
+                  flush=True)
+            attempt_dir.rmdir()
+            break
         started = time.time()
         code = subprocess.run(command, env=env).returncode
         elapsed = round(time.time() - started, 1)
+        if code == INFRASTRUCTURE_EXIT_CODE:
+            # The endpoint went away mid-repetition.  Continuing would write
+            # further unmeasured repetitions, so the run stops here and says so.
+            print(f"[repeat {index:02d}] ABORTED: endpoint went away mid-repetition. "
+                  f"Stopping; {args.repeats - index} repetition(s) not attempted.",
+                  flush=True)
+            (repeat_dir / "repeat_manifest.json").write_text(json.dumps({
+                "repeat_index": index, "finished": False,
+                "errors": ["aborted: inference endpoint unreachable"],
+                "aborted_infrastructure": True,
+                "authoritative_attempt": attempt_dir.name,
+                "attempts": len(attempts) + 1, "seconds": elapsed, **identity,
+            }, indent=2) + "\n")
+            failed.append(index)
+            break
         after = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
         dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], text=True).strip())
         invariants_path = attempt_dir / "invariants.json"

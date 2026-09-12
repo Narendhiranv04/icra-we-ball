@@ -24,6 +24,7 @@ from typing import Any, Mapping, Protocol
 
 try:
     from mujoco_scenes.functional_tamp_pipeline.errors import (
+        EndpointUnavailableError,
         MalformedVLMSpecificationError,
         TransportOrStructuredOutputError,
         VLMSpecificationError,
@@ -57,6 +58,9 @@ except ImportError:
     class TransportOrStructuredOutputError(VLMSpecificationError):
         category = "TRANSPORT_OR_STRUCTURED_OUTPUT_FAILURE"
 
+    class EndpointUnavailableError(TransportOrStructuredOutputError):
+        category = "INFRASTRUCTURE_UNAVAILABLE"
+
 
 class FMBackendNotConfiguredError(TransportOrStructuredOutputError):
     """Raised when live requirement generation has no configured endpoint."""
@@ -64,6 +68,20 @@ class FMBackendNotConfiguredError(TransportOrStructuredOutputError):
 
 class FMTransportError(TransportOrStructuredOutputError):
     """Raised when the inference server cannot return a usable completion."""
+
+
+class FMEndpointUnavailableError(FMTransportError, EndpointUnavailableError):
+    """Raised when the endpoint could not be reached at all.
+
+    Distinct from FMTransportError, which also covers a response that arrived
+    and was unusable.  Only the connection-level case is retried, and only this
+    case is excluded from scoring: retrying a refused socket re-attempts a call
+    that never happened, whereas retrying a model answer we dislike would be
+    resampling until the benchmark agrees with us.
+    """
+
+    def __init__(self, message: str):
+        EndpointUnavailableError.__init__(self, message)
 
 
 class FMResponseValidationError(MalformedVLMSpecificationError):
@@ -97,10 +115,15 @@ class CompletionTransport(Protocol):
 class OpenAICompletionTransport:
     """Small stdlib client for vLLM/SGLang's OpenAI-compatible endpoint."""
 
-    def __init__(self, base_url: str, api_key: str, timeout_seconds: float) -> None:
+    def __init__(self, base_url: str, api_key: str, timeout_seconds: float,
+                 max_attempts: int = 3, retry_backoff_seconds: float = 2.0) -> None:
         self.url = base_url.rstrip("/") + "/chat/completions"
         self.api_key = api_key
         self.timeout_seconds = timeout_seconds
+        if max_attempts < 1:
+            raise ValueError("max_attempts must be at least 1")
+        self.max_attempts = max_attempts
+        self.retry_backoff_seconds = retry_backoff_seconds
 
     def complete(self, payload: Mapping[str, Any]) -> Mapping[str, Any]:
         headers = {"Content-Type": "application/json"}
@@ -111,12 +134,21 @@ class OpenAICompletionTransport:
             data=json.dumps(payload).encode("utf-8"),
             headers=headers,
         )
-        last_error = None
-        for attempt in range(1):
+        last_error: Exception | None = None
+        # Retry only the case where no completion was produced at all.  A blip
+        # in the socket is not a datum about the model, so re-attempting it
+        # measures the same single call rather than resampling for a nicer
+        # answer -- and every attempt is counted in telemetry, so the retry is
+        # recorded rather than silent.  A response that arrives and is rejected
+        # (HTTP 4xx, non-object JSON) is never retried: that *is* the datum.
+        for attempt in range(self.max_attempts):
             from mujoco_scenes.functional_tamp_pipeline.telemetry import current_run
-            if current_run.get() is not None:
-                current_run.get().transport_attempts += 1
-                current_run.get().write()
+            run = current_run.get()
+            if run is not None:
+                # transport_retries is derived as attempts - semantic requests,
+                # so counting attempts is all that is needed for a retry to show up.
+                run.transport_attempts += 1
+                run.write()
             try:
                 with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
                     decoded = json.load(response)
@@ -125,18 +157,31 @@ class OpenAICompletionTransport:
                     return decoded
             except urllib.error.HTTPError as error:
                 detail = error.read().decode("utf-8", errors="replace")[:1000]
-                last_error = FMTransportError(
-                    f"Inference server returned HTTP {error.code}: {detail}"
-                )
-                break
+                # 5xx means the server accepted the socket but produced no
+                # completion, so it is an availability fault like a refusal.
+                # 4xx means it read the request and rejected it, which is a
+                # real observation about the request we sent.
+                if error.code >= 500:
+                    last_error = FMEndpointUnavailableError(
+                        f"Inference server unavailable at {self.url}: "
+                        f"HTTP {error.code}: {detail}")
+                else:
+                    raise FMTransportError(
+                        f"Inference server returned HTTP {error.code}: {detail}"
+                    ) from error
             except urllib.error.URLError as error:
-                last_error = FMTransportError(
+                last_error = FMEndpointUnavailableError(
                     f"Cannot reach inference server at {self.url}: {error.reason}"
                 )
-                time.sleep(1.0)
-            except (TimeoutError, json.JSONDecodeError, ConnectionError, OSError) as error:
-                last_error = FMTransportError(f"Invalid inference-server response or connection error: {error}")
-                time.sleep(1.0)
+            except json.JSONDecodeError as error:
+                raise FMTransportError(
+                    f"Invalid inference-server response: {error}") from error
+            except (TimeoutError, ConnectionError, OSError) as error:
+                last_error = FMEndpointUnavailableError(
+                    f"Cannot reach inference server at {self.url}: {error}"
+                )
+            if attempt + 1 < self.max_attempts:
+                time.sleep(self.retry_backoff_seconds * (2 ** attempt))
         raise last_error or FMTransportError("Transport failed without explicit error")
 
 

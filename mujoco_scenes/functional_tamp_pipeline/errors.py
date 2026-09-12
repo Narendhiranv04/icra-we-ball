@@ -64,6 +64,24 @@ class TransportOrStructuredOutputError(VLMSpecificationError):
         super().__init__(message, category="TRANSPORT_OR_STRUCTURED_OUTPUT_FAILURE")
 
 
+class EndpointUnavailableError(TransportOrStructuredOutputError):
+    """Raised when no completion was received because the endpoint was unreachable.
+
+    This is deliberately a *different* category from every other transport
+    failure.  A malformed or schema-violating response is evidence about the
+    model; a refused connection is evidence about the machine.  Scoring them
+    together let a dead server masquerade as 94 specification failures and
+    silently deflate a benchmark, so the two must never share a status again.
+
+    A trial that raises this never invoked the method and is therefore not an
+    observation of it.  Scoring excludes it rather than counting it as wrong.
+    """
+
+    def __init__(self, message: str):
+        VLMSpecificationError.__init__(self, message,
+                                       category="INFRASTRUCTURE_UNAVAILABLE")
+
+
 class ReplaySpecificationError(PipelineError):
     """Raised when replaying a specification JSON file fails due to missing file, malformed format, etc."""
 

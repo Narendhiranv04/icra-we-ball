@@ -23,6 +23,10 @@ PIPELINE_OUTCOMES = frozenset({
 # form, as opposed to arriving and being wrong about the task.
 FM_RESPONSE_FAILURE_CATEGORIES = frozenset({
     "TRANSPORT_OR_STRUCTURED_OUTPUT_FAILURE",
+    # No response arrived because the endpoint was unreachable.  Omitting this
+    # would report the response as usable and the task specification as valid,
+    # for a call that was never answered.
+    "INFRASTRUCTURE_UNAVAILABLE",
 })
 
 

@@ -58,6 +58,26 @@ INFEASIBILITY_CONCLUDED_STATUSES = frozenset({
 })
 
 
+# Statuses meaning the method was never invoked, because the machine serving it
+# could not be reached.  These are not results: an unreachable endpoint produces
+# a row in which nothing about the system was measured.  Counting them as
+# incorrect silently deflated a run by 94 trials when a tunnel died mid-grid --
+# every affected trial read as a specification failure, indistinguishable in the
+# aggregate from the model genuinely failing.  Scoring therefore excludes them
+# and reports the count separately, so an outage is visible as an outage.
+INFRASTRUCTURE_FAILURE_STATUSES = frozenset({"INFRASTRUCTURE_UNAVAILABLE"})
+
+
+def is_infrastructure_failure(pipeline_status: str | None) -> bool:
+    """Whether this row records an outage rather than an outcome."""
+    return str(pipeline_status) in INFRASTRUCTURE_FAILURE_STATUSES
+
+
+def trial_is_scorable(pipeline_status: str | None) -> bool:
+    """Whether this row is an observation of the method at all."""
+    return not is_infrastructure_failure(pipeline_status)
+
+
 def completion_claimed(pipeline_status: str | None) -> bool:
     """Whether the run announced a finished task."""
     return str(pipeline_status) in COMPLETION_CLAIMED_STATUSES
@@ -118,7 +138,9 @@ def summarize(rows: Iterable[Mapping[str, Any]], *, feasible_key: str = "feasibl
     halves are using different definitions, which is exactly the defect this
     module exists to prevent.
     """
-    rows = list(rows)
+    all_rows = list(rows)
+    excluded = [r for r in all_rows if is_infrastructure_failure(r.get(status_key))]
+    rows = [r for r in all_rows if trial_is_scorable(r.get(status_key))]
     feasible = [r for r in rows if r.get(feasible_key)]
     infeasible = [r for r in rows if not r.get(feasible_key)]
 
@@ -149,6 +171,8 @@ def summarize(rows: Iterable[Mapping[str, Any]], *, feasible_key: str = "feasibl
         gt_full_task_satisfied=bool(r.get(satisfied_key))))
     return {
         "trials": len(rows),
+        "trials_attempted": len(all_rows),
+        "infrastructure_excluded": len(excluded),
         "feasible_trials": len(feasible),
         "infeasible_trials": len(infeasible),
         "feasible_success": successes,
