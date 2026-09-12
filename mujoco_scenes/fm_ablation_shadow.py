@@ -1,103 +1,132 @@
-"""Run the real VLM pipeline end to end, with one evidence channel removed.
+"""Run the real VLM pipeline with evidence withheld from the observation.
 
-This is the shadow layer.  It adds no behaviour to the pipeline and changes no
-pipeline file: every stage -- v3 contract validation, the structural sanitizer,
-semantic compilation, executability analysis, grounding, planning, independent
-validation -- runs exactly as it does in the live benchmark, on exactly the same
-code.  The only difference is that the functional graph handed to grounding has
-had one or more evidence channels cleared.
+This is the shadow layer for the evidence ablation.  It adds no behaviour to
+the pipeline and modifies no pipeline file: contract validation, the structural
+sanitizer, semantic compilation, executability analysis, grounding, planning and
+independent validation all run exactly as they do in the live benchmark, on
+exactly the same code.
 
-## Where the mask is applied, and why it must be there
+## What is ablated, and what is not
 
-The mask sits *inside the specification provider*, which is the last thing that
-runs before the pipeline starts consuming G_F:
+**The functional graph G_F is never touched.**  G_F states the task -- which
+roles exist, how many, which relations the task requires -- and that is not
+evidence.  An earlier version of this file masked G_F, and it could not work:
+the task-interface validator exists to reject a malformed contract, and a graph
+with `required_relations` stripped is malformed by exactly that standard.  Every
+condition that removed a channel died in the validator, identically, for a
+reason having nothing to do with evidence.  The validator was right.
 
-    archived FM response
-      -> VLMSpecProvider.provide()      <- contract + sanitizer, UNMASKED
-      -> mask_specification()           <- the ablation, and nothing else
-      -> grounding, planning, scoring   <- the real pipeline, unchanged
+**The observed graph G_O is what changes.**  The question an evidence ablation
+asks is "what if the system could not perceive this kind of evidence?", which is
+a property of perception.  Withholding a channel from G_O is also precisely what
+the GT ablation's `evidence_components` gating did inside the grounder.
 
-Two earlier placements were wrong, and both are worth recording because they are
-the obvious things to try:
+## Where the mask is applied
 
-1. **Masking before the provider** (feeding a masked graph through the replay
-   path) fails, and should.  The task-interface validator's job is to reject a
-   malformed FM contract, and an ablated graph is malformed by exactly that
-   standard -- "operation group has empty required_relations".  Five of seven
-   conditions died there, identically, for a reason having nothing to do with
-   evidence.  It measured the validator.
+At `ground_graph`, the moment the observation is handed to grounding:
 
-2. **Masking inside grounding** (calling `ground_graph` directly, as the GT
-   ablation does) skips the sanitizer and the validator entirely.  That is
-   tolerable for an oracle graph, which is well-formed by construction, but for
-   an FM graph those stages are a substantial part of the method under test, and
-   skipping them measures something that is not the pipeline.
+    scene -> perception -> G_O -> [mask] -> ground_graph -> planning -> scoring
 
-Masking after the contract stages and before grounding keeps both properties:
-the FM's contract is judged exactly as production judges it, and the ablation
-affects only the evidence available for grounding.
+All three domains import `ground_graph` inside the function that calls it, so
+rebinding the module attribute covers kitchen, living room and workshop through
+one seam -- including kitchen's per-stage search loop, which grounds repeatedly
+against a graph that grows as regions are opened.  Patching the per-domain
+observation builders would have missed workshop entirely, which assembles its
+graph incrementally inside an adapter rather than through a builder function.
 
 ## How it avoids touching the pipeline
 
-`run.provider_for_mode` is rebound for the duration of one call and restored
-afterwards.  The wiring lives here, in shadow code; no file under
-`functional_tamp_pipeline/` is modified, and nothing outside this context
-manager observes a patched pipeline.
+The attribute is rebound for the duration of one call and restored afterwards.
+The wiring lives here, in shadow code; nothing under `functional_tamp_pipeline/`
+is modified, and nothing outside the context manager observes a patched module.
 """
 from __future__ import annotations
 
 import contextlib
 from typing import Any
 
-from mujoco_scenes.fm_evidence_ablation import mask_specification
+from mujoco_scenes.fm_evidence_ablation import (
+    CONDITION_LABELS, EVIDENCE_COMPONENTS, numeric_properties_referenced,
+    resolve_components,
+)
 
 
-class MaskedSpecProvider:
-    """Wraps the real provider and ablates only what it returns."""
+def mask_observed_node(node, components, numeric_properties) -> None:
+    """Withhold from one observation the channels this condition disables."""
+    if "semantic" not in components:
+        # The detector reports nothing: no category and no belief contract.
+        node.canonical_category = None
+        node.semantic_labels = {}
+    if "unary" not in components:
+        node.unary_properties = {}
+        node.unary_predicates = {}
+        # Withhold exactly the measurements a numeric constraint would read,
+        # and leave the rest of geometry for planning. See
+        # numeric_properties_referenced() for why both halves matter.
+        for key in list(node.geometry):
+            if key in numeric_properties:
+                node.geometry.pop(key, None)
+        properties = node.geometry.get("properties")
+        if isinstance(properties, dict):
+            for key in list(properties):
+                if key in numeric_properties:
+                    properties.pop(key, None)
 
-    def __init__(self, inner: Any, condition: str) -> None:
-        self._inner = inner
-        self._condition = condition
-        self.masked_calls = 0
 
-    def provide(self, domain, task_instruction, observation_images=None,
-                raw_document=None, **kwargs):
-        # The real provider runs first and in full: contract validation, the
-        # structural sanitizer and semantic compilation all see the unmasked FM
-        # output, so a contract failure stays a contract failure in every
-        # condition rather than becoming an artifact of the mask.
-        specification = self._inner.provide(
-            domain, task_instruction, observation_images, raw_document, **kwargs)
-        self.masked_calls += 1
-        return mask_specification(specification, self._condition)
+def mask_observed_graph(graph, condition: str, specification=None):
+    """Return G_O with the channels this condition disables withheld.
 
-    def __getattr__(self, name):
-        return getattr(self._inner, name)
+    Mutates in place and returns the graph, matching how the pipeline passes
+    its observation around.
+    """
+    components = resolve_components(condition)
+    numeric_properties = (numeric_properties_referenced(specification)
+                          if specification is not None else set())
+    for node in graph.nodes.values():
+        mask_observed_node(node, components, numeric_properties)
+    if "binary" not in components:
+        # Observed relations are binary evidence by definition.
+        graph.relations = {}
+    return graph
+
+
+def observed_evidence_present(graph) -> dict[str, bool]:
+    """What evidence an observation actually carries, to check a mask took."""
+    return {
+        "semantic": any(n.canonical_category or n.semantic_labels
+                        for n in graph.nodes.values()),
+        "unary": any(n.unary_properties or n.unary_predicates
+                     for n in graph.nodes.values()),
+        "binary": bool(graph.relations),
+    }
 
 
 @contextlib.contextmanager
 def evidence_masked(condition: str):
-    """Run the real pipeline with `condition`'s evidence mask in force.
+    """Run the real pipeline with `condition`'s evidence withheld from G_O.
 
-    Yields the wrapper so a caller can assert the mask was actually applied --
-    a shadow that silently failed to patch would report the unablated pipeline
-    seven times and look like a clean result.
+    Yields a dict recording how many groundings were masked, so a caller can
+    assert the mask was actually applied.  A shadow that silently failed to
+    patch would report the unablated pipeline under every condition and look
+    like a clean result.
     """
-    from mujoco_scenes.functional_tamp_pipeline import run as run_module
+    from mujoco_scenes.functional_tamp_pipeline import grounding as grounding_module
 
-    original = run_module.provider_for_mode
-    holder: dict[str, Any] = {}
+    resolve_components(condition)  # reject an unknown condition before running
+    original = grounding_module.ground_graph
+    stats: dict[str, Any] = {"condition": condition, "groundings": 0,
+                             "label": CONDITION_LABELS.get(condition, condition),
+                             "evidence_after_mask": []}
 
-    def patched(mode: str):
-        provider = original(mode)
-        if mode != "vlm":
-            return provider
-        wrapper = MaskedSpecProvider(provider, condition)
-        holder["wrapper"] = wrapper
-        return wrapper
+    def patched(graph_f, graph_o, context=None, *args, **kwargs):
+        mask_observed_graph(graph_o, condition, graph_f)
+        stats["groundings"] += 1
+        if len(stats["evidence_after_mask"]) < 5:
+            stats["evidence_after_mask"].append(observed_evidence_present(graph_o))
+        return original(graph_f, graph_o, context, *args, **kwargs)
 
-    run_module.provider_for_mode = patched
+    grounding_module.ground_graph = patched
     try:
-        yield holder
+        yield stats
     finally:
-        run_module.provider_for_mode = original
+        grounding_module.ground_graph = original

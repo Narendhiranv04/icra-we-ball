@@ -42,8 +42,7 @@ from mujoco_scenes.evaluation_outcome import (  # noqa: E402
     completion_claimed, is_false_completion, outcome_is_correct, trial_is_scorable,
 )
 from mujoco_scenes.fm_evidence_ablation import (  # noqa: E402
-    COMPONENT_MASKS, evidence_channels_present, mask_specification,
-    specification_from_archived_response,
+    COMPONENT_MASKS, CONDITION_LABELS, CONDITION_ORDER,
 )
 
 DOMAINS = {
@@ -114,7 +113,7 @@ def evaluate_one(*, domain: str, variant: str, trial: str, condition: str,
         "archived_response": str(raw_path),
     }
     started = time.perf_counter()
-    with evidence_masked(condition) as holder:
+    with evidence_masked(condition) as stats:
         try:
             result = run_pipeline(domain=domain, variant=variant, mode="vlm",
                                   specification_json=raw_path,
@@ -123,12 +122,14 @@ def evaluate_one(*, domain: str, variant: str, trial: str, condition: str,
             result = PipelineResult(domain=domain, variant=variant, mode="vlm",
                                     status="PIPELINE_EXCEPTION",
                                     failure_reason=f"{type(exc).__name__}: {exc}")
-        wrapper = holder.get("wrapper")
+
     # A shadow that silently failed to patch would report the unablated pipeline
     # seven times over and look like a clean result, so the mask having been
     # applied is recorded per row rather than assumed.
-    row["mask_applied"] = bool(wrapper and wrapper.masked_calls)
-    row["masked_spec_calls"] = int(wrapper.masked_calls) if wrapper else 0
+    row["condition_label"] = CONDITION_LABELS[condition]
+    row["mask_applied"] = bool(stats and stats.get("groundings"))
+    row["groundings_masked"] = int(stats.get("groundings", 0)) if stats else 0
+    row["observed_evidence_after_mask"] = (stats or {}).get("evidence_after_mask")
 
     satisfied, coverage = _full_task_satisfied(run_dir, domain)
     row.update(
@@ -171,7 +172,7 @@ def summarize(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     out = []
     for domain in (*DOMAINS, "all"):
         source = rows if domain == "all" else [r for r in rows if r["domain"] == domain]
-        for condition in COMPONENT_MASKS:
+        for condition in CONDITION_ORDER:
             group = [r for r in source if r["condition"] == condition]
             if not group:
                 continue
@@ -185,6 +186,7 @@ def summarize(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
                         if subset else None)
             out.append({
                 "domain": domain, "condition": condition,
+                "condition_label": CONDITION_LABELS[condition],
                 "enabled_evidence_components": "+".join(COMPONENT_MASKS[condition]),
                 "trials": len(group),
                 "mask_applied_all": all(r.get("mask_applied") for r in group),
@@ -216,7 +218,7 @@ def main() -> int:
     parser.add_argument("--output-root", type=Path, required=True)
     args = parser.parse_args()
 
-    conditions = (tuple(COMPONENT_MASKS) if args.conditions == "all"
+    conditions = (CONDITION_ORDER if args.conditions == "all"
                   else tuple(c.strip() for c in args.conditions.split(",") if c.strip()))
     unknown = set(conditions) - set(COMPONENT_MASKS)
     if unknown:

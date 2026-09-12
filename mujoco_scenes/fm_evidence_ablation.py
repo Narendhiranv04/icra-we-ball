@@ -42,18 +42,24 @@ from mujoco_scenes.functional_tamp_pipeline.models import (
     OperationGroup,
 )
 
-# The seven non-empty subsets of the three evidence channels, named exactly as
-# in the GT ablation so the two tables can be read side by side.
+# The ablation is cumulative: each condition adds one evidence channel to the
+# one before it, so a difference between two rows is attributable to the single
+# channel that was added.  The seven-subset form answers a different question
+# (which channels are individually redundant) and is not what is reported here.
 EVIDENCE_COMPONENTS = ("semantic", "unary", "binary")
 COMPONENT_MASKS: dict[str, tuple[str, ...]] = {
     "semantic_only": ("semantic",),
-    "unary_only": ("unary",),
-    "binary_only": ("binary",),
-    "no_binary": ("semantic", "unary"),
-    "no_unary": ("semantic", "binary"),
-    "no_semantic": ("unary", "binary"),
+    "semantic_unary": ("semantic", "unary"),
     "full": ("semantic", "unary", "binary"),
 }
+
+# Human-readable names for reports, in the order the conditions nest.
+CONDITION_LABELS = {
+    "semantic_only": "semantic only",
+    "semantic_unary": "semantic + unary geometric",
+    "full": "semantic + unary + binary geometric",
+}
+CONDITION_ORDER = ("semantic_only", "semantic_unary", "full")
 
 
 def resolve_components(condition: str) -> tuple[str, ...]:
@@ -63,81 +69,22 @@ def resolve_components(condition: str) -> tuple[str, ...]:
     return COMPONENT_MASKS[condition]
 
 
-def _mask_role(role: FunctionalRole, components: tuple[str, ...]) -> FunctionalRole:
-    """Clear the evidence a disabled channel would have supplied.
+def numeric_properties_referenced(specification) -> set[str]:
+    """Property names any role's numeric constraints actually consume.
 
-    Entity kind and cardinality are *not* evidence -- they are the shape of the
-    task, and removing them would ablate the question rather than the evidence.
-    The GT ablation kept them for the same reason.
+    The unary mask must withhold exactly these from the observation and nothing
+    else.  Grounding reads a numeric property from `unary_properties` first and
+    then falls back to `geometry` and `geometry["properties"]`, so clearing only
+    `unary_properties` leaves the evidence reachable and the ablation silently
+    does nothing.  Clearing all of `geometry` is equally wrong: planning and
+    execution read poses and extents from it, and a run would then fail for
+    reasons having nothing to do with evidence.
     """
-    changes: dict[str, Any] = {}
-    if "semantic" not in components:
-        changes.update(semantic_categories=(), semantic_hints=())
-    if "unary" not in components:
-        changes.update(unary_predicates=(), numeric_constraints=())
-    if not changes:
-        return role
-    # verification_mode is a claim about which checks apply; leaving it saying
-    # SEMANTIC_AND_GEOMETRIC under a mask that removed one of them would make
-    # the artifact describe a condition that was not run.
-    if "semantic" not in components and "unary" not in components:
-        changes["verification_mode"] = "STRUCTURAL_ONLY"
-    elif "unary" not in components:
-        changes["verification_mode"] = "SEMANTIC_ONLY"
-    return replace(role, **changes)
-
-
-def _mask_operation_group(group: OperationGroup, components: tuple[str, ...]) -> OperationGroup:
-    if "binary" in components:
-        return group
-    # physical_preconditions overrides required_relations inside the grounder,
-    # so clearing only the latter would leave binary evidence in force for every
-    # group that declares preconditions -- an ablation that silently did nothing.
-    return replace(group, required_relations=(), context_relations=(),
-                   physical_preconditions=())
-
-
-def mask_specification(specification: FunctionalRequirementGraph,
-                       condition: str) -> FunctionalRequirementGraph:
-    """Return a copy of G_F carrying only the enabled evidence channels."""
-    components = resolve_components(condition)
-    masked = replace(
-        specification,
-        nodes={name: _mask_role(role, components)
-               for name, role in specification.nodes.items()},
-        operation_groups=tuple(_mask_operation_group(g, components)
-                               for g in specification.operation_groups),
-        metadata={
-            **dict(specification.metadata),
-            "evidence_ablation": {
-                "condition": condition,
-                "enabled_evidence_components": list(components),
-                "disabled_evidence_components": [c for c in EVIDENCE_COMPONENTS
-                                                 if c not in components],
-            },
-        },
-    )
-    if "binary" not in components:
-        # Explicit relations and provisional relation constraints are binary
-        # geometry by definition.
-        masked = replace(masked, relations=(), provisional_relation_constraints=())
-    # `source` must survive: the pipeline refuses a replayed specification whose
-    # source does not match the requested mode, and an ablation of the FM graph
-    # is still the FM graph.
-    assert masked.source == specification.source
-    return masked
-
-
-def evidence_channels_present(specification: FunctionalRequirementGraph) -> dict[str, bool]:
-    """What evidence a graph actually carries, used to check a mask took effect."""
-    return {
-        "semantic": any(role.semantic_categories for role in specification.nodes.values()),
-        "unary": any(role.unary_predicates or role.numeric_constraints
-                     for role in specification.nodes.values()),
-        "binary": bool(specification.relations) or any(
-            g.required_relations or g.context_relations or g.physical_preconditions
-            for g in specification.operation_groups),
-    }
+    names: set[str] = set()
+    for role in specification.nodes.values():
+        for constraint in role.numeric_constraints:
+            names.add(constraint.property_name)
+    return names
 
 
 def specification_from_archived_response(raw_path: Path, domain: str,
