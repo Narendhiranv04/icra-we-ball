@@ -81,14 +81,29 @@ _ARGUMENT_ORDER = ("object", "instance", "instance_id", "fastener", "tool",
                    "region", "target", "support", "destination", "anchor")
 
 
+# One destination, two names.  The serving destination is called
+# `serving_area` by the ground-truth executor, the oracle world state and this
+# catalogue, and `dining_table` by the compiled pipeline and by the goal
+# evaluator in evaluation_metrics.py, which checks `at(cup, dining_table)`.
+# Both refer to the same place; the inconsistency is between the benchmark's own
+# artifacts, not something a plan can get right or wrong.  Normalising here
+# keeps the comparison about actions instead of vocabulary, and changes no
+# runtime behaviour.
+DESTINATION_ALIASES = {"dining_table": "serving_area"}
+
+
+def canonical_argument(value: str) -> str:
+    return DESTINATION_ALIASES.get(str(value), str(value))
+
+
 def arguments(action):
     value = action.get("arguments")
     if isinstance(value, list):
-        return [_argument(x) for x in value]
+        return [canonical_argument(_argument(x)) for x in value]
     if isinstance(value, dict):
         ordered = [value[key] for key in _ARGUMENT_ORDER if key in value]
         extra = [v for k, v in sorted(value.items()) if k not in _ARGUMENT_ORDER]
-        return [_argument(x) for x in ordered + extra]
+        return [canonical_argument(_argument(x)) for x in ordered + extra]
     return [] if value is None else [_argument(value)]
 
 
@@ -102,24 +117,29 @@ def compare_unordered(expected, produced):
     """
     if len(expected) != len(produced):
         return False, f"length {len(produced)} != expected {len(expected)}"
-    # Try to build a consistent correspondence greedily over matching operators.
-    def signature(action, mapping):
-        args = []
-        for value in arguments(action):
-            args.append(mapping.get(value, value))
-        return (str(action.get("operator")), tuple(args))
 
-    remaining = list(produced)
-    body_to_instance: dict[str, str] = {}
-    for want in expected:
-        matched = None
-        for candidate in remaining:
+    # Search for a consistent correspondence with backtracking.  A greedy scan
+    # is unsound here: a one-argument step like PICK matches many candidates, so
+    # committing to the first one can bind a body to the wrong instance and then
+    # dead-end on a later multi-argument step, reporting a difference where a
+    # consistent correspondence exists.  K5 failed exactly that way -- PICK bound
+    # the kettle to the first produced PICK and the POURs then had nowhere to go.
+    used = [False] * len(produced)
+
+    def assign(index, body_to_instance, instance_to_body):
+        if index == len(expected):
+            return True
+        want = expected[index]
+        want_args = arguments(want)
+        for position, candidate in enumerate(produced):
+            if used[position]:
+                continue
             if str(candidate.get("operator")) != str(want.get("operator")):
                 continue
-            want_args, got_args = arguments(want), arguments(candidate)
+            got_args = arguments(candidate)
             if len(want_args) != len(got_args):
                 continue
-            trial = dict(body_to_instance)
+            b2i, i2b = dict(body_to_instance), dict(instance_to_body)
             ok = True
             for w, g in zip(want_args, got_args):
                 if not OBSERVED_INSTANCE.match(g):
@@ -127,17 +147,22 @@ def compare_unordered(expected, produced):
                         ok = False
                         break
                     continue
-                if trial.setdefault(w, g) != g:
+                if b2i.setdefault(w, g) != g or i2b.setdefault(g, w) != w:
                     ok = False
                     break
-            if ok:
-                matched = candidate
-                body_to_instance = trial
-                break
-        if matched is None:
-            return False, f"no produced step corresponds to {want.get('operator')}{arguments(want)}"
-        remaining.remove(matched)
-    return True, "same steps, different order"
+            if not ok:
+                continue
+            used[position] = True
+            if assign(index + 1, b2i, i2b):
+                return True
+            used[position] = False
+        return False
+
+    if assign(0, {}, {}):
+        return True, "same steps, different order"
+    unmatched = expected[sum(used)] if sum(used) < len(expected) else expected[0]
+    return False, (f"no consistent correspondence; first unmatched "
+                   f"{unmatched.get('operator')}{arguments(unmatched)}")
 
 
 def compare(expected, produced):
