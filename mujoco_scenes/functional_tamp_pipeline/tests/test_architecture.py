@@ -546,8 +546,12 @@ def test_kitchen_compiles_observed_witness_into_common_astar() -> None:
     )
     assert result.search.statistics["algorithm"] == "deterministic_astar_symbolic_state_search"
     assert result.validation["goal_status"] == "GOAL_SATISFIED"
-    assert {row["operator"] for row in result.actions} == {
-        "PICK", "PLACE", "POUR", "STIR",
+    # PLACE_SERVING_UTENSIL is part of the domain's action vocabulary: the
+    # ground-truth executor, oracle world state and expected-action catalogue
+    # all name utensil placement that way.  The compiled problem used to emit a
+    # generic PLACE for it.
+    assert {row["operator"] for row in result.actions} <= {
+        "PICK", "PLACE", "PLACE_SERVING_UTENSIL", "POUR", "STIR",
     }
     assert all(row["operator"] != "OPEN" for row in result.actions)
 
@@ -1888,7 +1892,8 @@ def test_kitchen_causal_planning_order() -> None:
 
     # Verify soup utensil placed before bowl served
     for bowl_tgt, assigned_spoon in [("bowl_1", "spoon_2"), ("bowl_2", "spoon_3")]:
-        utensil_idx = [i for i, (op, args) in enumerate(plan_ops) if op == "PLACE" and args == (assigned_spoon, bowl_tgt)][0]
+        utensil_idx = [i for i, (op, args) in enumerate(plan_ops)
+                       if op == "PLACE_SERVING_UTENSIL" and args == (assigned_spoon, bowl_tgt)][0]
         serve_idx = [i for i, (op, args) in enumerate(plan_ops) if op == "PLACE" and args == (bowl_tgt, "serving_area")][0]
         assert utensil_idx < serve_idx, f"Causal violation: {bowl_tgt} served before {assigned_spoon} placed"
 

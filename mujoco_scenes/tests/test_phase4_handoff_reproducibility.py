@@ -53,11 +53,14 @@ def test_k4_fresh_clone_reproducibility(tmp_path: Path):
 
     # In K4: object_0009 is the bowl starting in B1; object_0005 is its assigned spoon.
     # The symbolic sequence must be:
-    # PICK(object_0009) -> PLACE(object_0009, serving_area) -> later PICK(object_0005) -> PLACE(object_0005, object_0009)
+    # Setting a utensil beside its bowl is PLACE_SERVING_UTENSIL, the name the
+    # domain's action vocabulary uses; only putting an object down on a surface
+    # is a plain PLACE.
+    # PICK(0009) -> PLACE(0009, serving_area) -> PICK(0005) -> PLACE_SERVING_UTENSIL(0005, 0009)
     step_pick_bowl = _find_action_step(reloaded.actions, "PICK", ["object_0009"])
     step_place_bowl_served = _find_action_step(reloaded.actions, "PLACE", ["object_0009", "serving_area"])
     step_pick_spoon = _find_action_step(reloaded.actions, "PICK", ["object_0005"])
-    step_place_spoon_in_bowl = _find_action_step(reloaded.actions, "PLACE", ["object_0005", "object_0009"])
+    step_place_spoon_in_bowl = _find_action_step(reloaded.actions, "PLACE_SERVING_UTENSIL", ["object_0005", "object_0009"])
 
     assert step_pick_bowl < step_place_bowl_served, "Bowl must be picked before being served"
     assert step_place_bowl_served < step_pick_spoon, "B1 bowl must reach serving_area before spoon is picked"
@@ -80,7 +83,7 @@ def test_k6_fresh_clone_reproducibility(tmp_path: Path):
 
     # In K6:
     # 1. Countertop bowl branch: object_0002 is on counter; drawer spoon object_0005 placed in it, then served.
-    step_place_c_spoon = _find_action_step(reloaded.actions, "PLACE", ["object_0005", "object_0002"])
+    step_place_c_spoon = _find_action_step(reloaded.actions, "PLACE_SERVING_UTENSIL", ["object_0005", "object_0002"])
     step_place_c_bowl_served = _find_action_step(reloaded.actions, "PLACE", ["object_0002", "serving_area"])
     assert step_place_c_spoon < step_place_c_bowl_served, "Countertop bowl receives spoon then is served"
 
@@ -88,7 +91,7 @@ def test_k6_fresh_clone_reproducibility(tmp_path: Path):
     step_pick_b1_bowl = _find_action_step(reloaded.actions, "PICK", ["object_0008"])
     step_place_b1_bowl_served = _find_action_step(reloaded.actions, "PLACE", ["object_0008", "serving_area"])
     step_pick_b1_spoon = _find_action_step(reloaded.actions, "PICK", ["object_0006"])
-    step_place_b1_spoon_in_bowl = _find_action_step(reloaded.actions, "PLACE", ["object_0006", "object_0008"])
+    step_place_b1_spoon_in_bowl = _find_action_step(reloaded.actions, "PLACE_SERVING_UTENSIL", ["object_0006", "object_0008"])
 
     assert step_pick_b1_bowl < step_place_b1_bowl_served
     assert step_place_b1_bowl_served < step_pick_b1_spoon
@@ -98,11 +101,11 @@ def test_k6_fresh_clone_reproducibility(tmp_path: Path):
 EXPECTED_CANONICAL_ACTIONS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
     "K1": (
         ("PICK", ("object_0006",)),
-        ("PLACE", ("object_0006", "object_0003")),
+        ("PLACE_SERVING_UTENSIL", ("object_0006", "object_0003")),
         ("PICK", ("object_0003",)),
         ("PLACE", ("object_0003", "serving_area")),
         ("PICK", ("object_0007",)),
-        ("PLACE", ("object_0007", "object_0004")),
+        ("PLACE_SERVING_UTENSIL", ("object_0007", "object_0004")),
         ("PICK", ("object_0004",)),
         ("PLACE", ("object_0004", "serving_area")),
         ("PICK", ("object_0008",)),
@@ -124,11 +127,11 @@ EXPECTED_CANONICAL_ACTIONS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] =
     ),
     "K2": (
         ("PICK", ("object_0005",)),
-        ("PLACE", ("object_0005", "object_0002")),
+        ("PLACE_SERVING_UTENSIL", ("object_0005", "object_0002")),
         ("PICK", ("object_0002",)),
         ("PLACE", ("object_0002", "serving_area")),
         ("PICK", ("object_0006",)),
-        ("PLACE", ("object_0006", "object_0003")),
+        ("PLACE_SERVING_UTENSIL", ("object_0006", "object_0003")),
         ("PICK", ("object_0003",)),
         ("PLACE", ("object_0003", "serving_area")),
         ("PICK", ("object_0009",)),
@@ -152,13 +155,13 @@ EXPECTED_CANONICAL_ACTIONS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] =
     ),
     "K3": (
         ("PICK", ("object_0005",)),
-        ("PLACE", ("object_0005", "object_0003")),
+        ("PLACE_SERVING_UTENSIL", ("object_0005", "object_0003")),
         ("PICK", ("object_0003",)),
         ("PLACE", ("object_0003", "serving_area")),
         ("PICK", ("object_0009",)),
         ("PLACE", ("object_0009", "serving_area")),
         ("PICK", ("object_0006",)),
-        ("PLACE", ("object_0006", "object_0009")),
+        ("PLACE_SERVING_UTENSIL", ("object_0006", "object_0009")),
         ("PICK", ("object_0007",)),
         ("POUR", ("object_0007", "object_0001")),
         ("POUR", ("object_0007", "object_0002")),
@@ -178,11 +181,11 @@ EXPECTED_CANONICAL_ACTIONS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] =
     ),
     "K5": (
         ("PICK", ("object_0005",)),
-        ("PLACE", ("object_0005", "object_0003")),
+        ("PLACE_SERVING_UTENSIL", ("object_0005", "object_0003")),
         ("PICK", ("object_0003",)),
         ("PLACE", ("object_0003", "serving_area")),
         ("PICK", ("object_0009",)),
-        ("PLACE", ("object_0009", "object_0004")),
+        ("PLACE_SERVING_UTENSIL", ("object_0009", "object_0004")),
         ("PICK", ("object_0004",)),
         ("PLACE", ("object_0004", "serving_area")),
         ("PICK", ("object_0006",)),
